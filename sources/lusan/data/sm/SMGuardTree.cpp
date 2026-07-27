@@ -346,14 +346,16 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
     else if ((kind == eKind::Call) || node->isReference())
     {
         node->mSymbolId = attributes.value(XmlSM::xmlSMAttributeGuardRefId).toUInt();
+        // The advisory `name` (R19) never binds anything -- the id does -- but it is read back
+        // into the display cache so a writer that cannot resolve names (the headless data layer)
+        // resaves the file unchanged. The editor refreshes it from the id before every save.
+        node->mCacheName = attributes.value(XmlSM::xmlSMAttributeGuardName).toString();
     }
 
     // Line layout: absent attributes read back as no-break / zero-indent, so a legacy
     // tree loads exactly as before.
     node->mBreakBefore = (attributes.value(XmlSM::xmlSMAttributeGuardBreak).toString() == QLatin1StringView("1"));
     node->mIndent      = attributes.value(XmlSM::xmlSMAttributeGuardIndent).toInt();
-    // The advisory `name` (R19) is deliberately NOT read: it is a write-only human aid and the
-    // symbol id is the sole binding. It is refreshed from the id again on the next save.
 
     if (node->isVerbatim())
     {

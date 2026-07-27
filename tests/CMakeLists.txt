@@ -398,7 +398,10 @@ set_target_properties(lusan_sm_guard_eval_tests PROPERTIES WIN32_EXECUTABLE OFF)
 # stack with synthetic mouse/key events on the Qt offscreen platform, so the
 # canvas interactions are verifiable without a display or input injection.
 # ---------------------------------------------------------------------------
-qt_add_executable(lusan_sm_canvas_tests
+# The design-page source set: everything a harness needs to construct a real SMDesign.
+# Shared by the canvas smoke tests and the SM-27 responsiveness gate so the two can
+# never drift into building different halves of the page.
+set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
@@ -487,6 +490,10 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN}/view/sm/SMOperationsDialog.cpp
+)
+
+qt_add_executable(lusan_sm_canvas_tests
+    ${LUSAN_DESIGN_PAGE_SRC}
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
     ${LUSAN}/res/lusan.qrc
 )
@@ -500,6 +507,28 @@ target_link_libraries(lusan_sm_canvas_tests PRIVATE
     aregsqlite3
 )
 set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# SM-27: the responsiveness gate. Generates a large synthetic document and times the
+# interactions spec 9.9 requires to feel immediate. Registered as the ctest entry
+# sm_perf (offscreen QPA); can also be run manually: lusan_sm_perf [output dir].
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_perf
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SMPerformanceTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_perf PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_perf PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_perf PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_perf PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
 # SM-21 (U3): the guard-bar UI verification harness. Drives the REAL SMGuardBar
@@ -717,5 +746,9 @@ add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
 add_test(NAME sm_canvas_tests COMMAND lusan_sm_canvas_tests
          ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/canvas-shots)
 
-set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests PROPERTIES
+# The responsiveness gate. Its budgets are generous enough for a debug build on a loaded
+# machine, so a failure means a real algorithmic regression, not timing noise.
+add_test(NAME sm_perf COMMAND lusan_sm_perf ${CMAKE_CURRENT_BINARY_DIR}/perf)
+
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_perf PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

@@ -141,11 +141,13 @@ void DataTypeContainer::writeToXml(QXmlStreamWriter& xml) const
     xml.writeTextElement(XmlSI::xmlSIElementContainer, mContainer);
     writeTextElem(xml, XmlSI::xmlSIElementBaseTypeValue, mValueType.getName(), false);
     
-    if (canHaveKey())
+    // A key that was read must be written back even when the container name is not in the
+    // predefined table -- the table is a UI affordance, not the authority on what the file holds.
+    if (canHaveKey() || (mKeyType.getName().isEmpty() == false))
     {
         writeTextElem(xml, XmlSI::xmlSIElementBaseTypeKey, mKeyType.getName(), false);
     }
-    
+
     writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);    
     xml.writeEndElement(); // DataType
 }
