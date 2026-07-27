@@ -592,6 +592,13 @@ private:
      **/
     SMEdgeItem* selectedEdge() const;
 
+    /**
+     * \brief   Adds the History submenu (None / Shallow / Deep, the current one checked) to a
+     *          state's context menu. Present on every state so the mode is discoverable, but
+     *          greyed on a state without a submachine -- there is nothing to remember there.
+     **/
+    void addHistoryMenu(QMenu& menu, uint32_t stateId);
+
     void addNoteMenuEntries(QMenu& menu, uint32_t ownerId, bool isState);
 
     /**

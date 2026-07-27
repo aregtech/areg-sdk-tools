@@ -96,6 +96,7 @@ public:
      **/
     void focusConditions(uint32_t transitionId);
     inline QLineEdit* stateNameEdit() const;
+    inline QComboBox* stateHistoryCombo() const;
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
@@ -139,6 +140,7 @@ private slots:
     void onStateNamePreview(uint32_t stateId, const QString& text);
 
     void onStateNameCommit();
+    void onStateHistoryCommit();
     void onStateDescriptionCommit();
     void onDoIntervalCommit();
     void onDoUntilCommit();
@@ -237,6 +239,7 @@ private:
     SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
+    QComboBox*          mStateHistory;  //!< The history mode; only a composite may carry one.
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
@@ -281,6 +284,11 @@ inline uint32_t SMPropertiesPanel::currentElementId() const
 inline QLineEdit* SMPropertiesPanel::stateNameEdit() const
 {
     return mStateName;
+}
+
+inline QComboBox* SMPropertiesPanel::stateHistoryCombo() const
+{
+    return mStateHistory;
 }
 
 inline QListWidget* SMPropertiesPanel::transitionList() const

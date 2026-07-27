@@ -49,6 +49,7 @@
 #include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QClipboard>
 #include <QColorDialog>
 #include <QCursor>
@@ -1140,6 +1141,12 @@ void SMDesign::populateDesignMenu(QMenu& menu)
     menu.addSeparator();
     menu.addAction(mActAddSubstate);
     menu.addAction(mActEnterSubmachine);
+    // Reachable without right-clicking the state; dead unless exactly one composite is selected.
+    // The shared selection model, not the scene's item selection: a selection made from the
+    // outline, a search hit or the validation panel never touches the scene of a level that is
+    // not on screen, and the menu must agree with the Properties panel about what is selected.
+    const QList<uint32_t>& stateSelection = mModel.getSelectionModel().getSelection();
+    addHistoryMenu(menu, stateSelection.size() == 1 ? stateSelection.first() : 0u);
     menu.addAction(mActGoToParent);
     menu.addAction(mActCenterMachine);
     menu.addSeparator();
@@ -1210,6 +1217,7 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActAddInternal);
         menu.addAction(mActAddSubstate);
         menu.addAction(mActEnterSubmachine);
+        addHistoryMenu(menu, state->getElementId());
         menu.addSeparator();
         menu.addAction(mActCut);
         menu.addAction(mActCopy);
@@ -1835,6 +1843,51 @@ void SMDesign::onToggleEdgeShape()
         edge->setShape(edge->getShape() == SMLayoutEdge::eShape::Arc
                         ? SMLayoutEdge::eShape::Line
                         : SMLayoutEdge::eShape::Arc);
+    }
+}
+
+void SMDesign::addHistoryMenu(QMenu& menu, uint32_t stateId)
+{
+    const SMStateEntry* state = (stateId != 0u) ? mModel.getData().findStateById(stateId) : nullptr;
+    const bool composite = (state != nullptr) && state->isComposite();
+
+    // A greyed entry with no reason is a dead end, and menu tooltips are off everywhere in this
+    // app, so the reason goes into the title where it is always readable.
+    QMenu* history = menu.addMenu(composite ? tr("History") : tr("History (needs a submachine)"));
+    history->setEnabled(composite);
+    history->setToolTipsVisible(true);
+    if (state == nullptr)
+    {
+        return;             // present but dead, never a silent no-op on a guess
+    }
+
+    QActionGroup* group = new QActionGroup(history);
+    group->setExclusive(true);
+
+    const struct { SMStateEntry::eHistory mode; QString label; QString hint; } modes[] =
+    {
+          { SMStateEntry::eHistory::None,    tr("None"),    tr("Coming back always starts from the Start state again") }
+        , { SMStateEntry::eHistory::Shallow, tr("Shallow"), tr("Coming back activates the substate that was active last time") }
+        , { SMStateEntry::eHistory::Deep,    tr("Deep"),    tr("Coming back restores the whole path that was active last time, down to the leaf") }
+    };
+
+    for (const auto& entry : modes)
+    {
+        QAction* action = history->addAction(entry.label);
+        action->setCheckable(true);
+        action->setChecked(state->getHistory() == entry.mode);
+        action->setToolTip(entry.hint);
+        group->addAction(action);
+
+        const SMStateEntry::eHistory mode = entry.mode;
+        connect(action, &QAction::triggered, this, [this, stateId, mode]()
+        {
+            const SMStateEntry* target = mModel.getData().findStateById(stateId);
+            if ((target != nullptr) && target->isComposite() && (target->getHistory() != mode))
+            {
+                mModel.getUndoStack().push(new SMSetHistoryCommand(mModel.getData(), mModel.getNotifier(), stateId, mode, tr("Set history mode")));
+            }
+        });
     }
 }
 

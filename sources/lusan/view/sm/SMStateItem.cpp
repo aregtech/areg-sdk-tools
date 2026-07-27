@@ -533,13 +533,15 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
 
     if (mHistory != SMStateEntry::eHistory::None)
     {
-        const QRectF badge{ right - 14.0, (headerH - 14.0) / 2.0, 14.0, 14.0 };
+        // `H*` is wider than `H`, so the ring grows with its mark instead of clipping the star.
+        const QString mark = QString::fromLatin1(mHistory == SMStateEntry::eHistory::Deep ? "H*" : "H");
+        const double  width = std::max(QFontMetricsF{ badgeFont }.horizontalAdvance(mark) + 7.0, 14.0);
+        const QRectF  badge{ right - width, (headerH - 14.0) / 2.0, width, 14.0 };
         painter->setPen(QPen(textColor, 1.0));
         painter->setBrush(Qt::NoBrush);
         painter->drawEllipse(badge);
         painter->setFont(badgeFont);
-        const char* mark = (mHistory == SMStateEntry::eHistory::Deep ? "H*" : "H");
-        painter->drawText(badge, Qt::AlignCenter, QString::fromLatin1(mark));
+        painter->drawText(badge, Qt::AlignCenter, mark);
         right = badge.left() - 4.0;
     }
 

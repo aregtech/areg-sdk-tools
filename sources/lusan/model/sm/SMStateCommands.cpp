@@ -150,6 +150,47 @@ void SMRenameStateCommand::undo()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SMSetHistoryCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetHistoryCommand::SMSetHistoryCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                         , uint32_t stateId, SMStateEntry::eHistory history
+                                         , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mId       (stateId)
+    , mNew      (history)
+    , mOld      (SMStateEntry::eHistory::None)
+{
+}
+
+void SMSetHistoryCommand::apply(SMStateEntry::eHistory history)
+{
+    SMStateEntry* state = data().findStateById(mId);
+    if (state != nullptr)
+    {
+        state->setHistory(history);
+        notifier().notifyElementChanged(mId, eDocElementKind::State);
+    }
+}
+
+void SMSetHistoryCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMStateEntry* state = data().findStateById(mId);
+        mOld = (state != nullptr ? state->getHistory() : SMStateEntry::eHistory::None);
+        mCaptured = true;
+    }
+
+    apply(mNew);
+}
+
+void SMSetHistoryCommand::undo()
+{
+    apply(mOld);
+}
+
+//////////////////////////////////////////////////////////////////////////
 // SMConvertToCompositeCommand
 //////////////////////////////////////////////////////////////////////////
 

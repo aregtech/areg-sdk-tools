@@ -92,6 +92,34 @@ private:
 };
 
 /**
+ * \class   SMSetHistoryCommand
+ * \brief   Switches a composite state's history mode. The state is looked up by ID on every
+ *          redo and undo, so the command survives a subtree that was detached and re-attached
+ *          in between. Whether the state may carry history at all is the caller's call: the
+ *          editor only offers the mode on composites, and a hand-written file that breaks the
+ *          rule is caught by validation rather than silently rewritten here.
+ **/
+class SMSetHistoryCommand : public SMCommand
+{
+public:
+    SMSetHistoryCommand(  StateMachineData& data, DocModelNotifier& notifier
+                        , uint32_t stateId, SMStateEntry::eHistory history
+                        , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(SMStateEntry::eHistory history);
+
+private:
+    uint32_t                mId;    //!< The composite state's ID.
+    SMStateEntry::eHistory  mNew;   //!< The requested mode.
+    SMStateEntry::eHistory  mOld;   //!< The previous mode, captured on the first redo.
+    bool                    mCaptured { false };
+};
+
+/**
  * \class   SMConvertToCompositeCommand
  * \brief   Converts a Normal state into a painted composite as one undo step: attaches a
  *          new nested StateList, adds the level's mandatory Start state, and creates that

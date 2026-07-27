@@ -469,6 +469,21 @@ namespace
             comp->setHistory(SMStateEntry::eHistory::Deep);
             CHECK(countRule(SMValidator::validate(doc), 18) == 0);
         }
+        {   // Negative: an imported submachine is a composite too, so it may carry history.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getImports().createImport("Lib");
+            SMStateEntry* host = doc.getStates().createState("Host", eKind::Normal);
+            host->setSubmachine("Lib");
+            host->setHistory(SMStateEntry::eHistory::Shallow);
+            CHECK(countRule(SMValidator::validate(doc), 18) == 0);
+        }
+        {   // Positive: the mode does not matter -- Deep on a leaf is the same rule-18 break.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("Leaf", eKind::Normal)->setHistory(SMStateEntry::eHistory::Deep);
+            CHECK(hasRule(SMValidator::validate(doc), 18));
+        }
     }
 }
 
@@ -1024,7 +1039,9 @@ namespace
             row->setLhsKind(eSource::Attribute); row->setLhs("x");
             CHECK(countWarn(SMValidator::validate(doc), 9) == 0);
         }
-        {   // W10: history on a composite nothing re-enters; negative once a transition targets it.
+        {   // W10: history on a composite nothing re-enters. A transition out of the Start state
+            // is the one-and-only entry, so it does not silence the warning; a transition from an
+            // ordinary sibling does, because the machine can come back that way.
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
@@ -1034,6 +1051,29 @@ namespace
 
             doc.getMethods().createMethod("go", eMethod::Trigger);
             start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
+            CHECK(hasWarn(SMValidator::validate(doc), 10));
+
+            SMStateEntry* pause = doc.getStates().createState("Pause", eKind::Normal);
+            comp->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Pause"));
+            pause->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
+            CHECK(countWarn(SMValidator::validate(doc), 10) == 0);
+        }
+        {   // W10 negative: a self-transition re-enters the composite through its own history.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
+            comp->setHistory(SMStateEntry::eHistory::Deep);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
+            comp->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
+            CHECK(countWarn(SMValidator::validate(doc), 10) == 0);
+        }
+        {   // W10 does not fire on a composite without history, however it is reached.
+            StateMachineData doc;
+            addStart(doc);
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
             CHECK(countWarn(SMValidator::validate(doc), 10) == 0);
         }
         {   // W11: an empty inline-code block; negative once it has content.

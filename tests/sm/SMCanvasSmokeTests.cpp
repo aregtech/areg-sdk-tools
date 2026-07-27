@@ -3433,6 +3433,110 @@ int main(int argc, char* argv[])
         }
     }
 
+    std::printf("sect: SM-28 history mode -- offered only on a composite, badge survives a collapse\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        SMPropertiesPanel props(doc);
+        props.resize(320, 600);
+        props.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMScene& canvas = page.getScene();
+        SMStateEntry* composite = d.findState("LightOn");
+        SMStateEntry* leaf = d.findState("LightOff");
+        CHECK((composite != nullptr) && composite->isComposite());
+        CHECK((leaf != nullptr) && (leaf->isComposite() == false));
+
+        // The plain state gets the field, greyed: the mode stays discoverable, never appliable.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ leaf->getId() });
+        QApplication::processEvents();
+        CHECK(props.currentPage() == SMPropertiesPanel::PageState);
+        CHECK(props.stateHistoryCombo()->isEnabled() == false);
+
+        QMenu leafMenu;
+        page.populateDesignMenu(leafMenu);
+        QAction* leafEntry = nullptr;
+        for (QAction* action : leafMenu.actions())
+        {
+            if (action->text().startsWith(QStringLiteral("History")))
+            {
+                leafEntry = action;
+            }
+        }
+
+        CHECK((leafEntry != nullptr) && (leafEntry->isEnabled() == false));
+
+        // The composite gets a live field, starting at the document's value.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ composite->getId() });
+        QApplication::processEvents();
+        CHECK(props.stateHistoryCombo()->isEnabled());
+        CHECK(props.stateHistoryCombo()->currentData().toInt() == static_cast<int>(composite->getHistory()));
+
+        // Applying Deep through the Design menu is one undo step, and the canvas picks it up.
+        const int before = doc.getUndoStack().count();
+        QMenu compMenu;
+        page.populateDesignMenu(compMenu);
+        QAction* historyEntry = nullptr;
+        QAction* deep = nullptr;
+        for (QAction* action : compMenu.actions())
+        {
+            if (action->text().startsWith(QStringLiteral("History")) == false)
+            {
+                continue;
+            }
+
+            historyEntry = action;
+            for (QAction* mode : action->menu()->actions())
+            {
+                if (mode->text() == QStringLiteral("Deep"))
+                {
+                    deep = mode;
+                }
+            }
+        }
+
+        // The entry has to be LIVE, not merely present: triggering a mode action succeeds even
+        // inside a disabled submenu, so asserting the effect alone hid a dead menu once already.
+        CHECK((historyEntry != nullptr) && historyEntry->isEnabled());
+        CHECK((historyEntry != nullptr) && (historyEntry->text() == QStringLiteral("History")));
+        CHECK(deep != nullptr);
+        if (deep != nullptr)
+        {
+            deep->trigger();
+            QApplication::processEvents();
+        }
+
+        CHECK(doc.getUndoStack().count() == (before + 1));
+        CHECK(composite->getHistory() == SMStateEntry::eHistory::Deep);
+        CHECK(props.stateHistoryCombo()->currentData().toInt() == static_cast<int>(SMStateEntry::eHistory::Deep));
+
+        SMStateItem* box = canvas.stateItem(composite->getId());
+        CHECK((box != nullptr) && (box->getHistoryBadge() == SMStateEntry::eHistory::Deep));
+
+        // Collapsing hides the body, never the header -- the badge belongs to the header.
+        if (box != nullptr)
+        {
+            const bool wasExpanded = box->isExpanded();
+            box->toggleExpanded();
+            QApplication::processEvents();
+            CHECK(box->isExpanded() != wasExpanded);
+            CHECK(box->getHistoryBadge() == SMStateEntry::eHistory::Deep);
+            grab(page, "g28-history-collapsed");
+        }
+
+        doc.getUndoStack().undo();                  // the collapse
+        doc.getUndoStack().undo();                  // the history change
+        QApplication::processEvents();
+        CHECK(composite->getHistory() != SMStateEntry::eHistory::Deep);
+        SMStateItem* again = canvas.stateItem(composite->getId());
+        CHECK((again != nullptr) && (again->getHistoryBadge() != SMStateEntry::eHistory::Deep));
+    }
+
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);
 }

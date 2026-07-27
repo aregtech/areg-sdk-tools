@@ -106,6 +106,12 @@ Transitions on a composite state fire while any of its descendants is active. Wi
 state, **document order is priority order** -- the first transition whose stimulus matches
 and whose guard passes is the one that fires.
 
+Entering a composite state normally descends to its `Start` state. A composite can instead be
+told to resume where it left off, with `History="Shallow"` (the last direct substate) or
+`History="Deep"` (the whole last active path). Set it from the state's Properties, its context
+menu or the **Design** menu; the canvas marks it with an `H` or `H*` badge in the state's
+header. See [`fsm-history.md`](./fsm-history.md) for the rules and a worked example.
+
 A **guard** is an optional boolean expression built in the condition builder from
 comparisons, condition-method calls, attributes, constants, stimulus parameters, literals
 and, where structure is not enough, verbatim C++ (a lambda or a raw expression). References

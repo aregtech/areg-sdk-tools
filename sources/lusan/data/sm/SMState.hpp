@@ -156,6 +156,13 @@ public:
     inline bool hasNestedStates() const;
 
     /**
+     * \brief   True when the state carries a submachine at all, painted here or imported.
+     *          History and the completion hook need one, and this is the single definition
+     *          the validator and every editor surface agree on.
+     **/
+    inline bool isComposite() const;
+
+    /**
      * \brief   Returns the painted nested StateList, or nullptr if none.
      **/
     inline const SMStateData* getNestedStates() const;
@@ -435,6 +442,11 @@ inline const SMStateData* SMStateEntry::getNestedStates() const
 inline SMStateData* SMStateEntry::getNestedStates()
 {
     return mNested;
+}
+
+inline bool SMStateEntry::isComposite() const
+{
+    return (mNested != nullptr) || (mSubmachine.isEmpty() == false);
 }
 
 #endif  // LUSAN_DATA_SM_SMSTATE_HPP
