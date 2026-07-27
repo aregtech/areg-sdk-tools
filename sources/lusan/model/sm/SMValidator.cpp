@@ -506,8 +506,8 @@ namespace
         const uint32_t id = state.getId();
         checkIdentifier(id, eDocElementKind::State, state.getName());
 
-        const bool composite = state.hasNestedStates() || state.isImportedSubmachine();
-        const bool hasSubstates = state.hasNestedStates() || state.isImportedSubmachine();
+        const bool composite = state.isComposite();
+        const bool hasSubstates = composite;
 
         // A Final state is terminal; a Start state cannot itself be a composite.
         if (state.getKind() == SMStateEntry::eStateKind::Final)
@@ -1153,28 +1153,41 @@ namespace
         };
 
         // Incoming (sibling) transition targets per level -- reachability and history re-entry.
+        // The second set drops everything the Start state points at: a Start is left once and can
+        // never be targeted, so a transition out of it fires exactly once. That is an entry, not a
+        // re-entry, and history is only worth anything on a state the machine comes back to.
         QHash<const SMStateData*, QSet<uint32_t>> incoming;
+        QHash<const SMStateData*, QSet<uint32_t>> reentered;
         for (const LevelInfo& info : levels)
         {
             QSet<uint32_t>& targets = incoming[info.level];
+            QSet<uint32_t>& repeats = reentered[info.level];
             for (SMStateEntry* st : info.level->getElements())
             {
                 if (st == nullptr)
                     continue;
+                const bool fromStart = (st->getKind() == SMStateEntry::eStateKind::Start);
                 for (SMTransitionEntry* tr : st->getTransitions().getElements())
-                    if ((tr != nullptr) && tr->isExternal()) targets.insert(tr->getToId());
+                {
+                    if ((tr == nullptr) || (tr->isExternal() == false))
+                        continue;
+                    targets.insert(tr->getToId());
+                    if (fromStart == false)
+                        repeats.insert(tr->getToId());
+                }
             }
         }
 
         for (const LevelInfo& info : levels)
         {
             const QSet<uint32_t>& targets = incoming[info.level];
+            const QSet<uint32_t>& repeats = reentered[info.level];
             for (SMStateEntry* st : info.level->getElements())
             {
                 if (st == nullptr)
                     continue;
                 const uint32_t sid = st->getId();
-                const bool composite = st->hasNestedStates() || st->isImportedSubmachine();
+                const bool composite = st->isComposite();
 
                 if (st->getOnFinal().isEmpty() == false)
                 {
@@ -1194,7 +1207,7 @@ namespace
                 if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false) && (st->getTransitions().hasElements() == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 2, vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));
 
-                if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (targets.contains(sid) == false))
+                if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (repeats.contains(sid) == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 10, vtr("History on '%1' is never re-entered").arg(st->getName()));
 
                 QSet<QString> unconditionalStimuli;

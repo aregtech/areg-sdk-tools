@@ -165,6 +165,22 @@ public:
     inline bool hasNote() const;
 
     /**
+     * \brief   Toggles the body collapse through an undo command.
+     **/
+    void toggleExpanded();
+
+    /**
+     * \brief   True while the body is shown; false when only the header is left.
+     **/
+    inline bool isExpanded() const;
+
+    /**
+     * \brief   The history mark drawn in the header (None = no badge). It sits in the header,
+     *          so collapsing the body never takes it away.
+     **/
+    inline SMStateEntry::eHistory getHistoryBadge() const;
+
+    /**
      * \brief   The box geometry (position and size) in scene coordinates.
      **/
     QRectF getBoxGeometry() const;
@@ -364,10 +380,6 @@ private:
      **/
     void closeRenameEditor(bool immediate = false);
 
-    /**
-     * \brief   Toggles the body collapse through an undo command.
-     **/
-    void toggleExpanded();
 
     /**
      * \brief   Re-anchors the transitions connected to this box after it moved or resized.
@@ -425,6 +437,16 @@ inline bool SMStateItem::isMarker() const
 inline const QList<SMStateItem::BodyRow>& SMStateItem::getBodyRows() const
 {
     return mRows;
+}
+
+inline bool SMStateItem::isExpanded() const
+{
+    return mExpanded;
+}
+
+inline SMStateEntry::eHistory SMStateItem::getHistoryBadge() const
+{
+    return mHistory;
 }
 
 #endif  // LUSAN_VIEW_SM_SMSTATEITEM_HPP

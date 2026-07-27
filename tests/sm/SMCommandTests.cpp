@@ -905,6 +905,65 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario J: SM-28 history mode -- one undo step per change, and the attribute
+// only survives a save while the state still has a submachine to remember.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testHistoryMode()
+    {
+        std::printf("[SM-28] history mode: undo/redo and persistence\n");
+
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        doc.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+        SMStateEntry* comp = doc.getStates().createState("Running", SMStateEntry::eStateKind::Normal);
+        SMStateData* nested = comp->getOrCreateNestedStates();
+        nested->createState("SubStart", SMStateEntry::eStateKind::Start);
+        nested->createState("Work", SMStateEntry::eStateKind::Normal);
+        const uint32_t compId = comp->getId();
+        CHECK(comp->isComposite());
+
+        const QString noHistory = serialize(doc);
+
+        stack.push(new SMSetHistoryCommand(doc, notifier, compId, SMStateEntry::eHistory::Shallow, "Set history mode"));
+        CHECK(stack.count() == 1);
+        CHECK(doc.findStateById(compId)->getHistory() == SMStateEntry::eHistory::Shallow);
+        CHECK(serialize(doc).contains("History=\"Shallow\""));
+
+        // Switching modes is a second step, not an edit of the first.
+        stack.push(new SMSetHistoryCommand(doc, notifier, compId, SMStateEntry::eHistory::Deep, "Set history mode"));
+        CHECK(stack.count() == 2);
+        CHECK(serialize(doc).contains("History=\"Deep\""));
+
+        stack.undo();
+        CHECK(doc.findStateById(compId)->getHistory() == SMStateEntry::eHistory::Shallow);
+        stack.undo();
+        CHECK(doc.findStateById(compId)->getHistory() == SMStateEntry::eHistory::None);
+        CHECK(serialize(doc) == noHistory);         // clearing leaves no trace in the file
+
+        stack.redo();
+        stack.redo();
+        CHECK(doc.findStateById(compId)->getHistory() == SMStateEntry::eHistory::Deep);
+
+        // A submachine holding only its Start marker is not persisted, so the host reloads as a
+        // plain state. Writing History anyway would hand the user a validation error on open.
+        StateMachineData half;
+        half.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+        SMStateEntry* halfComp = half.getStates().createState("Running", SMStateEntry::eStateKind::Normal);
+        halfComp->getOrCreateNestedStates()->createState("SubStart", SMStateEntry::eStateKind::Start);
+        halfComp->setHistory(SMStateEntry::eHistory::Deep);
+        halfComp->setOnFinal("evDone");
+        const QString halfXml = serialize(half);
+        CHECK(halfXml.contains("History=") == false);
+        CHECK(halfXml.contains("OnFinal=") == false);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -921,6 +980,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testEventTimerLifecycle();
     testCanvasStateLifecycle();
     testCopyPasteDuplicate();
+    testHistoryMode();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

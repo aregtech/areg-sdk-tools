@@ -356,7 +356,12 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
     xml.writeAttribute(XmlSM::xmlSMAttributeKind, SMStateEntry::toString(mKind));
-    if (mHistory != eHistory::None)
+    // A half-built painted submachine is dropped below, and the two attributes that only make
+    // sense with one have to go with it -- otherwise the file reloads as a plain state carrying
+    // history, an error the user never made. Anything hand-written stays untouched: a state that
+    // never had a submachine keeps whatever it was given, and validation is where that is judged.
+    const bool droppingNested = (mNested != nullptr) && (mNested->hasRealState() == false);
+    if ((mHistory != eHistory::None) && (droppingNested == false))
     {
         xml.writeAttribute(XmlSM::xmlSMAttributeHistory, SMStateEntry::toString(mHistory));
     }
@@ -364,7 +369,7 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     {
         xml.writeAttribute(XmlSM::xmlSMAttributeSubmachine, mSubmachine);
     }
-    if (mOnFinal.isEmpty() == false)
+    if ((mOnFinal.isEmpty() == false) && (droppingNested == false))
     {
         xml.writeAttribute(XmlSM::xmlSMAttributeOnFinal, mOnFinal);
     }

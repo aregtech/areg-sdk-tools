@@ -197,6 +197,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStateGeneral (nullptr)
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
+    , mStateHistory (nullptr)
     , mStateDesc    (nullptr)
     , mEnterOps     (nullptr)
     , mExitOps      (nullptr)
@@ -280,6 +281,13 @@ void SMPropertiesPanel::buildStatePage()
     // as the user types, the same rule the canvas in-place editor enforces.
     mStateName->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mStateName));
     mStateKind = new QLabel(this);
+    mStateHistory = new QComboBox(this);
+    mStateHistory->setObjectName(QStringLiteral("smStateHistory"));
+    mStateHistory->addItem(tr("None"), static_cast<int>(SMStateEntry::eHistory::None));
+    mStateHistory->addItem(tr("Shallow"), static_cast<int>(SMStateEntry::eHistory::Shallow));
+    mStateHistory->addItem(tr("Deep"), static_cast<int>(SMStateEntry::eHistory::Deep));
+    mStateHistory->setItemData(1, tr("Coming back activates the substate that was active last time"), Qt::ToolTipRole);
+    mStateHistory->setItemData(2, tr("Coming back restores the whole path that was active last time, down to the leaf"), Qt::ToolTipRole);
     mTransitions = new ReorderList(this);
     mStateDesc = new QPlainTextEdit(this);
 
@@ -296,6 +304,7 @@ void SMPropertiesPanel::buildStatePage()
     form->setContentsMargins(6, 6, 6, 6);
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
+    form->addRow(tr("History:"), mStateHistory);
     form->addRow(tr("Description:"), mStateDesc);
 
     mStateGeneral = new SMSectionChrome(this);
@@ -320,6 +329,7 @@ void SMPropertiesPanel::buildStatePage()
             mModel.publishStateNamePreview(mCurrentId, text);
         }
     });
+    connect(mStateHistory, &QComboBox::activated, this, &SMPropertiesPanel::onStateHistoryCommit);
     connect(mTransitions, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { onTransitionActivated(); });
 
     static_cast<ReorderList*>(mTransitions)->mOnReorder = [this](int from, int to)
@@ -589,6 +599,15 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mStateName->setText(state->getName());
     mStateName->setReadOnly(state->getKind() == SMStateEntry::eStateKind::Start);
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
+    // Only a composite has substates to remember, so a plain state gets a disabled field that
+    // says why instead of a silently missing one -- the same field then comes alive the moment
+    // the state grows a submachine.
+    const bool composite = state->isComposite();
+    mStateHistory->setCurrentIndex(mStateHistory->findData(static_cast<int>(state->getHistory())));
+    mStateHistory->setEnabled(composite);
+    mStateHistory->setToolTip(composite
+                              ? tr("What happens when the machine comes back to this state")
+                              : tr("Only a state with a submachine can remember where it was"));
     mStateDesc->setPlainText(state->getDescription());
     // Entry/exit operations have no transition scope, so the Param source is not offered here. The
     // Actions sections are bound from the slot table, so a `Do` list joins by adding one slot.
@@ -809,6 +828,29 @@ void SMPropertiesPanel::onStateNameCommit()
     }
 
     mModel.getUndoStack().push(new SMRenameStateCommand(data, mModel.getNotifier(), mCurrentId, name, tr("Rename state")));
+}
+
+void SMPropertiesPanel::onStateHistoryCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const SMStateEntry::eHistory history = static_cast<SMStateEntry::eHistory>(mStateHistory->currentData().toInt());
+    if ((history == state->getHistory()) || (state->isComposite() == false))
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetHistoryCommand(data, mModel.getNotifier(), mCurrentId, history, tr("Set history mode")));
 }
 
 void SMPropertiesPanel::onStateDescriptionCommit()

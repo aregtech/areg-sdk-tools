@@ -1017,6 +1017,57 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// History mode: the attribute round-trips on both composite flavours, is absent
+// at the default, and a resave stays byte-identical (SM-28).
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testHistoryModes()
+    {
+        std::printf("[SM-28] history modes round-trip on painted and imported composites\n");
+
+        StateMachineData doc;
+        doc.getOverview().setName("HistoryModes");
+        doc.getImports().createImport("Lib");
+
+        doc.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+
+        SMStateEntry* painted = doc.getStates().createState("Painted", SMStateEntry::eStateKind::Normal);
+        SMStateData* nested = painted->getOrCreateNestedStates();
+        nested->createState("SubStart", SMStateEntry::eStateKind::Start);
+        nested->createState("Work", SMStateEntry::eStateKind::Normal);
+        painted->setHistory(SMStateEntry::eHistory::Shallow);
+
+        SMStateEntry* hosted = doc.getStates().createState("Hosted", SMStateEntry::eStateKind::Normal);
+        hosted->setSubmachine("Lib");
+        hosted->setHistory(SMStateEntry::eHistory::Deep);
+
+        SMStateEntry* plain = doc.getStates().createState("Plain", SMStateEntry::eStateKind::Normal);
+        CHECK(plain->getHistory() == SMStateEntry::eHistory::None);
+
+        const QString outPath = outFile("sm28_history.fsml");
+        CHECK(doc.writeToFile(outPath));
+
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("History=\"Shallow\""));
+        CHECK(written.contains("History=\"Deep\""));
+        CHECK(written.count("History=") == 2);          // the default writes nothing
+
+        StateMachineData reread;
+        CHECK(reread.readFromFile(outPath));
+        CHECK(reread.openSucceeded());
+        CHECK(reread.getStates().findState("Painted")->getHistory() == SMStateEntry::eHistory::Shallow);
+        CHECK(reread.getStates().findState("Hosted")->getHistory() == SMStateEntry::eHistory::Deep);
+        CHECK(reread.getStates().findState("Plain")->getHistory() == SMStateEntry::eHistory::None);
+
+        const QString outPath2 = outFile("sm28_history_2.fsml");
+        CHECK(reread.writeToFile(outPath2));
+        CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
 
@@ -1041,6 +1092,7 @@ int main(int /*argc*/, char** /*argv*/)
     testAutosaveHelpers();
     testDoActivity();
     testEphemeralSubmachine();
+    testHistoryModes();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;
