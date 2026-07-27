@@ -27,6 +27,7 @@
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 
 #include <QObject>
 #include <QSet>
@@ -38,7 +39,7 @@ namespace
 
     //!< The declared callee of an action/event operation, and its stored argument list, or a null
     //!< callee when the operation is neither an action nor an event, or its callee does not resolve.
-    const MethodBase* calleeOf(const StateMachineData& data, SMOperationBase* op, const QList<SMArgumentEntry>*& args)
+    const MethodBase* calleeOf(const SMDocumentIndex& index, SMOperationBase* op, const QList<SMArgumentEntry>*& args)
     {
         args = nullptr;
         if (op->getOperationType() == eOp::ActionCall)
@@ -46,19 +47,13 @@ namespace
             SMActionCall* call = static_cast<SMActionCall*>(op);
             args = &call->getArguments();
             // By kind: a trigger sharing the action's name is a different declaration.
-            return data.getMethods().findAction(call->getAction());
+            return index.method(call->getAction(), SMMethodEntry::eMethodType::Action);
         }
         else if (op->getOperationType() == eOp::EventSend)
         {
             SMEventSend* send = static_cast<SMEventSend*>(op);
             args = &send->getArguments();
-            for (const SMEventEntry* e : data.getEvents().getElements())
-            {
-                if ((e != nullptr) && (e->getName() == send->getEvent()))
-                {
-                    return e;
-                }
-            }
+            return index.event(send->getEvent());
         }
 
         return nullptr;
@@ -134,10 +129,11 @@ QList<DocIssue> SMOperationValidation::listIssues( const StateMachineData& data
                                                  , const QString& location)
 {
     QList<DocIssue> issues;
+    const SMDocumentIndex index(data);
     for (SMOperationBase* op : list.getOperations())
     {
         const QList<SMArgumentEntry>* args = nullptr;
-        const MethodBase* callee = calleeOf(data, op, args);
+        const MethodBase* callee = calleeOf(index, op, args);
         if ((callee == nullptr) || (args == nullptr))
         {
             continue;   // unresolved callee (the picker shows it blank): not a mapping fault here.

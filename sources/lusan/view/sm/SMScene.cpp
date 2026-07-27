@@ -710,11 +710,13 @@ void SMScene::onNameChanged(uint32_t id, const QString& /*oldName*/, const QStri
         item->updateFromModel();
     }
 
-    // Transition targets reference states by name; refresh edges and the connection map.
+    // An edge label resolves its target's name live, so only the edges touching the renamed
+    // state can change. Refreshing all of them made a rename cost O(level size) -- 200 ms on a
+    // 200-node level (SM-27 responsiveness gate).
     for (SMCanvasItem* edgeItem : std::as_const(mItems))
     {
         SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(edgeItem);
-        if (edge != nullptr)
+        if ((edge != nullptr) && ((edge->getSourceId() == id) || (edge->getTargetId() == id)))
         {
             edge->updateFromModel();
         }

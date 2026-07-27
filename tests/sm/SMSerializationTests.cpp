@@ -40,6 +40,7 @@
 #include <QThread>
 #include <QXmlStreamReader>
 #include <cstdio>
+#include <iterator>
 #include <memory>
 
 #ifndef LUSAN_TEST_DATA_DIR
@@ -122,11 +123,9 @@ namespace
 
 namespace
 {
-    void testRoundTrip()
+    void roundTripDocument(const char* docName, const char* outName)
     {
-        std::printf("[SM-02] byte-identical round-trip (TrafficLight.fsml)\n");
-
-        const QString refPath = dataFile("TrafficLight.fsml");
+        const QString refPath = dataFile(docName);
         const QByteArray original = readAllBytes(refPath);
         CHECK(original.isEmpty() == false);
 
@@ -135,7 +134,7 @@ namespace
         CHECK(opened);
         CHECK(doc.openSucceeded());
 
-        const QString outPath = outFile("sm02_roundtrip.fsml");
+        const QString outPath = outFile(outName);
         CHECK(doc.writeToFile(outPath));
 
         const QByteArray written = readAllBytes(outPath);
@@ -150,12 +149,30 @@ namespace
                 ++diff;
             }
 
-            std::printf("  [DIFF] sizes original=%lld written=%lld; first difference at byte %d\n",
+            std::printf("  [DIFF] %s: sizes original=%lld written=%lld; first difference at byte %d\n",
+                        docName,
                         static_cast<long long>(original.size()), static_cast<long long>(written.size()), diff);
             const int from = (diff > 40) ? diff - 40 : 0;
             std::printf("  [DIFF] expected: ...%s\n", original.mid(from, 90).toStdString().c_str());
             std::printf("  [DIFF] actual  : ...%s\n", written.mid(from, 90).toStdString().c_str());
+            std::printf("  [DIFF] full output kept at %s\n", outPath.toStdString().c_str());
         }
+    }
+
+    void testRoundTrip()
+    {
+        std::printf("[SM-02] byte-identical round-trip (TrafficLight.fsml)\n");
+        roundTripDocument("TrafficLight.fsml", "sm02_roundtrip.fsml");
+    }
+
+    // The coverage fixture carries every persisted element and attribute, so a writer that
+    // forgets one is caught here rather than by a user losing data. The other two reference
+    // documents ride along: every `.claude` fixture is kept in canonical writer form.
+    void testFullFeatureRoundTrip()
+    {
+        std::printf("[SM-27] byte-identical round-trip (reference documents)\n");
+        roundTripDocument("FullFeature.fsml", "sm27_fullfeature.fsml");
+        roundTripDocument("GuardDemo.fsml", "sm27_guarddemo.fsml");
     }
 }
 
@@ -607,6 +624,128 @@ namespace
 
         std::printf("  [OK] all malformed inputs terminated\n");
     }
+
+    // A structural fuzz sweep on top of the byte-level one above: attribute values replaced by
+    // nonsense of the wrong shape, duplicated IDs, and references to elements that do not exist.
+    // None of these is a programming error, so none may assert, hang, or crash.
+    void testHostileAttributes()
+    {
+        std::printf("[SM-27] hostile attribute values and illegal references terminate cleanly\n");
+
+        const QByteArray original = readAllBytes(dataFile("FullFeature.fsml"));
+        CHECK(original.isEmpty() == false);
+
+        struct Mutation
+        {
+            const char* find;
+            const char* replace;
+        };
+
+        const Mutation mutations[] =
+        {
+            { "Type=\"Enumeration\"",           "Type=\"NoSuchKind\""            },  // unknown data-type kind
+            { "Type=\"Container\"",             "Type=\"\""                      },  // empty data-type kind
+            { "ID=\"11\"",                      "ID=\"13\""                      },  // duplicated element ID
+            { "ID=\"40\"",                      "ID=\"notanumber\""              },  // non-numeric ID
+            { "To=\"43\"",                      "To=\"9999\""                    },  // target that does not exist
+            { "To=\"60\"",                      "To=\"\""                        },  // empty target
+            { "StimulusKind=\"Trigger\"",       "StimulusKind=\"Rumor\""         },  // unknown stimulus kind
+            { "Stimulus=\"PowerOn\"",           "Stimulus=\"NeverDeclared\""     },  // undeclared stimulus
+            { "Kind=\"Start\"",                 "Kind=\"Pseudo\""                },  // unknown state kind
+            { "History=\"Shallow\"",            "History=\"Sideways\""           },  // unknown history mode
+            { "Source=\"Constant\"",            "Source=\"Telepathy\""           },  // unknown value source
+            { "Implement=\"Handler\"",          "Implement=\"Magic\""            },  // unknown condition body kind
+            { "Timeout=\"30000\"",              "Timeout=\"-1\""                 },  // negative timeout
+            { "Timeout=\"500\"",                "Timeout=\"99999999999999999999\"" },  // overflowing timeout
+            { "Threading=\"Shared\"",           "Threading=\"Quantum\""          },  // unknown threading mode
+            { "Version=\"2.1.0\"",              "Version=\"not.a.version\""      },  // malformed user version
+            { "op=\"ge\"",                      "op=\"approximately\""           },  // unknown guard operator
+            { "state=\"ok\"",                   "state=\"perfect\""              },  // unknown guard state
+            { "id=\"11\"",                      "id=\"0\""                       },  // guard reference to nothing
+            { "GridSize=\"16\"",                "GridSize=\"-8\""                },  // negative grid size
+            { "Owner=\"43\"",                   "Owner=\"nope\""                 },  // non-numeric layout owner
+            { "Bulge=\"0.35\"",                 "Bulge=\"NaN\""                  },  // non-finite bulge
+            { "Level=\"1\"",                    "Level=\"4294967295\""           },  // level that does not exist
+        };
+
+        const QString hostilePath = outFile("sm27_hostile.fsml");
+        for (const Mutation& mutation : mutations)
+        {
+            QByteArray mutated = original;
+            CHECK(replaceOnce(mutated, mutation.find, mutation.replace));
+            CHECK(writeAllBytes(hostilePath, mutated));
+
+            // The guarantee is termination without a crash; whether the document opens is up
+            // to the individual reader, and a rejected document must stay rejected.
+            StateMachineData doc;
+            const bool opened = doc.readFromFile(hostilePath);
+            CHECK(opened == doc.openSucceeded());
+
+            // Whatever survived must still be writable and re-readable -- a half-parsed
+            // document may never take the writer down with it.
+            const QString echoPath = outFile("sm27_hostile_echo.fsml");
+            if (doc.writeToFile(echoPath))
+            {
+                StateMachineData echo;
+                echo.readFromFile(echoPath);
+            }
+        }
+
+        std::printf("  [OK] %d hostile mutations terminated\n", static_cast<int>(std::size(mutations)));
+    }
+
+    // Transitions stored their target by name before SM-26. Reading such a document must bind
+    // the name to the target's ID, not silently turn every external transition into an internal
+    // one -- and the resolution has to survive a forward reference.
+    void testLegacyTargetByName()
+    {
+        std::printf("[SM-27] pre-SM-26 by-name transition targets resolve to IDs\n");
+
+        const QByteArray legacy =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+            "<StateMachine FormatVersion=\"1.0.0\">\n"
+            "    <Overview ID=\"1\" Name=\"Legacy\" Version=\"1.0.0\" Threading=\"Local\"/>\n"
+            "    <MethodList>\n"
+            "        <Method ID=\"2\" Name=\"Go\" MethodType=\"Trigger\"/>\n"
+            "    </MethodList>\n"
+            "    <StateList>\n"
+            "        <State ID=\"3\" Name=\"First\" Kind=\"Start\">\n"
+            "            <TransitionList>\n"
+            "                <Transition ID=\"4\" StimulusKind=\"Trigger\" Stimulus=\"Go\" To=\"Second\"/>\n"
+            "                <Transition ID=\"5\" StimulusKind=\"Trigger\" Stimulus=\"Go\" To=\"Nowhere\"/>\n"
+            "                <Transition ID=\"6\" StimulusKind=\"Trigger\" Stimulus=\"Go\"/>\n"
+            "            </TransitionList>\n"
+            "        </State>\n"
+            "        <State ID=\"7\" Name=\"Second\" Kind=\"Normal\"/>\n"
+            "    </StateList>\n"
+            "</StateMachine>\n";
+
+        const QString legacyPath = outFile("sm27_legacy_target.fsml");
+        CHECK(writeAllBytes(legacyPath, legacy));
+
+        StateMachineData doc;
+        CHECK(doc.readFromFile(legacyPath));
+
+        const SMStateEntry* first = doc.findState(QStringLiteral("First"));
+        const SMStateEntry* second = doc.findState(QStringLiteral("Second"));
+        CHECK(first != nullptr);
+        CHECK(second != nullptr);
+
+        const SMTransitionEntry* forward = doc.findTransitionById(4u);
+        const SMTransitionEntry* dangling = doc.findTransitionById(5u);
+        const SMTransitionEntry* internal = doc.findTransitionById(6u);
+        CHECK(forward != nullptr);
+        CHECK((forward != nullptr) && (second != nullptr) && (forward->getToId() == second->getId()));
+        CHECK((dangling != nullptr) && (dangling->getToId() == 0u));   // unknown name -> internal
+        CHECK((internal != nullptr) && (internal->getToId() == 0u));   // no To at all -> internal
+
+        // The next save writes the ID, so the name form is a one-way migration.
+        const QString migratedPath = outFile("sm27_legacy_target_saved.fsml");
+        CHECK(doc.writeToFile(migratedPath));
+        const QByteArray migrated = readAllBytes(migratedPath);
+        CHECK(migrated.contains("To=\"Second\"") == false);
+        CHECK(migrated.contains("To=\"7\""));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -886,12 +1025,15 @@ int main(int /*argc*/, char** /*argv*/)
     std::printf("==== SM serialization/versioning tests ====\n");
 
     testRoundTrip();
+    testFullFeatureRoundTrip();
     testLayoutLogicSeparation();
     testCData();
     testNestedConditions();
     testFlatGuardStaysLegacy();
     testDeprecation();
     testRobustness();
+    testHostileAttributes();
+    testLegacyTargetByName();
     testVersionMigration();
     testUnknownPreservation();
     testRejectNewerMajor();

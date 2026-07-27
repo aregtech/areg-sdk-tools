@@ -250,6 +250,10 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemIsFocusable, true);
     setAcceptHoverEvents(true);
+    // Deliberately NOT DeviceCoordinateCache: measured on the SM-27 responsiveness gate it made
+    // a 200-node level slower (first paint 499 -> 877 ms), because a state box repaints rarely
+    // but is invalidated by every move, resize and selection change, so the per-item pixmap is
+    // rebuilt more often than it is reused.
 }
 
 SMStateItem::~SMStateItem()

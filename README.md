@@ -48,7 +48,20 @@ This is intentional: Areg’s logging system is tightly coupled with its runtime
 
 ---
 
-### 2. Multi-Instance Real-Time Log Viewer & Analyzer
+### 2. Visual State Machine Designer
+
+- Design finite state machines as `.fsml` documents: a deterministic, diff-friendly XML format
+- Paint hierarchical state graphs with unlimited nesting, prioritized transitions, guards, and typed operations
+- Declare the machine's data types, attributes, events, timers, and methods on dedicated pages, exactly as in the interface designer
+- Continuous background validation reports errors and design smells without blocking editing
+
+Full guide: [**State Machine Designer**](./docs/fsm-designer.md).
+
+**Behaviour becomes a reviewable artifact instead of hand-written control flow.**
+
+---
+
+### 3. Multi-Instance Real-Time Log Viewer & Analyzer
 
 - **Real-time log aggregation** from multiple processes and machines
 - **Runtime filtering by scope, priority, module, and source**
@@ -59,7 +72,7 @@ This is intentional: Areg’s logging system is tightly coupled with its runtime
 
 ---
 
-### 3. Offline Log Viewer & Performance Analyzer
+### 4. Offline Log Viewer & Performance Analyzer
 
 - Open and inspect saved `.sqlog` files
 - Apply advanced filters and text search
@@ -68,7 +81,7 @@ This is intentional: Areg’s logging system is tightly coupled with its runtime
 
 ---
 
-### 4. Live Log Collector Integration
+### 5. Live Log Collector Integration
 
 To enable live logging:
 
@@ -129,6 +142,9 @@ git clone https://github.com/aregtech/areg-sdk-tools.git .
 
 * **Service Interface Designer**
   Visual design and validation of Areg service interfaces
+
+* **State Machine Designer**
+  Visual design and validation of hierarchical state machines (`.fsml`)
 
 * **Multi-Instance Real-Time Log Viewer & Analyzer**
   Live log streaming, filtering, and runtime control

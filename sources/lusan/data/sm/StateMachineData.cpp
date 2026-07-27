@@ -37,6 +37,37 @@ namespace
         return kCurrent;
     }
 
+    //!< Binds the transitions of a pre-SM-26 document, whose `To` holds a state name, to the
+    //!< matching state ID. Runs after the whole tree is read because a target may be declared
+    //!< later in the file. A name that resolves to nothing leaves the transition internal --
+    //!< the same outcome as a deleted target, which validation already reports.
+    void resolvePendingTargets(const StateMachineData& doc, SMStateData& level)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if ((transition == nullptr) || transition->getPendingTargetName().isEmpty())
+                {
+                    continue;
+                }
+
+                const SMStateEntry* target = doc.findState(transition->getPendingTargetName());
+                transition->resolvePendingTarget(target != nullptr ? target->getId() : 0u);
+            }
+
+            if (state->hasNestedStates())
+            {
+                resolvePendingTargets(doc, *state->getNestedStates());
+            }
+        }
+    }
+
     //!< Collects every layout owner ID (each state and its transitions) in a submachine subtree.
     void collectSubtreeOwners(const SMStateData& level, QSet<uint32_t>& owners)
     {
@@ -520,6 +551,8 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     {
         return false;
     }
+
+    resolvePendingTargets(*this, mStates);
 
     if (mFormatVersion < current)
     {

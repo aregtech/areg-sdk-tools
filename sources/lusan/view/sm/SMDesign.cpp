@@ -25,6 +25,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMPasteCommand.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
@@ -1733,22 +1734,9 @@ void SMDesign::setStimulusOfSelection()
         options.append(qMakePair(kind, name));
     };
 
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const SMDocumentIndex::Stimulus& stimulus : SMDocumentIndex(data).stimuli())
     {
-        if (method->getMethodType() == SMMethodEntry::eMethodType::Trigger)
-        {
-            add(SMTransitionEntry::eStimulusKind::Trigger, method->getName());
-        }
-    }
-
-    for (const SMEventEntry* event : data.getEvents().getElements())
-    {
-        add(SMTransitionEntry::eStimulusKind::Event, event->getName());
-    }
-
-    for (const SMTimerEntry& timer : data.getTimers().getElements())
-    {
-        add(SMTransitionEntry::eStimulusKind::Timer, timer.getName());
+        add(stimulus.kind, stimulus.name);
     }
 
     if (options.isEmpty())

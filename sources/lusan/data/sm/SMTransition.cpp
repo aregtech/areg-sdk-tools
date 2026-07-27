@@ -58,6 +58,7 @@ SMTransitionEntry::SMTransitionEntry(ElementBase* parent /*= nullptr*/)
     , mStimulusKind (eStimulusKind::Trigger)
     , mStimulus     ( )
     , mToId         (0)
+    , mToName       ( )
     , mDescription  ( )
     , mConditions   (this)
     , mGuard        ( )
@@ -73,6 +74,7 @@ SMTransitionEntry::SMTransitionEntry(  uint32_t id
     , mStimulusKind (kind)
     , mStimulus     (stimulus)
     , mToId         (0)
+    , mToName       ( )
     , mDescription  ( )
     , mConditions   (this)
     , mGuard        ( )
@@ -85,6 +87,7 @@ SMTransitionEntry::SMTransitionEntry(const SMTransitionEntry& src)
     , mStimulusKind (src.mStimulusKind)
     , mStimulus     (src.mStimulus)
     , mToId         (src.mToId)
+    , mToName       (src.mToName)
     , mDescription  (src.mDescription)
     , mConditions   (src.mConditions)
     , mGuard        (src.mGuard)
@@ -99,6 +102,7 @@ SMTransitionEntry::SMTransitionEntry(SMTransitionEntry&& src) noexcept
     , mStimulusKind (src.mStimulusKind)
     , mStimulus     (std::move(src.mStimulus))
     , mToId         (src.mToId)
+    , mToName       (std::move(src.mToName))
     , mDescription  (std::move(src.mDescription))
     , mConditions   (std::move(src.mConditions))
     , mGuard        (std::move(src.mGuard))
@@ -116,6 +120,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (const SMTransitionEntry& other
         mStimulusKind = other.mStimulusKind;
         mStimulus     = other.mStimulus;
         mToId         = other.mToId;
+        mToName       = other.mToName;
         mDescription  = other.mDescription;
         mConditions   = other.mConditions;
         mGuard        = other.mGuard;
@@ -135,6 +140,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
         mStimulusKind = other.mStimulusKind;
         mStimulus     = std::move(other.mStimulus);
         mToId         = other.mToId;
+        mToName       = std::move(other.mToName);
         mDescription  = std::move(other.mDescription);
         mConditions   = std::move(other.mConditions);
         mGuard        = std::move(other.mGuard);
@@ -177,7 +183,14 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
     setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
     mStimulusKind = fromKindString(attributes.value(XmlSM::xmlSMAttributeStimulusKind).toString());
     mStimulus     = attributes.value(XmlSM::xmlSMAttributeStimulus).toString();
-    mToId = attributes.value(XmlSM::xmlSMAttributeTo).toUInt();
+    // Targets became IDs in SM-26. A document written before that -- or hand-authored from the
+    // older spec examples -- names the target state; keep the name for the document root to
+    // resolve once the whole tree is in memory, or the transition silently becomes internal.
+    const QStringView to = attributes.value(XmlSM::xmlSMAttributeTo);
+    bool numeric = false;
+    const uint32_t toId = to.toUInt(&numeric);
+    mToId   = numeric ? toId : 0;
+    mToName = (numeric || to.isEmpty()) ? QString() : to.toString();
     mDescription.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTransition))

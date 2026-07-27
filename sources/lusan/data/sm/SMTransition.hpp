@@ -109,6 +109,19 @@ public:
      **/
     inline bool isExternal() const;
 
+    /**
+     * \brief   The target state name read from a document written before targets became IDs,
+     *          empty once resolved. Runtime only -- never serialized.
+     **/
+    inline const QString& getPendingTargetName() const;
+
+    /**
+     * \brief   Binds a pending by-name target to \p targetId and forgets the name. Called by
+     *          the document root once the whole state tree is in memory, because a target may
+     *          be a forward reference.
+     **/
+    inline void resolvePendingTarget(uint32_t targetId);
+
     inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
@@ -146,6 +159,7 @@ private:
     eStimulusKind   mStimulusKind;  //!< The stimulus kind.
     QString         mStimulus;      //!< The stimulus name.
     uint32_t        mToId;          //!< The target sibling state's ID (0 = internal).
+    QString         mToName;        //!< Pre-ID document target name awaiting resolution; not serialized.
     QString         mDescription;   //!< The description text.
     SMConditionList mConditions;    //!< Legacy condition tree (read-shim only; not written when a guard exists).
     SMGuard         mGuard;         //!< The canonical guard (ID-bound tree / draft / empty).
@@ -238,6 +252,17 @@ inline void SMTransitionEntry::clearTo()
 inline bool SMTransitionEntry::isExternal() const
 {
     return (mToId != 0);
+}
+
+inline const QString& SMTransitionEntry::getPendingTargetName() const
+{
+    return mToName;
+}
+
+inline void SMTransitionEntry::resolvePendingTarget(uint32_t targetId)
+{
+    mToId = targetId;
+    mToName.clear();
 }
 
 inline const QString& SMTransitionEntry::getDescription() const

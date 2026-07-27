@@ -23,6 +23,7 @@
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 
 #include <QObject>
 
@@ -31,7 +32,7 @@ namespace
     using eTarget = SMReferences::eTarget;
 
     //!< Resolves a referenced declaration name to its document ID for the given kind; 0 if none.
-    uint32_t resolveId(const StateMachineData& data, eTarget kind, const QString& name)
+    uint32_t resolveId(const SMDocumentIndex& index, eTarget kind, const QString& name)
     {
         switch (kind)
         {
@@ -39,27 +40,27 @@ namespace
         case eTarget::Action:
         case eTarget::Condition:
         {
-            const SMMethodEntry* method = data.getMethods().findMethod(name);
+            const SMMethodEntry* method = index.method(name);
             return (method != nullptr) ? method->getId() : 0u;
         }
         case eTarget::Event:
         {
-            const SMEventEntry* event = data.getEvents().findEvent(name);
+            const SMEventEntry* event = index.event(name);
             return (event != nullptr) ? event->getId() : 0u;
         }
         case eTarget::Timer:
         {
-            const SMTimerEntry* timer = data.getTimers().findElement(name);
+            const SMTimerEntry* timer = index.timer(name);
             return (timer != nullptr) ? timer->getId() : 0u;
         }
         case eTarget::Attribute:
         {
-            const SMAttributeEntry* attribute = data.getAttributes().findElement(name);
+            const SMAttributeEntry* attribute = index.attribute(name);
             return (attribute != nullptr) ? attribute->getId() : 0u;
         }
         case eTarget::Constant:
         {
-            const ConstantEntry* constant = data.getConstants().findElement(name);
+            const ConstantEntry* constant = index.constant(name);
             return (constant != nullptr) ? constant->getId() : 0u;
         }
         default:
@@ -68,23 +69,23 @@ namespace
     }
 
     //!< The current declaration name for a resolved ID (guard symbols carry IDs, not names).
-    QString resolveName(const StateMachineData& data, eTarget kind, uint32_t declId)
+    QString resolveName(const SMDocumentIndex& index, eTarget kind, uint32_t declId)
     {
         switch (kind)
         {
         case eTarget::Condition:
         {
-            const SMMethodEntry* method = data.getMethods().findMethod(declId);
+            const SMMethodEntry* method = index.method(declId);
             return (method != nullptr) ? method->getName() : QString();
         }
         case eTarget::Attribute:
         {
-            const SMAttributeEntry* attribute = data.getAttributes().findElement(declId);
+            const SMAttributeEntry* attribute = index.attribute(declId);
             return (attribute != nullptr) ? attribute->getName() : QString();
         }
         case eTarget::Constant:
         {
-            const ConstantEntry* constant = data.getConstants().findElement(declId);
+            const ConstantEntry* constant = index.constant(declId);
             return (constant != nullptr) ? constant->getName() : QString();
         }
         default:
@@ -93,7 +94,7 @@ namespace
     }
 
     //!< Appends the guard-bound declarations (condition / attribute / constant) of a guard subtree.
-    void collectGuardRefs(const StateMachineData& data, const SMGuardNode* node, QList<SMGoToDef::Target>& out)
+    void collectGuardRefs(const SMDocumentIndex& index, const SMGuardNode* node, QList<SMGoToDef::Target>& out)
     {
         if (node == nullptr)
             return;
@@ -112,23 +113,24 @@ namespace
         {
             const uint32_t declId = node->getSymbolId();
             if (declId != 0u)
-                out.append({ kind, declId, resolveName(data, kind, declId) });
+                out.append({ kind, declId, resolveName(index, kind, declId) });
         }
 
         for (const SMGuardNode* child : node->getChildren())
-            collectGuardRefs(data, child, out);
+            collectGuardRefs(index, child, out);
     }
 }
 
 QList<SMGoToDef::Target> SMGoToDef::collect(const StateMachineData& data, uint32_t elementId, bool isState)
 {
     QList<Target> collected;
+    const SMDocumentIndex index(data);
 
     // Name-based references (stimulus, action calls, attribute sets, timer/event ops, arguments)
     // from the headless walker, each resolved to its declaration ID.
     for (const SMReferences::Ref& ref : SMReferences::definitionsOf(data, elementId, isState))
     {
-        const uint32_t declId = resolveId(data, ref.target, ref.name);
+        const uint32_t declId = resolveId(index, ref.target, ref.name);
         if (declId != 0u)
             collected.append({ ref.target, declId, ref.name });
     }
@@ -137,9 +139,9 @@ QList<SMGoToDef::Target> SMGoToDef::collect(const StateMachineData& data, uint32
     // does not see them, so union them the way SMWhereUsed does (guard knowledge stays here).
     if (isState == false)
     {
-        const SMTransitionEntry* transition = data.findTransitionById(elementId);
+        const SMTransitionEntry* transition = index.transition(elementId);
         if (transition != nullptr)
-            collectGuardRefs(data, transition->getGuard().getTree(), collected);
+            collectGuardRefs(index, transition->getGuard().getTree(), collected);
     }
 
     // De-duplicate by (kind, ID): a declaration referenced both in the guard and in an operation
@@ -166,7 +168,8 @@ QList<SMGoToDef::Target> SMGoToDef::collect(const StateMachineData& data, uint32
 
 SMGoToDef::Target SMGoToDef::stimulusOf(const StateMachineData& data, uint32_t transitionId)
 {
-    const SMTransitionEntry* transition = data.findTransitionById(transitionId);
+    const SMDocumentIndex index(data);
+    const SMTransitionEntry* transition = index.transition(transitionId);
     if (transition == nullptr)
     {
         return { eTarget::Trigger, 0u, QString() };
@@ -182,15 +185,16 @@ SMGoToDef::Target SMGoToDef::stimulusOf(const StateMachineData& data, uint32_t t
     default:                                        break;
     }
 
-    return { kind, resolveId(data, kind, name), name };
+    return { kind, resolveId(index, kind, name), name };
 }
 
 QList<SMGoToDef::Target> SMGoToDef::resolveRefs(const StateMachineData& data, const QList<SMReferences::Ref>& refs)
 {
     QList<Target> unique;
+    const SMDocumentIndex index(data);
     for (const SMReferences::Ref& ref : refs)
     {
-        const uint32_t declId = resolveId(data, ref.target, ref.name);
+        const uint32_t declId = resolveId(index, ref.target, ref.name);
         if (declId == 0u)
         {
             continue;   // A dangling name resolves to no declaration: nowhere to navigate.
