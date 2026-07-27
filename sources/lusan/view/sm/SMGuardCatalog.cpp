@@ -27,7 +27,7 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
-#include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 
 #include <QVector>
 
@@ -106,20 +106,20 @@ QString SMGuardSymbol::kindNoun() const
 QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_t transitionId)
 {
     QList<SMGuardSymbol> result;
+    const SMDocumentIndex index(data);
 
-    // STIMULUS -- the in-scope trigger/event parameters (blue).
-    const QStringList paramNames = SMGuardSymbols::paramNames(data, transitionId);
-    const QStringList paramTypes = SMGuardSymbols::paramTypes(data, transitionId);
-    for (int i = 0; i < paramNames.size(); ++i)
+    // STIMULUS -- the in-scope trigger/event parameters (blue). One scope object, so the name,
+    // the type and the ID of a parameter come from the same walk instead of three.
+    for (const MethodParameter& param : index.paramScope(transitionId).parameters())
     {
         SMGuardSymbol sym;
-        sym.name        = paramNames.at(i);
+        sym.name        = param.getName();
         sym.glyph       = QStringLiteral("a");
         sym.owner       = NEGuardStyle::eOwner::Stimulus;
         sym.refkind     = SMGuardSymbol::eRefKind::Param;
-        sym.typeText    = (i < paramTypes.size()) ? paramTypes.at(i) : QString();
+        sym.typeText    = param.getType();
         sym.isCall      = false;
-        sym.symbolId    = SMGuardSymbols::paramId(data, transitionId, sym.name);
+        sym.symbolId    = param.getId();
         result.append(sym);
     }
 
@@ -153,13 +153,8 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
 
     // Condition methods: lambdas stay in the FSM group, handlers in their own.
     QList<SMGuardSymbol> handlers;
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const SMMethodEntry* method : index.methodsOf(SMMethodEntry::eMethodType::Condition))
     {
-        if ((method == nullptr) || (method->isCondition() == false))
-        {
-            continue;
-        }
-
         SMGuardSymbol sym;
         sym.name        = method->getName();
         sym.owner       = method->isLambdaCondition() ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;

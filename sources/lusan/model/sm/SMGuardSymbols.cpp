@@ -25,57 +25,8 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
-#include "lusan/data/sm/SMConstantData.hpp"
-#include "lusan/data/sm/SMEventData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
-#include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
-
-namespace
-{
-    //!< The payload method (trigger or event) whose parameters are in scope for a transition.
-    const MethodBase* stimulusPayload(const StateMachineData& data, uint32_t transitionId)
-    {
-        const SMTransitionEntry* transition = data.findTransitionById(transitionId);
-        if ((transition == nullptr) || (transition->getStimulusKind() == SMTransitionEntry::eStimulusKind::Timer))
-        {
-            return nullptr;
-        }
-
-        if (transition->getStimulusKind() == SMTransitionEntry::eStimulusKind::Trigger)
-        {
-            return data.getMethods().findMethod(transition->getStimulus());
-        }
-
-        for (const SMEventEntry* event : data.getEvents().getElements())
-        {
-            if ((event != nullptr) && (event->getName() == transition->getStimulus()))
-            {
-                return event;
-            }
-        }
-
-        return nullptr;
-    }
-
-    //!< The declared parameter with the id \p id in the transition's stimulus payload, or nullptr.
-    const MethodParameter* payloadParam(const StateMachineData& data, uint32_t transitionId, uint32_t id)
-    {
-        const MethodBase* payload = stimulusPayload(data, transitionId);
-        if (payload != nullptr)
-        {
-            for (const MethodParameter& param : payload->getElements())
-            {
-                if (param.getId() == id)
-                {
-                    return &param;
-                }
-            }
-        }
-
-        return nullptr;
-    }
-}
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 
 SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data, const QStringList& parts, QString& typeNameOut)
 {
@@ -150,159 +101,75 @@ QStringList SMGuardSymbols::scopedMembers(const StateMachineData& data, const QS
 
 uint32_t SMGuardSymbols::attributeId(const StateMachineData& data, const QString& name)
 {
-    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
-    {
-        if (attr.getName() == name)
-        {
-            return attr.getId();
-        }
-    }
-
-    return 0u;
+    const SMAttributeEntry* attribute = SMDocumentIndex(data).attribute(name);
+    return (attribute != nullptr) ? attribute->getId() : 0u;
 }
 
 uint32_t SMGuardSymbols::constantId(const StateMachineData& data, const QString& name)
 {
-    for (const ConstantEntry& constant : data.getConstants().getElements())
-    {
-        if (constant.getName() == name)
-        {
-            return constant.getId();
-        }
-    }
-
-    return 0u;
+    const ConstantEntry* constant = SMDocumentIndex(data).constant(name);
+    return (constant != nullptr) ? constant->getId() : 0u;
 }
 
 uint32_t SMGuardSymbols::paramId(const StateMachineData& data, uint32_t transitionId, const QString& name)
 {
-    const MethodBase* payload = stimulusPayload(data, transitionId);
-    if (payload != nullptr)
-    {
-        for (const MethodParameter& param : payload->getElements())
-        {
-            if (param.getName() == name)
-            {
-                return param.getId();
-            }
-        }
-    }
-
-    return 0u;
+    const MethodParameter* param = SMDocumentIndex(data).paramScope(transitionId).byName(name);
+    return (param != nullptr) ? param->getId() : 0u;
 }
 
 const SMMethodEntry* SMGuardSymbols::conditionMethod(const StateMachineData& data, const QString& name)
 {
-    const SMMethodEntry* method = data.getMethods().findMethod(name);
+    const SMMethodEntry* method = SMDocumentIndex(data).method(name);
     return ((method != nullptr) && method->isCondition()) ? method : nullptr;
 }
 
 QStringList SMGuardSymbols::paramNames(const StateMachineData& data, uint32_t transitionId)
 {
-    QStringList names;
-    const MethodBase* payload = stimulusPayload(data, transitionId);
-    if (payload != nullptr)
-    {
-        for (const MethodParameter& param : payload->getElements())
-        {
-            names.append(param.getName());
-        }
-    }
-
-    return names;
+    return SMDocumentIndex(data).paramScope(transitionId).names();
 }
 
 QStringList SMGuardSymbols::paramTypes(const StateMachineData& data, uint32_t transitionId)
 {
-    QStringList types;
-    const MethodBase* payload = stimulusPayload(data, transitionId);
-    if (payload != nullptr)
-    {
-        for (const MethodParameter& param : payload->getElements())
-        {
-            types.append(param.getType());
-        }
-    }
-
-    return types;
+    return SMDocumentIndex(data).paramScope(transitionId).types();
 }
 
 QString SMGuardSymbols::attributeName(const StateMachineData& data, uint32_t id)
 {
-    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
-    {
-        if (attr.getId() == id)
-        {
-            return attr.getName();
-        }
-    }
-
-    return QString();
+    const SMAttributeEntry* attribute = SMDocumentIndex(data).attribute(id);
+    return (attribute != nullptr) ? attribute->getName() : QString();
 }
 
 QString SMGuardSymbols::constantName(const StateMachineData& data, uint32_t id)
 {
-    for (const ConstantEntry& constant : data.getConstants().getElements())
-    {
-        if (constant.getId() == id)
-        {
-            return constant.getName();
-        }
-    }
-
-    return QString();
+    const ConstantEntry* constant = SMDocumentIndex(data).constant(id);
+    return (constant != nullptr) ? constant->getName() : QString();
 }
 
 QString SMGuardSymbols::paramName(const StateMachineData& data, uint32_t transitionId, uint32_t id)
 {
-    const MethodBase* payload = stimulusPayload(data, transitionId);
-    if (payload != nullptr)
-    {
-        for (const MethodParameter& param : payload->getElements())
-        {
-            if (param.getId() == id)
-            {
-                return param.getName();
-            }
-        }
-    }
-
-    return QString();
+    const MethodParameter* param = SMDocumentIndex(data).paramScope(transitionId).byId(id);
+    return (param != nullptr) ? param->getName() : QString();
 }
 
 QString SMGuardSymbols::attributeType(const StateMachineData& data, uint32_t id)
 {
-    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
-    {
-        if (attr.getId() == id)
-        {
-            return attr.getType();
-        }
-    }
-
-    return QString();
+    const SMAttributeEntry* attribute = SMDocumentIndex(data).attribute(id);
+    return (attribute != nullptr) ? attribute->getType() : QString();
 }
 
 QString SMGuardSymbols::constantType(const StateMachineData& data, uint32_t id)
 {
-    for (const ConstantEntry& constant : data.getConstants().getElements())
-    {
-        if (constant.getId() == id)
-        {
-            return constant.getType();
-        }
-    }
-
-    return QString();
+    const ConstantEntry* constant = SMDocumentIndex(data).constant(id);
+    return (constant != nullptr) ? constant->getType() : QString();
 }
 
 QString SMGuardSymbols::paramType(const StateMachineData& data, uint32_t transitionId, uint32_t id)
 {
-    const MethodParameter* param = payloadParam(data, transitionId, id);
+    const MethodParameter* param = SMDocumentIndex(data).paramScope(transitionId).byId(id);
     return (param != nullptr) ? param->getType() : QString();
 }
 
 const SMMethodEntry* SMGuardSymbols::method(const StateMachineData& data, uint32_t id)
 {
-    return data.getMethods().findMethod(id);
+    return SMDocumentIndex(data).method(id);
 }

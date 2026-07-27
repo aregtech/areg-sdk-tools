@@ -28,6 +28,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -232,7 +233,8 @@ void SMTryStrip::rebuild()
     layout->setSpacing(4);
 
     const StateMachineData& data = mModel.getData();
-    const SMTransitionEntry* transition = (mTransitionId != 0u) ? data.findTransitionById(mTransitionId) : nullptr;
+    const SMDocumentIndex index(data);
+    const SMTransitionEntry* transition = (mTransitionId != 0u) ? index.transition(mTransitionId) : nullptr;
     const SMGuard* guard = (transition != nullptr) ? &transition->getGuard() : nullptr;
 
     if ((guard == nullptr) || guard->isEmpty() || (guard->isOk() == false) || (guard->getTree() == nullptr))
@@ -263,21 +265,18 @@ void SMTryStrip::rebuild()
     QWidget* valueHost = new QWidget(mContent);
     SMFlowLayout* flow = new SMFlowLayout(valueHost, 0, 12, 4);
 
-    const QStringList paramNames = SMGuardSymbols::paramNames(data, mTransitionId);
-    const QStringList paramTypes = SMGuardSymbols::paramTypes(data, mTransitionId);
-    for (int i = 0; i < paramNames.size(); ++i)
+    for (const MethodParameter& param : index.paramScope(mTransitionId).parameters())
     {
-        const uint32_t id = SMGuardSymbols::paramId(data, mTransitionId, paramNames.at(i));
-        if (id != 0u)
+        if (param.getId() != 0u)
         {
-            flow->addWidget(makeValueField(eKind::Param, id, paramNames.at(i), (i < paramTypes.size()) ? paramTypes.at(i) : QString()));
+            flow->addWidget(makeValueField(eKind::Param, param.getId(), param.getName(), param.getType()));
         }
     }
 
     QList<uint32_t> attrIds = SMGuardEval::referencedIds(tree, eKind::Attr);
     for (uint32_t siblingId : SMGuardEval::siblingTransitions(data, mTransitionId))
     {
-        const SMTransitionEntry* sibling = data.findTransitionById(siblingId);
+        const SMTransitionEntry* sibling = index.transition(siblingId);
         if ((sibling != nullptr) && (siblingId != mTransitionId)
             && sibling->getGuard().isOk() && (sibling->getGuard().getTree() != nullptr))
         {
@@ -293,13 +292,10 @@ void SMTryStrip::rebuild()
 
     for (uint32_t id : attrIds)
     {
-        for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+        const SMAttributeEntry* attr = index.attribute(id);
+        if (attr != nullptr)
         {
-            if (attr.getId() == id)
-            {
-                flow->addWidget(makeValueField(eKind::Attr, id, attr.getName(), attr.getType()));
-                break;
-            }
+            flow->addWidget(makeValueField(eKind::Attr, id, attr->getName(), attr->getType()));
         }
     }
 

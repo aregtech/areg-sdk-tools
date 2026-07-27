@@ -54,6 +54,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMTransition.cpp
     ${LUSAN}/data/sm/StateMachineData.cpp
     # model/sm (headless reference glue)
+    ${LUSAN}/model/sm/SMDocumentIndex.cpp
     ${LUSAN}/model/sm/SMGoToDef.cpp
 )
 

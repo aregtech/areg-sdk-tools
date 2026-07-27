@@ -6,6 +6,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
     ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/sm/SMDocumentIndex.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
@@ -47,6 +48,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMConditionText.hpp
     ${LUSAN}/model/sm/SMConstantModel.hpp
     ${LUSAN}/model/sm/SMDataTypeModel.hpp
+    ${LUSAN}/model/sm/SMDocumentIndex.hpp
     ${LUSAN}/model/sm/SMEventModel.hpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.hpp
     ${LUSAN}/model/sm/SMGuardCommands.hpp

@@ -24,7 +24,7 @@
 #include "lusan/data/sm/SMConstantData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
-#include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 
 namespace
 {
@@ -45,19 +45,16 @@ QList<SMSourceEntry> SMMappingSources::candidates( const StateMachineData& data
                                                  , const QString& targetType)
 {
     QList<SMSourceEntry> result;
+    const SMDocumentIndex index(data);
 
     switch (kind)
     {
     case SMArgumentEntry::eValueSource::Param:
-    {
-        const QStringList names = SMGuardSymbols::paramNames(data, transitionId);
-        const QStringList types = SMGuardSymbols::paramTypes(data, transitionId);
-        for (int i = 0; i < names.size(); ++i)
+        for (const MethodParameter& param : index.paramScope(transitionId).parameters())
         {
-            offer(result, names.at(i), (i < types.size()) ? types.at(i) : QString(), targetType);
+            offer(result, param.getName(), param.getType(), targetType);
         }
         break;
-    }
 
     case SMArgumentEntry::eValueSource::Attribute:
         for (const SMAttributeEntry& attr : data.getAttributes().getElements())
@@ -75,9 +72,9 @@ QList<SMSourceEntry> SMMappingSources::candidates( const StateMachineData& data
 
     case SMArgumentEntry::eValueSource::Condition:
         // A Condition source is a parameterless condition-method call.
-        for (const SMMethodEntry* method : data.getMethods().getElements())
+        for (const SMMethodEntry* method : index.methodsOf(SMMethodEntry::eMethodType::Condition))
         {
-            if ((method != nullptr) && method->isCondition() && method->getElements().isEmpty())
+            if (method->getElements().isEmpty())
             {
                 offer(result, method->getName(), method->getReturn(), targetType);
             }
@@ -98,7 +95,7 @@ bool SMMappingSources::isKindLegal(const StateMachineData& data, uint32_t transi
         return true;
     }
 
-    return (transitionId != 0u) && (SMGuardSymbols::paramNames(data, transitionId).isEmpty() == false);
+    return (transitionId != 0u) && (SMDocumentIndex(data).paramScope(transitionId).isEmpty() == false);
 }
 
 QString SMMappingSources::referencedType( const StateMachineData& data
@@ -106,36 +103,35 @@ QString SMMappingSources::referencedType( const StateMachineData& data
                                         , SMArgumentEntry::eValueSource kind
                                         , const QString& name)
 {
+    const SMDocumentIndex index(data);
+
     switch (kind)
     {
     case SMArgumentEntry::eValueSource::Param:
     {
-        const QStringList names = SMGuardSymbols::paramNames(data, transitionId);
-        const QStringList types = SMGuardSymbols::paramTypes(data, transitionId);
-        const int index = names.indexOf(name);
-        return ((index >= 0) && (index < types.size())) ? types.at(index) : QString();
+        const MethodParameter* param = index.paramScope(transitionId).byName(name);
+        return (param != nullptr) ? param->getType() : QString();
     }
 
     case SMArgumentEntry::eValueSource::Attribute:
-        for (const SMAttributeEntry& attr : data.getAttributes().getElements())
-        {
-            if (attr.getName() == name) { return attr.getType(); }
-        }
-        return QString();
+    {
+        const SMAttributeEntry* attr = index.attribute(name);
+        return (attr != nullptr) ? attr->getType() : QString();
+    }
 
     case SMArgumentEntry::eValueSource::Constant:
-        for (const ConstantEntry& constant : data.getConstants().getElements())
-        {
-            if (constant.getName() == name) { return constant.getType(); }
-        }
-        return QString();
+    {
+        const ConstantEntry* constant = index.constant(name);
+        return (constant != nullptr) ? constant->getType() : QString();
+    }
 
     case SMArgumentEntry::eValueSource::Condition:
-        for (const SMMethodEntry* method : data.getMethods().getElements())
-        {
-            if ((method != nullptr) && (method->getName() == name)) { return method->getReturn(); }
-        }
-        return QString();
+    {
+        // By bare name, not by kind: the row stores what the picker offered, and a stale name
+        // must still resolve to whatever declaration still carries it.
+        const SMMethodEntry* method = index.method(name);
+        return (method != nullptr) ? method->getReturn() : QString();
+    }
 
     default:
         return QString();

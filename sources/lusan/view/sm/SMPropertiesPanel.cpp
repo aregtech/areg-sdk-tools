@@ -28,6 +28,7 @@
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMCommand.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
@@ -932,26 +933,9 @@ int SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString& cu
         mStimulusName->setItemData(row, SMKindGlyph::word(stimulusGlyph(kind)) + QLatin1Char(' ') + name, Qt::ToolTipRole);
     };
 
-    // Triggers are the FSM's methods of trigger type (checked against the Methods page).
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const SMDocumentIndex::Stimulus& stimulus : SMDocumentIndex(data).stimuli())
     {
-        if ((method != nullptr) && (method->getMethodType() == SMMethodEntry::eMethodType::Trigger))
-        {
-            addRow(SMTransitionEntry::eStimulusKind::Trigger, method->getName());
-        }
-    }
-
-    for (const SMEventEntry* event : data.getEvents().getElements())
-    {
-        if (event != nullptr)
-        {
-            addRow(SMTransitionEntry::eStimulusKind::Event, event->getName());
-        }
-    }
-
-    for (const SMTimerEntry& timer : data.getTimers().getElements())
-    {
-        addRow(SMTransitionEntry::eStimulusKind::Timer, timer.getName());
+        addRow(stimulus.kind, stimulus.name);
     }
 
     if (currentName.isEmpty())

@@ -24,6 +24,7 @@
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMDocumentIndex.hpp"
 
 #include <QStringList>
 
@@ -87,20 +88,6 @@ namespace
         return name + QLatin1Char('(') + parts.join(QStringLiteral(", ")) + QLatin1Char(')');
     }
 
-    //!< The Action-typed method with the given name, or nullptr.
-    const MethodBase* findAction(const StateMachineData& data, const QString& name)
-    {
-        for (const SMMethodEntry* method : data.getMethods().getElements())
-        {
-            if ((method != nullptr) && (method->getName() == name))
-            {
-                return method;
-            }
-        }
-
-        return nullptr;
-    }
-
     //!< The first non-empty, trimmed line of an inline body, elided for the row.
     QString firstLine(const QString& body)
     {
@@ -135,7 +122,7 @@ QString SMOperationSummary::stimulusSignature(const StateMachineData& data, cons
     }
 
     QStringList parts;
-    const MethodBase* callee = findAction(data, name);
+    const MethodBase* callee = SMDocumentIndex(data).method(name);
     if (callee != nullptr)
     {
         for (const MethodParameter& param : callee->getElements())
@@ -154,7 +141,7 @@ QString SMOperationSummary::text(const StateMachineData& data, const SMOperation
     case SMOperationBase::eOperation::ActionCall:
     {
         const SMActionCall& call = static_cast<const SMActionCall&>(op);
-        return callSignature(call.getAction(), findAction(data, call.getAction()), call.getArguments());
+        return callSignature(call.getAction(), SMDocumentIndex(data).method(call.getAction()), call.getArguments());
     }
 
     case SMOperationBase::eOperation::EventSend:
