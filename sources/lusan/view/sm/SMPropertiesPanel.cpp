@@ -344,22 +344,25 @@ void SMPropertiesPanel::buildStatePage()
     QFrame* submachineSep = new QFrame(this);
     submachineSep->setFrameShape(QFrame::VLine);
     submachineSep->setMaximumSize(12, 20);
-    const auto makeSubmachineButton = [this](const QString& name, Qt::ToolButtonStyle style) -> QToolButton*
+    const auto makeSubmachineButton = [this](const QString& name) -> QToolButton*
     {
         QToolButton* button = new QToolButton(this);
         button->setObjectName(name);
-        button->setToolButtonStyle(style);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
         button->setAutoRaise(true);
         button->setCursor(Qt::PointingHandCursor);
         return button;
     };
 
-    // Only the first one shows its label: it is the one whose meaning changes with the selection,
-    // and two of its three meanings write to the document.
-    mBtnEnterSubmachine  = makeSubmachineButton(QStringLiteral("smBtnEnterSubmachine"), Qt::ToolButtonTextBesideIcon);
-    mBtnGoToParent       = makeSubmachineButton(QStringLiteral("smBtnGoToParent"), Qt::ToolButtonIconOnly);
-    mBtnAddSubmachine    = makeSubmachineButton(QStringLiteral("smBtnAddSubmachine"), Qt::ToolButtonIconOnly);
-    mBtnRemoveSubmachine = makeSubmachineButton(QStringLiteral("smBtnRemoveSubmachine"), Qt::ToolButtonIconOnly);
+    // Icon-only, like every other button in this header. The first one changes meaning with the
+    // selection, and its label used to say so -- but a label reading "Open Imported Machine" is
+    // wider than half the dock, and a header row that wide drags the whole panel out over the
+    // canvas. Its icon still separates adding a submachine from entering one, its tooltip spells
+    // the current meaning out, and the Design menu carries the same action in words.
+    mBtnEnterSubmachine  = makeSubmachineButton(QStringLiteral("smBtnEnterSubmachine"));
+    mBtnGoToParent       = makeSubmachineButton(QStringLiteral("smBtnGoToParent"));
+    mBtnAddSubmachine    = makeSubmachineButton(QStringLiteral("smBtnAddSubmachine"));
+    mBtnRemoveSubmachine = makeSubmachineButton(QStringLiteral("smBtnRemoveSubmachine"));
     mStateGeneral->addHeaderWidget(submachineSep);
     mStateGeneral->addHeaderWidget(mBtnEnterSubmachine);
     mStateGeneral->addHeaderWidget(mBtnGoToParent);

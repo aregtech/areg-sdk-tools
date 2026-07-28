@@ -154,7 +154,7 @@ private slots:
     void onOpenImport(uint32_t stateId, const QString& alias);
 
     /**
-     * rief   Registers another machine picked in the browse dialog and, when \p hostStateId is
+     * \brief   Registers another machine picked in the browse dialog and, when \p hostStateId is
      *          not zero, hosts it on that state -- both in a single undo entry.
      **/
     void onAddSubmachineRequested(uint32_t hostStateId);

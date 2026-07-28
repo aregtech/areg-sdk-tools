@@ -162,14 +162,14 @@ public:
     inline SMIncludeData& getIncludes();
 
     /**
-     * rief   The include entries that name another state machine, in document order.
+     * \brief   The include entries that name another state machine, in document order.
      *          Computed on each call -- the entries live in the include list, so there is no
      *          container to hand back a reference to.
      **/
     QList<const IncludeEntry*> machineImports() const;
 
     /**
-     * rief   The machine import registered under \p alias, or nullptr. Aliases are matched
+     * \brief   The machine import registered under \p alias, or nullptr. Aliases are matched
      *          by an explicit scan: the container is keyed by location, not by alias.
      **/
     const IncludeEntry* findImportByAlias(const QString& alias) const;

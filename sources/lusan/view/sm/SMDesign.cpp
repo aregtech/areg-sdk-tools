@@ -1035,6 +1035,10 @@ void SMDesign::buildDesignPanels()
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
+    // Settle the width now, once. Until a dock is given one it keeps following what its widget
+    // asks for, so the first state or transition put into the panel would move the canvas edge --
+    // the selection deciding how much room the drawing gets. After this, only a drag does.
+    resizeDocks(QList<QDockWidget*>{ mPropertiesDock }, QList<int>{ NESMDesign::PanelDefaultWidth }, Qt::Horizontal);
 
     // F8 / Shift+F8 step through the findings (spec 9.1). The findings themselves live in the
     // output window's Validation tab, so the page asks for it and the window brings it forward

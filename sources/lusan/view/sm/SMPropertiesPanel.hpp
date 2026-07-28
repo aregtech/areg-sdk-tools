@@ -99,7 +99,7 @@ public:
     void focusConditions(uint32_t transitionId);
 
     /**
-     * rief   Binds the four submachine buttons on the State/General header to the Design page's
+     * \brief   Binds the four submachine buttons on the State/General header to the Design page's
      *          own actions. One QAction per operation: two action objects would mean two
      *          enable-state computations, and they would drift.
      **/

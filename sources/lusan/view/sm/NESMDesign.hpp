@@ -125,6 +125,12 @@ namespace NESMDesign
     //!< the user's to set. Raise it if the panel's controls become unusable when squeezed.
     constexpr int       PanelMinWidth   { 180 };
 
+    //!< The width the Design page's Properties dock is given when the page is built. A dock that
+    //!< was never assigned a width follows its widget's size hint, so the first selection that
+    //!< fills the panel would push the canvas edge aside; handing it this width once makes the
+    //!< width the user's from the start. Wide enough for the panel's own pages at the default font.
+    constexpr int       PanelDefaultWidth   { 380 };
+
     //!< The fixed canvas working area of one machine level.
     constexpr double    SceneExtent     { 10000.0 };
 

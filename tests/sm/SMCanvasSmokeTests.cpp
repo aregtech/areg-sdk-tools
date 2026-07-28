@@ -3619,6 +3619,63 @@ int main(int argc, char* argv[])
         }
     }
 
+    // --- The Properties dock keeps its width when the selection changes ---
+    {
+        std::printf("[panel] the selection fills the Properties panel, it does not resize it\n");
+
+        // Its own window: the sections above have dragged this page's docks around.
+        StateMachineModel wmodel;
+        CHECK(wmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign wdesign(wmodel);
+        wdesign.resize(1400, 900);
+        wdesign.show();
+        QApplication::processEvents();
+
+        QDockWidget* dock = wdesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* panel = (dock != nullptr ? qobject_cast<SMPropertiesPanel*>(dock->widget()) : nullptr);
+        CHECK(dock != nullptr);
+        CHECK(panel != nullptr);
+        if ((dock != nullptr) && (panel != nullptr))
+        {
+            const int width = dock->width();
+            const int empty = panel->sizeHint().width();
+            CHECK(width == NESMDesign::PanelDefaultWidth);
+
+            // Whatever the panel puts on screen, it must not ask for more room than it did with
+            // nothing selected -- that request is what used to widen the dock over the canvas.
+            const SMStateEntry* wstate = wmodel.getData().findState(QStringLiteral("LightOff"));
+            CHECK(wstate != nullptr);
+            if (wstate != nullptr)
+            {
+                wmodel.getSelectionModel().setSelection(QList<uint32_t>{ wstate->getId() });
+                QApplication::processEvents();
+                CHECK(dock->width() == width);
+                CHECK(panel->sizeHint().width() <= empty);
+            }
+
+            CHECK(wmodel.getData().findTransitionById(27) != nullptr);
+            if (wmodel.getData().findTransitionById(27) != nullptr)
+            {
+                wmodel.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+                QApplication::processEvents();
+                CHECK(dock->width() == width);
+                CHECK(panel->sizeHint().width() <= empty);
+            }
+
+            wmodel.getSelectionModel().clearSelection();
+            QApplication::processEvents();
+            CHECK(dock->width() == width);
+
+            // A width the user set stays set, selection or not.
+            wdesign.resizeDocks(QList<QDockWidget*>{ dock }, QList<int>{ 640 }, Qt::Horizontal);
+            QApplication::processEvents();
+            const int dragged = dock->width();
+            wmodel.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+            QApplication::processEvents();
+            CHECK(dock->width() == dragged);
+        }
+    }
+
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);
 }
