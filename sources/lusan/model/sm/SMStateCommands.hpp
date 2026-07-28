@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/SMStateCommands.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -33,7 +33,7 @@
  * \class   SMAddStateCommand
  * \brief   Adds a new state to a machine level. A convenience over the shared add command
  *          that builds the state entry so the caller supplies only name and kind. The name
- *          is assumed unique — paste-time de-duplication is a caller concern.
+ *          is assumed unique -- paste-time de-duplication is a caller concern.
  **/
 class SMAddStateCommand : public TDocAddCommand<SMStateEntry*, DocumentElem>
 {
@@ -69,7 +69,7 @@ private:
 /**
  * \class   SMRenameStateCommand
  * \brief   Renames a state. Name syntax and document-wide uniqueness are the caller's
- *          responsibility — the command applies the change and broadcasts it.
+ *          responsibility -- the command applies the change and broadcasts it.
  **/
 class SMRenameStateCommand : public SMCommand
 {
@@ -117,6 +117,64 @@ private:
     SMStateEntry::eHistory  mNew;   //!< The requested mode.
     SMStateEntry::eHistory  mOld;   //!< The previous mode, captured on the first redo.
     bool                    mCaptured { false };
+};
+
+/**
+ * \class   SMSetSubmachineCommand
+ * \brief   Points a state at a registered import, or unlinks it. Clearing the alias also clears
+ *          `History` and `OnFinal` in the same step: both only mean something on a composite, and
+ *          leaving them behind would report an error the user never made.
+ *
+ *          The command refuses a state that owns a painted `StateList` -- the two forms of
+ *          composition are mutually exclusive, and swapping them here would destroy a subtree
+ *          that undo could not bring back.
+ **/
+class SMSetSubmachineCommand : public SMCommand
+{
+public:
+    SMSetSubmachineCommand(  StateMachineData& data, DocModelNotifier& notifier
+                           , uint32_t stateId, const QString& alias
+                           , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+    //!< True when the state accepts the change; a no-op command otherwise.
+    bool isEffective() const;
+
+private:
+    uint32_t                mId;
+    QString                 mNew;                       //!< The requested alias (empty unlinks).
+    QString                 mOldAlias;
+    QString                 mOldFinal;
+    SMStateEntry::eHistory  mOldHistory { SMStateEntry::eHistory::None };
+    bool                    mEffective  { false };
+    bool                    mCaptured   { false };
+};
+
+/**
+ * \class   SMSetOnFinalCommand
+ * \brief   Sets (or clears) the completion-hook event a composite state sends when its
+ *          submachine reaches its top-level Final state.
+ **/
+class SMSetOnFinalCommand : public SMCommand
+{
+public:
+    SMSetOnFinalCommand(  StateMachineData& data, DocModelNotifier& notifier
+                        , uint32_t stateId, const QString& eventName
+                        , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(const QString& eventName);
+
+private:
+    uint32_t    mId;
+    QString     mNew;
+    QString     mOld;
+    bool        mCaptured { false };
 };
 
 /**
@@ -173,6 +231,43 @@ class SMRemoveStateCommand : public SMCompositeCommand
 {
 public:
     SMRemoveStateCommand(StateMachineData& data, DocModelNotifier& notifier, SMStateData& level, uint32_t stateId, const QString& text, QUndoCommand* parent = nullptr);
+};
+
+/**
+ * \class   SMRemoveCompositeCommand
+ * \brief   Turns a painted composite back into a plain state, as one undo step: the whole
+ *          nested StateList goes -- every level of it -- along with the layout entries of the
+ *          states and transitions inside, every transition of a surviving state that targeted
+ *          anything in the subtree, and the `History` / `OnFinal` attributes that only mean
+ *          something while the state is composite.
+ *
+ *          Undo re-attaches the same list object, so every ID and every geometry comes back
+ *          unchanged.
+ *
+ *          The imported form is not this command's job: unlinking an alias removes nothing, and
+ *          SMSetSubmachineCommand with an empty alias already does it (clearing History and
+ *          OnFinal in the same step). The caller picks by form; this one refuses a state with no
+ *          painted subtree.
+ **/
+class SMRemoveCompositeCommand : public SMCompositeCommand
+{
+public:
+    SMRemoveCompositeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                             , uint32_t stateId, const QString& text, QUndoCommand* parent = nullptr);
+
+    //!< True when the state owns a painted subtree and the command has an effect.
+    bool isEffective() const;
+
+    //!< How many states the removal takes with it, for the confirmation.
+    int removedStateCount() const;
+
+    //!< How many transitions of surviving states point into the subtree and go with it.
+    int removedTransitionCount() const;
+
+private:
+    bool    mEffective  { false };
+    int     mStates     { 0 };
+    int     mTransitions{ 0 };
 };
 
 #endif  // LUSAN_MODEL_SM_SMSTATECOMMANDS_HPP

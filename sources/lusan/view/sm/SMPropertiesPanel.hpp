@@ -31,6 +31,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QAction;
 class QComboBox;
 class QEvent;
 class QLabel;
@@ -42,6 +43,7 @@ class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
 class SMOperationsEditor;
+class QToolButton;
 class SMSectionChrome;
 class StateMachineModel;
 enum class eDocElementKind;
@@ -95,8 +97,18 @@ public:
      *          (edge-label double-click; validation-entry navigation).
      **/
     void focusConditions(uint32_t transitionId);
+
+    /**
+     * \brief   Binds the four submachine buttons on the State/General header to the Design page's
+     *          own actions. One QAction per operation: two action objects would mean two
+     *          enable-state computations, and they would drift.
+     **/
+    void bindSubmachineActions(QAction* enterOrAdd, QAction* goToParent, QAction* addSubmachine, QAction* removeSubmachine);
+
     inline QLineEdit* stateNameEdit() const;
     inline QComboBox* stateHistoryCombo() const;
+    inline QComboBox* stateSubmachineCombo() const;
+    inline QComboBox* stateOnFinalCombo() const;
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
@@ -141,6 +153,8 @@ private slots:
 
     void onStateNameCommit();
     void onStateHistoryCommit();
+    void onStateSubmachineCommit();
+    void onStateOnFinalCommit();
     void onStateDescriptionCommit();
     void onDoIntervalCommit();
     void onDoUntilCommit();
@@ -237,9 +251,15 @@ private:
     // State page.
     QTabWidget*         mStateTabs;     //!< The General / Enter / Do / Exit tab host.
     SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
+    QToolButton*        mBtnEnterSubmachine;  //!< Enter / open / add a substate, per selection.
+    QToolButton*        mBtnGoToParent;
+    QToolButton*        mBtnAddSubmachine;
+    QToolButton*        mBtnRemoveSubmachine;
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
     QComboBox*          mStateHistory;  //!< The history mode; only a composite may carry one.
+    QComboBox*          mStateSubmachine;   //!< The hosted import alias; empty means no import.
+    QComboBox*          mStateOnFinal;      //!< The event sent when the submachine finishes.
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
@@ -289,6 +309,16 @@ inline QLineEdit* SMPropertiesPanel::stateNameEdit() const
 inline QComboBox* SMPropertiesPanel::stateHistoryCombo() const
 {
     return mStateHistory;
+}
+
+inline QComboBox* SMPropertiesPanel::stateSubmachineCombo() const
+{
+    return mStateSubmachine;
+}
+
+inline QComboBox* SMPropertiesPanel::stateOnFinalCombo() const
+{
+    return mStateOnFinal;
 }
 
 inline QListWidget* SMPropertiesPanel::transitionList() const

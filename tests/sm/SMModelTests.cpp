@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        tests/sm/SMModelTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -163,11 +163,6 @@ namespace
             addId(ids, i.getId());
         }
 
-        for (const SMImportEntry& im : doc.getImports().getElements())
-        {
-            addId(ids, im.getId());
-        }
-
         collectStates(ids, doc.getStates());
 
         for (const SMLayoutNote& note : doc.getLayout().getNotes())
@@ -214,10 +209,13 @@ namespace
         cond->setImplement(SMMethodEntry::eImplement::Embedded);
         cond->setBody("return true;");
 
-        // Constants, includes, imports.
+        // Constants and includes; a machine import is an include entry with an alias.
         doc.getConstants().createConstant("MaxCount");
         doc.getIncludes().createInclude("common/GlobalConst.hpp");
-        doc.getImports().createImport("PedestrianCrossing");
+        if (IncludeEntry* import = doc.getIncludes().createInclude("./PedestrianCrossing.fsml"))
+        {
+            import->setAlias("PedestrianCrossing");
+        }
 
         // States: root Start + a composite Normal state with a nested level.
         SMStateData& root = doc.getStates();
@@ -280,15 +278,15 @@ namespace
 
         CHECK(doc.getOverview().getName() == QString("TrafficLight"));
         CHECK(doc.getOverview().getThreading() == SMOverviewData::eThreading::Local);
-        CHECK(doc.getFormatVersion() == VersionNumber(1, 0, 0));
+        CHECK(doc.getFormatVersion() == VersionNumber(StateMachineData::XML_FORMAT_DEFAULT));
 
         CHECK(doc.getDataTypes().getCustomDataTypes().size() == 1);
         CHECK(doc.getEvents().getElementCount() == 1);
         CHECK(doc.getTimers().getElementCount() == 3);
         CHECK(doc.getMethods().getElementCount() == 5);
         CHECK(doc.getConstants().getElementCount() == 1);
-        CHECK(doc.getIncludes().getElementCount() == 1);
-        CHECK(doc.getImports().getElementCount() == 1);
+        CHECK(doc.getIncludes().getElementCount() == 2);
+        CHECK(doc.machineImports().size() == 1);
 
         // Recursive state structure: 2 root states + 2 nested = 4 total.
         CHECK(doc.getStates().getElementCount() == 2);
@@ -318,7 +316,7 @@ namespace
         CHECK(doc.getMethods().findTrigger("AllLightsOff") == nullptr);  // action, not a trigger
         CHECK(doc.getConstants().findElement(QString("MaxCount")) != nullptr);
         CHECK(doc.getIncludes().findElement(QString("common/GlobalConst.hpp")) != nullptr);
-        CHECK(doc.getImports().findElement(QString("PedestrianCrossing")) != nullptr);
+        CHECK(doc.findImportByAlias("PedestrianCrossing") != nullptr);
         CHECK(doc.getDataTypes().findCustomDataType("eDirection") != nullptr);
 
         // State lookup is document-wide, including nested levels (spec 6.2.3).

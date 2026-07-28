@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_APP_LUSANAPPLICATION_HPP
+#ifndef LUSAN_APP_LUSANAPPLICATION_HPP
 #define LUSAN_APP_LUSANAPPLICATION_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/app/LusanApplication.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -101,6 +101,13 @@ public:
      * \return  The list of internal file extensions.
      **/
     static QStringList getInternalFileExtensions();
+
+    /**
+     * \brief   Builds a single "<label> (*.a *.b ...)" filter string from the given extensions.
+     *          An editor that may only see part of a category names its own extensions instead
+     *          of dumping the whole list into a browse dialog.
+     **/
+    static QString buildFileFilter(const QString& label, const QStringList& extensions);
 
     /**
      * \brief   Returns the list of workspace directories.

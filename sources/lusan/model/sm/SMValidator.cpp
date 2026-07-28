@@ -33,7 +33,8 @@
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
-#include "lusan/data/sm/SMImportData.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMDataTypeData.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
@@ -49,6 +50,7 @@
 
 #include <QCoreApplication>
 #include <QHash>
+#include <QRegularExpression>
 #include <QSet>
 
 namespace
@@ -154,6 +156,14 @@ namespace
         }
     }
 
+    //!< Which kind a finding on one include row carries: the kind follows the row, so a `.fsml`
+    //!< entry reports as Import and everything else as Include.
+    eDocElementKind kindOfInclude(const IncludeEntry& entry)
+    {
+        return (includeKindOf(entry.getLocation(), QStringLiteral("fsml")) == eIncludeKind::Document
+                ? eDocElementKind::Import : eDocElementKind::Include);
+    }
+
     /**
      * \class   Ctx
      * \brief   One validation run: holds the document, the accumulated findings, and the
@@ -177,6 +187,8 @@ namespace
         void collectLevels(const SMStateData& level, bool isRoot, uint32_t ownerId, QList<LevelInfo>& out) const;
 
         void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name);
+        bool fragmentResolves(const QString& fragment) const;
+        QString unresolvedFragment(const QString& typeName) const;
         bool typeResolves(const QString& typeName) const;
         void checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName);
 
@@ -208,6 +220,9 @@ namespace
         // Warning rules (10.2 rules 1-11).
         void checkWarnings(const QList<LevelInfo>& levels);
         void checkGuards();
+
+        // Import rules (10.1 rules 19/22, 10.2 rule 12).
+        void checkImports(const QList<LevelInfo>& levels);
 
     private:
         const StateMachineData& mData;
@@ -254,22 +269,52 @@ namespace
         }
     }
 
+    bool Ctx::fragmentResolves(const QString& fragment) const
+    {
+        // Anything that is not a plain identifier after trimming -- a nested expression, a
+        // pointer or reference suffix -- is left alone. This is a type registry lookup, not a
+        // C++ parser.
+        if (StateMachineData::isValidIdentifier(fragment) == false)
+            return true;
+        if (DataTypeFactory::fromString(fragment) != DataTypeBase::eCategory::Undefined)
+            return true;
+        return (mData.getDataTypes().findCustomDataType(fragment) != nullptr);
+    }
+
+    QString Ctx::unresolvedFragment(const QString& typeName) const
+    {
+        // A templated type is the container name plus its arguments, and every one of them is a
+        // type that has to exist. Checking only the whole string let `NEArray<Foo>` through with
+        // an undefined Foo.
+        const QStringList fragments = typeName.split(QRegularExpression(QStringLiteral("[<>,]")), Qt::SkipEmptyParts);
+        for (const QString& fragment : fragments)
+        {
+            const QString trimmed = fragment.trimmed();
+            if ((trimmed.isEmpty() == false) && (fragmentResolves(trimmed) == false))
+            {
+                return trimmed;
+            }
+        }
+
+        return QString();
+    }
+
     bool Ctx::typeResolves(const QString& typeName) const
     {
-        // Only plain identifiers are resolved here; structured or templated type strings, and
-        // type compatibility of the value against the type, are handled by other validators.
-        if (StateMachineData::isValidIdentifier(typeName) == false)
-            return true;
-        if (DataTypeFactory::fromString(typeName) != DataTypeBase::eCategory::Undefined)
-            return true;
-        return (mData.getDataTypes().findCustomDataType(typeName) != nullptr);
+        return unresolvedFragment(typeName).isEmpty();
     }
 
     void Ctx::checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName)
     {
-        if ((typeName.isEmpty() == false) && (typeResolves(typeName) == false))
+        if (typeName.isEmpty())
+            return;
+
+        // Report the offending fragment, not the whole string: "Foo does not resolve" is
+        // actionable, "NEMap<String, Foo> does not resolve" is not.
+        const QString unresolved = unresolvedFragment(typeName);
+        if (unresolved.isEmpty() == false)
         {
-            add(id, kind, eSeverity::Error, 6, vtr("Data type '%1' does not resolve").arg(typeName));
+            add(id, kind, eSeverity::Error, 6, vtr("Data type '%1' does not resolve").arg(unresolved));
         }
     }
 
@@ -338,7 +383,7 @@ namespace
         for (const SMTimerEntry& t : mData.getTimers().getElements())     counts[t.getId()] += 1;
         for (const SMAttributeEntry& a : mData.getAttributes().getElements()) counts[a.getId()] += 1;
         for (const ConstantEntry& c : mData.getConstants().getElements())  counts[c.getId()] += 1;
-        for (const SMImportEntry& i : mData.getImports().getElements())    counts[i.getId()] += 1;
+        for (const IncludeEntry& i : mData.getIncludes().getElements())    counts[i.getId()] += 1;
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
             if (d != nullptr) counts[d->getId()] += 1;
 
@@ -422,9 +467,26 @@ namespace
         for (const ConstantEntry& c : mData.getConstants().getElements()) { cNames << c.getName(); cIds << c.getId(); }
         dupWithin(cNames, cIds, eDocElementKind::Constant);
 
+        // The include registry is keyed by location, so getName() is the path -- the alias is the
+        // registry name here, and collecting getName() would quietly check the wrong thing.
         QStringList iNames; QList<uint32_t> iIds;
-        for (const SMImportEntry& i : mData.getImports().getElements()) { iNames << i.getName(); iIds << i.getId(); }
+        for (const IncludeEntry* i : mData.machineImports()) { iNames << i->getAlias(); iIds << i->getId(); }
         dupWithin(iNames, iIds, eDocElementKind::Import);
+
+        // A file listed twice is redundant rather than wrong: the second entry changes nothing
+        // about the generated machine. The UI cannot create one, so this only fires on a
+        // hand-edited or merged file, which is exactly when a quiet nudge helps.
+        QHash<QString, int> seenLocations;
+        for (const IncludeEntry& i : mData.getIncludes().getElements())
+        {
+            if (i.getLocation().isEmpty())
+                continue;
+            if (++seenLocations[i.getLocation()] > 1)
+            {
+                add(i.getId(), kindOfInclude(i), eSeverity::Warning, 4
+                    , vtr("'%1' is included more than once").arg(i.getLocation()));
+            }
+        }
 
         QStringList dNames; QList<uint32_t> dIds;
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
@@ -535,7 +597,7 @@ namespace
             add(id, eDocElementKind::State, eSeverity::Error, 18, vtr("OnFinal is only allowed on a composite state"));
 
         // A submachine alias must name a declared import; the completion hook must name an event.
-        if (state.isImportedSubmachine() && (mData.getImports().findElement(state.getSubmachine()) == nullptr))
+        if (state.isImportedSubmachine() && (mData.findImportByAlias(state.getSubmachine()) == nullptr))
             add(id, eDocElementKind::State, eSeverity::Error, 6, vtr("Submachine import '%1' is not declared").arg(state.getSubmachine()));
         if ((state.getOnFinal().isEmpty() == false) && (mData.getEvents().findEvent(state.getOnFinal()) == nullptr))
             add(id, eDocElementKind::State, eSeverity::Error, 6, vtr("OnFinal event '%1' is not declared").arg(state.getOnFinal()));
@@ -1029,6 +1091,9 @@ namespace
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("Embedded condition '%1' has an empty body").arg(m->getName()));
             if ((embedded == false) && (m->getBody().trimmed().isEmpty() == false))
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("A body is only allowed on an Embedded condition"));
+            // Return belongs to a condition method and is a declared type like any other.
+            if (m->isCondition())
+                checkDataType(m->getId(), eDocElementKind::Method, m->getReturn());
             for (const MethodParameter& p : m->getElements())
                 checkDataType(p.getId(), eDocElementKind::Method, p.getType());
         }
@@ -1051,15 +1116,143 @@ namespace
             checkIdentifier(c.getId(), eDocElementKind::Constant, c.getName());
             checkDataType(c.getId(), eDocElementKind::Constant, c.getType());
         }
-        for (const SMImportEntry& i : mData.getImports().getElements())
-            checkIdentifier(i.getId(), eDocElementKind::Import, i.getName());
+        for (const IncludeEntry* i : mData.machineImports())
+        {
+            if (i->getAlias().isEmpty())
+                add(i->getId(), eDocElementKind::Import, eSeverity::Error, 18
+                    , vtr("Imported machine '%1' has no alias, so no state can host it").arg(i->getLocation()));
+            else
+                checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias());
+        }
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
             if (d != nullptr) checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
 
+        checkImports(levels);
         checkWarnings(levels);
         checkGuards();
 
         return mIssues;
+    }
+
+    void Ctx::checkImports(const QList<LevelInfo>& levels)
+    {
+        // Guards the recursive "the imported document fails its own validation" check. A cycle
+        // is caught below, but a document reached through a chain that does not close is still
+        // reached once per host, so the depth stops the work from multiplying.
+        static thread_local int _depth = 0;
+
+        QSet<QString> brokenAliases;
+        for (const IncludeEntry* import : mData.machineImports())
+        {
+            const IncludeEntry& entry = *import;
+            const uint32_t id = entry.getId();
+            const QString  name = entry.getAlias();
+
+            QStringList cycle;
+            if (SMImportResolver::findCycle(mData, entry, cycle))
+            {
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' closes a cycle: %2").arg(name, cycle.join(QStringLiteral(" imports "))));
+                brokenAliases.insert(name);
+                continue;
+            }
+
+            const SMImportResolver::Resolution resolution = SMImportResolver::resolve(mData, entry);
+            switch (resolution.state)
+            {
+            case SMImportResolver::eState::NoLocation:
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' names no file").arg(name));
+                brokenAliases.insert(name);
+                continue;
+
+            case SMImportResolver::eState::NotFound:
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' points at a file that does not exist: %2").arg(name, entry.getLocation()));
+                brokenAliases.insert(name);
+                continue;
+
+            case SMImportResolver::eState::ParseFailed:
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' cannot be read as a state machine: %2").arg(name, entry.getLocation()));
+                brokenAliases.insert(name);
+                continue;
+
+            case SMImportResolver::eState::Resolved:
+                break;
+            }
+
+            // The cycle check terminates but does not bound the work: a wide graph is walked on
+            // every pass. The depth limit is what makes that cost predictable, and it gives the
+            // user a rule instead of a slowdown. Painted nesting is not counted here at all.
+            QStringList deep;
+            if (SMImportResolver::importDepth(resolution.absolutePath, SMImportResolver::MAX_IMPORT_DEPTH, deep)
+                > SMImportResolver::MAX_IMPORT_DEPTH)
+            {
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Imported machine '%1' nests more than %2 levels of imports")
+                        .arg(name).arg(SMImportResolver::MAX_IMPORT_DEPTH));
+                brokenAliases.insert(name);
+                continue;
+            }
+
+            const VersionNumber& pinned = entry.getVersion();
+            const VersionNumber& actual = resolution.actualVersion;
+            if (pinned.getMajor() != actual.getMajor())
+            {
+                add(id, eDocElementKind::Import, eSeverity::Error, 22
+                    , vtr("Import '%1' is pinned to version %2 but the file is %3; use Update to accept it")
+                        .arg(name, pinned.toString(), actual.toString()));
+            }
+            else if (pinned.getMinor() != actual.getMinor())
+            {
+                add(id, eDocElementKind::Import, eSeverity::Warning, 12
+                    , vtr("Import '%1' is pinned to version %2, the file is %3; updating is recommended")
+                        .arg(name, pinned.toString(), actual.toString()));
+            }
+            else if (pinned.getPatch() != actual.getPatch())
+            {
+                add(id, eDocElementKind::Import, eSeverity::Info, 12
+                    , vtr("Import '%1' is pinned to version %2, the file is %3")
+                        .arg(name, pinned.toString(), actual.toString()));
+            }
+
+            if (_depth == 0)
+            {
+                ++_depth;
+                const QList<SMIssue> nested = SMValidator::validate(*resolution.document);
+                --_depth;
+                for (const SMIssue& issue : nested)
+                {
+                    if (issue.severity == eSeverity::Error)
+                    {
+                        add(id, eDocElementKind::Import, eSeverity::Error, 19
+                            , vtr("Imported machine '%1' has errors of its own: %2").arg(name, issue.message));
+                        brokenAliases.insert(name);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (brokenAliases.isEmpty())
+        {
+            return;
+        }
+
+        // The registration carries the finding, and so does every state that hosts it: the user
+        // works on the canvas, and a state whose machine cannot be loaded has to say so there.
+        for (const LevelInfo& info : levels)
+        {
+            for (const SMStateEntry* state : info.level->getElements())
+            {
+                if ((state != nullptr) && brokenAliases.contains(state->getSubmachine()))
+                {
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 19
+                        , vtr("State '%1' hosts submachine '%2', which is not available").arg(state->getName(), state->getSubmachine()));
+                }
+            }
+        }
     }
 
     void Ctx::checkGuards()
@@ -1326,14 +1519,14 @@ namespace
             if (constsUsed.contains(c.getName()) == false)
                 add(c.getId(), eDocElementKind::Constant, eSeverity::Info, 4, vtr("Constant '%1' is never referenced").arg(c.getName()));
         }
-        for (const SMImportEntry& i : mData.getImports().getElements())
+        for (const IncludeEntry* i : mData.machineImports())
         {
             // An import is always another `.fsml` machine brought in to serve as a submachine, so
             // one that no state adopts was imported for a purpose that never happened. That is the
             // one import case worth a warning; C++ includes live in their own registry and carry
             // no such expectation.
-            if (importsUsed.contains(i.getName()) == false)
-                add(i.getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never used as a submachine").arg(i.getName()));
+            if ((i->getAlias().isEmpty() == false) && (importsUsed.contains(i->getAlias()) == false))
+                add(i->getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never used as a submachine").arg(i->getAlias()));
         }
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {

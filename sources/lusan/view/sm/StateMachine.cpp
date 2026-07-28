@@ -20,8 +20,11 @@
 #include "lusan/view/sm/StateMachine.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
+#include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
@@ -40,6 +43,7 @@
 
 #include <QAction>
 #include <QDir>
+#include <QFileInfo>
 #include <QLabel>
 #include <QMessageBox>
 #include <QTimer>
@@ -318,6 +322,7 @@ void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t dec
     case SMReferences::eTarget::Timer:      pageIndex = static_cast<int>(PageEvents);        break;
     case SMReferences::eTarget::Attribute:  pageIndex = static_cast<int>(PageAttributes);    break;
     case SMReferences::eTarget::Constant:   pageIndex = static_cast<int>(PageConstants);     break;
+    case SMReferences::eTarget::Import:     pageIndex = static_cast<int>(PageIncludes);      break;
     case SMReferences::eTarget::State:      return;     // states are revealed on the canvas, not here.
     }
 
@@ -334,7 +339,79 @@ void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t dec
     case SMReferences::eTarget::Timer:      static_cast<SMEvent*>(page)->revealTimer(declId);        break;
     case SMReferences::eTarget::Attribute:  static_cast<SMAttribute*>(page)->revealElement(declId);  break;
     case SMReferences::eTarget::Constant:   static_cast<SMConstant*>(page)->revealElement(declId);   break;
+    case SMReferences::eTarget::Import:     static_cast<SMInclude*>(page)->revealElement(declId);    break;
     default:                                                                                         break;
+    }
+}
+
+void StateMachine::onAddSubmachineRequested(uint32_t hostStateId)
+{
+    SMIncludeModel& includes = mModel.getIncludeModel();
+    const QString picked = SMInclude::browseForMachine(includes, this);
+    if (picked.isEmpty())
+    {
+        return;
+    }
+
+    // One registration per file, hosted by as many states as the user likes -- so a file that is
+    // already in the list is linked, not registered again under a second alias.
+    const QString location = includes.storableLocation(picked);
+    const IncludeEntry* existing = includes.findInclude(location);
+    if ((existing != nullptr) && (hostStateId == 0))
+    {
+        QMessageBox::information(this, tr("Already Imported")
+                                , tr("'%1' is already registered as '%2'. Select a plain state to host it.")
+                                  .arg(QFileInfo(picked).fileName(), existing->getAlias()));
+        return;
+    }
+
+    // Registering and hosting are one gesture, so they are one undo entry. Without the link the
+    // button would be a tab shortcut wearing a misleading name.
+    mModel.getUndoStack().beginMacro(tr("Add submachine"));
+    const IncludeEntry* entry = (existing != nullptr ? existing : includes.createInclude(location));
+    if ((entry != nullptr) && (hostStateId != 0))
+    {
+        SMSetSubmachineCommand* link = new SMSetSubmachineCommand(mModel.getData(), mModel.getNotifier(), hostStateId
+                                                                 , entry->getAlias()
+                                                                 , tr("Host submachine %1").arg(entry->getAlias()));
+        if (link->isEffective())
+        {
+            mModel.getUndoStack().push(link);
+        }
+        else
+        {
+            delete link;
+        }
+    }
+
+    mModel.getUndoStack().endMacro();
+}
+
+void StateMachine::onOpenImport(uint32_t stateId, const QString& alias)
+{
+    const IncludeEntry* entry = mModel.getData().findImportByAlias(alias);
+    if (entry == nullptr)
+    {
+        QMessageBox::warning(this, tr("Submachine")
+                            , tr("This state names the machine '%1', which is not in the import list.").arg(alias));
+        return;
+    }
+
+    const SMImportResolver::Resolution resolution = SMImportResolver::resolve(mModel.getData(), *entry);
+    if (resolution.isResolved() == false)
+    {
+        QMessageBox::warning(this, tr("Submachine")
+                            , tr("The machine '%1' cannot be opened:\n%2").arg(alias, entry->getLocation()));
+        return;
+    }
+
+    const SMStateEntry* state = mModel.getData().findStateById(stateId);
+    const QString host = mModel.getData().getOverview().getName();
+    const QString origin = tr("%1 : %2").arg(host.isEmpty() ? userFriendlyCurrentFile() : host
+                                            , state != nullptr ? state->getName() : alias);
+    if (mMainWindow != nullptr)
+    {
+        mMainWindow->openStateMachineReadOnly(resolution.absolutePath, origin);
     }
 }
 
@@ -556,7 +633,20 @@ QString StateMachine::suggestedSaveName() const
 
 bool StateMachine::writeToFile(const QString& filePath)
 {
+    if (mModel.isReadOnly())
+    {
+        QMessageBox::information(this, tr("Read Only")
+                                , tr("This is a read only view of an imported machine. Open the file as its own document to change it."));
+        return false;
+    }
+
     return mModel.saveToFile(filePath);
+}
+
+void StateMachine::openReadOnly(const QString& origin)
+{
+    mModel.setReadOnly(true, origin);
+    setWindowTitle(tr("%1 [read only]").arg(userFriendlyCurrentFile()));
 }
 
 bool StateMachine::maybeSave()
@@ -684,6 +774,7 @@ void StateMachine::ensureTabInitialized(int index)
         SMDesign* design = new SMDesign(mModel, &mTabWidget);
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
+        connect(design, &SMDesign::signalAddSubmachineRequested, this, &StateMachine::onAddSubmachineRequested);
         connect(design, &SMDesign::signalNavigateToPage, this, &StateMachine::onNavigateToPage);
         connect(design, &SMDesign::signalNavigateToDefinition, this, &StateMachine::navigateToDefinition);
         // The canvas View submenu moves the toolbar / Properties / Outline between the Design
@@ -702,6 +793,7 @@ void StateMachine::ensureTabInitialized(int index)
                 mMainWindow->showValidationOutput(step);
             }
         });
+        connect(design, &SMDesign::signalOpenImport, this, &StateMachine::onOpenImport);
         page = design;
     }
     else

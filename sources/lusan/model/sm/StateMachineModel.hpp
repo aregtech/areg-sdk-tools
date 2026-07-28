@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/StateMachineModel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -30,11 +30,11 @@
 #include "lusan/model/sm/SMConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
+#include "lusan/model/sm/SMUndoStack.hpp"
 #include "lusan/model/sm/SMValidationController.hpp"
 
 #include <QObject>
 #include <QTimer>
-#include <QUndoStack>
 #include <memory>
 
 class StateMachineModel : public QObject
@@ -63,10 +63,23 @@ public:
     inline bool isDirty() const;
     inline const QString& getFilePath() const;
 
+    /**
+     * \brief   Marks the document read-only: the undo stack refuses every command and saving is
+     *          declined. Used for a submachine import opened from its host -- the import is
+     *          edited by opening it as its own document, never through a host.
+     * \param   readOnly    Whether the document may be changed.
+     * \param   origin      Where the read-only view was opened from (host document and alias),
+     *                      shown by the editor so the user knows which document they are in.
+     **/
+    void setReadOnly(bool readOnly, const QString& origin = QString());
+
+    inline bool isReadOnly() const;
+    inline const QString& getReadOnlyOrigin() const;
+
     inline StateMachineData& getData();
     inline const StateMachineData& getData() const;
-    inline QUndoStack& getUndoStack();
-    inline const QUndoStack& getUndoStack() const;
+    inline SMUndoStack& getUndoStack();
+    inline const SMUndoStack& getUndoStack() const;
     inline DocModelNotifier& getNotifier();
     inline SMOverviewModel& getOverviewModel();
     inline SMDataTypeModel& getDataTypeModel();
@@ -94,7 +107,7 @@ private:
 private:
     std::unique_ptr<StateMachineData> mData;
     DocModelNotifier mNotifier;
-    QUndoStack      mUndoStack;
+    SMUndoStack     mUndoStack;
     QTimer          mAutosaveTimer;
     SMOverviewModel mOverviewModel;
     SMDataTypeModel mDataTypeModel;
@@ -106,6 +119,7 @@ private:
     SMIncludeModel  mIncludeModel;
     SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
+    QString         mReadOnlyOrigin;    //!< Non-empty only for a read-only import view.
     SMValidationController mValidationController; //!< Background structural/reference validation.
 };
 
@@ -135,12 +149,22 @@ inline const StateMachineData& StateMachineModel::getData() const
     return *mData;
 }
 
-inline QUndoStack& StateMachineModel::getUndoStack()
+inline bool StateMachineModel::isReadOnly() const
+{
+    return mUndoStack.isReadOnly();
+}
+
+inline const QString& StateMachineModel::getReadOnlyOrigin() const
+{
+    return mReadOnlyOrigin;
+}
+
+inline SMUndoStack& StateMachineModel::getUndoStack()
 {
     return mUndoStack;
 }
 
-inline const QUndoStack& StateMachineModel::getUndoStack() const
+inline const SMUndoStack& StateMachineModel::getUndoStack() const
 {
     return mUndoStack;
 }

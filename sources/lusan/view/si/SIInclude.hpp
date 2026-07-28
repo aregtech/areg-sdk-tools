@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_APPLICATION_SI_SIINCLUDE_HPP
+#ifndef LUSAN_APPLICATION_SI_SIINCLUDE_HPP
 #define LUSAN_APPLICATION_SI_SIINCLUDE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIInclude.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -210,13 +210,26 @@ private:
     inline void cellChanged(int row, int col, const QString& newValue);
 
     /**
-     * \brief   Sets the texts in the table of the attribute entry.
-     * \param   row     The row index of the attribute.
-     * \param   entry   The attribute entry object.
-     * \param   insert  If true, inserts new the row. Otherwise, updates the row.
-     *                  If `row` parameter is negative, always inserts new entry at the end of the list.
+     * \brief   Fills the columns of one entry row and moves it into the group its location
+     *          belongs to.
+     * \param   item    The row to fill.
+     * \param   entry   The include entry behind it.
      **/
-    inline void setTexts(int row, const IncludeEntry& entry, bool insert = false);
+    inline void setTexts(QTreeWidgetItem* item, const IncludeEntry& entry);
+
+    /**
+     * \brief   Rebuilds every entry row from the model, in document order, under its group.
+     **/
+    inline void rebuildRows();
+
+    //!< The include ID on the selected row; 0 when a group heading (or nothing) is selected.
+    inline uint32_t currentId() const;
+
+    //!< The position of the include with the given ID in the model list, or -1.
+    inline int modelIndexOf(uint32_t id) const;
+
+    //!< Selects the row of the given include ID; does nothing when it has no row.
+    inline void selectById(uint32_t id);
 
     /**
      * \brief   Updates the controls to display the control entry details in the details widget.
@@ -224,21 +237,6 @@ private:
      * \param   updateAll   If true, updates all details. Otherwise, updates only the name, type, and value.
      **/
     inline void updateDetails(const IncludeEntry* entry, bool updateAll = false);
-
-    /**
-     * \brief   Finds and returns valid pointer to the include object entry in the specified row.
-     * \param   row     The row index of the include entry.
-     **/
-    inline IncludeEntry* findInclude(int row);    
-    inline const IncludeEntry* findInclude(int row) const;
-
-    /**
-     * \brief   Swaps the includes by given row indexes.
-     *          The swapping will not change the order of IDs, but will swap the data.
-     * \param   firstRow    The row index of the first include to swap.
-     * \param   secondRow   The row index of the second include to swap.
-     **/
-    inline void swapIncludes(int firstRow, int secondRow);
 
     /**
      * \brief   Updates the tool buttons.

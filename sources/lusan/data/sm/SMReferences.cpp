@@ -163,6 +163,14 @@ namespace
             collectStateList(*state, state->getExitList(),  QStringLiteral("exit"),  out);
             collectStateList(*state, state->getDoList(),    QStringLiteral("do"),    out);
 
+            // The hosted submachine: the state names an entry of the ImportList by alias.
+            if (state->getSubmachine().isEmpty() == false)
+            {
+                const SMReferences::Use use{ state->getId(), true, describeStateSite(*state, QStringLiteral("Submachine")) };
+                out.append({ eTarget::Import, false, state->getSubmachine(), 0, use
+                           , [state](const QString& v) { state->setSubmachine(v); } });
+            }
+
             // The OnFinal completion-hook event.
             if (state->getOnFinal().isEmpty() == false)
             {

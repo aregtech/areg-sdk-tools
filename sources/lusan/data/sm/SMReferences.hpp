@@ -68,6 +68,7 @@ namespace SMReferences
         , Timer         //!< A timer (transition `Stimulus` kind Timer; `TimerStart`/`TimerStop`).
         , Attribute     //!< An attribute (`AttributeSet`; argument/value `Value`, source Attribute; guard).
         , Constant      //!< A constant (argument/value `Value`, source Constant; guard).
+        , Import        //!< A submachine import (`State@Submachine`).
     };
 
     /**

@@ -52,6 +52,7 @@
 #include <QEvent>
 #include <QFont>
 #include <QFormLayout>
+#include <QFrame>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -63,6 +64,7 @@
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <functional>
@@ -195,9 +197,15 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mUpdating     (false)
     , mStateTabs    (nullptr)
     , mStateGeneral (nullptr)
+    , mBtnEnterSubmachine(nullptr)
+    , mBtnGoToParent(nullptr)
+    , mBtnAddSubmachine(nullptr)
+    , mBtnRemoveSubmachine(nullptr)
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateHistory (nullptr)
+    , mStateSubmachine(nullptr)
+    , mStateOnFinal (nullptr)
     , mStateDesc    (nullptr)
     , mEnterOps     (nullptr)
     , mExitOps      (nullptr)
@@ -241,9 +249,20 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     // transition is on screen, rebuild its stimulus picker so the new stimulus is selectable
     // immediately (the added element's id is never mCurrentId, so onElementChanged misses it).
     connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) {
-        if ((mPage == PageTransition) && (isEditing() == false)
+        if (isEditing())
+        {
+            return;
+        }
+
+        if ((mPage == PageTransition)
             && ((kind == eDocElementKind::Method) || (kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)))
         {
+            refresh();
+        }
+        else if ((mPage == PageState) && (kind == eDocElementKind::Import))
+        {
+            // A machine registered on the Includes page has to be selectable here at once;
+            // otherwise the Add Submachine button looks like it did nothing.
             refresh();
         }
     });
@@ -288,6 +307,10 @@ void SMPropertiesPanel::buildStatePage()
     mStateHistory->addItem(tr("Deep"), static_cast<int>(SMStateEntry::eHistory::Deep));
     mStateHistory->setItemData(1, tr("Coming back activates the substate that was active last time"), Qt::ToolTipRole);
     mStateHistory->setItemData(2, tr("Coming back restores the whole path that was active last time, down to the leaf"), Qt::ToolTipRole);
+    mStateSubmachine = new QComboBox(this);
+    mStateSubmachine->setObjectName(QStringLiteral("smStateSubmachine"));
+    mStateOnFinal = new QComboBox(this);
+    mStateOnFinal->setObjectName(QStringLiteral("smStateOnFinal"));
     mTransitions = new ReorderList(this);
     mStateDesc = new QPlainTextEdit(this);
 
@@ -304,6 +327,8 @@ void SMPropertiesPanel::buildStatePage()
     form->setContentsMargins(6, 6, 6, 6);
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
+    form->addRow(tr("Submachine:"), mStateSubmachine);
+    form->addRow(tr("On Final:"), mStateOnFinal);
     form->addRow(tr("History:"), mStateHistory);
     form->addRow(tr("Description:"), mStateDesc);
 
@@ -313,6 +338,37 @@ void SMPropertiesPanel::buildStatePage()
                              , tr("The state name, kind and description"));
     mStateGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionList), tr("Transitions"), mTransitions
                              , tr("The transitions leaving this state"));
+    // The submachine controls: the same operations the Design menu and toolbar carry, put where
+    // the user already is when they decide a state needs one. A separator keeps them from reading
+    // as more section-jump buttons.
+    QFrame* submachineSep = new QFrame(this);
+    submachineSep->setFrameShape(QFrame::VLine);
+    submachineSep->setMaximumSize(12, 20);
+    const auto makeSubmachineButton = [this](const QString& name) -> QToolButton*
+    {
+        QToolButton* button = new QToolButton(this);
+        button->setObjectName(name);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        button->setAutoRaise(true);
+        button->setCursor(Qt::PointingHandCursor);
+        return button;
+    };
+
+    // Icon-only, like every other button in this header. The first one changes meaning with the
+    // selection, and its label used to say so -- but a label reading "Open Imported Machine" is
+    // wider than half the dock, and a header row that wide drags the whole panel out over the
+    // canvas. Its icon still separates adding a submachine from entering one, its tooltip spells
+    // the current meaning out, and the Design menu carries the same action in words.
+    mBtnEnterSubmachine  = makeSubmachineButton(QStringLiteral("smBtnEnterSubmachine"));
+    mBtnGoToParent       = makeSubmachineButton(QStringLiteral("smBtnGoToParent"));
+    mBtnAddSubmachine    = makeSubmachineButton(QStringLiteral("smBtnAddSubmachine"));
+    mBtnRemoveSubmachine = makeSubmachineButton(QStringLiteral("smBtnRemoveSubmachine"));
+    mStateGeneral->addHeaderWidget(submachineSep);
+    mStateGeneral->addHeaderWidget(mBtnEnterSubmachine);
+    mStateGeneral->addHeaderWidget(mBtnGoToParent);
+    mStateGeneral->addHeaderWidget(mBtnAddSubmachine);
+    mStateGeneral->addHeaderWidget(mBtnRemoveSubmachine);
+
     mStateGeneral->setCompact(false);
     // Both sections start OPEN: selecting a state must land on an editable name, a readable kind and
     // the description without a click, which is what a General tab is for. Sections are still
@@ -330,6 +386,8 @@ void SMPropertiesPanel::buildStatePage()
         }
     });
     connect(mStateHistory, &QComboBox::activated, this, &SMPropertiesPanel::onStateHistoryCommit);
+    connect(mStateSubmachine, &QComboBox::activated, this, &SMPropertiesPanel::onStateSubmachineCommit);
+    connect(mStateOnFinal, &QComboBox::activated, this, &SMPropertiesPanel::onStateOnFinalCommit);
     connect(mTransitions, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { onTransitionActivated(); });
 
     static_cast<ReorderList*>(mTransitions)->mOnReorder = [this](int from, int to)
@@ -384,6 +442,16 @@ void SMPropertiesPanel::buildStatePage()
     mActionSlots.append({ eOpList::Exit,  mExitOps,  exitTab });
 
     mStack->insertWidget(PageState, mStateTabs);
+}
+
+void SMPropertiesPanel::bindSubmachineActions(QAction* enterOrAdd, QAction* goToParent, QAction* addSubmachine, QAction* removeSubmachine)
+{
+    // setDefaultAction makes each button mirror its action's text, icon, tooltip and enabled
+    // state, which is how the first button's label follows the selection for free.
+    mBtnEnterSubmachine->setDefaultAction(enterOrAdd);
+    mBtnGoToParent->setDefaultAction(goToParent);
+    mBtnAddSubmachine->setDefaultAction(addSubmachine);
+    mBtnRemoveSubmachine->setDefaultAction(removeSubmachine);
 }
 
 void SMPropertiesPanel::buildTransitionPage()
@@ -603,6 +671,53 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     // says why instead of a silently missing one -- the same field then comes alive the moment
     // the state grows a submachine.
     const bool composite = state->isComposite();
+
+    // A state hosts an import or paints its own substates, never both. Once substates are painted
+    // the picker is closed: swapping to an import would delete a subtree that undo cannot rebuild.
+    const bool canHost = (state->getKind() == SMStateEntry::eStateKind::Normal) && (state->hasNestedStates() == false);
+    mStateSubmachine->clear();
+    mStateSubmachine->addItem(tr("(none)"), QString());
+    for (const QString& alias : mModel.getIncludeModel().getAliases())
+    {
+        mStateSubmachine->addItem(alias, alias);
+    }
+
+    // A hand-written file may name an import that is no longer registered; showing it keeps the
+    // panel honest about what the document says (validation reports the missing declaration).
+    const QString submachine = state->getSubmachine();
+    if ((submachine.isEmpty() == false) && (mStateSubmachine->findData(submachine) < 0))
+    {
+        mStateSubmachine->addItem(tr("%1 (not registered)").arg(submachine), submachine);
+    }
+
+    mStateSubmachine->setCurrentIndex(qMax(0, mStateSubmachine->findData(submachine)));
+    mStateSubmachine->setEnabled(canHost);
+    mStateSubmachine->setToolTip(canHost
+                                 ? tr("The imported machine this state runs")
+                                 : tr("This state paints its own substates, so it cannot host an imported machine"));
+
+    mStateOnFinal->clear();
+    mStateOnFinal->addItem(tr("(none)"), QString());
+    for (const SMEventEntry* event : mModel.getData().getEvents().getElements())
+    {
+        if (event != nullptr)
+        {
+            mStateOnFinal->addItem(event->getName(), event->getName());
+        }
+    }
+
+    const QString onFinal = state->getOnFinal();
+    if ((onFinal.isEmpty() == false) && (mStateOnFinal->findData(onFinal) < 0))
+    {
+        mStateOnFinal->addItem(tr("%1 (not declared)").arg(onFinal), onFinal);
+    }
+
+    mStateOnFinal->setCurrentIndex(qMax(0, mStateOnFinal->findData(onFinal)));
+    mStateOnFinal->setEnabled(composite);
+    mStateOnFinal->setToolTip(composite
+                              ? tr("The event sent when the submachine reaches its Final state")
+                              : tr("Only a state with a submachine can finish"));
+
     mStateHistory->setCurrentIndex(mStateHistory->findData(static_cast<int>(state->getHistory())));
     mStateHistory->setEnabled(composite);
     mStateHistory->setToolTip(composite
@@ -783,8 +898,7 @@ void SMPropertiesPanel::showRegistry(uint32_t elementId)
         || (findEntryName(data.getTimers().getElements(), elementId, name)     && (kind = tr("Timer"), true))
         || (findEntryName(data.getMethods().getElements(), elementId, name)    && (kind = tr("Method"), true))
         || (findEntryName(data.getConstants().getElements(), elementId, name)  && (kind = tr("Constant"), true))
-        || (findEntryName(data.getIncludes().getElements(), elementId, name)   && (kind = tr("Include"), true))
-        || (findEntryName(data.getImports().getElements(), elementId, name)    && (kind = tr("Import"), true));
+        || (findEntryName(data.getIncludes().getElements(), elementId, name)   && (kind = tr("Include"), true));
 
     if (found)
     {
@@ -851,6 +965,62 @@ void SMPropertiesPanel::onStateHistoryCommit()
     }
 
     mModel.getUndoStack().push(new SMSetHistoryCommand(data, mModel.getNotifier(), mCurrentId, history, tr("Set history mode")));
+}
+
+void SMPropertiesPanel::onStateSubmachineCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const QString alias = mStateSubmachine->currentData().toString();
+    if (alias == state->getSubmachine())
+    {
+        return;
+    }
+
+    SMSetSubmachineCommand* command = new SMSetSubmachineCommand(data, mModel.getNotifier(), mCurrentId, alias
+                                                               , alias.isEmpty() ? tr("Remove submachine") : tr("Set submachine"));
+    if (command->isEffective())
+    {
+        mModel.getUndoStack().push(command);
+    }
+    else
+    {
+        delete command;
+        showState(mCurrentId);
+    }
+}
+
+void SMPropertiesPanel::onStateOnFinalCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const QString event = mStateOnFinal->currentData().toString();
+    if ((event == state->getOnFinal()) || (state->isComposite() == false))
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetOnFinalCommand(data, mModel.getNotifier(), mCurrentId, event, tr("Set completion event")));
 }
 
 void SMPropertiesPanel::onStateDescriptionCommit()
@@ -1182,6 +1352,12 @@ void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
         // current triggers (live sync). A rename already routes through onNameChanged.
         refresh();
     }
+    else if ((mPage == PageState) && (kind == eDocElementKind::Import))
+    {
+        // An alias rename rewrites the hosting states through the reference-rewrite command, but
+        // the combo item text is built here and stays stale until the page is rebuilt.
+        refresh();
+    }
 }
 
 void SMPropertiesPanel::onElementRemoved(uint32_t id, eDocElementKind kind)
@@ -1189,6 +1365,10 @@ void SMPropertiesPanel::onElementRemoved(uint32_t id, eDocElementKind kind)
     if (id == mCurrentId)
     {
         showEmpty();
+    }
+    else if ((mPage == PageState) && (isEditing() == false) && (kind == eDocElementKind::Import))
+    {
+        refresh();
     }
     else if ((mPage == PageTransition) && (isEditing() == false) && (kind == eDocElementKind::Method))
     {

@@ -36,7 +36,7 @@ The editor has eight tabs, mirroring the service interface editor:
 | **Events** | Machine-global events with typed payload parameters, and timers with timeout and repeat count |
 | **Methods** | Triggers (external stimuli), Actions (things the machine does), Conditions (boolean tests, either handler-implemented or embedded C++) |
 | **Constants** | Named typed values usable anywhere a value is expected |
-| **Includes** | C++ headers the generated code must include, and imported `.fsml` submachines |
+| **Includes** | One list under three headings: `Include Files` (C++ headers the generated code must include), `Data Types` (`.dtml` documents), and `State Machines` (imported `.fsml` submachines, with their alias and pinned version). The heading a file lands under follows its extension, so `Add` never asks what kind it is |
 | **Design** | The state graph canvas |
 
 Triggers, events and timers share **one name space** -- a transition names its stimulus and
@@ -65,7 +65,8 @@ The armed tool is shown checked in all three surfaces at once.
 
 ### Navigation
 
-- Double-click a composite state, or press `Enter` on it, to descend into its level.
+- Double-click a composite state, or press `Enter` on it, to descend into its level. A state
+  that hosts an *imported* machine opens that file instead -- see "Adding a submachine".
 - `Backspace`, `Alt`+double-click, or a breadcrumb segment goes back up.
 - `Home` centres the machine; `Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0` zoom; `Ctrl`+`Shift`+`0`
   zooms to fit.
@@ -82,6 +83,72 @@ The armed tool is shown checked in all three surfaces at once.
 - Alignment and distribution act on the selection.
 - `Ctrl+Shift+G` toggles snap to grid; grid size and visibility are saved with the document.
 - Every gesture is one undo step. Undo history survives page switches.
+
+### Adding a submachine
+
+A state can own a submachine in exactly one of two ways, and never both at once. Which one
+you want decides how you add it.
+
+The **Properties -> General** header carries the four controls for all of it: one button that
+enters, opens or creates a submachine depending on what is selected, `Go to Parent`,
+`Add Submachine...` and `Remove Submachine`. The first one renames itself so you can see what
+pressing it will do -- `Add Substate` on a plain state, `Enter Submachine` on a painted one,
+`Open Imported Machine` on a state that hosts an imported file.
+
+**Painted -- the submachine lives in this document.** Select a `Normal` state and press
+`Add Substate`, double-click its body, or press `Enter`. The editor attaches the nested level,
+creates its mandatory `Start` state and descends, all as one undo step. From then on the state
+is composite: `Enter` descends, `Backspace` comes back up, and `Delete` on the state removes
+the whole subtree. `Add Substate (Painted)` in the canvas context menu is the same operation
+under its explicit name.
+
+**Imported -- the submachine is another `.fsml` file.** Press `Add Submachine...`, pick the
+file, and that is the whole gesture: the machine is registered on the **Includes** page under
+an *alias* (the file's base name by default, editable) with its location and the version it
+had at that moment, and if the selected state is a plain `Normal` state the alias is linked to
+it in the same undo step. One `Ctrl+Z` reverses both.
+
+You can also register a machine from the Includes page directly: `Add` creates an entry under
+`Include Files`, and the moment you browse to a `.fsml` or type one into `Location` the row moves
+to `State Machines` and grows its alias and pinned version. The extension is what decides, so
+nothing has to be declared. Then pick the alias in **Properties -> General -> Submachine**; the
+picker is disabled for `Start` and `Final` states and for a state that already has a painted
+subtree.
+
+A file is registered **once**, and that one registration can be hosted by any number of
+states; each is an independent instance. Picking a file that is already in the list links the
+existing alias instead of adding a second one.
+
+The location is stored relative to *this document's own directory*, so the host has to be
+saved before it can import anything -- the editor says so rather than storing a path that
+cannot be resolved later.
+
+An imported machine is **sealed**. The host stores only the alias, the location and the pinned
+version -- it never reaches inside. The one signal the submachine sends back is the
+**On Final** event: set it in Properties and the host raises that event when the imported
+machine reaches its top-level `Final` state. Because the import is a separate document,
+double-clicking a hosting state does not descend -- it opens that file **read-only** in its own
+window, with the origin shown in the breadcrumb. Edit it by opening it as its own document.
+
+**Switching form.** The two forms are mutually exclusive, so press `Remove Submachine` before
+setting the other one. On an imported machine it unlinks the alias and clears `On Final` and
+`History` in the same undo step; the registration and the file itself stay. On a painted one it
+deletes the whole nested subtree -- every level of it, the layout of everything in it, and every
+transition from outside that pointed into it. It asks first, naming the counts, and one
+`Ctrl+Z` brings all of it back with the same IDs and the same geometry.
+
+**Limits.** Imported machines may nest at most **10** levels of imports, and may never form a
+cycle -- a machine cannot import itself, directly or through a chain. Both are refused when you
+pick the file, with the offending chain in the message, rather than reported afterwards.
+Painted nesting has **no** depth limit: it carries no cross-document reference and cannot form
+a cycle.
+
+**When an import breaks.** A missing, unreadable or cyclic import is an error on the
+registration *and* on every state that hosts it, but the host document still opens -- a broken
+import never costs you your own work. A file that cannot be parsed is still registered, with a
+warning, because it may be repaired later. Version drift is graded: a differing **major**
+version is an error, **minor** is a warning, **patch** is information, and only the **Update**
+button re-pins.
 
 ### Panels
 
@@ -144,10 +211,14 @@ the **Validation** tab with three severities:
 - **Errors** must be fixed -- missing or duplicated `Start` states, duplicate IDs or names,
   unresolved references, targets that are not siblings, `Final` states with outgoing
   transitions, unmapped required arguments, type incompatibilities, unparseable literals,
-  malformed expression rows, and so on.
+  malformed expression rows, imports that cannot be resolved, that form a cycle or that nest
+  more than ten levels of imports, an imported `.fsml` with no alias for a state to name, a
+  pinned import version whose major component has moved, and so on.
 - **Warnings** are design smells -- unreachable states, dead ends, shadowed transitions,
-  declarations nothing references, events sent but never reacted to, timers reacted to but
-  never started, empty internal transitions, comparisons of two constants, empty inline code.
+  declarations nothing references (an imported machine no state hosts included), the same file
+  included more than once, events sent but never reacted to, timers reacted to but never
+  started, empty internal transitions, comparisons of two constants, empty inline code, a
+  pinned import version whose minor component has moved.
 - **Information** covers declarations that are simply not used yet: an unused attribute or
   constant is legitimate at any point in a design and is never reported as a warning.
 
@@ -170,10 +241,15 @@ document that is clean here is a document it will accept.
   reindenting, no normalization.
 - Every element carries a document-unique numeric `ID` from one monotonic counter. IDs are
   never reused and never renumbered, and every reference between elements uses the ID.
-- `FormatVersion` on the root governs compatibility. An older document is migrated in memory
-  on open and the file is left untouched until you save. A document written by a newer
-  **major** version is refused, unmodified. A newer minor or patch version opens, and content
-  the current version does not recognize is preserved and written back unchanged.
+- `FormatVersion` on the root governs compatibility; the current version is **1.1.0**. An older
+  document is migrated in memory on open and the file is left untouched until you save. A
+  document written by a newer **major** version is refused, unmodified. A newer minor or patch
+  version opens, and content the current version does not recognize is preserved and written
+  back unchanged.
+- 1.1.0 folded machine imports into the include list: a `1.0.0` document's `<ImportList>` is
+  read and each `<MachineImport>` becomes a `<Location>` carrying `Alias` and `Version`. This is
+  the one case where saving does not reproduce the file byte for byte -- the migration is
+  one-way, and the second save is byte-identical again.
 
 A schema for editors and validators is available at `.claude/fsml.xsd`, and
 `.claude/FullFeature.fsml` is a reference document that exercises every element the format

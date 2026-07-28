@@ -30,6 +30,7 @@
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMClipboard.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
@@ -52,6 +53,7 @@
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
+#include <QAction>
 #include <QApplication>
 #include <QComboBox>
 #include <QClipboard>
@@ -3535,6 +3537,143 @@ int main(int argc, char* argv[])
         CHECK(composite->getHistory() != SMStateEntry::eHistory::Deep);
         SMStateItem* again = canvas.stateItem(composite->getId());
         CHECK((again != nullptr) && (again->getHistoryBadge() != SMStateEntry::eHistory::Deep));
+    }
+
+    // --- SM-29-EXT: one control, three meanings, and the label says which ---
+    {
+        std::printf("[SM-29-EXT] the enter/add button renames itself with the selection\n");
+
+        QAction* enterAction = design.actionEnterSubmachine();
+        CHECK(enterAction != nullptr);
+
+        // A state of its own rather than one borrowed from the fixture: the sections above have
+        // already made every root Normal state composite.
+        SMCreateStateCommand* create = new SMCreateStateCommand(data, model.getNotifier(), data.getStates()
+                                                                , QStringLiteral("ExtProbe"), SMStateEntry::eStateKind::Normal
+                                                                , QRectF(900.0, 600.0, 160.0, 80.0), QStringLiteral("Add state"));
+        model.getUndoStack().push(create);
+        const uint32_t plainId = create->getStateId();
+        CHECK(data.findStateById(plainId) != nullptr);
+        if (plainId != 0)
+        {
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(enterAction->isEnabled());
+            CHECK(enterAction->text() == QStringLiteral("Add Substate"));
+
+            // Painted: the only thing left to do with it is descend.
+            SMConvertToCompositeCommand* convert =
+                    new SMConvertToCompositeCommand(data, model.getNotifier(), plainId, QStringLiteral("ExtStart")
+                                                    , QRectF(32.0, 32.0, 48.0, 48.0), QStringLiteral("Add substate"));
+            CHECK(convert->isEffective());
+            model.getUndoStack().push(convert);
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(enterAction->text() == QStringLiteral("Enter Submachine"));
+
+            // Removing the painted subtree gives the state back its plain meaning, in one step.
+            SMRemoveCompositeCommand* flatten =
+                    new SMRemoveCompositeCommand(data, model.getNotifier(), plainId, QStringLiteral("Remove submachine"));
+            CHECK(flatten->isEffective());
+            CHECK(flatten->removedStateCount() == 1);
+            model.getUndoStack().push(flatten);
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(data.findStateById(plainId)->hasNestedStates() == false);
+            CHECK(enterAction->text() == QStringLiteral("Add Substate"));
+
+            // Imported: the machine lives in another file, so the button opens it instead.
+            IncludeEntry* import = data.getIncludes().createInclude(QStringLiteral("./ExtCycle.fsml"));
+            CHECK(import != nullptr);
+            if (import != nullptr)
+            {
+                import->setAlias(QStringLiteral("ExtCycle"));
+            }
+
+            SMSetSubmachineCommand* link = new SMSetSubmachineCommand(data, model.getNotifier(), plainId
+                                                                      , QStringLiteral("ExtCycle"), QStringLiteral("Host"));
+            CHECK(link->isEffective());
+            model.getUndoStack().push(link);
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(enterAction->text() == QStringLiteral("Open Imported Machine"));
+            CHECK(design.actionRemoveSubmachine()->isEnabled());
+
+            // Start states host nothing, so every one of them is dead here.
+            const SMStateEntry* start = data.findState(QStringLiteral("Off"));
+            if (start != nullptr)
+            {
+                model.getSelectionModel().setSelection(QList<uint32_t>{ start->getId() });
+                QApplication::processEvents();
+                CHECK(enterAction->isEnabled() == false);
+                CHECK(design.actionRemoveSubmachine()->isEnabled() == false);
+            }
+
+            model.getUndoStack().undo();            // the link
+            model.getUndoStack().undo();            // the flatten
+            model.getUndoStack().undo();            // the convert
+            model.getUndoStack().undo();            // the probe state
+            model.getSelectionModel().clearSelection();
+            QApplication::processEvents();
+            CHECK(data.findStateById(plainId) == nullptr);
+        }
+    }
+
+    // --- The Properties dock keeps its width when the selection changes ---
+    {
+        std::printf("[panel] the selection fills the Properties panel, it does not resize it\n");
+
+        // Its own window: the sections above have dragged this page's docks around.
+        StateMachineModel wmodel;
+        CHECK(wmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign wdesign(wmodel);
+        wdesign.resize(1400, 900);
+        wdesign.show();
+        QApplication::processEvents();
+
+        QDockWidget* dock = wdesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* panel = (dock != nullptr ? qobject_cast<SMPropertiesPanel*>(dock->widget()) : nullptr);
+        CHECK(dock != nullptr);
+        CHECK(panel != nullptr);
+        if ((dock != nullptr) && (panel != nullptr))
+        {
+            const int width = dock->width();
+            const int empty = panel->sizeHint().width();
+            CHECK(width == NESMDesign::PanelDefaultWidth);
+
+            // Whatever the panel puts on screen, it must not ask for more room than it did with
+            // nothing selected -- that request is what used to widen the dock over the canvas.
+            const SMStateEntry* wstate = wmodel.getData().findState(QStringLiteral("LightOff"));
+            CHECK(wstate != nullptr);
+            if (wstate != nullptr)
+            {
+                wmodel.getSelectionModel().setSelection(QList<uint32_t>{ wstate->getId() });
+                QApplication::processEvents();
+                CHECK(dock->width() == width);
+                CHECK(panel->sizeHint().width() <= empty);
+            }
+
+            CHECK(wmodel.getData().findTransitionById(27) != nullptr);
+            if (wmodel.getData().findTransitionById(27) != nullptr)
+            {
+                wmodel.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+                QApplication::processEvents();
+                CHECK(dock->width() == width);
+                CHECK(panel->sizeHint().width() <= empty);
+            }
+
+            wmodel.getSelectionModel().clearSelection();
+            QApplication::processEvents();
+            CHECK(dock->width() == width);
+
+            // A width the user set stays set, selection or not.
+            wdesign.resizeDocks(QList<QDockWidget*>{ dock }, QList<int>{ 640 }, Qt::Horizontal);
+            QApplication::processEvents();
+            const int dragged = dock->width();
+            wmodel.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+            QApplication::processEvents();
+            CHECK(dock->width() == dragged);
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

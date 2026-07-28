@@ -20,36 +20,51 @@
  *
  ************************************************************************/
 
+#include "lusan/data/common/IncludeEntry.hpp"
+
+#include <QIcon>
 #include <QKeySequence>
 #include <QString>
 #include <QWidget>
 
+#include <cstdint>
+
+class QModelIndex;
 class QToolButton;
 class QTreeWidget;
+class QTreeWidgetItem;
 
 /**
  * \brief   The section-3 difference between the Service Interface and State Machine Includes
  *          pages: the third recognized include extension (besides a C++ header and a `.dtml`
- *          data type document) and the label shown for it in the Type column.
+ *          data type document), the label shown for it in the Type column, and the heading of
+ *          the group that collects it.
  *
- *          Service Interface: `docExtension = "siml"`, `docTypeLabel = "Service Interface"`.
- *          State Machine    : `docExtension = "fsml"`, `docTypeLabel = "State Machine"`.
+ *          Service Interface: `"siml"`, `"Service Interface"`, `"Service Interfaces"`.
+ *          State Machine    : `"fsml"`, `"State Machine"`, `"State Machines"`.
  **/
 struct IncludeTypeConfig
 {
     QString docExtension;   //!< The document file extension (no dot), e.g. "siml" or "fsml".
     QString docTypeLabel;   //!< The Type column label for that extension, e.g. "Service Interface".
+    QString groupDocLabel;  //!< The heading of the group that collects those documents.
+    QIcon   docIcon;        //!< The mark of that document kind, on its heading and its rows.
 };
 
 /**
  * \brief   The shared include list panel: an "Include Files:" group holding the
- *          add/insert/delete + move up/down + update toolbar above a 4-column flat list
- *          (Location / Type / Name / Version), built on a QTreeWidget.
+ *          add/insert/delete + move up/down + update toolbar above a 4-column tree
+ *          (Location / Type / Name / Version).
  *
- *          The view is controller-agnostic: it only builds the widgets and exposes ctrl*()
- *          accessors, plus the config-driven typeForLocation()/nameForLocation() helpers so
- *          both editors derive the Type and Name columns from a file location identically.
- *          The page controller owns all row population and selection logic.
+ *          Rows sit under three permanent headings -- source files, data types, documents of
+ *          the host's own kind -- so the reader does not have to know which list a file belongs
+ *          to before looking for it. The headings stay visible when empty; that is what makes
+ *          them read as places to put something.
+ *
+ *          The view is controller-agnostic: it builds the widgets and exposes ctrl*() accessors
+ *          plus the config-driven classification helpers, so both editors derive the group, the
+ *          Type and the Name of a location identically. Row population and selection belong to
+ *          the page controller.
  **/
 class IncludeListView : public QWidget
 {
@@ -63,8 +78,8 @@ public:
     {
           ColLocation   = 0 //!< The include file location (editable inline).
         , ColType       = 1 //!< The derived include type (read-only).
-        , ColName       = 2 //!< The derived include name (read-only).
-        , ColVersion    = 3 //!< The include version (read-only, blank until parsed).
+        , ColName       = 2 //!< The include name: the alias for a document, derived otherwise.
+        , ColVersion    = 3 //!< The pinned version of a document include; empty otherwise.
     };
 
     explicit IncludeListView(const IncludeTypeConfig& config, QWidget* parent = nullptr);
@@ -78,6 +93,16 @@ public:
     QToolButton* ctrlButtonMoveDown() const;
     QToolButton* ctrlButtonUpdate() const;
 
+    //!< The permanent heading row that collects \p kind.
+    QTreeWidgetItem* ctrlGroup(eIncludeKind kind) const;
+
+    //!< The kind a location belongs to, using the host document's own extension.
+    eIncludeKind kindForLocation(const QString& location) const;
+
+    //!< The mark of one kind, on its heading and on every row under it. One place, so a row and
+    //!< its heading can never disagree about what they are.
+    QIcon iconForKind(eIncludeKind kind) const;
+
     /**
      * \brief   Returns the Type column text for a location: the configured document label for
      *          the document extension, "Data Type" for `.dtml`, "Source" for anything else.
@@ -90,12 +115,51 @@ public:
      **/
     QString nameForLocation(const QString& location) const;
 
+    //!< Refreshes the per-group entry counts shown in the headings.
+    void updateGroupCounts(int sourceCount, int dataTypeCount, int documentCount);
+
+    //!< The same, counted from the rows themselves. For callers that move a single row and have
+    //!< no tally of their own.
+    void refreshGroupCounts();
+
+    //!< Removes every entry row, leaving the three headings in place.
+    void clearRows();
+
+    /**
+     * \brief   Creates (or moves) the row of \p id so that it sits last in the group of \p kind.
+     *          The row carries \p id in the Location column's UserRole -- the one place an ID is
+     *          stored, so every lookup agrees on where to read it.
+     **/
+    QTreeWidgetItem* placeRow(QTreeWidgetItem* existing, eIncludeKind kind, uint32_t id);
+
+    //!< The entry row carrying \p id, or nullptr. Heading rows are never returned.
+    QTreeWidgetItem* findRow(uint32_t id) const;
+
+    //!< The element ID stored on an entry row; 0 for a heading row or nullptr.
+    static uint32_t rowId(const QTreeWidgetItem* item);
+
+    //!< True when \p item is one of the three permanent headings.
+    bool isGroup(const QTreeWidgetItem* item) const;
+
+    /**
+     * \brief   The item a model index of this tree denotes. The tree is two levels deep, so this
+     *          replaces the flat topLevelItem(row) lookup the delegate used to do.
+     **/
+    QTreeWidgetItem* itemAt(const QModelIndex& index) const;
+
+protected:
+    void changeEvent(QEvent* event) override;
+
 private:
     void buildUi();
+    void decorateGroup(QTreeWidgetItem* group);
 
 private:
     const IncludeTypeConfig mConfig;
     QTreeWidget*    mTable;
+    QTreeWidgetItem* mGroupSource;
+    QTreeWidgetItem* mGroupDataType;
+    QTreeWidgetItem* mGroupDocument;
     QToolButton*    mButtonAdd;
     QToolButton*    mButtonInsert;
     QToolButton*    mButtonRemove;

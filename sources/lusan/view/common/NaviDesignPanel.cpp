@@ -72,7 +72,12 @@ void NaviDesignPanel::bindDesign(SMDesign* design)
     mEmpty = false;
     if (mKind == NaviDesignPanel::eKind::Properties)
     {
-        mContent = new SMPropertiesPanel(design->getModel(), this);
+        SMPropertiesPanel* properties = new SMPropertiesPanel(design->getModel(), this);
+        // The docked copy drives the same actions the page owns, so both surfaces agree on what
+        // is enabled and produce the same undo entries.
+        properties->bindSubmachineActions(design->actionEnterSubmachine(), design->actionGoToParent()
+                                          , design->actionAddSubmachine(), design->actionRemoveSubmachine());
+        mContent = properties;
     }
     else
     {

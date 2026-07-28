@@ -42,7 +42,8 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMDataTypeData.cpp
     ${LUSAN}/data/sm/SMEventData.cpp
     ${LUSAN}/data/sm/SMGuardTree.cpp
-    ${LUSAN}/data/sm/SMImportData.cpp
+    ${LUSAN}/data/sm/SMDocumentCache.cpp
+    ${LUSAN}/data/sm/SMImportResolver.cpp
     ${LUSAN}/data/sm/SMIncludeData.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
     ${LUSAN}/data/sm/SMMethodData.cpp

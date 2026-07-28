@@ -76,6 +76,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMTimerModel.hpp
     ${LUSAN}/model/sm/SMTransitionCommands.hpp
     ${LUSAN}/model/sm/SMTypeCompat.hpp
+    ${LUSAN}/model/sm/SMUndoStack.hpp
     ${LUSAN}/model/sm/SMValidationController.hpp
     ${LUSAN}/model/sm/SMValidator.hpp
     ${LUSAN}/model/sm/SMGoToDef.hpp

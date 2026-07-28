@@ -248,6 +248,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActAddSubstate(nullptr)
     , mActEnterSubmachine(nullptr)
     , mActGoToParent(nullptr)
+    , mActAddSubmachine(nullptr)
+    , mActRemoveSubmachine(nullptr)
     , mActCenterMachine(nullptr)
     , mActNewTrigger(nullptr)
     , mActNewAction (nullptr)
@@ -385,6 +387,13 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // policy never fires customContextMenuRequested; the view's own signal (emitted from its
     // contextMenuEvent override, viewport coordinates) is the reliable hook.
     connect(mView, &SMGraphicsView::signalContextMenuRequested, this, &SMDesign::onViewContextMenuRequested);
+
+    // A read-only view still navigates, zooms and reads; it just cannot author. The undo stack
+    // is the guarantee -- this only stops the drawing tools from pretending otherwise.
+    if (mToolBar != nullptr)
+    {
+        mToolBar->setEnabled(mModel.isReadOnly() == false);
+    }
 
     DocModelNotifier& notifier = mModel.getNotifier();
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
@@ -779,6 +788,12 @@ void SMDesign::setupActions()
         mSceneManager->goToParent();
     });
 
+    mActAddSubmachine = new QAction(tr("Add Submachine..."), this);
+    connect(mActAddSubmachine, &QAction::triggered, this, &SMDesign::addSubmachineToSelection);
+
+    mActRemoveSubmachine = new QAction(tr("Remove Submachine"), this);
+    connect(mActRemoveSubmachine, &QAction::triggered, this, &SMDesign::removeSubmachineFromSelection);
+
     // Scrolling far from the diagram easily "loses" it; this brings it back into view
     // without changing the zoom (issue #514).
     mActCenterMachine = new QAction(tr("Center Machine"), this);
@@ -829,6 +844,8 @@ void SMDesign::setupActions()
     mActGridSize->setIcon(SMToolIcons::icon(eIcon::GridSize));
     mActEnterSubmachine->setIcon(SMToolIcons::icon(eIcon::EnterSubmachine));
     mActGoToParent->setIcon(SMToolIcons::icon(eIcon::GoToParent));
+    mActAddSubmachine->setIcon(QIcon(QStringLiteral(":/icons/entry add")));
+    mActRemoveSubmachine->setIcon(QIcon(QStringLiteral(":/icons/entry delete")));
     mActCenterMachine->setIcon(SMToolIcons::icon(eIcon::CenterMachine));
     mActZoomIn->setIcon(SMToolIcons::icon(eIcon::ZoomIn));
     mActZoomOut->setIcon(SMToolIcons::icon(eIcon::ZoomOut));
@@ -860,6 +877,7 @@ void SMDesign::setupActions()
                                  , mActDistributeH, mActDistributeV
                                  , mActSetStimulus, mActRaisePriority, mActLowerPriority
                                  , mActAddSubstate, mActEnterSubmachine, mActGoToParent, mActCenterMachine
+                                 , mActAddSubmachine, mActRemoveSubmachine
                                  , mActNewTrigger, mActNewAction, mActNewCondition, mActNewEvent, mActNewTimer
                                  , mActNewAttribute, mActNewConstant, mActNewDataType };
     for (QAction* action : actions)
@@ -988,6 +1006,7 @@ void SMDesign::buildDesignPanels()
     // Properties on the right, top; Outline on the right, below it. Both bound to this page's
     // model/scene manager (issue #516) and dockable to any of the page's four edges.
     mProperties = new SMPropertiesPanel(mModel);
+    mProperties->bindSubmachineActions(mActEnterSubmachine, mActGoToParent, mActAddSubmachine, mActRemoveSubmachine);
     // A Ctrl+Shift click on a referenced symbol in the Conditions guard field navigates to its
     // declaration page, the same channel the canvas links use (StateMachine switches pages).
     connect(mProperties, &SMPropertiesPanel::signalNavigateToDefinition, this, &SMDesign::signalNavigateToDefinition);
@@ -1016,6 +1035,10 @@ void SMDesign::buildDesignPanels()
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
+    // Settle the width now, once. Until a dock is given one it keeps following what its widget
+    // asks for, so the first state or transition put into the panel would move the canvas edge --
+    // the selection deciding how much room the drawing gets. After this, only a drag does.
+    resizeDocks(QList<QDockWidget*>{ mPropertiesDock }, QList<int>{ NESMDesign::PanelDefaultWidth }, Qt::Horizontal);
 
     // F8 / Shift+F8 step through the findings (spec 9.1). The findings themselves live in the
     // output window's Validation tab, so the page asks for it and the window brings it forward
@@ -1217,6 +1240,8 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActAddInternal);
         menu.addAction(mActAddSubstate);
         menu.addAction(mActEnterSubmachine);
+        menu.addAction(mActAddSubmachine);
+        menu.addAction(mActRemoveSubmachine);
         addHistoryMenu(menu, state->getElementId());
         menu.addSeparator();
         menu.addAction(mActCut);
@@ -2376,6 +2401,20 @@ void SMDesign::rebuildBreadcrumb()
         delete item;
     }
 
+    // A document opened as somebody's import starts its path in that host, so the breadcrumb says
+    // where the crossing happened; without it a read-only window looks like an ordinary one.
+    const QString origin = mModel.getReadOnlyOrigin();
+    if (origin.isEmpty() == false)
+    {
+        QLabel* crossing = new QLabel(origin, mBreadcrumb);
+        QFont font{ crossing->font() };
+        font.setItalic(true);
+        crossing->setFont(font);
+        crossing->setToolTip(tr("Opened read only from this machine"));
+        mBreadcrumbLayout->addWidget(crossing);
+        mBreadcrumbLayout->addWidget(new QLabel(QStringLiteral(">"), mBreadcrumb));
+    }
+
     const QList<uint32_t> path{ mSceneManager->getCurrentPath() };
     for (int i = 0; i < path.size(); ++i)
     {
@@ -2931,15 +2970,36 @@ void SMDesign::updateNavActions()
 
     const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
     const SMStateEntry* single = (selection.size() == 1 ? mModel.getData().findStateById(selection.first()) : nullptr);
-    // Enter Submachine descends into an existing submachine, or (for a plain normal state)
-    // creates one on the fly, so it is enabled for any non-imported normal/composite state.
-    mActEnterSubmachine->setEnabled((single != nullptr)
-                                    && (single->isImportedSubmachine() == false)
-                                    && (single->hasNestedStates() || (single->getKind() == SMStateEntry::eStateKind::Normal)));
-    mActAddSubstate->setEnabled((single != nullptr)
-                                && (single->getKind() == SMStateEntry::eStateKind::Normal)
-                                && (single->isImportedSubmachine() == false)
-                                && (single->hasNestedStates() == false));
+    const bool normal   = (single != nullptr) && (single->getKind() == SMStateEntry::eStateKind::Normal);
+    const bool imported = (single != nullptr) && single->isImportedSubmachine();
+    const bool painted  = (single != nullptr) && single->hasNestedStates();
+
+    // At most one of the three is ever meaningful, so one control carries all three -- and says
+    // which one it is, because two of them change the document. A state that hosts an imported
+    // machine cannot gain a painted one, a painted one can only be entered, and a bare Normal
+    // state gets a painted subtree (imported is set through the Submachine picker, not here).
+    mActEnterSubmachine->setEnabled(imported || painted || normal);
+    if (imported)
+    {
+        mActEnterSubmachine->setText(tr("Open Imported Machine"));
+        mActEnterSubmachine->setIcon(SMToolIcons::icon(SMToolIcons::eIcon::EnterSubmachine));
+    }
+    else if (painted)
+    {
+        mActEnterSubmachine->setText(tr("Enter Submachine"));
+        mActEnterSubmachine->setIcon(SMToolIcons::icon(SMToolIcons::eIcon::EnterSubmachine));
+    }
+    else if (normal)
+    {
+        mActEnterSubmachine->setText(tr("Add Substate"));
+        mActEnterSubmachine->setIcon(SMToolIcons::icon(SMToolIcons::eIcon::AddState));
+    }
+
+    mActAddSubstate->setEnabled(normal && (imported == false) && (painted == false));
+    // Registering a machine is useful whether or not a state is selected; linking it to the
+    // selection is the part that needs a bare Normal state.
+    mActAddSubmachine->setEnabled(true);
+    mActRemoveSubmachine->setEnabled(imported || painted);
 
     // Internal transitions run operations without leaving the state; only a Normal (possibly
     // composite) state can carry them. A Start state is a pure entry marker with no entry /
@@ -3057,11 +3117,17 @@ void SMDesign::enterSelectedSubmachine()
         return;
     }
 
-    if (state->hasNestedStates())
+    if (state->isImportedSubmachine())
+    {
+        // The machine lives in another file and the host never reaches inside it, so descending
+        // means opening that document -- read-only, because it is not this document's to change.
+        emit signalOpenImport(id, state->getSubmachine());
+    }
+    else if (state->hasNestedStates())
     {
         mSceneManager->enterSubmachine(id);
     }
-    else if ((state->getKind() == SMStateEntry::eStateKind::Normal) && (state->isImportedSubmachine() == false))
+    else if (state->getKind() == SMStateEntry::eStateKind::Normal)
     {
         // The state has no submachine yet: create a painted composite (with its Start state)
         // and descend into it, so "Enter Submachine" doubles as "start designing one here".
@@ -3069,6 +3135,84 @@ void SMDesign::enterSelectedSubmachine()
         // to a plain state when the user leaves it; that needs an undoable revert command.)
         addSubstateToSelection();
     }
+}
+
+void SMDesign::addSubmachineToSelection()
+{
+    const StateMachineData& data = mModel.getData();
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    const SMStateEntry* single = (selection.size() == 1 ? data.findStateById(selection.first()) : nullptr);
+    const bool linkable = (single != nullptr)
+                       && (single->getKind() == SMStateEntry::eStateKind::Normal)
+                       && (single->isImportedSubmachine() == false)
+                       && (single->hasNestedStates() == false);
+
+    emit signalAddSubmachineRequested(linkable ? single->getId() : 0u);
+}
+
+void SMDesign::removeSubmachineFromSelection()
+{
+    StateMachineData& data = mModel.getData();
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    const SMStateEntry* single = (selection.size() == 1 ? data.findStateById(selection.first()) : nullptr);
+    if (single == nullptr)
+    {
+        return;
+    }
+
+    const uint32_t stateId = single->getId();
+    if (single->isImportedSubmachine())
+    {
+        // Unlinking removes nothing -- the registration and the imported file both stay -- so
+        // there is nothing to confirm.
+        SMSetSubmachineCommand* unlink = new SMSetSubmachineCommand(data, mModel.getNotifier(), stateId, QString()
+                                                                   , tr("Remove submachine from %1").arg(single->getName()));
+        if (unlink->isEffective())
+        {
+            mModel.getUndoStack().push(unlink);
+        }
+        else
+        {
+            delete unlink;
+        }
+
+        return;
+    }
+
+    SMRemoveCompositeCommand* command = new SMRemoveCompositeCommand(data, mModel.getNotifier(), stateId
+                                                                    , tr("Remove submachine of %1").arg(single->getName()));
+    if (command->isEffective() == false)
+    {
+        delete command;
+        return;
+    }
+
+    // The extent is not visible: the subtree may be several levels deep, and the transitions that
+    // point into it live on states the user is not looking at.
+    const int states = command->removedStateCount();
+    const int edges  = command->removedTransitionCount();
+    const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Remove Submachine")
+                        , tr("Remove the submachine of '%1'? This deletes %2 state%3 and %4 transition%5 that target them. This can be undone.")
+                          .arg(single->getName())
+                          .arg(states).arg(states == 1 ? QString() : QStringLiteral("s"))
+                          .arg(edges).arg(edges == 1 ? QString() : QStringLiteral("s"))
+                        , QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+    if (choice != QMessageBox::Yes)
+    {
+        delete command;
+        return;
+    }
+
+    // Standing inside the level that is about to disappear leaves the canvas on a scene with no
+    // owner, so step out to the host's own level first.
+    const QList<uint32_t> path = mSceneManager->getCurrentPath();
+    const int hostIndex = static_cast<int>(path.indexOf(stateId));
+    if (hostIndex > 0)
+    {
+        mSceneManager->navigateTo(path.at(hostIndex - 1));
+    }
+
+    mModel.getUndoStack().push(command);
 }
 
 void SMDesign::centerMachine()
