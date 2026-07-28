@@ -63,6 +63,11 @@ namespace
             const ConstantEntry* constant = index.constant(name);
             return (constant != nullptr) ? constant->getId() : 0u;
         }
+        case eTarget::Import:
+        {
+            const SMImportEntry* import = index.import(name);
+            return (import != nullptr) ? import->getId() : 0u;
+        }
         default:
             return 0u;
         }
@@ -231,6 +236,7 @@ QString SMGoToDef::kindWord(SMReferences::eTarget kind)
     case SMReferences::eTarget::Timer:      return QObject::tr("timer");
     case SMReferences::eTarget::Attribute:  return QObject::tr("attribute");
     case SMReferences::eTarget::Constant:   return QObject::tr("constant");
+    case SMReferences::eTarget::Import:     return QObject::tr("imported machine");
     default:                                return QString();
     }
 }

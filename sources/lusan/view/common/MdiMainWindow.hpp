@@ -130,6 +130,16 @@ public:
     bool openFile(const QString& fileName);
 
     /**
+     * \brief   Opens a state machine document as a read-only view, the way a host opens the
+     *          machine one of its states imports. A document that is already open keeps whatever
+     *          window it has -- the user's own document is never demoted to read-only.
+     * \param   filePath    The absolute path of the `.fsml` document.
+     * \param   origin      Where the view was opened from, shown in the document's breadcrumb.
+     * \return  True when a window for the document is on screen.
+     **/
+    bool openStateMachineReadOnly(const QString& filePath, const QString& origin);
+
+    /**
      * \brief   Call to notify the main window that application is connected to log collector service and is ready to receive log messages.
      * \param   isConnected     True if connected, false if disconnected.
      * \param   address         The IP address of the log collector service.

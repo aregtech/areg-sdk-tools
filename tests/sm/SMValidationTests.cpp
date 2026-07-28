@@ -36,9 +36,15 @@
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
 #include "lusan/data/sm/SMImportData.hpp"
+#include "lusan/data/sm/SMImportResolver.hpp"
+#include "lusan/data/sm/SMDocumentCache.hpp"
 #include "lusan/data/sm/SMDataTypeData.hpp"
 
 #include "lusan/data/common/DataTypeEnum.hpp"
+
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
 
 #include <cstdio>
 
@@ -1245,6 +1251,178 @@ namespace
 // main
 //////////////////////////////////////////////////////////////////////////
 
+
+//////////////////////////////////////////////////////////////////////////
+// Submachine imports: resolution, hosting, cycles, version pinning
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< Writes a minimal, error-free machine to \p path, optionally importing other documents.
+    void writeMachine(const QString& path, const QString& name, const QString& version
+                     , const QList<QPair<QString, QString> >& imports = QList<QPair<QString, QString> >())
+    {
+        std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument(name);
+        doc->getOverview().setVersion(version);
+        for (const QPair<QString, QString>& one : imports)
+        {
+            SMImportEntry* entry = doc->getImports().createImport(one.first);
+            entry->setLocation(one.second);
+            entry->setVersion(VersionNumber(QStringLiteral("1.0.0")));
+        }
+
+        doc->writeToFile(path);
+        SMDocumentCache::getInstance().clear();
+    }
+
+    //!< A host document at \p path with one registered import hosted by \p hostCount states.
+    std::unique_ptr<StateMachineData> hostMachine(const QString& path, const QString& alias
+                                                 , const QString& location, const QString& pinned
+                                                 , int hostCount)
+    {
+        std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument(QStringLiteral("Host"));
+        SMImportEntry* entry = doc->getImports().createImport(alias);
+        entry->setLocation(location);
+        entry->setVersion(VersionNumber(pinned));
+        for (int i = 0; i < hostCount; ++i)
+        {
+            SMStateEntry* state = doc->getStates().createState(QStringLiteral("Phase%1").arg(i + 1), eKind::Normal);
+            state->setSubmachine(alias);
+        }
+
+        doc->setFilePath(path);
+        return doc;
+    }
+
+    void testImports()
+    {
+        std::printf("- submachine imports\n");
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString root = dir.path();
+        const auto at = [&root](const char* file) -> QString { return QDir(root).absoluteFilePath(QString::fromLatin1(file)); };
+
+        {   // A TurnCycle-style import instantiated by two states survives a save/reload round trip.
+            writeMachine(at("turncycle.fsml"), QStringLiteral("TurnCycle"), QStringLiteral("1.2.0"));
+            std::unique_ptr<StateMachineData> host = hostMachine(at("host.fsml"), QStringLiteral("TurnCycle"), QStringLiteral("./turncycle.fsml"), QStringLiteral("1.2.0"), 2);
+            CHECK(host->writeToFile(at("host.fsml")));
+
+            StateMachineData reloaded;
+            CHECK(reloaded.readFromFile(at("host.fsml")));
+            const SMImportEntry* entry = reloaded.getImports().findElement(QStringLiteral("TurnCycle"));
+            CHECK(entry != nullptr);
+            CHECK((entry != nullptr) && (entry->getLocation() == QStringLiteral("./turncycle.fsml")));
+            CHECK((entry != nullptr) && (entry->getVersion().toString() == QStringLiteral("1.2.0")));
+
+            int hosts = 0;
+            for (const SMStateEntry* state : reloaded.getStates().getElements())
+                if ((state != nullptr) && (state->getSubmachine() == QStringLiteral("TurnCycle"))) ++hosts;
+            CHECK(hosts == 2);
+
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> issues = SMValidator::validate(reloaded);
+            CHECK(countRule(issues, 19) == 0);
+            CHECK(countRule(issues, 22) == 0);
+        }
+
+        {   // A missing file flags the registration AND every hosting state, and never blocks the open.
+            std::unique_ptr<StateMachineData> host = hostMachine(at("broken.fsml"), QStringLiteral("Gone"), QStringLiteral("./no-such-machine.fsml"), QStringLiteral("1.0.0"), 2);
+            CHECK(host->writeToFile(at("broken.fsml")));
+
+            StateMachineData reloaded;
+            CHECK(reloaded.readFromFile(at("broken.fsml")));
+            CHECK(reloaded.openSucceeded());
+
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> issues = SMValidator::validate(reloaded);
+            CHECK(countRule(issues, 19) == 3);      // one registration + two hosting states
+            int onStates = 0;
+            for (const SMIssue& i : issues)
+                if ((i.rule == 19) && (i.kind == eDocElementKind::State)) ++onStates;
+            CHECK(onStates == 2);
+        }
+
+        {   // An unreadable file is reported like a missing one, not swallowed.
+            QFile garbage(at("garbage.fsml"));
+            CHECK(garbage.open(QIODevice::WriteOnly | QIODevice::Text));
+            garbage.write("this is not xml at all");
+            garbage.close();
+
+            std::unique_ptr<StateMachineData> host = hostMachine(at("host2.fsml"), QStringLiteral("Junk"), QStringLiteral("./garbage.fsml"), QStringLiteral("1.0.0"), 1);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> issues = SMValidator::validate(*host);
+            CHECK(countRule(issues, 19) >= 1);
+        }
+
+        {   // A direct cycle: the document imports itself.
+            writeMachine(at("selfish.fsml"), QStringLiteral("Selfish"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >{ qMakePair(QStringLiteral("Selfish"), QStringLiteral("./selfish.fsml")) });
+            StateMachineData doc;
+            CHECK(doc.readFromFile(at("selfish.fsml")));
+            SMDocumentCache::getInstance().clear();
+            CHECK(hasRule(SMValidator::validate(doc), 19));
+        }
+
+        {   // A transitive cycle: A imports B, B imports C, C imports A.
+            writeMachine(at("cycA.fsml"), QStringLiteral("CycA"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >{ qMakePair(QStringLiteral("CycB"), QStringLiteral("./cycB.fsml")) });
+            writeMachine(at("cycB.fsml"), QStringLiteral("CycB"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >{ qMakePair(QStringLiteral("CycC"), QStringLiteral("./cycC.fsml")) });
+            writeMachine(at("cycC.fsml"), QStringLiteral("CycC"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >{ qMakePair(QStringLiteral("CycA"), QStringLiteral("./cycA.fsml")) });
+
+            StateMachineData doc;
+            CHECK(doc.readFromFile(at("cycA.fsml")));
+            SMDocumentCache::getInstance().clear();
+            CHECK(hasRule(SMValidator::validate(doc), 19));
+        }
+
+        {   // A chain that never returns to the host is not a cycle.
+            writeMachine(at("leaf.fsml"), QStringLiteral("Leaf"), QStringLiteral("1.0.0"));
+            writeMachine(at("mid.fsml"), QStringLiteral("Mid"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >{ qMakePair(QStringLiteral("Leaf"), QStringLiteral("./leaf.fsml")) });
+            std::unique_ptr<StateMachineData> host = hostMachine(at("top.fsml"), QStringLiteral("Mid"), QStringLiteral("./mid.fsml"), QStringLiteral("1.0.0"), 1);
+            SMDocumentCache::getInstance().clear();
+            CHECK(countRule(SMValidator::validate(*host), 19) == 0);
+        }
+
+        {   // Version pinning: major = error 22, minor = warning 12, patch = information 12.
+            writeMachine(at("pinned.fsml"), QStringLiteral("Pinned"), QStringLiteral("2.5.7"));
+
+            std::unique_ptr<StateMachineData> major = hostMachine(at("h1.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("1.5.7"), 1);
+            SMDocumentCache::getInstance().clear();
+            CHECK(hasRule(SMValidator::validate(*major), 22));
+
+            std::unique_ptr<StateMachineData> minor = hostMachine(at("h2.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.4.7"), 1);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> minorIssues = SMValidator::validate(*minor);
+            CHECK(hasWarn(minorIssues, 12));
+            CHECK(warnSeverityIs(minorIssues, 12, SMIssue::eSeverity::Warning));
+            CHECK(countRule(minorIssues, 22) == 0);
+
+            std::unique_ptr<StateMachineData> patch = hostMachine(at("h3.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.5.1"), 1);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> patchIssues = SMValidator::validate(*patch);
+            CHECK(hasWarn(patchIssues, 12));
+            CHECK(warnSeverityIs(patchIssues, 12, SMIssue::eSeverity::Info));
+
+            std::unique_ptr<StateMachineData> exact = hostMachine(at("h4.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.5.7"), 1);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> exactIssues = SMValidator::validate(*exact);
+            CHECK(countWarn(exactIssues, 12) == 0);
+            CHECK(countRule(exactIssues, 22) == 0);
+        }
+
+        {   // An absolute location resolves too, and a picked file is stored relative to the host.
+            writeMachine(at("abs.fsml"), QStringLiteral("Abs"), QStringLiteral("1.0.0"));
+            std::unique_ptr<StateMachineData> host = hostMachine(at("h5.fsml"), QStringLiteral("Abs"), at("abs.fsml"), QStringLiteral("1.0.0"), 1);
+            SMDocumentCache::getInstance().clear();
+            CHECK(countRule(SMValidator::validate(*host), 19) == 0);
+            CHECK(SMImportResolver::storableLocation(*host, at("abs.fsml")) == QStringLiteral("./abs.fsml"));
+        }
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("=== FSM validation engine tests ===\n");
@@ -1268,6 +1446,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testErrorsDoNotBlock();
     testPseudoStateAndKindNamespace();
     testUnifiedEngine();
+    testImports();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

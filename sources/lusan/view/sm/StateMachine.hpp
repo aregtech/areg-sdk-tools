@@ -96,6 +96,14 @@ public:
     bool isToolbarVisible() const override;
 
     /**
+     * \brief   Turns this window into a read-only view of the document, the form a submachine
+     *          import is shown in. Nothing can be edited or saved here; the document is edited
+     *          by opening it on its own.
+     * \param   origin  The host document and state the view was opened from.
+     **/
+    void openReadOnly(const QString& origin);
+
+    /**
      * \brief   Returns the Design page if it has already been built, or nullptr - never
      *          forces its (expensive) construction just to be queried (used by
      *          MdiMainWindow to populate the Design menu).
@@ -137,6 +145,13 @@ private slots:
      *          and transition findings itself).
      **/
     void onNavigateToPage(eDocElementKind kind);
+
+    /**
+     * \brief   Opens the machine a state imports, in its own read-only window. An import is
+     *          sealed: the host never edits it, and a document that cannot be resolved is
+     *          reported rather than opened empty.
+     **/
+    void onOpenImport(uint32_t stateId, const QString& alias);
 
 private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());

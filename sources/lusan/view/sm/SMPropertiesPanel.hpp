@@ -97,6 +97,8 @@ public:
     void focusConditions(uint32_t transitionId);
     inline QLineEdit* stateNameEdit() const;
     inline QComboBox* stateHistoryCombo() const;
+    inline QComboBox* stateSubmachineCombo() const;
+    inline QComboBox* stateOnFinalCombo() const;
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
@@ -141,6 +143,8 @@ private slots:
 
     void onStateNameCommit();
     void onStateHistoryCommit();
+    void onStateSubmachineCommit();
+    void onStateOnFinalCommit();
     void onStateDescriptionCommit();
     void onDoIntervalCommit();
     void onDoUntilCommit();
@@ -240,6 +244,8 @@ private:
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
     QComboBox*          mStateHistory;  //!< The history mode; only a composite may carry one.
+    QComboBox*          mStateSubmachine;   //!< The hosted import alias; empty means no import.
+    QComboBox*          mStateOnFinal;      //!< The event sent when the submachine finishes.
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
@@ -289,6 +295,16 @@ inline QLineEdit* SMPropertiesPanel::stateNameEdit() const
 inline QComboBox* SMPropertiesPanel::stateHistoryCombo() const
 {
     return mStateHistory;
+}
+
+inline QComboBox* SMPropertiesPanel::stateSubmachineCombo() const
+{
+    return mStateSubmachine;
+}
+
+inline QComboBox* SMPropertiesPanel::stateOnFinalCombo() const
+{
+    return mStateOnFinal;
 }
 
 inline QListWidget* SMPropertiesPanel::transitionList() const

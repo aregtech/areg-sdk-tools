@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMInclude.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -31,16 +31,19 @@ class IncludeListView;
 class QEvent;
 class QModelIndex;
 class QTreeWidgetItem;
+class SMImportModel;
+class SMImports;
 class SMIncludeModel;
 
 /**
- * \brief   The FSM Includes page: header include locations, the counterpart of the Service
- *          Interface Includes page. The page splits into two equal-width
- *          panels — the multi-column include list (Location, Type, Name, Version) on the
- *          left and the selected-include details editor on the right. Every edit is
- *          committed through SMIncludeModel's undo commands; the page mutates no model state
- *          directly and rebuilds the list from the live model on every Include-kind notifier
- *          signal, self-triggered or from undo/redo alike.
+ * \brief   The FSM Includes page: header include locations and imported state machines, the
+ *          counterpart of the Service Interface Includes page. The upper half splits into two
+ *          equal-width panels -- the multi-column include list (Location, Type, Name, Version)
+ *          on the left and the selected-include details editor on the right; the lower half is
+ *          the imports registry (\ref SMImports). Every edit is committed through the page
+ *          models' undo commands; the page mutates no model state directly and rebuilds the
+ *          list from the live model on every Include-kind notifier signal, self-triggered or
+ *          from undo/redo alike.
  **/
 class SMInclude : public    QScrollArea
                 , protected IETableHelper
@@ -51,8 +54,13 @@ class SMInclude : public    QScrollArea
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMInclude(SMIncludeModel& model, QWidget* parent = nullptr);
+    SMInclude(SMIncludeModel& model, SMImportModel& imports, QWidget* parent = nullptr);
     virtual ~SMInclude() = default;
+
+    /**
+     * \brief   Selects the registered import with the given ID (go-to-declaration landing).
+     **/
+    bool revealElement(uint32_t id);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -130,6 +138,7 @@ private:
     SMIncludeModel&     mModel;
     IncludeListView*    mList;
     IncludeDetailsView* mDetails;
+    SMImports*          mImports;       //!< The imported state machines section.
     TableCell*          mTableCell;     //!< Inline editor delegate for the Location column.
     uint32_t            mNameCounter;
 };

@@ -34,6 +34,7 @@
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
 #include "lusan/data/sm/SMImportData.hpp"
+#include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMDataTypeData.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
@@ -208,6 +209,9 @@ namespace
         // Warning rules (10.2 rules 1-11).
         void checkWarnings(const QList<LevelInfo>& levels);
         void checkGuards();
+
+        // Import rules (10.1 rules 19/22, 10.2 rule 12).
+        void checkImports(const QList<LevelInfo>& levels);
 
     private:
         const StateMachineData& mData;
@@ -1056,10 +1060,116 @@ namespace
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
             if (d != nullptr) checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
 
+        checkImports(levels);
         checkWarnings(levels);
         checkGuards();
 
         return mIssues;
+    }
+
+    void Ctx::checkImports(const QList<LevelInfo>& levels)
+    {
+        // Guards the recursive "the imported document fails its own validation" check. A cycle
+        // is caught below, but a document reached through a chain that does not close is still
+        // reached once per host, so the depth stops the work from multiplying.
+        static thread_local int _depth = 0;
+
+        QSet<QString> brokenAliases;
+        for (const SMImportEntry& entry : mData.getImports().getElements())
+        {
+            const uint32_t id = entry.getId();
+
+            QStringList cycle;
+            if (SMImportResolver::findCycle(mData, entry, cycle))
+            {
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' closes a cycle: %2").arg(entry.getName(), cycle.join(QStringLiteral(" imports "))));
+                brokenAliases.insert(entry.getName());
+                continue;
+            }
+
+            const SMImportResolver::Resolution resolution = SMImportResolver::resolve(mData, entry);
+            switch (resolution.state)
+            {
+            case SMImportResolver::eState::NoLocation:
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' names no file").arg(entry.getName()));
+                brokenAliases.insert(entry.getName());
+                continue;
+
+            case SMImportResolver::eState::NotFound:
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' points at a file that does not exist: %2").arg(entry.getName(), entry.getLocation()));
+                brokenAliases.insert(entry.getName());
+                continue;
+
+            case SMImportResolver::eState::ParseFailed:
+                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                    , vtr("Import '%1' cannot be read as a state machine: %2").arg(entry.getName(), entry.getLocation()));
+                brokenAliases.insert(entry.getName());
+                continue;
+
+            case SMImportResolver::eState::Resolved:
+                break;
+            }
+
+            const VersionNumber& pinned = entry.getVersion();
+            const VersionNumber& actual = resolution.actualVersion;
+            if (pinned.getMajor() != actual.getMajor())
+            {
+                add(id, eDocElementKind::Import, eSeverity::Error, 22
+                    , vtr("Import '%1' is pinned to version %2 but the file is %3; use Update to accept it")
+                        .arg(entry.getName(), pinned.toString(), actual.toString()));
+            }
+            else if (pinned.getMinor() != actual.getMinor())
+            {
+                add(id, eDocElementKind::Import, eSeverity::Warning, 12
+                    , vtr("Import '%1' is pinned to version %2, the file is %3; updating is recommended")
+                        .arg(entry.getName(), pinned.toString(), actual.toString()));
+            }
+            else if (pinned.getPatch() != actual.getPatch())
+            {
+                add(id, eDocElementKind::Import, eSeverity::Info, 12
+                    , vtr("Import '%1' is pinned to version %2, the file is %3")
+                        .arg(entry.getName(), pinned.toString(), actual.toString()));
+            }
+
+            if (_depth == 0)
+            {
+                ++_depth;
+                const QList<SMIssue> nested = SMValidator::validate(*resolution.document);
+                --_depth;
+                for (const SMIssue& issue : nested)
+                {
+                    if (issue.severity == eSeverity::Error)
+                    {
+                        add(id, eDocElementKind::Import, eSeverity::Error, 19
+                            , vtr("Imported machine '%1' has errors of its own: %2").arg(entry.getName(), issue.message));
+                        brokenAliases.insert(entry.getName());
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (brokenAliases.isEmpty())
+        {
+            return;
+        }
+
+        // The registration carries the finding, and so does every state that hosts it: the user
+        // works on the canvas, and a state whose machine cannot be loaded has to say so there.
+        for (const LevelInfo& info : levels)
+        {
+            for (const SMStateEntry* state : info.level->getElements())
+            {
+                if ((state != nullptr) && brokenAliases.contains(state->getSubmachine()))
+                {
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 19
+                        , vtr("State '%1' hosts submachine '%2', which is not available").arg(state->getName(), state->getSubmachine()));
+                }
+            }
+        }
     }
 
     void Ctx::checkGuards()

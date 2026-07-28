@@ -386,6 +386,13 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // contextMenuEvent override, viewport coordinates) is the reliable hook.
     connect(mView, &SMGraphicsView::signalContextMenuRequested, this, &SMDesign::onViewContextMenuRequested);
 
+    // A read-only view still navigates, zooms and reads; it just cannot author. The undo stack
+    // is the guarantee -- this only stops the drawing tools from pretending otherwise.
+    if (mToolBar != nullptr)
+    {
+        mToolBar->setEnabled(mModel.isReadOnly() == false);
+    }
+
     DocModelNotifier& notifier = mModel.getNotifier();
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
     connect(&notifier, &DocModelNotifier::layoutChanged, this, &SMDesign::onModelLayoutChanged);
@@ -2376,6 +2383,20 @@ void SMDesign::rebuildBreadcrumb()
         delete item;
     }
 
+    // A document opened as somebody's import starts its path in that host, so the breadcrumb says
+    // where the crossing happened; without it a read-only window looks like an ordinary one.
+    const QString origin = mModel.getReadOnlyOrigin();
+    if (origin.isEmpty() == false)
+    {
+        QLabel* crossing = new QLabel(origin, mBreadcrumb);
+        QFont font{ crossing->font() };
+        font.setItalic(true);
+        crossing->setFont(font);
+        crossing->setToolTip(tr("Opened read only from this machine"));
+        mBreadcrumbLayout->addWidget(crossing);
+        mBreadcrumbLayout->addWidget(new QLabel(QStringLiteral(">"), mBreadcrumb));
+    }
+
     const QList<uint32_t> path{ mSceneManager->getCurrentPath() };
     for (int i = 0; i < path.size(); ++i)
     {
@@ -3057,11 +3078,17 @@ void SMDesign::enterSelectedSubmachine()
         return;
     }
 
-    if (state->hasNestedStates())
+    if (state->isImportedSubmachine())
+    {
+        // The machine lives in another file and the host never reaches inside it, so descending
+        // means opening that document -- read-only, because it is not this document's to change.
+        emit signalOpenImport(id, state->getSubmachine());
+    }
+    else if (state->hasNestedStates())
     {
         mSceneManager->enterSubmachine(id);
     }
-    else if ((state->getKind() == SMStateEntry::eStateKind::Normal) && (state->isImportedSubmachine() == false))
+    else if (state->getKind() == SMStateEntry::eStateKind::Normal)
     {
         // The state has no submachine yet: create a painted composite (with its Start state)
         // and descend into it, so "Enter Submachine" doubles as "start designing one here".

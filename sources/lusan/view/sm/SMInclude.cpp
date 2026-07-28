@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMInclude.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -26,6 +26,7 @@
 #include "lusan/view/common/IncludeDetailsView.hpp"
 #include "lusan/view/common/IncludeListView.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
+#include "lusan/view/sm/SMImports.hpp"
 
 #include <QCheckBox>
 #include <QEvent>
@@ -57,11 +58,12 @@ namespace
     }
 }
 
-SMInclude::SMInclude(SMIncludeModel& model, QWidget* parent /*= nullptr*/)
+SMInclude::SMInclude(SMIncludeModel& model, SMImportModel& imports, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
     , mList             (new IncludeListView(IncludeTypeConfig{ QStringLiteral("fsml"), tr("State Machine") }, this))
     , mDetails          (new IncludeDetailsView(this))
+    , mImports          (new SMImports(imports, this))
     , mTableCell        (nullptr)
     , mNameCounter      (0)
 {
@@ -115,6 +117,11 @@ void SMInclude::buildUi()
     columns->addWidget(mDetails, 1);
 
     root->addLayout(columns, 1);
+
+    // Imported machines are the page's second registry; they sit below the include files so the
+    // two file-facing lists read top to bottom instead of competing for the same width.
+    mImports->setParent(content);
+    root->addWidget(mImports, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -277,6 +284,11 @@ uint32_t SMInclude::currentIncludeId() const
     return (item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).toUInt() : 0u);
 }
 
+bool SMInclude::revealElement(uint32_t id)
+{
+    return mImports->revealElement(id);
+}
+
 QString SMInclude::genName()
 {
     static const QString _defName("NewInclude");
@@ -347,7 +359,7 @@ void SMInclude::onMoveUpClicked()
     if (index > 0)
     {
         // The swap keeps IDs attached to list position, so the moved entry's new ID is the
-        // neighbor's old ID — reselect that to keep the moved row highlighted.
+        // neighbor's old ID -- reselect that to keep the moved row highlighted.
         const uint32_t neighborId = mModel.getIncludes().at(index - 1).getId();
         mModel.swapIncludes(id, neighborId);
         selectInclude(neighborId);

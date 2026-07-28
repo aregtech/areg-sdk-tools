@@ -31,6 +31,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMEventDetails.cpp
     ${LUSAN}/view/sm/SMEventList.cpp
     ${LUSAN}/view/sm/SMEventParamDetails.cpp
+    ${LUSAN}/view/sm/SMImports.cpp
     ${LUSAN}/view/sm/SMInclude.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
     ${LUSAN}/view/sm/SMAutoPlacer.cpp
@@ -93,6 +94,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMEventDetails.hpp
     ${LUSAN}/view/sm/SMEventList.hpp
     ${LUSAN}/view/sm/SMEventParamDetails.hpp
+    ${LUSAN}/view/sm/SMImports.hpp
     ${LUSAN}/view/sm/SMInclude.hpp
     ${LUSAN}/view/sm/NESMDesign.hpp
     ${LUSAN}/view/sm/SMAutoPlacer.hpp

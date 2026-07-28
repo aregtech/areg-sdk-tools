@@ -396,6 +396,7 @@ private:
     SMStateEntry::eHistory      mHistory;       //!< The history badge mode.
     bool                        mComposite;     //!< The state owns painted substates.
     bool                        mImported;      //!< The state hosts an imported submachine.
+    QString                     mSubmachine;    //!< The hosted import alias, shown on the badge.
     bool                        mExpanded;      //!< The body is expanded.
     int                         mActionSeverity;//!< Entry/exit mapping severity (NEGuardStyle), or -1 (clean).
     QString                     mColorName;     //!< The persisted body color (empty = theme).

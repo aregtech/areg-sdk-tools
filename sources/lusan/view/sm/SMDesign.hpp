@@ -414,6 +414,15 @@ signals:
      **/
     void signalNavigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
+    /**
+     * \brief   Emitted when the user descends into a state that hosts an imported machine. The
+     *          import is a document of its own, so the canvas cannot show it: the owning window
+     *          opens the file read-only instead.
+     * \param   stateId The hosting state.
+     * \param   alias   The import alias the state names.
+     **/
+    void signalOpenImport(uint32_t stateId, const QString& alias);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////

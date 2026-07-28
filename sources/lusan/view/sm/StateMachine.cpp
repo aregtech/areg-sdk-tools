@@ -20,6 +20,7 @@
 #include "lusan/view/sm/StateMachine.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -318,6 +319,7 @@ void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t dec
     case SMReferences::eTarget::Timer:      pageIndex = static_cast<int>(PageEvents);        break;
     case SMReferences::eTarget::Attribute:  pageIndex = static_cast<int>(PageAttributes);    break;
     case SMReferences::eTarget::Constant:   pageIndex = static_cast<int>(PageConstants);     break;
+    case SMReferences::eTarget::Import:     pageIndex = static_cast<int>(PageIncludes);      break;
     case SMReferences::eTarget::State:      return;     // states are revealed on the canvas, not here.
     }
 
@@ -334,7 +336,36 @@ void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t dec
     case SMReferences::eTarget::Timer:      static_cast<SMEvent*>(page)->revealTimer(declId);        break;
     case SMReferences::eTarget::Attribute:  static_cast<SMAttribute*>(page)->revealElement(declId);  break;
     case SMReferences::eTarget::Constant:   static_cast<SMConstant*>(page)->revealElement(declId);   break;
+    case SMReferences::eTarget::Import:     static_cast<SMInclude*>(page)->revealElement(declId);    break;
     default:                                                                                         break;
+    }
+}
+
+void StateMachine::onOpenImport(uint32_t stateId, const QString& alias)
+{
+    const SMImportEntry* entry = mModel.getData().getImports().findElement(alias);
+    if (entry == nullptr)
+    {
+        QMessageBox::warning(this, tr("Submachine")
+                            , tr("This state names the machine '%1', which is not in the import list.").arg(alias));
+        return;
+    }
+
+    const SMImportResolver::Resolution resolution = SMImportResolver::resolve(mModel.getData(), *entry);
+    if (resolution.isResolved() == false)
+    {
+        QMessageBox::warning(this, tr("Submachine")
+                            , tr("The machine '%1' cannot be opened:\n%2").arg(alias, entry->getLocation()));
+        return;
+    }
+
+    const SMStateEntry* state = mModel.getData().findStateById(stateId);
+    const QString host = mModel.getData().getOverview().getName();
+    const QString origin = tr("%1 : %2").arg(host.isEmpty() ? userFriendlyCurrentFile() : host
+                                            , state != nullptr ? state->getName() : alias);
+    if (mMainWindow != nullptr)
+    {
+        mMainWindow->openStateMachineReadOnly(resolution.absolutePath, origin);
     }
 }
 
@@ -556,7 +587,20 @@ QString StateMachine::suggestedSaveName() const
 
 bool StateMachine::writeToFile(const QString& filePath)
 {
+    if (mModel.isReadOnly())
+    {
+        QMessageBox::information(this, tr("Read Only")
+                                , tr("This is a read only view of an imported machine. Open the file as its own document to change it."));
+        return false;
+    }
+
     return mModel.saveToFile(filePath);
+}
+
+void StateMachine::openReadOnly(const QString& origin)
+{
+    mModel.setReadOnly(true, origin);
+    setWindowTitle(tr("%1 [read only]").arg(userFriendlyCurrentFile()));
 }
 
 bool StateMachine::maybeSave()
@@ -677,7 +721,7 @@ void StateMachine::ensureTabInitialized(int index)
     }
     else if (index == static_cast<int>(PageIncludes))
     {
-        page = new SMInclude(mModel.getIncludeModel(), &mTabWidget);
+        page = new SMInclude(mModel.getIncludeModel(), mModel.getImportModel(), &mTabWidget);
     }
     else if (index == static_cast<int>(PageDesign))
     {
@@ -702,6 +746,7 @@ void StateMachine::ensureTabInitialized(int index)
                 mMainWindow->showValidationOutput(step);
             }
         });
+        connect(design, &SMDesign::signalOpenImport, this, &StateMachine::onOpenImport);
         page = design;
     }
     else

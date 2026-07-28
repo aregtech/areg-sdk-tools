@@ -241,6 +241,25 @@ bool MdiMainWindow::openFile(const QString& fileName)
     return result;
 }
 
+bool MdiMainWindow::openStateMachineReadOnly(const QString& filePath, const QString& origin)
+{
+    if (QMdiSubWindow* existing = findMdiChild(filePath))
+    {
+        mMdiArea.setActiveSubWindow(existing);
+        return true;
+    }
+
+    StateMachine* child = createStateMachineView(filePath);
+    if (child == nullptr)
+    {
+        return false;
+    }
+
+    child->openReadOnly(origin);
+    child->show();
+    return true;
+}
+
 bool MdiMainWindow::loadFile(const QString& fileName)
 {
     bool succeeded{false};

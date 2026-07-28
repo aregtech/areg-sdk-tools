@@ -65,7 +65,8 @@ The armed tool is shown checked in all three surfaces at once.
 
 ### Navigation
 
-- Double-click a composite state, or press `Enter` on it, to descend into its level.
+- Double-click a composite state, or press `Enter` on it, to descend into its level. A state
+  that hosts an *imported* machine opens that file instead -- see "Adding a submachine".
 - `Backspace`, `Alt`+double-click, or a breadcrumb segment goes back up.
 - `Home` centres the machine; `Ctrl`+`+` / `Ctrl`+`-` / `Ctrl`+`0` zoom; `Ctrl`+`Shift`+`0`
   zooms to fit.
@@ -82,6 +83,46 @@ The armed tool is shown checked in all three surfaces at once.
 - Alignment and distribution act on the selection.
 - `Ctrl+Shift+G` toggles snap to grid; grid size and visibility are saved with the document.
 - Every gesture is one undo step. Undo history survives page switches.
+
+### Adding a submachine
+
+A state can own a submachine in exactly one of two ways, and never both at once. Which one
+you want decides how you add it.
+
+**Painted -- the submachine lives in this document.** Select a `Normal` state and double-click
+its body, press `Enter`, or use `Add Substate (Painted)` from the context menu. The editor
+attaches the nested level, creates its mandatory `Start` state and descends, all as one undo
+step. From then on the state is composite: `Enter` descends, `Backspace` comes back up, and
+`Delete` on the state removes the whole subtree.
+
+**Imported -- the submachine is another `.fsml` file.** Two steps:
+
+1. On the **Includes** page, in `Imported State Machines`, press **Add** and pick the `.fsml`.
+   It is registered under an *alias* (the file's base name by default, editable) together with
+   its location and the version it had when you imported it. The location is stored relative to
+   *this document's own directory*, so save the host before importing.
+2. Select the hosting state and pick that alias in **Properties -> General -> Submachine**.
+   The picker is disabled for `Start` and `Final` states and for a state that already has a
+   painted subtree.
+
+The same machine can back any number of states; each is an independent instance.
+
+An imported machine is **sealed**. The host stores only the alias, the location and the pinned
+version -- it never reaches inside. The one signal the submachine sends back is the
+**On Final** event: set it in Properties and the host raises that event when the imported
+machine reaches its top-level `Final` state. Because the import is a separate document,
+double-clicking a hosting state does not descend -- it opens that file **read-only** in its own
+window, with the origin shown in the breadcrumb. Edit it by opening it as its own document.
+
+**Switching form.** The two forms are mutually exclusive, so clear one before setting the
+other. Clearing `Submachine` also clears `On Final` and `History` in the same undo step, since
+neither means anything on a state that is no longer composite.
+
+**When an import breaks.** A missing, unreadable or cyclic import is an error on the
+registration *and* on every state that hosts it, but the host document still opens -- a broken
+import never costs you your own work. Version drift is graded: a differing **major** version is
+an error, **minor** is a warning, **patch** is information, and only the **Update** button
+re-pins.
 
 ### Panels
 
@@ -144,10 +185,13 @@ the **Validation** tab with three severities:
 - **Errors** must be fixed -- missing or duplicated `Start` states, duplicate IDs or names,
   unresolved references, targets that are not siblings, `Final` states with outgoing
   transitions, unmapped required arguments, type incompatibilities, unparseable literals,
-  malformed expression rows, and so on.
+  malformed expression rows, imports that cannot be resolved or that form a cycle, a pinned
+  import version whose major component has moved, and so on.
 - **Warnings** are design smells -- unreachable states, dead ends, shadowed transitions,
-  declarations nothing references, events sent but never reacted to, timers reacted to but
-  never started, empty internal transitions, comparisons of two constants, empty inline code.
+  declarations nothing references (an imported machine no state hosts included), events sent
+  but never reacted to, timers reacted to but never started, empty internal transitions,
+  comparisons of two constants, empty inline code, a pinned import version whose minor
+  component has moved.
 - **Information** covers declarations that are simply not used yet: an unused attribute or
   constant is legitimate at any point in a design and is never reported as a warning.
 

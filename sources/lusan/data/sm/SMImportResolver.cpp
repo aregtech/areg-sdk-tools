@@ -1,0 +1,177 @@
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/data/sm/SMImportResolver.cpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, submachine import resolution and cycle detection.
+ *
+ ************************************************************************/
+
+#include "lusan/data/sm/SMImportResolver.hpp"
+
+#include "lusan/data/sm/SMDocumentCache.hpp"
+#include "lusan/data/sm/SMImportData.hpp"
+#include "lusan/data/sm/StateMachineData.hpp"
+
+#include <QDir>
+#include <QFileInfo>
+#include <QSet>
+
+namespace
+{
+    //!< The directory a host document's relative locations are measured from; empty when unsaved.
+    QString hostDirectory(const StateMachineData& host)
+    {
+        const QString& path = host.getFilePath();
+        return (path.isEmpty() ? QString() : QFileInfo(path).absolutePath());
+    }
+
+    //!< How a document names itself in a message: its machine name, or the file name if unnamed.
+    QString documentLabel(const StateMachineData& doc)
+    {
+        const QString& name = doc.getOverview().getName();
+        return (name.isEmpty() == false ? name : QFileInfo(doc.getFilePath()).fileName());
+    }
+
+    //!< Absolute, cleaned path of a location interpreted relative to \p directory.
+    QString makeAbsolute(const QString& directory, const QString& location)
+    {
+        if (location.isEmpty())
+        {
+            return QString();
+        }
+
+        const QFileInfo info(location);
+        if (info.isAbsolute())
+        {
+            return QDir::cleanPath(info.absoluteFilePath());
+        }
+
+        return (directory.isEmpty() ? QString() : QDir::cleanPath(QDir(directory).absoluteFilePath(location)));
+    }
+}
+
+QString SMImportResolver::absolutePath(const StateMachineData& host, const QString& location)
+{
+    return makeAbsolute(hostDirectory(host), location);
+}
+
+QString SMImportResolver::storableLocation(const StateMachineData& host, const QString& absoluteFilePath)
+{
+    const QString cleaned = QDir::cleanPath(absoluteFilePath);
+    const QString dir     = hostDirectory(host);
+    if (dir.isEmpty() || cleaned.isEmpty())
+    {
+        return cleaned;
+    }
+
+    // A relative location keeps working when the whole project tree is moved or checked out
+    // elsewhere; one that has to climb out of the tree does not, so it stays absolute.
+    const QString relative = QDir(dir).relativeFilePath(cleaned);
+    if (relative.startsWith(QStringLiteral("..")) || QFileInfo(relative).isAbsolute())
+    {
+        return cleaned;
+    }
+
+    return QStringLiteral("./") + relative;
+}
+
+SMImportResolver::Resolution SMImportResolver::resolve(const StateMachineData& host, const SMImportEntry& entry)
+{
+    Resolution result;
+    if (entry.getLocation().isEmpty())
+    {
+        return result;
+    }
+
+    result.absolutePath = absolutePath(host, entry.getLocation());
+    if (result.absolutePath.isEmpty() || (QFileInfo(result.absolutePath).isFile() == false))
+    {
+        result.state = eState::NotFound;
+        return result;
+    }
+
+    result.document = SMDocumentCache::getInstance().document(result.absolutePath);
+    if (result.document == nullptr)
+    {
+        result.state = eState::ParseFailed;
+        return result;
+    }
+
+    result.state         = eState::Resolved;
+    result.actualVersion = result.document->getOverview().getVersion();
+    return result;
+}
+
+bool SMImportResolver::findCycle(const StateMachineData& host, const SMImportEntry& entry, QStringList& chain)
+{
+    const QString hostPath = QDir::cleanPath(QFileInfo(host.getFilePath()).absoluteFilePath());
+    if (host.getFilePath().isEmpty())
+    {
+        // An unsaved document has no identity on disk, so nothing can point back at it.
+        return false;
+    }
+
+    struct Step
+    {
+        QString     path;
+        QStringList trail;
+    };
+
+    const QString first = absolutePath(host, entry.getLocation());
+    if (first.isEmpty())
+    {
+        return false;
+    }
+
+    QList<Step>   pending{ Step{ first, QStringList{ documentLabel(host) } } };
+    QSet<QString> seen{ hostPath };
+
+    while (pending.isEmpty() == false)
+    {
+        const Step step = pending.takeFirst();
+        if (step.path == hostPath)
+        {
+            chain = step.trail;
+            chain.append(documentLabel(host));
+            return true;
+        }
+
+        if (seen.contains(step.path))
+        {
+            // A cycle that does not run through the host belongs to that other document's own
+            // findings, not to this one.
+            continue;
+        }
+
+        seen.insert(step.path);
+        std::shared_ptr<const StateMachineData> doc = SMDocumentCache::getInstance().document(step.path);
+        if (doc == nullptr)
+        {
+            continue;
+        }
+
+        QStringList trail = step.trail;
+        trail.append(documentLabel(*doc));
+        for (const SMImportEntry& nested : doc->getImports().getElements())
+        {
+            const QString next = absolutePath(*doc, nested.getLocation());
+            if (next.isEmpty() == false)
+            {
+                pending.append(Step{ next, trail });
+            }
+        }
+    }
+
+    return false;
+}

@@ -198,6 +198,8 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateHistory (nullptr)
+    , mStateSubmachine(nullptr)
+    , mStateOnFinal (nullptr)
     , mStateDesc    (nullptr)
     , mEnterOps     (nullptr)
     , mExitOps      (nullptr)
@@ -288,6 +290,10 @@ void SMPropertiesPanel::buildStatePage()
     mStateHistory->addItem(tr("Deep"), static_cast<int>(SMStateEntry::eHistory::Deep));
     mStateHistory->setItemData(1, tr("Coming back activates the substate that was active last time"), Qt::ToolTipRole);
     mStateHistory->setItemData(2, tr("Coming back restores the whole path that was active last time, down to the leaf"), Qt::ToolTipRole);
+    mStateSubmachine = new QComboBox(this);
+    mStateSubmachine->setObjectName(QStringLiteral("smStateSubmachine"));
+    mStateOnFinal = new QComboBox(this);
+    mStateOnFinal->setObjectName(QStringLiteral("smStateOnFinal"));
     mTransitions = new ReorderList(this);
     mStateDesc = new QPlainTextEdit(this);
 
@@ -304,6 +310,8 @@ void SMPropertiesPanel::buildStatePage()
     form->setContentsMargins(6, 6, 6, 6);
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
+    form->addRow(tr("Submachine:"), mStateSubmachine);
+    form->addRow(tr("On Final:"), mStateOnFinal);
     form->addRow(tr("History:"), mStateHistory);
     form->addRow(tr("Description:"), mStateDesc);
 
@@ -330,6 +338,8 @@ void SMPropertiesPanel::buildStatePage()
         }
     });
     connect(mStateHistory, &QComboBox::activated, this, &SMPropertiesPanel::onStateHistoryCommit);
+    connect(mStateSubmachine, &QComboBox::activated, this, &SMPropertiesPanel::onStateSubmachineCommit);
+    connect(mStateOnFinal, &QComboBox::activated, this, &SMPropertiesPanel::onStateOnFinalCommit);
     connect(mTransitions, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { onTransitionActivated(); });
 
     static_cast<ReorderList*>(mTransitions)->mOnReorder = [this](int from, int to)
@@ -603,6 +613,53 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     // says why instead of a silently missing one -- the same field then comes alive the moment
     // the state grows a submachine.
     const bool composite = state->isComposite();
+
+    // A state hosts an import or paints its own substates, never both. Once substates are painted
+    // the picker is closed: swapping to an import would delete a subtree that undo cannot rebuild.
+    const bool canHost = (state->getKind() == SMStateEntry::eStateKind::Normal) && (state->hasNestedStates() == false);
+    mStateSubmachine->clear();
+    mStateSubmachine->addItem(tr("(none)"), QString());
+    for (const QString& alias : mModel.getImportModel().getAliases())
+    {
+        mStateSubmachine->addItem(alias, alias);
+    }
+
+    // A hand-written file may name an import that is no longer registered; showing it keeps the
+    // panel honest about what the document says (validation reports the missing declaration).
+    const QString submachine = state->getSubmachine();
+    if ((submachine.isEmpty() == false) && (mStateSubmachine->findData(submachine) < 0))
+    {
+        mStateSubmachine->addItem(tr("%1 (not registered)").arg(submachine), submachine);
+    }
+
+    mStateSubmachine->setCurrentIndex(qMax(0, mStateSubmachine->findData(submachine)));
+    mStateSubmachine->setEnabled(canHost);
+    mStateSubmachine->setToolTip(canHost
+                                 ? tr("The imported machine this state runs")
+                                 : tr("This state paints its own substates, so it cannot host an imported machine"));
+
+    mStateOnFinal->clear();
+    mStateOnFinal->addItem(tr("(none)"), QString());
+    for (const SMEventEntry* event : mModel.getData().getEvents().getElements())
+    {
+        if (event != nullptr)
+        {
+            mStateOnFinal->addItem(event->getName(), event->getName());
+        }
+    }
+
+    const QString onFinal = state->getOnFinal();
+    if ((onFinal.isEmpty() == false) && (mStateOnFinal->findData(onFinal) < 0))
+    {
+        mStateOnFinal->addItem(tr("%1 (not declared)").arg(onFinal), onFinal);
+    }
+
+    mStateOnFinal->setCurrentIndex(qMax(0, mStateOnFinal->findData(onFinal)));
+    mStateOnFinal->setEnabled(composite);
+    mStateOnFinal->setToolTip(composite
+                              ? tr("The event sent when the submachine reaches its Final state")
+                              : tr("Only a state with a submachine can finish"));
+
     mStateHistory->setCurrentIndex(mStateHistory->findData(static_cast<int>(state->getHistory())));
     mStateHistory->setEnabled(composite);
     mStateHistory->setToolTip(composite
@@ -851,6 +908,62 @@ void SMPropertiesPanel::onStateHistoryCommit()
     }
 
     mModel.getUndoStack().push(new SMSetHistoryCommand(data, mModel.getNotifier(), mCurrentId, history, tr("Set history mode")));
+}
+
+void SMPropertiesPanel::onStateSubmachineCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const QString alias = mStateSubmachine->currentData().toString();
+    if (alias == state->getSubmachine())
+    {
+        return;
+    }
+
+    SMSetSubmachineCommand* command = new SMSetSubmachineCommand(data, mModel.getNotifier(), mCurrentId, alias
+                                                               , alias.isEmpty() ? tr("Remove submachine") : tr("Set submachine"));
+    if (command->isEffective())
+    {
+        mModel.getUndoStack().push(command);
+    }
+    else
+    {
+        delete command;
+        showState(mCurrentId);
+    }
+}
+
+void SMPropertiesPanel::onStateOnFinalCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const QString event = mStateOnFinal->currentData().toString();
+    if ((event == state->getOnFinal()) || (state->isComposite() == false))
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetOnFinalCommand(data, mModel.getNotifier(), mCurrentId, event, tr("Set completion event")));
 }
 
 void SMPropertiesPanel::onStateDescriptionCommit()

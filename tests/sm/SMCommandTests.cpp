@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        tests/sm/SMCommandTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -40,6 +40,7 @@
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
+#include "lusan/model/sm/SMImportModel.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
@@ -345,7 +346,7 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Scenario E: SM-07 Data Types page model — enumeration/structure/imported
+// Scenario E: SM-07 Data Types page model -- enumeration/structure/imported
 // lifecycle through SMDataTypeModel exactly as SMDataType (the view) drives it,
 // undo/redo round-trip, and a category conversion composite.
 //////////////////////////////////////////////////////////////////////////
@@ -457,7 +458,7 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Scenario F (SM-07-02): container data types — direct creation and conversion-from-
+// Scenario F (SM-07-02): container data types -- direct creation and conversion-from-
 // existing both seed sensible defaults, switching basic container enables/disables and
 // clears the key, key/value are set by name through SMDataTypeModel, undo/redo round-trip.
 //////////////////////////////////////////////////////////////////////////
@@ -547,8 +548,8 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Scenario G (SM-09): Events page model (SMEventModel) — event and payload-parameter
-// lifecycle, and Timers page model (SMTimerModel) — timer lifecycle, both through the same
+// Scenario G (SM-09): Events page model (SMEventModel) -- event and payload-parameter
+// lifecycle, and Timers page model (SMTimerModel) -- timer lifecycle, both through the same
 // undo stack, plus the shared stimulus name-space collision check (StateMachineData::
 // findStimulus) that the pages use for live "name already used" feedback.
 //////////////////////////////////////////////////////////////////////////
@@ -673,7 +674,7 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Scenario H: SM-13 canvas state lifecycle — create (state + node as one step),
+// Scenario H: SM-13 canvas state lifecycle -- create (state + node as one step),
 // rename, and delete removing the transitions that target the deleted state.
 //////////////////////////////////////////////////////////////////////////
 
@@ -721,7 +722,7 @@ namespace
 
         stack.push(new SMRemoveStateCommand(doc, notifier, doc.getStates(), idleId, "Delete Ready"));
         CHECK(doc.getStates().findState("Ready") == nullptr);
-        CHECK(run->getTransitions().getElementCount() == 1);        // evStop → Ready removed
+        CHECK(run->getTransitions().getElementCount() == 1);        // evStop -> Ready removed
 
         stack.undo();
         CHECK(serialize(doc) == beforeDelete);                      // transition restored with IDs
@@ -967,6 +968,87 @@ namespace
 // main
 //////////////////////////////////////////////////////////////////////////
 
+
+//////////////////////////////////////////////////////////////////////////
+// SM-29: submachine hosting and the read-only document
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testSubmachineHosting()
+    {
+        std::printf("[SM-29] submachine link/unlink and read-only refusal\n");
+
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        doc.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+        SMStateEntry* host = doc.getStates().createState("Phase", SMStateEntry::eStateKind::Normal);
+        const uint32_t hostId = host->getId();
+        doc.getImports().createImport("TurnCycle");
+
+        SMSetSubmachineCommand* link = new SMSetSubmachineCommand(doc, notifier, hostId, "TurnCycle", "Set submachine");
+        CHECK(link->isEffective());
+        stack.push(link);
+        CHECK(doc.findStateById(hostId)->getSubmachine() == QStringLiteral("TurnCycle"));
+        CHECK(doc.findStateById(hostId)->isComposite());
+
+        // OnFinal and History only mean something while the state hosts a machine, so unlinking
+        // takes them with it -- in the same undo step, and undo brings all three back.
+        stack.push(new SMSetOnFinalCommand(doc, notifier, hostId, "evDone", "Set completion event"));
+        stack.push(new SMSetHistoryCommand(doc, notifier, hostId, SMStateEntry::eHistory::Deep, "Set history mode"));
+        stack.push(new SMSetSubmachineCommand(doc, notifier, hostId, QString(), "Remove submachine"));
+        CHECK(doc.findStateById(hostId)->getSubmachine().isEmpty());
+        CHECK(doc.findStateById(hostId)->getOnFinal().isEmpty());
+        CHECK(doc.findStateById(hostId)->getHistory() == SMStateEntry::eHistory::None);
+
+        stack.undo();
+        CHECK(doc.findStateById(hostId)->getSubmachine() == QStringLiteral("TurnCycle"));
+        CHECK(doc.findStateById(hostId)->getOnFinal() == QStringLiteral("evDone"));
+        CHECK(doc.findStateById(hostId)->getHistory() == SMStateEntry::eHistory::Deep);
+
+        // A painted composite refuses the swap: the subtree would be gone beyond undo's reach.
+        SMStateEntry* painted = doc.getStates().createState("Painted", SMStateEntry::eStateKind::Normal);
+        painted->getOrCreateNestedStates()->createState("SubStart", SMStateEntry::eStateKind::Start);
+        SMSetSubmachineCommand* refused = new SMSetSubmachineCommand(doc, notifier, painted->getId(), "TurnCycle", "Set submachine");
+        CHECK(refused->isEffective() == false);
+        delete refused;
+
+        // Renaming the import rewrites the alias on every hosting state as one step.
+        StateMachineModel model;
+        model.getData().getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+        SMStateEntry* a = model.getData().getStates().createState("A", SMStateEntry::eStateKind::Normal);
+        SMStateEntry* b = model.getData().getStates().createState("B", SMStateEntry::eStateKind::Normal);
+        SMImportEntry* imported = model.getImportModel().createImport("Cycle", "./cycle.fsml");
+        CHECK(imported != nullptr);
+        a->setSubmachine("Cycle");
+        b->setSubmachine("Cycle");
+        CHECK(model.getImportModel().whereUsed(imported->getId()).size() == 2);
+
+        model.getImportModel().setName(imported->getId(), "Rotation");
+        CHECK(a->getSubmachine() == QStringLiteral("Rotation"));
+        CHECK(b->getSubmachine() == QStringLiteral("Rotation"));
+        model.getUndoStack().undo();
+        CHECK(a->getSubmachine() == QStringLiteral("Cycle"));
+        CHECK(b->getSubmachine() == QStringLiteral("Cycle"));
+
+        // Read-only: the stack is the chokepoint, so nothing a view builds can reach the model.
+        const int before = model.getUndoStack().count();
+        model.setReadOnly(true, QStringLiteral("Host : A"));
+        CHECK(model.isReadOnly());
+        CHECK(model.getUndoStack().count() == 0);           // history is dropped with the write right
+        CHECK(model.getUndoStack().push(new SMSetOnFinalCommand(model.getData(), model.getNotifier(), a->getId(), "evX", "Set completion event")) == false);
+        CHECK(a->getOnFinal().isEmpty());
+        CHECK(model.saveToFile(QStringLiteral("C:/Temp/should-never-exist.fsml")) == false);
+        CHECK(before >= 0);
+
+        model.setReadOnly(false);
+        CHECK(model.getUndoStack().push(new SMSetOnFinalCommand(model.getData(), model.getNotifier(), a->getId(), "evX", "Set completion event")));
+        CHECK(a->getOnFinal() == QStringLiteral("evX"));
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("SM-04 command framework tests\n");
@@ -981,6 +1063,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testCanvasStateLifecycle();
     testCopyPasteDuplicate();
     testHistoryMode();
+    testSubmachineHosting();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

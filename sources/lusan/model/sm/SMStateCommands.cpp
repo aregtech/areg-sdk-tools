@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/SMStateCommands.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -186,6 +186,109 @@ void SMSetHistoryCommand::redo()
 }
 
 void SMSetHistoryCommand::undo()
+{
+    apply(mOld);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetSubmachineCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetSubmachineCommand::SMSetSubmachineCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                               , uint32_t stateId, const QString& alias
+                                               , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mId       (stateId)
+    , mNew      (alias)
+{
+    const SMStateEntry* state = data.findStateById(stateId);
+    mEffective = (state != nullptr)
+              && (state->hasNestedStates() == false)
+              && (state->getKind() == SMStateEntry::eStateKind::Normal)
+              && (state->getSubmachine() != alias);
+}
+
+bool SMSetSubmachineCommand::isEffective() const
+{
+    return mEffective;
+}
+
+void SMSetSubmachineCommand::redo()
+{
+    SMStateEntry* state = (mEffective ? data().findStateById(mId) : nullptr);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    if (mCaptured == false)
+    {
+        mOldAlias   = state->getSubmachine();
+        mOldFinal   = state->getOnFinal();
+        mOldHistory = state->getHistory();
+        mCaptured   = true;
+    }
+
+    state->setSubmachine(mNew);
+    if (mNew.isEmpty())
+    {
+        state->setOnFinal(QString());
+        state->setHistory(SMStateEntry::eHistory::None);
+    }
+
+    notifier().notifyElementChanged(mId, eDocElementKind::State);
+}
+
+void SMSetSubmachineCommand::undo()
+{
+    SMStateEntry* state = (mEffective ? data().findStateById(mId) : nullptr);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->setSubmachine(mOldAlias);
+    state->setOnFinal(mOldFinal);
+    state->setHistory(mOldHistory);
+    notifier().notifyElementChanged(mId, eDocElementKind::State);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetOnFinalCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetOnFinalCommand::SMSetOnFinalCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                         , uint32_t stateId, const QString& eventName
+                                         , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mId       (stateId)
+    , mNew      (eventName)
+{
+}
+
+void SMSetOnFinalCommand::apply(const QString& eventName)
+{
+    SMStateEntry* state = data().findStateById(mId);
+    if (state != nullptr)
+    {
+        state->setOnFinal(eventName);
+        notifier().notifyElementChanged(mId, eDocElementKind::State);
+    }
+}
+
+void SMSetOnFinalCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMStateEntry* state = data().findStateById(mId);
+        mOld = (state != nullptr ? state->getOnFinal() : QString());
+        mCaptured = true;
+    }
+
+    apply(mNew);
+}
+
+void SMSetOnFinalCommand::undo()
 {
     apply(mOld);
 }

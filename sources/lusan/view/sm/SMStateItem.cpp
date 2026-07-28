@@ -234,6 +234,7 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     , mHistory          (SMStateEntry::eHistory::None)
     , mComposite        (false)
     , mImported         (false)
+    , mSubmachine       ( )
     , mExpanded         (true)
     , mActionSeverity   (-1)
     , mColorName        ( )
@@ -547,8 +548,17 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
 
     if (mComposite || mImported)
     {
-        // Composite: nested boxes; imported: a box with an inbound arrow.
-        const QRectF badge{ right - 14.0, (headerH - 12.0) / 2.0, 12.0, 12.0 };
+        // An imported machine is named on the box: which machine a state runs is the first thing
+        // a reader of the diagram wants, and the file it comes from is not on screen anywhere else.
+        // The alias is elided rather than dropped, so a long name shrinks instead of pushing out
+        // the state's own name.
+        painter->setFont(badgeFont);
+        const double aliasW = (mImported && (mSubmachine.isEmpty() == false))
+                            ? qMin(QFontMetricsF{ badgeFont }.horizontalAdvance(mSubmachine) + 4.0
+                                  , qMax((right - padding) * 0.4, 0.0))
+                            : 0.0;
+
+        const QRectF badge{ right - 14.0 - aliasW, (headerH - 12.0) / 2.0, 12.0, 12.0 };
         painter->setPen(QPen(textColor, 1.1));
         painter->setBrush(Qt::NoBrush);
         painter->drawRect(badge.adjusted(0.0, 0.0, -3.0, -3.0));
@@ -561,6 +571,14 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
             painter->drawLine(badge.bottomRight(), badge.center());
             painter->drawLine(badge.center(), badge.center() + QPointF(4.0, 0.0));
             painter->drawLine(badge.center(), badge.center() + QPointF(0.0, 4.0));
+        }
+
+        if (aliasW > 0.0)
+        {
+            const QRectF aliasRect{ badge.right() + 2.0, 0.0, aliasW, headerH };
+            painter->setPen(textColor);
+            painter->drawText(aliasRect, Qt::AlignVCenter | Qt::AlignLeft
+                             , QFontMetricsF{ badgeFont }.elidedText(mSubmachine, Qt::ElideRight, aliasW));
         }
 
         right = badge.left() - 4.0;
@@ -948,6 +966,7 @@ void SMStateItem::updateFromModel()
     // never persisted), so the box must not advertise a substate it does not really have.
     mComposite = state->hasNestedStates() && state->getNestedStates()->hasRealState();
     mImported  = state->isImportedSubmachine();
+    mSubmachine = state->getSubmachine();
     mHasNote   = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
 
     // An entry/exit action whose arguments are not fully mapped warns in the header, so a method

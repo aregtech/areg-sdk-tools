@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/StateMachineModel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -106,8 +106,10 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mMethodModel   (*this)
     , mConstantModel (*this)
     , mIncludeModel  (*this)
+    , mImportModel   (*this)
     , mSelectionModel(this)
     , mOpenSuccess   (false)
+    , mReadOnlyOrigin( )
     , mValidationController(*mData, mNotifier, this)
 {
     mUndoStack.setUndoLimit(100);
@@ -171,9 +173,24 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
     return true;
 }
 
+void StateMachineModel::setReadOnly(bool readOnly, const QString& origin /*= QString()*/)
+{
+    mReadOnlyOrigin = readOnly ? origin : QString();
+    mUndoStack.setReadOnly(readOnly);
+    if (readOnly)
+    {
+        // Nothing can change, so there is nothing to autosave and no history worth keeping.
+        mAutosaveTimer.stop();
+        mUndoStack.clear();
+        mUndoStack.setClean();
+    }
+
+    mNotifier.notifyReadOnlyChanged(readOnly);
+}
+
 bool StateMachineModel::saveToFile(const QString& filePath /*= QString()*/)
 {
-    if (mData == nullptr)
+    if ((mData == nullptr) || isReadOnly())
     {
         return false;
     }
@@ -195,7 +212,7 @@ bool StateMachineModel::saveToFile(const QString& filePath /*= QString()*/)
 
 bool StateMachineModel::writeAutosave()
 {
-    if ((mData == nullptr) || mUndoStack.isClean())
+    if ((mData == nullptr) || isReadOnly() || mUndoStack.isClean())
     {
         return true;
     }

@@ -17,6 +17,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
+    ${LUSAN}/model/sm/SMImportModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
@@ -59,6 +60,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMGuardSymbols.hpp
     ${LUSAN}/model/sm/SMGuardValidation.hpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.hpp
+    ${LUSAN}/model/sm/SMImportModel.hpp
     ${LUSAN}/model/sm/SMIncludeModel.hpp
     ${LUSAN}/model/sm/SMLayoutCommands.hpp
     ${LUSAN}/model/sm/SMLiteralValidator.hpp
@@ -76,6 +78,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMTimerModel.hpp
     ${LUSAN}/model/sm/SMTransitionCommands.hpp
     ${LUSAN}/model/sm/SMTypeCompat.hpp
+    ${LUSAN}/model/sm/SMUndoStack.hpp
     ${LUSAN}/model/sm/SMValidationController.hpp
     ${LUSAN}/model/sm/SMValidator.hpp
     ${LUSAN}/model/sm/SMGoToDef.hpp

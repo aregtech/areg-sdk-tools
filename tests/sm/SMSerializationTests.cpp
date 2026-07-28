@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        tests/sm/SMSerializationTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -21,7 +21,7 @@
  *       and never open as an empty valid document).
  *    4. Code bodies and expressions round-trip byte-exactly through CDATA.
  *    5. FormatVersion migration/preservation/refusal behavior follows spec 7.8.
- *  Acceptance 2 (validation against `fsml.xsd`) is checked out of process with lxml — the
+ *  Acceptance 2 (validation against `fsml.xsd`) is checked out of process with lxml -- the
  *  written output is produced here and validated by the build/verify step.
  *
  ************************************************************************/
@@ -173,6 +173,9 @@ namespace
         std::printf("[SM-27] byte-identical round-trip (reference documents)\n");
         roundTripDocument("FullFeature.fsml", "sm27_fullfeature.fsml");
         roundTripDocument("GuardDemo.fsml", "sm27_guarddemo.fsml");
+        // The import pair: one import instantiated by two states, plus one that does not resolve.
+        roundTripDocument("SubmachineDemo.fsml", "sm29_submachinedemo.fsml");
+        roundTripDocument("TurnCycle.fsml", "sm29_turncycle.fsml");
     }
 }
 
@@ -582,7 +585,7 @@ namespace
         const QString truncPath = outFile("sm02_trunc.fsml");
 
         // Every prefix of the document is malformed (unclosed elements): opening must fail
-        // and, crucially, must terminate (no infinite loop — reaching here proves it).
+        // and, crucially, must terminate (no infinite loop -- reaching here proves it).
         // Every length here cuts before the root `</StateMachine>` closes, so each prefix
         // is genuinely incomplete (an unclosed document), never a valid whole.
         const int lengths[] = { 1, 10, 42, 100, 250, 600, 1500, 4000, 9000, 12000, 16000, 17900 };

@@ -37,6 +37,7 @@
 class ConstantEntry;
 class SMAttributeEntry;
 class SMEventEntry;
+class SMImportEntry;
 class SMTimerEntry;
 class StateMachineData;
 
@@ -141,6 +142,7 @@ public:
     const SMTimerEntry* timer(const QString& name) const;
     const SMAttributeEntry* attribute(const QString& name) const;
     const ConstantEntry* constant(const QString& name) const;
+    const SMImportEntry* import(const QString& name) const;
 
     // ---- Declarations by document ID --------------------------------------
 
@@ -149,6 +151,7 @@ public:
     const SMTimerEntry* timer(uint32_t id) const;
     const SMAttributeEntry* attribute(uint32_t id) const;
     const ConstantEntry* constant(uint32_t id) const;
+    const SMImportEntry* import(uint32_t id) const;
 
     // ---- Grouped views ----------------------------------------------------
 
