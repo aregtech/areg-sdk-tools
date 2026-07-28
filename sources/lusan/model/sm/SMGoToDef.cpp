@@ -65,7 +65,7 @@ namespace
         }
         case eTarget::Import:
         {
-            const SMImportEntry* import = index.import(name);
+            const IncludeEntry* import = index.import(name);
             return (import != nullptr) ? import->getId() : 0u;
         }
         default:

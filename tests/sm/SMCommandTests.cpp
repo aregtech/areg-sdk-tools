@@ -40,7 +40,7 @@
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
-#include "lusan/model/sm/SMImportModel.hpp"
+#include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
@@ -48,7 +48,12 @@
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/data/common/EnumEntry.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/data/sm/SMDocumentCache.hpp"
 
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
 #include <QUndoStack>
 #include <QXmlStreamWriter>
 #include <QString>
@@ -986,7 +991,10 @@ namespace
         doc.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
         SMStateEntry* host = doc.getStates().createState("Phase", SMStateEntry::eStateKind::Normal);
         const uint32_t hostId = host->getId();
-        doc.getImports().createImport("TurnCycle");
+        if (IncludeEntry* import = doc.getIncludes().createInclude("./TurnCycle.fsml"))
+        {
+            import->setAlias("TurnCycle");
+        }
 
         SMSetSubmachineCommand* link = new SMSetSubmachineCommand(doc, notifier, hostId, "TurnCycle", "Set submachine");
         CHECK(link->isEffective());
@@ -1020,13 +1028,15 @@ namespace
         model.getData().getStates().createState("Idle", SMStateEntry::eStateKind::Start);
         SMStateEntry* a = model.getData().getStates().createState("A", SMStateEntry::eStateKind::Normal);
         SMStateEntry* b = model.getData().getStates().createState("B", SMStateEntry::eStateKind::Normal);
-        SMImportEntry* imported = model.getImportModel().createImport("Cycle", "./cycle.fsml");
+        IncludeEntry* imported = model.getIncludeModel().createInclude("./cycle.fsml");
         CHECK(imported != nullptr);
+        CHECK(imported->getAlias() == QStringLiteral("cycle"));
+        model.getIncludeModel().setAlias(imported->getId(), "Cycle");
         a->setSubmachine("Cycle");
         b->setSubmachine("Cycle");
-        CHECK(model.getImportModel().whereUsed(imported->getId()).size() == 2);
+        CHECK(model.getIncludeModel().whereUsed(imported->getId()).size() == 2);
 
-        model.getImportModel().setName(imported->getId(), "Rotation");
+        model.getIncludeModel().setAlias(imported->getId(), "Rotation");
         CHECK(a->getSubmachine() == QStringLiteral("Rotation"));
         CHECK(b->getSubmachine() == QStringLiteral("Rotation"));
         model.getUndoStack().undo();
@@ -1049,6 +1059,137 @@ namespace
     }
 }
 
+namespace
+{
+    //!< Writes a minimal machine that imports \p importPath (empty for none), so the add-time
+    //!< checks have real files on disk to walk.
+    void writeMachineFile(const QString& path, const QString& name, const QString& importPath)
+    {
+        std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument(name);
+        if (importPath.isEmpty() == false)
+        {
+            IncludeEntry* entry = doc->getIncludes().createInclude(importPath);
+            entry->setAlias(QStringLiteral("Nested"));
+            entry->setVersion(VersionNumber(QStringLiteral("1.0.0")));
+        }
+
+        doc->writeToFile(path);
+        SMDocumentCache::getInstance().clear();
+    }
+
+    void testImportPreChecks()
+    {
+        std::printf("[SM-29-EXT] add-time import refusals\n");
+
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString root = dir.path();
+        const auto at = [&root](const char* file) -> QString { return QDir(root).absoluteFilePath(QString::fromLatin1(file)); };
+
+        StateMachineModel model;
+        SMIncludeModel& includes = model.getIncludeModel();
+        QStringList chain;
+
+        // An unsaved host has no folder to resolve against and no identity anything can point
+        // back at, so the cycle check would pass on any file. Refused outright rather than
+        // silently unchecked.
+        CHECK(includes.canImport(at("other.fsml"), chain) == SMIncludeModel::eImportRefusal::HostNotSaved);
+
+        writeMachineFile(at("abc.fsml"), QStringLiteral("ABC"), QString());
+        model.getData().setFilePath(at("abc.fsml"));
+        CHECK(includes.canImport(at("abc.fsml"), chain) == SMIncludeModel::eImportRefusal::SelfImport);
+
+        // DEF imports ABC; opening ABC and importing DEF would close the cycle.
+        writeMachineFile(at("def.fsml"), QStringLiteral("DEF"), QStringLiteral("./abc.fsml"));
+        SMDocumentCache::getInstance().clear();
+        chain.clear();
+        CHECK(includes.canImport(at("def.fsml"), chain) == SMIncludeModel::eImportRefusal::Cycle);
+        CHECK(chain.isEmpty() == false);
+
+        // A plain machine that points nowhere is accepted, and registering it a second time is
+        // refused by the location guard rather than duplicated under another alias.
+        writeMachineFile(at("plain.fsml"), QStringLiteral("Plain"), QString());
+        SMDocumentCache::getInstance().clear();
+        CHECK(includes.canImport(at("plain.fsml"), chain) == SMIncludeModel::eImportRefusal::None);
+        const IncludeEntry* added = includes.createInclude(includes.storableLocation(at("plain.fsml")));
+        CHECK(added != nullptr);
+        CHECK((added != nullptr) && (added->getAlias() == QStringLiteral("plain")));
+        CHECK(includes.createInclude(includes.storableLocation(at("plain.fsml"))) == nullptr);
+
+        // A file that is not a machine at all is a warning, not a refusal: it may be repaired.
+        QFile broken(at("broken.fsml"));
+        CHECK(broken.open(QIODevice::WriteOnly));
+        broken.write("not xml at all");
+        broken.close();
+        SMDocumentCache::getInstance().clear();
+        CHECK(includes.canImport(at("broken.fsml"), chain) == SMIncludeModel::eImportRefusal::Unreadable);
+    }
+
+    void testRemoveComposite()
+    {
+        std::printf("[SM-29-EXT] remove a painted submachine, three levels deep\n");
+
+        StateMachineData doc;
+        DocModelNotifier notifier;
+        QUndoStack       stack;
+
+        doc.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+        SMStateEntry* host = doc.getStates().createState("Host", SMStateEntry::eStateKind::Normal);
+        SMStateEntry* peer = doc.getStates().createState("Peer", SMStateEntry::eStateKind::Normal);
+        const uint32_t hostId = host->getId();
+
+        // Level 1: Start + Work; level 2 under Work: Start + Deep; level 3 under Deep: Start.
+        SMStateData* l1 = host->getOrCreateNestedStates();
+        l1->createState("L1Start", SMStateEntry::eStateKind::Start);
+        SMStateEntry* work = l1->createState("Work", SMStateEntry::eStateKind::Normal);
+        SMStateData* l2 = work->getOrCreateNestedStates();
+        l2->createState("L2Start", SMStateEntry::eStateKind::Start);
+        SMStateEntry* deep = l2->createState("Deep", SMStateEntry::eStateKind::Normal);
+        SMStateData* l3 = deep->getOrCreateNestedStates();
+        SMStateEntry* leaf = l3->createState("L3Start", SMStateEntry::eStateKind::Start);
+        const uint32_t leafId = leaf->getId();
+
+        host->setHistory(SMStateEntry::eHistory::Deep);
+        host->setOnFinal("evDone");
+
+        // A transition of a surviving state that reaches into the subtree: exactly the reference
+        // that dangles when the subtree goes and nobody sweeps for it.
+        SMTransitionEntry* intruder = peer->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "poke");
+        intruder->setToId(leafId);
+
+        doc.getLayout().addNode(hostId);
+        doc.getLayout().addNode(leafId);
+        doc.getLayout().addEdge(intruder->getId());
+
+        SMRemoveCompositeCommand* command = new SMRemoveCompositeCommand(doc, notifier, hostId, "Remove submachine");
+        CHECK(command->isEffective());
+        CHECK(command->removedStateCount() == 5);           // L1Start, Work, L2Start, Deep, L3Start
+        CHECK(command->removedTransitionCount() == 1);
+        stack.push(command);
+
+        CHECK(doc.findStateById(hostId)->hasNestedStates() == false);
+        CHECK(doc.findStateById(hostId)->getHistory() == SMStateEntry::eHistory::None);
+        CHECK(doc.findStateById(hostId)->getOnFinal().isEmpty());
+        CHECK(doc.findStateById(leafId) == nullptr);
+        CHECK(peer->getTransitions().getElementCount() == 0);
+        CHECK(doc.getLayout().findNode(leafId) == nullptr);
+        CHECK(doc.getLayout().findNode(hostId) != nullptr);  // the host survives, and so does its box
+
+        stack.undo();
+        CHECK(doc.findStateById(hostId)->hasNestedStates());
+        CHECK(doc.findStateById(hostId)->getHistory() == SMStateEntry::eHistory::Deep);
+        CHECK(doc.findStateById(hostId)->getOnFinal() == QStringLiteral("evDone"));
+        CHECK(doc.findStateById(leafId) != nullptr);          // the same ID, not a fresh one
+        CHECK(peer->getTransitions().getElementCount() == 1);
+        CHECK(doc.getLayout().findNode(leafId) != nullptr);
+
+        // A plain state has nothing to remove.
+        SMRemoveCompositeCommand* nothing = new SMRemoveCompositeCommand(doc, notifier, peer->getId(), "Remove submachine");
+        CHECK(nothing->isEffective() == false);
+        delete nothing;
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("SM-04 command framework tests\n");
@@ -1064,6 +1205,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testCopyPasteDuplicate();
     testHistoryMode();
     testSubmachineHosting();
+    testImportPreChecks();
+    testRemoveComposite();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

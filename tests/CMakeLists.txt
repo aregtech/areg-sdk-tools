@@ -43,7 +43,6 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMEventData.cpp
     ${LUSAN}/data/sm/SMGuardTree.cpp
     ${LUSAN}/data/sm/SMDocumentCache.cpp
-    ${LUSAN}/data/sm/SMImportData.cpp
     ${LUSAN}/data/sm/SMImportResolver.cpp
     ${LUSAN}/data/sm/SMIncludeData.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
@@ -178,7 +177,6 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
-    ${LUSAN}/model/sm/SMImportModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
@@ -232,7 +230,6 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
-    ${LUSAN}/model/sm/SMImportModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
@@ -425,7 +422,6 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
-    ${LUSAN}/model/sm/SMImportModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
@@ -562,7 +558,6 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
-    ${LUSAN}/model/sm/SMImportModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp

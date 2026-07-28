@@ -298,6 +298,8 @@ public:
     inline QAction* actionAddSubstate() const;
     inline QAction* actionEnterSubmachine() const;
     inline QAction* actionGoToParent() const;
+    inline QAction* actionAddSubmachine() const;
+    inline QAction* actionRemoveSubmachine() const;
     inline QAction* actionCenterMachine() const;
 
     /**
@@ -384,6 +386,13 @@ signals:
      *          page and starts a new entry of the requested kind.
      **/
     void signalDeclareRequested(SMDesign::eDeclareKind kind);
+
+    /**
+     * \brief   Asks the owning window to register another machine and, when \p hostStateId is not
+     *          zero, host it on that state -- both in one undo entry. The browse dialog belongs to
+     *          the Includes page, and the canvas does not reach into a sibling page.
+     **/
+    void signalAddSubmachineRequested(uint32_t hostStateId);
 
     /**
      * \brief   Emitted by the canvas context menu's View submenu; the owning window moves the
@@ -529,6 +538,17 @@ private:
      * \brief   Descends into the single selected composite state's submachine.
      **/
     void enterSelectedSubmachine();
+
+    /**
+     * \brief   Asks the window for another machine, naming the state that should host it.
+     **/
+    void addSubmachineToSelection();
+
+    /**
+     * \brief   Takes the submachine off the selected state: unlinks an imported one, or deletes
+     *          a painted subtree after confirming how much goes with it.
+     **/
+    void removeSubmachineFromSelection();
 
     /**
      * \brief   Brings the level's painted content back into view (issue #514): centers it
@@ -848,6 +868,8 @@ private:
     QAction*            mActAddSubstate;   //!< Convert the selected state to a composite.
     QAction*            mActEnterSubmachine; //!< Descend into the selected submachine.
     QAction*            mActGoToParent;    //!< Ascend to the parent level.
+    QAction*            mActAddSubmachine;    //!< Register another machine and host it here.
+    QAction*            mActRemoveSubmachine; //!< Take the submachine off the selected state.
     QAction*            mActCenterMachine; //!< Bring the painted machine back into view.
     QAction*            mActNewTrigger; //!< Declare dropdown: new trigger method.
     QAction*            mActNewAction;  //!< Declare dropdown: new action method.
@@ -1089,6 +1111,16 @@ inline QAction* SMDesign::actionEnterSubmachine() const
 inline QAction* SMDesign::actionGoToParent() const
 {
     return mActGoToParent;
+}
+
+inline QAction* SMDesign::actionAddSubmachine() const
+{
+    return mActAddSubmachine;
+}
+
+inline QAction* SMDesign::actionRemoveSubmachine() const
+{
+    return mActRemoveSubmachine;
 }
 
 inline QAction* SMDesign::actionCenterMachine() const

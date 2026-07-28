@@ -22,7 +22,7 @@
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
-#include "lusan/data/sm/SMImportData.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -134,9 +134,9 @@ const ConstantEntry* SMDocumentIndex::constant(const QString& name) const
     return mData.getConstants().findElement(name);
 }
 
-const SMImportEntry* SMDocumentIndex::import(const QString& name) const
+const IncludeEntry* SMDocumentIndex::import(const QString& name) const
 {
-    return mData.getImports().findElement(name);
+    return mData.findImportByAlias(name);
 }
 
 const SMMethodEntry* SMDocumentIndex::method(uint32_t id) const
@@ -164,9 +164,9 @@ const ConstantEntry* SMDocumentIndex::constant(uint32_t id) const
     return mData.getConstants().findElement(id);
 }
 
-const SMImportEntry* SMDocumentIndex::import(uint32_t id) const
+const IncludeEntry* SMDocumentIndex::import(uint32_t id) const
 {
-    return mData.getImports().findElement(id);
+    return mData.getIncludes().findElement(id);
 }
 
 QList<const SMMethodEntry*> SMDocumentIndex::methodsOf(SMMethodEntry::eMethodType kind) const

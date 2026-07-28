@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/IncludeEntry.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,12 +22,33 @@
 #include "lusan/common/XmlSI.hpp"
 #include "IncludeEntry.hpp"
 
+#include <QFileInfo>
+
+eIncludeKind includeKindOf(const QString& location, const QString& docExtension)
+{
+    const QString suffix = QFileInfo(location).suffix().toLower();
+    if (suffix == docExtension.toLower())
+    {
+        return eIncludeKind::Document;
+    }
+    else if (suffix == QStringLiteral("dtml"))
+    {
+        return eIncludeKind::DataType;
+    }
+    else
+    {
+        return eIncludeKind::Source;
+    }
+}
+
 IncludeEntry::IncludeEntry(ElementBase* parent /*= nullptr*/)
     : DocumentElem  (parent)
     , mLocation     ( )
     , mDescription  ( )
     , mDeprecated   (false)
     , mDeprecateHint( )
+    , mAlias        ( )
+    , mVersion      ( )
 {
 }
 
@@ -37,6 +58,8 @@ IncludeEntry::IncludeEntry(uint32_t id, const QString & location, ElementBase * 
     , mDescription  ( )
     , mDeprecated   (false)
     , mDeprecateHint( )
+    , mAlias        ( )
+    , mVersion      ( )
 {
     
 }    
@@ -47,6 +70,8 @@ IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& desc
     , mDescription  (description)
     , mDeprecated   (deprecated)
     , mDeprecateHint(deprecationHint)
+    , mAlias        ( )
+    , mVersion      ( )
 {
 }
 
@@ -56,6 +81,8 @@ IncludeEntry::IncludeEntry(const IncludeEntry& other)
     , mDescription  (other.mDescription)
     , mDeprecated   (other.mDeprecated)
     , mDeprecateHint(other.mDeprecateHint)
+    , mAlias        (other.mAlias)
+    , mVersion      (other.mVersion)
 {
 }
 
@@ -65,6 +92,8 @@ IncludeEntry::IncludeEntry(IncludeEntry&& other) noexcept
     , mDescription  (std::move(other.mDescription))
     , mDeprecated   (other.mDeprecated)
     , mDeprecateHint(std::move(other.mDeprecateHint))
+    , mAlias        (std::move(other.mAlias))
+    , mVersion      (other.mVersion)
 {
     other.mDeprecated   = false;
 }
@@ -78,6 +107,8 @@ IncludeEntry& IncludeEntry::operator = (const IncludeEntry& other)
         mDescription    = other.mDescription;
         mDeprecated     = other.mDeprecated;
         mDeprecateHint  = other.mDeprecateHint;
+        mAlias          = other.mAlias;
+        mVersion        = other.mVersion;
     }
 
     return *this;
@@ -92,6 +123,8 @@ IncludeEntry& IncludeEntry::operator=(IncludeEntry&& other) noexcept
         mDescription    = std::move(other.mDescription);
         mDeprecated     = other.mDeprecated;
         mDeprecateHint  = std::move(other.mDeprecateHint);
+        mAlias          = std::move(other.mAlias);
+        mVersion        = other.mVersion;
 
         other.mDeprecated   = false;
     }
@@ -127,6 +160,26 @@ const QString& IncludeEntry::getLocation() const
 void IncludeEntry::setLocation(const QString& path)
 {
     mLocation = path;
+}
+
+const QString& IncludeEntry::getAlias() const
+{
+    return mAlias;
+}
+
+void IncludeEntry::setAlias(const QString& alias)
+{
+    mAlias = alias;
+}
+
+const VersionNumber& IncludeEntry::getVersion() const
+{
+    return mVersion;
+}
+
+void IncludeEntry::setVersion(const VersionNumber& version)
+{
+    mVersion = version;
 }
 
 const QString& IncludeEntry::getDescription() const
@@ -175,6 +228,8 @@ bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     mLocation = attributes.value(XmlSI::xmlSIAttributeName).toString();
+    mAlias    = attributes.value(XmlSI::xmlSIAttributeAlias).toString();
+    mVersion  = VersionNumber(attributes.value(XmlSI::xmlSIAttributeVersion).toString());
 
     QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
     setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
@@ -204,6 +259,17 @@ void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeStartElement(XmlSI::xmlSIElementLocation);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mLocation);
+    // Only an imported state machine carries these two, so a .siml file never grows them. The
+    // alias is what marks the entry as an import: without one there is nothing to pin a version to.
+    if (mAlias.isEmpty() == false)
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeAlias, mAlias);
+        if (mVersion.isValid())
+        {
+            xml.writeAttribute(XmlSI::xmlSIAttributeVersion, mVersion.toString());
+        }
+    }
+
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);

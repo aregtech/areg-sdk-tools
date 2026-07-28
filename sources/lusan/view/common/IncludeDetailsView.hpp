@@ -23,6 +23,7 @@
 #include <QWidget>
 
 class QCheckBox;
+class QFormLayout;
 class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
@@ -50,6 +51,10 @@ public:
     QCheckBox* ctrlDeprecated() const;
     QLineEdit* ctrlDeprecateHint() const;
 
+    //!< Shows or hides the Deprecated row. A data type include has no deprecation semantics, so
+    //!< the page that shows one hides the row instead of leaving a control that does nothing.
+    void setDeprecationVisible(bool visible);
+
 signals:
     //!< Emitted while the user types in the include location field (validator-filtered text).
     //!< The page controller uses it to mirror the location into the selected list row.
@@ -64,6 +69,7 @@ private:
     QPlainTextEdit* mDescription;
     QCheckBox*      mDeprecated;
     QLineEdit*      mDeprecateHint;
+    QFormLayout*    mForm;
 };
 
 #endif  // LUSAN_VIEW_COMMON_INCLUDEDETAILSVIEW_HPP

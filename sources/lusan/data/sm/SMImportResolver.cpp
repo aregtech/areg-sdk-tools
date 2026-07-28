@@ -20,7 +20,7 @@
 #include "lusan/data/sm/SMImportResolver.hpp"
 
 #include "lusan/data/sm/SMDocumentCache.hpp"
-#include "lusan/data/sm/SMImportData.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include <QDir>
@@ -43,6 +43,10 @@ namespace
         return (name.isEmpty() == false ? name : QFileInfo(doc.getFilePath()).fileName());
     }
 
+    //!< The recursion behind importDepth: \p onPath holds the documents already on the current
+    //!< branch, so a cycle terminates instead of recursing forever.
+    int depthOf(const QString& absoluteFilePath, int limit, QSet<QString>& onPath, QStringList& chain);
+
     //!< Absolute, cleaned path of a location interpreted relative to \p directory.
     QString makeAbsolute(const QString& directory, const QString& location)
     {
@@ -58,6 +62,49 @@ namespace
         }
 
         return (directory.isEmpty() ? QString() : QDir::cleanPath(QDir(directory).absoluteFilePath(location)));
+    }
+
+    int depthOf(const QString& absoluteFilePath, int limit, QSet<QString>& onPath, QStringList& chain)
+    {
+        if (absoluteFilePath.isEmpty() || onPath.contains(absoluteFilePath))
+        {
+            return 0;
+        }
+
+        std::shared_ptr<const StateMachineData> doc = SMDocumentCache::getInstance().document(absoluteFilePath);
+        if (doc == nullptr)
+        {
+            return 0;
+        }
+
+        chain.append(documentLabel(*doc));
+        if (limit <= 0)
+        {
+            return 1;
+        }
+
+        onPath.insert(absoluteFilePath);
+        int best = 0;
+        QStringList bestChain;
+        for (const IncludeEntry* nested : doc->machineImports())
+        {
+            QStringList branch;
+            const int depth = depthOf(makeAbsolute(QFileInfo(absoluteFilePath).absolutePath(), nested->getLocation())
+                                      , limit - 1, onPath, branch);
+            if (depth > best)
+            {
+                best = depth;
+                bestChain = branch;
+                if (best >= limit)
+                {
+                    break;
+                }
+            }
+        }
+
+        onPath.remove(absoluteFilePath);
+        chain.append(bestChain);
+        return (1 + best);
     }
 }
 
@@ -86,7 +133,7 @@ QString SMImportResolver::storableLocation(const StateMachineData& host, const Q
     return QStringLiteral("./") + relative;
 }
 
-SMImportResolver::Resolution SMImportResolver::resolve(const StateMachineData& host, const SMImportEntry& entry)
+SMImportResolver::Resolution SMImportResolver::resolve(const StateMachineData& host, const IncludeEntry& entry)
 {
     Resolution result;
     if (entry.getLocation().isEmpty())
@@ -113,7 +160,7 @@ SMImportResolver::Resolution SMImportResolver::resolve(const StateMachineData& h
     return result;
 }
 
-bool SMImportResolver::findCycle(const StateMachineData& host, const SMImportEntry& entry, QStringList& chain)
+bool SMImportResolver::findCycle(const StateMachineData& host, const IncludeEntry& entry, QStringList& chain)
 {
     const QString hostPath = QDir::cleanPath(QFileInfo(host.getFilePath()).absoluteFilePath());
     if (host.getFilePath().isEmpty())
@@ -163,9 +210,9 @@ bool SMImportResolver::findCycle(const StateMachineData& host, const SMImportEnt
 
         QStringList trail = step.trail;
         trail.append(documentLabel(*doc));
-        for (const SMImportEntry& nested : doc->getImports().getElements())
+        for (const IncludeEntry* nested : doc->machineImports())
         {
-            const QString next = absolutePath(*doc, nested.getLocation());
+            const QString next = absolutePath(*doc, nested->getLocation());
             if (next.isEmpty() == false)
             {
                 pending.append(Step{ next, trail });
@@ -174,4 +221,11 @@ bool SMImportResolver::findCycle(const StateMachineData& host, const SMImportEnt
     }
 
     return false;
+}
+
+int SMImportResolver::importDepth(const QString& absoluteFilePath, int limit, QStringList& chain)
+{
+    QSet<QString> onPath;
+    chain.clear();
+    return depthOf(absoluteFilePath, limit, onPath, chain);
 }

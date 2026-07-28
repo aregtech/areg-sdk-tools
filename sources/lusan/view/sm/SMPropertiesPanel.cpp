@@ -52,6 +52,7 @@
 #include <QEvent>
 #include <QFont>
 #include <QFormLayout>
+#include <QFrame>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -63,6 +64,7 @@
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 #include <functional>
@@ -195,6 +197,10 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mUpdating     (false)
     , mStateTabs    (nullptr)
     , mStateGeneral (nullptr)
+    , mBtnEnterSubmachine(nullptr)
+    , mBtnGoToParent(nullptr)
+    , mBtnAddSubmachine(nullptr)
+    , mBtnRemoveSubmachine(nullptr)
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateHistory (nullptr)
@@ -243,9 +249,20 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     // transition is on screen, rebuild its stimulus picker so the new stimulus is selectable
     // immediately (the added element's id is never mCurrentId, so onElementChanged misses it).
     connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) {
-        if ((mPage == PageTransition) && (isEditing() == false)
+        if (isEditing())
+        {
+            return;
+        }
+
+        if ((mPage == PageTransition)
             && ((kind == eDocElementKind::Method) || (kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)))
         {
+            refresh();
+        }
+        else if ((mPage == PageState) && (kind == eDocElementKind::Import))
+        {
+            // A machine registered on the Includes page has to be selectable here at once;
+            // otherwise the Add Submachine button looks like it did nothing.
             refresh();
         }
     });
@@ -321,6 +338,34 @@ void SMPropertiesPanel::buildStatePage()
                              , tr("The state name, kind and description"));
     mStateGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionList), tr("Transitions"), mTransitions
                              , tr("The transitions leaving this state"));
+    // The submachine controls: the same operations the Design menu and toolbar carry, put where
+    // the user already is when they decide a state needs one. A separator keeps them from reading
+    // as more section-jump buttons.
+    QFrame* submachineSep = new QFrame(this);
+    submachineSep->setFrameShape(QFrame::VLine);
+    submachineSep->setMaximumSize(12, 20);
+    const auto makeSubmachineButton = [this](const QString& name, Qt::ToolButtonStyle style) -> QToolButton*
+    {
+        QToolButton* button = new QToolButton(this);
+        button->setObjectName(name);
+        button->setToolButtonStyle(style);
+        button->setAutoRaise(true);
+        button->setCursor(Qt::PointingHandCursor);
+        return button;
+    };
+
+    // Only the first one shows its label: it is the one whose meaning changes with the selection,
+    // and two of its three meanings write to the document.
+    mBtnEnterSubmachine  = makeSubmachineButton(QStringLiteral("smBtnEnterSubmachine"), Qt::ToolButtonTextBesideIcon);
+    mBtnGoToParent       = makeSubmachineButton(QStringLiteral("smBtnGoToParent"), Qt::ToolButtonIconOnly);
+    mBtnAddSubmachine    = makeSubmachineButton(QStringLiteral("smBtnAddSubmachine"), Qt::ToolButtonIconOnly);
+    mBtnRemoveSubmachine = makeSubmachineButton(QStringLiteral("smBtnRemoveSubmachine"), Qt::ToolButtonIconOnly);
+    mStateGeneral->addHeaderWidget(submachineSep);
+    mStateGeneral->addHeaderWidget(mBtnEnterSubmachine);
+    mStateGeneral->addHeaderWidget(mBtnGoToParent);
+    mStateGeneral->addHeaderWidget(mBtnAddSubmachine);
+    mStateGeneral->addHeaderWidget(mBtnRemoveSubmachine);
+
     mStateGeneral->setCompact(false);
     // Both sections start OPEN: selecting a state must land on an editable name, a readable kind and
     // the description without a click, which is what a General tab is for. Sections are still
@@ -394,6 +439,16 @@ void SMPropertiesPanel::buildStatePage()
     mActionSlots.append({ eOpList::Exit,  mExitOps,  exitTab });
 
     mStack->insertWidget(PageState, mStateTabs);
+}
+
+void SMPropertiesPanel::bindSubmachineActions(QAction* enterOrAdd, QAction* goToParent, QAction* addSubmachine, QAction* removeSubmachine)
+{
+    // setDefaultAction makes each button mirror its action's text, icon, tooltip and enabled
+    // state, which is how the first button's label follows the selection for free.
+    mBtnEnterSubmachine->setDefaultAction(enterOrAdd);
+    mBtnGoToParent->setDefaultAction(goToParent);
+    mBtnAddSubmachine->setDefaultAction(addSubmachine);
+    mBtnRemoveSubmachine->setDefaultAction(removeSubmachine);
 }
 
 void SMPropertiesPanel::buildTransitionPage()
@@ -619,7 +674,7 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     const bool canHost = (state->getKind() == SMStateEntry::eStateKind::Normal) && (state->hasNestedStates() == false);
     mStateSubmachine->clear();
     mStateSubmachine->addItem(tr("(none)"), QString());
-    for (const QString& alias : mModel.getImportModel().getAliases())
+    for (const QString& alias : mModel.getIncludeModel().getAliases())
     {
         mStateSubmachine->addItem(alias, alias);
     }
@@ -840,8 +895,7 @@ void SMPropertiesPanel::showRegistry(uint32_t elementId)
         || (findEntryName(data.getTimers().getElements(), elementId, name)     && (kind = tr("Timer"), true))
         || (findEntryName(data.getMethods().getElements(), elementId, name)    && (kind = tr("Method"), true))
         || (findEntryName(data.getConstants().getElements(), elementId, name)  && (kind = tr("Constant"), true))
-        || (findEntryName(data.getIncludes().getElements(), elementId, name)   && (kind = tr("Include"), true))
-        || (findEntryName(data.getImports().getElements(), elementId, name)    && (kind = tr("Import"), true));
+        || (findEntryName(data.getIncludes().getElements(), elementId, name)   && (kind = tr("Include"), true));
 
     if (found)
     {
@@ -1295,6 +1349,12 @@ void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
         // current triggers (live sync). A rename already routes through onNameChanged.
         refresh();
     }
+    else if ((mPage == PageState) && (kind == eDocElementKind::Import))
+    {
+        // An alias rename rewrites the hosting states through the reference-rewrite command, but
+        // the combo item text is built here and stays stale until the page is rebuilt.
+        refresh();
+    }
 }
 
 void SMPropertiesPanel::onElementRemoved(uint32_t id, eDocElementKind kind)
@@ -1302,6 +1362,10 @@ void SMPropertiesPanel::onElementRemoved(uint32_t id, eDocElementKind kind)
     if (id == mCurrentId)
     {
         showEmpty();
+    }
+    else if ((mPage == PageState) && (isEditing() == false) && (kind == eDocElementKind::Import))
+    {
+        refresh();
     }
     else if ((mPage == PageTransition) && (isEditing() == false) && (kind == eDocElementKind::Method))
     {

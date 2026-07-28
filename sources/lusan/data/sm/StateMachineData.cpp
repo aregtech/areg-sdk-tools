@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/StateMachineData.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -274,7 +274,6 @@ StateMachineData::StateMachineData()
     , mMethods          (this)
     , mConstants        (this)
     , mIncludes         (this)
-    , mImports          (this)
     , mStates           (this)
     , mLayout           (this)
     , mOpenSuccess      (false)
@@ -528,7 +527,7 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
         }
         else if (sectionIndex == 8)
         {
-            mImports.readFromXml(xml);
+            readLegacyImportList(xml);
             unknownBucket = 9;
         }
         else if (sectionIndex == 9)
@@ -603,7 +602,6 @@ void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
     writeUnknownBucket(7);
     mIncludes.writeToXml(xml);
     writeUnknownBucket(8);
-    mImports.writeToXml(xml);
     writeUnknownBucket(9);
     mStates.writeToXml(xml);
     writeUnknownBucket(10);
@@ -619,6 +617,73 @@ void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
+void StateMachineData::readLegacyImportList(QXmlStreamReader& xml)
+{
+    // A 1.0.0 document keeps its machine imports in their own section. They become ordinary
+    // include entries carrying an alias and a pinned version, appended after whatever the
+    // <IncludeList> already contributed, so document order survives the fold.
+    while ((xml.atEnd() == false)
+           && ((xml.tokenType() != QXmlStreamReader::EndElement) || (xml.name() != XmlSM::xmlSMElementImportList)))
+    {
+        if ((xml.tokenType() == QXmlStreamReader::StartElement) && (xml.name() == XmlSM::xmlSMElementMachineImport))
+        {
+            const QXmlStreamAttributes attributes = xml.attributes();
+            IncludeEntry entry(&mIncludes);
+            entry.setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+            entry.setLocation(attributes.value(XmlSM::xmlSMAttributeLocation).toString());
+            entry.setAlias(attributes.value(XmlSM::xmlSMAttributeName).toString());
+            entry.setVersion(VersionNumber(attributes.value(XmlSM::xmlSMAttributeVersion).toString()));
+
+            while ((xml.atEnd() == false)
+                   && ((xml.tokenType() != QXmlStreamReader::EndElement) || (xml.name() != XmlSM::xmlSMElementMachineImport)))
+            {
+                if ((xml.tokenType() == QXmlStreamReader::StartElement) && (xml.name() == XmlSM::xmlSMElementDescription))
+                {
+                    entry.setDescription(xml.readElementText());
+                }
+
+                xml.readNext();
+            }
+
+            mIncludes.addElement(std::move(entry), true);
+        }
+
+        xml.readNext();
+    }
+}
+
+QList<const IncludeEntry*> StateMachineData::machineImports() const
+{
+    QList<const IncludeEntry*> result;
+    for (const IncludeEntry& entry : mIncludes.getElements())
+    {
+        if (includeKindOf(entry.getLocation(), QStringLiteral("fsml")) == eIncludeKind::Document)
+        {
+            result.append(&entry);
+        }
+    }
+
+    return result;
+}
+
+const IncludeEntry* StateMachineData::findImportByAlias(const QString& alias) const
+{
+    if (alias.isEmpty())
+    {
+        return nullptr;
+    }
+
+    for (const IncludeEntry* entry : machineImports())
+    {
+        if (entry->getAlias() == alias)
+        {
+            return entry;
+        }
+    }
+
+    return nullptr;
+}
+
 bool StateMachineData::migrateFromVersion(const VersionNumber& sourceVersion)
 {
     VersionNumber working(sourceVersion);
@@ -632,12 +697,31 @@ bool StateMachineData::migrateFromVersion(const VersionNumber& sourceVersion)
         working = VersionNumber(XML_FORMAT_100);
     }
 
+    if (working < VersionNumber(XML_FORMAT_110))
+    {
+        if (migrateTo110(working) == false)
+        {
+            return false;
+        }
+
+        working = VersionNumber(XML_FORMAT_110);
+    }
+
     mFormatVersion = VersionNumber(XML_FORMAT_DEFAULT);
     return true;
 }
 
 bool StateMachineData::migrateTo100(const VersionNumber& sourceVersion)
 {
+    Q_UNUSED(sourceVersion);
+    return true;
+}
+
+bool StateMachineData::migrateTo110(const VersionNumber& sourceVersion)
+{
+    // The <ImportList> fold happens while reading, because a 1.0.0 document can carry the
+    // section in either order and the reader is the only place that sees both. Nothing is left
+    // to transform here; the step exists so the chain stays readable when 1.2.0 arrives.
     Q_UNUSED(sourceVersion);
     return true;
 }

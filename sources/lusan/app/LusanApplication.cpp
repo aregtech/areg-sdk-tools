@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/app/LusanApplication.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -51,7 +51,6 @@ const QStringList   LusanApplication::InternalExts
 {
       "*.siml"
     , "*.dtml"
-    , "*.coml"
     , "*.fsml"
     , "*.sqlog"
 };
@@ -165,6 +164,11 @@ QStringList LusanApplication::getInternalFileExtensions()
 
     internals += ")";
     return QStringList(internals);
+}
+
+QString LusanApplication::buildFileFilter(const QString& label, const QStringList& extensions)
+{
+    return QStringLiteral("%1 (%2)").arg(label, extensions.join(QLatin1Char(' ')));
 }
 
 QStringList LusanApplication::getWorkspaceDirectories()

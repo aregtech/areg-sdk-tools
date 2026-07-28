@@ -37,6 +37,7 @@ IncludeDetailsView::IncludeDetailsView(QWidget* parent /*= nullptr*/)
     , mDescription      (nullptr)
     , mDeprecated       (nullptr)
     , mDeprecateHint    (nullptr)
+    , mForm             (nullptr)
 {
     buildUi();
 }
@@ -48,6 +49,7 @@ void IncludeDetailsView::buildUi()
 
     QGroupBox* details = new QGroupBox(tr("Details:"), this);
     QFormLayout* form = new QFormLayout(details);
+    mForm = form;
     form->setRowWrapPolicy(QFormLayout::DontWrapRows);
     form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
 
@@ -81,6 +83,12 @@ void IncludeDetailsView::buildUi()
     // Escape cancels the edit: the live-synced text fields restore their pre-edit value.
     EditCancelFilter::install(mInclude);
     EditCancelFilter::install(mDeprecateHint);
+}
+
+void IncludeDetailsView::setDeprecationVisible(bool visible)
+{
+    const int row = mForm->rowCount() - 1;
+    mForm->setRowVisible(row, visible);
 }
 
 QLineEdit* IncludeDetailsView::ctrlInclude() const

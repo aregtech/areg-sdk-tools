@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_COMMON_XMLSI_HPP
+#ifndef LUSAN_COMMON_XMLSI_HPP
 #define LUSAN_COMMON_XMLSI_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/XmlSI.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -58,6 +58,7 @@ namespace XmlSI
     /**
      * \brief   Common XML element attributes of the Service Interface data.
      **/
+    constexpr QLatin1StringView xmlSIAttributeAlias         { "Alias" };
     constexpr QLatin1StringView xmlSIAttributeCategory      { "Category" };
     constexpr QLatin1StringView xmlSIAttributeDataType      { "DataType" };
     constexpr QLatin1StringView xmlSIAttributeHasKey        { "HasKey" };

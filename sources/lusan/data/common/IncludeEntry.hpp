@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
+#ifndef LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
 #define LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/IncludeEntry.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -23,10 +23,29 @@
  * Include files
  ************************************************************************/
 #include "lusan/data/common/DocumentElem.hpp"
+#include "lusan/common/VersionNumber.hpp"
 
 #include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
+/**
+ * \enum    eIncludeKind
+ * \brief   What an include entry points at, derived from its file extension.
+ **/
+enum class eIncludeKind
+{
+      Source        //!< A C++ header or source file.
+    , DataType      //!< A `.dtml` data type document.
+    , Document      //!< Another document of the host's own kind (`.fsml` or `.siml`).
+};
+
+/**
+ * \brief   Classifies an include location. \p docExtension is the host document's own
+ *          extension without the dot ("fsml" or "siml") -- a state machine including a
+ *          `.siml`, or the reverse, is not a Document include and never resolves.
+ **/
+eIncludeKind includeKindOf(const QString& location, const QString& docExtension);
 
  /**
   * \class   IncludeEntry
@@ -184,6 +203,27 @@ public:
     inline void setName(const QString& path);
 
     /**
+     * \brief   Gets the alias an imported document is registered under. Empty for every
+     *          other kind of include, and never a substitute for getName().
+     **/
+    const QString& getAlias() const;
+
+    /**
+     * \brief   Sets the alias of an imported document.
+     **/
+    void setAlias(const QString& alias);
+
+    /**
+     * \brief   Gets the version pinned when an imported document was registered.
+     **/
+    const VersionNumber& getVersion() const;
+
+    /**
+     * \brief   Sets the pinned version of an imported document.
+     **/
+    void setVersion(const VersionNumber& version);
+
+    /**
      * \brief   Gets the description.
      * \return  The description.
      **/
@@ -229,16 +269,21 @@ public:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QString     mLocation;      //!< The file path.
-    QString     mDescription;   //!< The description.
-    bool        mDeprecated;    //!< The deprecated flag.
-    QString     mDeprecateHint; //!< The deprecation hint.
+    QString         mLocation;      //!< The file path.
+    QString         mDescription;   //!< The description.
+    bool            mDeprecated;    //!< The deprecated flag.
+    QString         mDeprecateHint; //!< The deprecation hint.
+    QString         mAlias;         //!< The alias of an imported state machine; empty otherwise.
+    VersionNumber   mVersion;       //!< The version pinned for an imported state machine.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // IncludeEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
+// The location IS the name: TEDataContainer::findElement(QString) compares getName(), and the
+// include registry is keyed by path. Returning the alias here would silently turn every
+// duplicate guard and every lookup into something else.
 inline const QString& IncludeEntry::getName() const
 {
     return getLocation();

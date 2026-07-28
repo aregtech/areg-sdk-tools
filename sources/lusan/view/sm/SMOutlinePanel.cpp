@@ -245,16 +245,27 @@ void SMOutlinePanel::rebuild()
         addRegistry(constants, constant.getId(), constant.getName());
     }
 
-    QTreeWidgetItem* includes = addGroup(tr("Includes"));
+    // Same three headings and the same extension-derived classification as the Includes page,
+    // so a file sits under the same heading wherever the user looks for it.
+    QTreeWidgetItem* includes = addGroup(tr("Include Files"));
+    QTreeWidgetItem* dataTypes = addGroup(tr("Data Types"));
+    QTreeWidgetItem* machines = addGroup(tr("State Machines"));
     for (const IncludeEntry& include : data.getIncludes().getElements())
     {
-        addRegistry(includes, include.getId(), include.getName());
-    }
+        switch (includeKindOf(include.getLocation(), QStringLiteral("fsml")))
+        {
+        case eIncludeKind::Document:
+            addRegistry(machines, include.getId(), include.getAlias().isEmpty() ? include.getLocation() : include.getAlias());
+            break;
 
-    QTreeWidgetItem* imports = addGroup(tr("Imports"));
-    for (const SMImportEntry& import : data.getImports().getElements())
-    {
-        addRegistry(imports, import.getId(), import.getName());
+        case eIncludeKind::DataType:
+            addRegistry(dataTypes, include.getId(), include.getLocation());
+            break;
+
+        default:
+            addRegistry(includes, include.getId(), include.getLocation());
+            break;
+        }
     }
 
     for (QHash<uint32_t, QTreeWidgetItem*>::const_iterator it = mItemById.constBegin(); it != mItemById.constEnd(); ++it)

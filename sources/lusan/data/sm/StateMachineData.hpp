@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/StateMachineData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -33,10 +33,10 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
 #include "lusan/data/sm/SMIncludeData.hpp"
-#include "lusan/data/sm/SMImportData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
 
+#include <QList>
 #include <QString>
 #include <QVector>
 #include <memory>
@@ -83,7 +83,8 @@ public:
     };
 
     static constexpr const char* const  XML_FORMAT_100      { "1.0.0" };
-    static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_FORMAT_100 };
+    static constexpr const char* const  XML_FORMAT_110      { "1.1.0" };
+    static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_FORMAT_110 };
 
     /**
      * \struct  UnknownAttribute
@@ -160,8 +161,18 @@ public:
     inline const SMIncludeData& getIncludes() const;
     inline SMIncludeData& getIncludes();
 
-    inline const SMImportData& getImports() const;
-    inline SMImportData& getImports();
+    /**
+     * rief   The include entries that name another state machine, in document order.
+     *          Computed on each call -- the entries live in the include list, so there is no
+     *          container to hand back a reference to.
+     **/
+    QList<const IncludeEntry*> machineImports() const;
+
+    /**
+     * rief   The machine import registered under \p alias, or nullptr. Aliases are matched
+     *          by an explicit scan: the container is keyed by location, not by alias.
+     **/
+    const IncludeEntry* findImportByAlias(const QString& alias) const;
 
     inline const SMStateData& getStates() const;
     inline SMStateData& getStates();
@@ -231,7 +242,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Resolves a name in the shared stimulus name space — trigger methods,
+     * \brief   Resolves a name in the shared stimulus name space -- trigger methods,
      *          events and timers. One function so the "one name space" rule
      *          has a single implementation used by validation, pickers and rename.
      * \param   name    The stimulus name to resolve.
@@ -310,6 +321,11 @@ private:
     
     bool migrateTo100(const VersionNumber& sourceVersion);
 
+    bool migrateTo110(const VersionNumber& sourceVersion);
+
+    //!< Reads a pre-1.1.0 `<ImportList>` and folds each `MachineImport` into the include list.
+    void readLegacyImportList(QXmlStreamReader& xml);
+
     void clearUnknownContent();
 
 //////////////////////////////////////////////////////////////////////////
@@ -326,8 +342,7 @@ private:
     SMTimerData     mTimers;        //!< The TimerList section.
     SMMethodData    mMethods;       //!< The MethodList section.
     SMConstantData  mConstants;     //!< The ConstantList section.
-    SMIncludeData   mIncludes;      //!< The IncludeList section.
-    SMImportData    mImports;       //!< The ImportList section.
+    SMIncludeData   mIncludes;      //!< The IncludeList section, machine imports included.
     SMStateData     mStates;        //!< The root StateList (level 0).
     SMLayoutData    mLayout;        //!< The Layout section.
     QVector<UnknownAttribute> mUnknownRootAttributes; //!< Unknown root attributes preserved on round-trip.
@@ -447,16 +462,6 @@ inline const SMIncludeData& StateMachineData::getIncludes() const
 inline SMIncludeData& StateMachineData::getIncludes()
 {
     return mIncludes;
-}
-
-inline const SMImportData& StateMachineData::getImports() const
-{
-    return mImports;
-}
-
-inline SMImportData& StateMachineData::getImports()
-{
-    return mImports;
 }
 
 inline const SMStateData& StateMachineData::getStates() const

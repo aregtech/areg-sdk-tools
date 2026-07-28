@@ -31,6 +31,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QAction;
 class QComboBox;
 class QEvent;
 class QLabel;
@@ -42,6 +43,7 @@ class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
 class SMOperationsEditor;
+class QToolButton;
 class SMSectionChrome;
 class StateMachineModel;
 enum class eDocElementKind;
@@ -95,6 +97,14 @@ public:
      *          (edge-label double-click; validation-entry navigation).
      **/
     void focusConditions(uint32_t transitionId);
+
+    /**
+     * rief   Binds the four submachine buttons on the State/General header to the Design page's
+     *          own actions. One QAction per operation: two action objects would mean two
+     *          enable-state computations, and they would drift.
+     **/
+    void bindSubmachineActions(QAction* enterOrAdd, QAction* goToParent, QAction* addSubmachine, QAction* removeSubmachine);
+
     inline QLineEdit* stateNameEdit() const;
     inline QComboBox* stateHistoryCombo() const;
     inline QComboBox* stateSubmachineCombo() const;
@@ -241,6 +251,10 @@ private:
     // State page.
     QTabWidget*         mStateTabs;     //!< The General / Enter / Do / Exit tab host.
     SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
+    QToolButton*        mBtnEnterSubmachine;  //!< Enter / open / add a substate, per selection.
+    QToolButton*        mBtnGoToParent;
+    QToolButton*        mBtnAddSubmachine;
+    QToolButton*        mBtnRemoveSubmachine;
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
     QComboBox*          mStateHistory;  //!< The history mode; only a composite may carry one.

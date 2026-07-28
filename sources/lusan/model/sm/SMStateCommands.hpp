@@ -233,4 +233,41 @@ public:
     SMRemoveStateCommand(StateMachineData& data, DocModelNotifier& notifier, SMStateData& level, uint32_t stateId, const QString& text, QUndoCommand* parent = nullptr);
 };
 
+/**
+ * \class   SMRemoveCompositeCommand
+ * \brief   Turns a painted composite back into a plain state, as one undo step: the whole
+ *          nested StateList goes -- every level of it -- along with the layout entries of the
+ *          states and transitions inside, every transition of a surviving state that targeted
+ *          anything in the subtree, and the `History` / `OnFinal` attributes that only mean
+ *          something while the state is composite.
+ *
+ *          Undo re-attaches the same list object, so every ID and every geometry comes back
+ *          unchanged.
+ *
+ *          The imported form is not this command's job: unlinking an alias removes nothing, and
+ *          SMSetSubmachineCommand with an empty alias already does it (clearing History and
+ *          OnFinal in the same step). The caller picks by form; this one refuses a state with no
+ *          painted subtree.
+ **/
+class SMRemoveCompositeCommand : public SMCompositeCommand
+{
+public:
+    SMRemoveCompositeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                             , uint32_t stateId, const QString& text, QUndoCommand* parent = nullptr);
+
+    //!< True when the state owns a painted subtree and the command has an effect.
+    bool isEffective() const;
+
+    //!< How many states the removal takes with it, for the confirmation.
+    int removedStateCount() const;
+
+    //!< How many transitions of surviving states point into the subtree and go with it.
+    int removedTransitionCount() const;
+
+private:
+    bool    mEffective  { false };
+    int     mStates     { 0 };
+    int     mTransitions{ 0 };
+};
+
 #endif  // LUSAN_MODEL_SM_SMSTATECOMMANDS_HPP

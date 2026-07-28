@@ -58,20 +58,21 @@ namespace
         uint32_t            id;     //!< The transition's element ID.
     };
 
-    //!< Walks every state outside the deleted subtree and collects the transitions whose
-    //!< target ID belongs to the subtree (transitions reference their target by ID).
-    void collectIncoming(SMStateData& level, uint32_t skipStateId, const QSet<uint32_t>& stateIds, QList<IncomingRef>& incoming)
+    //!< Walks every state outside the removed set and collects the transitions whose target ID
+    //!< belongs to it (transitions reference their target by ID). A state in the removed set is
+    //!< skipped whole: its own transitions go with it.
+    void collectIncoming(SMStateData& level, const QSet<uint32_t>& removedIds, QList<IncomingRef>& incoming)
     {
         for (SMStateEntry* state : level.getElements())
         {
-            if (state->getId() == skipStateId)
+            if (removedIds.contains(state->getId()))
             {
                 continue;
             }
 
             for (SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal() && stateIds.contains(transition->getToId()))
+                if (transition->isExternal() && removedIds.contains(transition->getToId()))
                 {
                     incoming.append(IncomingRef{ &state->getTransitions(), transition->getId() });
                 }
@@ -79,8 +80,38 @@ namespace
 
             if (state->hasNestedStates())
             {
-                collectIncoming(*state->getNestedStates(), skipStateId, stateIds, incoming);
+                collectIncoming(*state->getNestedStates(), removedIds, incoming);
             }
+        }
+    }
+
+    /**
+     * \brief   The transitions of surviving states that target the removed subtree, with their
+     *          IDs appended to \p owners so their layout goes with them. Dangling `To` references
+     *          only surface at validation, which is why both delete paths share this one sweep.
+     * \param   data        The document root; the walk starts at its root level.
+     * \param   removedIds  The state IDs disappearing in this command.
+     * \param   owners      Receives the doomed transitions' IDs, for the layout child.
+     **/
+    QList<IncomingRef> collectIncomingRemovals(StateMachineData& data, const QSet<uint32_t>& removedIds, QList<uint32_t>& owners)
+    {
+        QList<IncomingRef> incoming;
+        collectIncoming(data.getStates(), removedIds, incoming);
+        for (const IncomingRef& ref : incoming)
+        {
+            owners.append(ref.id);
+        }
+
+        return incoming;
+    }
+
+    //!< Creates one removal child per collected transition. Kept apart from the sweep because the
+    //!< layout child has to be constructed first (children redo in construction order).
+    void appendIncomingRemovals(DocModelNotifier& notifier, const QList<IncomingRef>& incoming, const QString& text, QUndoCommand* parent)
+    {
+        for (const IncomingRef& ref : incoming)
+        {
+            new TDocRemoveCommand<SMTransitionEntry*, DocumentElem>(notifier, *ref.list, ref.id, eDocElementKind::Transition, text, parent);
         }
     }
 }
@@ -302,22 +333,45 @@ namespace
     /**
      * \class   SMAttachNestedCommand
      * \brief   Toggles the ownership of a composite state's nested StateList between the
-     *          state (applied) and this command (undone), so undo/redo reuse the same
-     *          list object and every ID inside it survives history navigation.
+     *          state and this command, so undo/redo reuse the same list object and every ID
+     *          inside it survives history navigation.
+     *
+     *          The direction is the constructor's choice: attaching is how a state becomes a
+     *          painted composite, detaching is how it stops being one. One class, because the
+     *          two are the same ownership handover read in opposite directions.
      **/
     class SMAttachNestedCommand : public SMCommand
     {
     public:
+        enum class eMode
+        {
+              Attach    //!< Redo attaches the list to the state; undo takes it back.
+            , Detach    //!< Redo takes the state's list; undo puts it back.
+        };
+
         SMAttachNestedCommand(  StateMachineData& data, DocModelNotifier& notifier
                               , uint32_t stateId, SMStateData* nested
-                              , const QString& text, QUndoCommand* parent)
+                              , const QString& text, QUndoCommand* parent
+                              , eMode mode = eMode::Attach)
             : SMCommand (data, notifier, text, parent)
             , mStateId  (stateId)
             , mNested   (nested)
+            , mMode     (mode)
         {
         }
 
         void redo() override
+        {
+            (mMode == eMode::Attach) ? attach() : detach();
+        }
+
+        void undo() override
+        {
+            (mMode == eMode::Attach) ? detach() : attach();
+        }
+
+    private:
+        void attach()
         {
             SMStateEntry* state = data().findStateById(mStateId);
             if (state != nullptr)
@@ -327,7 +381,7 @@ namespace
             }
         }
 
-        void undo() override
+        void detach()
         {
             SMStateEntry* state = data().findStateById(mStateId);
             if (state != nullptr)
@@ -338,8 +392,9 @@ namespace
         }
 
     private:
-        uint32_t                        mStateId;   //!< The converted state's ID.
-        std::unique_ptr<SMStateData>    mNested;    //!< Owned while the command is undone.
+        uint32_t                        mStateId;   //!< The composite state's ID.
+        std::unique_ptr<SMStateData>    mNested;    //!< Owned while the list is off the state.
+        eMode                           mMode;
     };
 }
 
@@ -397,19 +452,74 @@ SMRemoveStateCommand::SMRemoveStateCommand(StateMachineData& data, DocModelNotif
         collectSubtree(**slot, owners, stateIds);
     }
 
-    QList<IncomingRef> incoming;
-    collectIncoming(data.getStates(), stateId, stateIds, incoming);
-    for (const IncomingRef& ref : incoming)
-    {
-        owners.append(ref.id);
-    }
+    const QList<IncomingRef> incoming = collectIncomingRemovals(data, stateIds, owners);
 
-    // Children run forward on redo (layout, incoming transitions, state) and reverse on undo.
+    // Children run forward on redo (layout, incoming transitions, state) and reverse on undo, so
+    // the layout is restored last -- after the elements it belongs to are back.
     new SMRemoveLayoutCommand(data, notifier, owners, text, this);
-    for (const IncomingRef& ref : incoming)
+    appendIncomingRemovals(notifier, incoming, text, this);
+    new TDocRemoveCommand<SMStateEntry*, DocumentElem>(notifier, level, stateId, eDocElementKind::State, text, this);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMRemoveCompositeCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMRemoveCompositeCommand::SMRemoveCompositeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                   , uint32_t stateId, const QString& text
+                                                   , QUndoCommand* parent /*= nullptr*/)
+    : SMCompositeCommand(data, notifier, text, parent)
+{
+    SMStateEntry* state = data.findStateById(stateId);
+    if ((state == nullptr) || (state->hasNestedStates() == false))
     {
-        new TDocRemoveCommand<SMTransitionEntry*, DocumentElem>(notifier, *ref.list, ref.id, eDocElementKind::Transition, text, this);
+        return;
     }
 
-    new TDocRemoveCommand<SMStateEntry*, DocumentElem>(notifier, level, stateId, eDocElementKind::State, text, this);
+    // The host survives, so it is not part of the removed set: only what is inside its nested
+    // list goes, at every level.
+    QList<uint32_t> owners;
+    QSet<uint32_t>  stateIds;
+    for (const SMStateEntry* child : state->getNestedStates()->getElements())
+    {
+        collectSubtree(*child, owners, stateIds);
+    }
+
+    const QList<IncomingRef> incoming = collectIncomingRemovals(data, stateIds, owners);
+    mEffective   = true;
+    mStates      = stateIds.size();
+    mTransitions = incoming.size();
+
+    // Same child order as a state delete: layout first so undo restores it last, once the
+    // elements it describes are back.
+    new SMRemoveLayoutCommand(data, notifier, owners, text, this);
+    appendIncomingRemovals(notifier, incoming, text, this);
+    // History and OnFinal describe a composition that is about to stop existing; leaving them
+    // behind raises a rule-18 finding the user never caused.
+    if (state->getHistory() != SMStateEntry::eHistory::None)
+    {
+        new SMSetHistoryCommand(data, notifier, stateId, SMStateEntry::eHistory::None, text, this);
+    }
+
+    if (state->getOnFinal().isEmpty() == false)
+    {
+        new SMSetOnFinalCommand(data, notifier, stateId, QString(), text, this);
+    }
+
+    new SMAttachNestedCommand(data, notifier, stateId, nullptr, text, this, SMAttachNestedCommand::eMode::Detach);
+}
+
+bool SMRemoveCompositeCommand::isEffective() const
+{
+    return mEffective;
+}
+
+int SMRemoveCompositeCommand::removedStateCount() const
+{
+    return mStates;
+}
+
+int SMRemoveCompositeCommand::removedTransitionCount() const
+{
+    return mTransitions;
 }

@@ -24,6 +24,7 @@
 #include <QVBoxLayout>
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/model/si/SIIncludeModel.hpp"
 #include "lusan/view/common/IncludeDetailsView.hpp"
@@ -52,9 +53,12 @@ namespace
 
 QStringList SIInclude::getSupportedExtensions()
 {
+    // A Service Interface is an API contract; a State Machine is a behaviour. Neither can consume
+    // the other, so `.fsml` is not offered here. A data type belongs to neither and is shared.
     QStringList exts{};
     exts.append(LusanApplication::getExternalFileExtensions());
-    exts.append(LusanApplication::getInternalFileExtensions());
+    exts.append(LusanApplication::buildFileFilter(tr("Service Interface Files")
+                                                 , QStringList{ QStringLiteral("*.siml"), QStringLiteral("*.dtml") }));
     return exts;
 }
 
@@ -80,7 +84,8 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     : QScrollArea(parent)
     , mModel    (model)
     , mDetails  (new IncludeDetailsView(this))
-    , mList     (new IncludeListView(IncludeTypeConfig{ QStringLiteral("siml"), tr("Service Interface") }, this))
+    , mList     (new IncludeListView(IncludeTypeConfig{ QStringLiteral("siml"), tr("Service Interface"), tr("Service Interfaces")
+                                                     , NELusanCommon::iconServiceInterface(NELusanCommon::SizeSmall) }, this))
     , mWidget   (new SIIncludeWidget(this))
     , mTableCell(nullptr)
     , mCurUrl   ( )
@@ -118,7 +123,7 @@ int SIInclude::getColumnCount() const
 
 QString SIInclude::getCellText(const QModelIndex& cell) const
 {
-    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(cell.row());
+    QTreeWidgetItem* item = mList->itemAt(cell);
     return (item != nullptr ? item->text(cell.column()) : QString());
 }
 
@@ -128,33 +133,29 @@ void SIInclude::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* prev
         return;
 
     blockBasicSignals(true);
-    QTreeWidget* table = mList->ctrlTableList();
-    const int row = table->indexOfTopLevelItem(current);
-    const IncludeEntry* entry = findInclude(row);
+    const uint32_t id = IncludeListView::rowId(current);
+    IncludeEntry* entry = mModel.findInclude(id);
     updateDetails(entry, true);
-    updateToolBottons(entry != nullptr ? row : -1, table->topLevelItemCount());
+    updateToolBottons(entry != nullptr ? modelIndexOf(id) : -1, static_cast<int>(mModel.getIncludes().size()));
     blockBasicSignals(false);
 }
 
 void SIInclude::onAddClicked()
 {
-    QString location(genName());
-    QTreeWidget* table = mList->ctrlTableList();
+    const QString location(genName());
 
     blockBasicSignals(true);
     IncludeEntry* entry = mModel.createInclude(location);
     if (entry != nullptr)
     {
+        const uint32_t id = entry->getId();
         mDetails->ctrlInclude()->setEnabled(true);
-
-        int row = table->topLevelItemCount();
-        setTexts(-1, *entry);
-        table->setCurrentItem(table->topLevelItem(row));
-        table->scrollToBottom();
-        updateDetails(entry, true);
+        rebuildRows();
+        selectById(id);
+        updateDetails(mModel.findInclude(id), true);
         mDetails->ctrlInclude()->setFocus();
         mDetails->ctrlInclude()->selectAll();
-        updateToolBottons(row, row + 1);
+        updateToolBottons(modelIndexOf(id), static_cast<int>(mModel.getIncludes().size()));
     }
 
     blockBasicSignals(false);
@@ -162,58 +163,44 @@ void SIInclude::onAddClicked()
 
 void SIInclude::onRemoveClicked()
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    IncludeEntry* entry = findInclude(row);
-    IncludeEntry* nextEntry{ nullptr };
-    if (entry == nullptr)
+    const uint32_t id = currentId();
+    const int row = modelIndexOf(id);
+    if (row < 0)
         return;
 
     blockBasicSignals(true);
-    int count = table->topLevelItemCount();
-    int nextRow = (row + 1 == count) ? row - 1 : row + 1;
-    QTreeWidgetItem* next = ((nextRow >= 0) && (nextRow < count)) ? table->topLevelItem(nextRow) : nullptr;
-    if (next != nullptr)
-    {
-        nextEntry = findInclude(nextRow);
-        table->setCurrentItem(next);
-    }
+    const QList<IncludeEntry>& list = mModel.getIncludes();
+    const int nextRow = ((row + 1) == list.size()) ? (row - 1) : (row + 1);
+    const uint32_t nextId = ((nextRow >= 0) && (nextRow < list.size())) ? list.at(nextRow).getId() : 0u;
 
-    updateDetails(nextEntry, true);
-
-    delete table->takeTopLevelItem(row);
-    mModel.deleteInclude(entry->getId());
-    updateToolBottons(next != nullptr ? table->indexOfTopLevelItem(table->currentItem()) : -1, table->topLevelItemCount());
+    mModel.deleteInclude(id);
+    rebuildRows();
+    selectById(nextId);
+    updateDetails(mModel.findInclude(currentId()), true);
+    updateToolBottons(modelIndexOf(currentId()), static_cast<int>(mModel.getIncludes().size()));
     blockBasicSignals(false);
 }
 
 void SIInclude::onInsertClicked()
 {
-    QString location(genName());
-    QTreeWidget* table = mList->ctrlTableList();
+    const QString location(genName());
 
     blockBasicSignals(true);
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    row = row < 0 ? 0 : row;
+    int row = modelIndexOf(currentId());
+    row = (row < 0 ? 0 : row);
     IncludeEntry* entry = mModel.insertInclude(row, location);
     if (entry != nullptr)
     {
+        // Inserting renumbers the IDs below it, so the rows are rebuilt rather than patched: the
+        // row carrying an ID has to be the row the model says carries it.
         mDetails->ctrlInclude()->setEnabled(true);
-
-        setTexts(row, *entry, true);
-        const QList<IncludeEntry>& list = mModel.getIncludes();
-        int rowCount = table->topLevelItemCount();
-        Q_ASSERT(list.size() == rowCount);
-        for (int i = row + 1; i < rowCount; ++i)
-        {
-            table->topLevelItem(i)->setData(COL_LOCATION, Qt::ItemDataRole::UserRole, QVariant::fromValue<uint32_t>(list.at(i).getId()));
-        }
-
-        table->setCurrentItem(table->topLevelItem(row));
-        updateDetails(entry, true);
+        rebuildRows();
+        const uint32_t id = mModel.getIncludes().at(row).getId();
+        selectById(id);
+        updateDetails(mModel.findInclude(id), true);
         mDetails->ctrlInclude()->setFocus();
         mDetails->ctrlInclude()->selectAll();
-        updateToolBottons(row, table->topLevelItemCount());
+        updateToolBottons(row, static_cast<int>(mModel.getIncludes().size()));
     }
 
     blockBasicSignals(false);
@@ -221,30 +208,32 @@ void SIInclude::onInsertClicked()
 
 void SIInclude::onMoveUpClicked()
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
+    const int row = modelIndexOf(currentId());
     if (row > 0)
     {
         blockBasicSignals(true);
-        uint32_t idFirst = table->topLevelItem(row)->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt();
-        uint32_t idSecond = table->topLevelItem(row - 1)->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt();
-        mModel.swapIncludes(idFirst, idSecond);
-        swapIncludes(row, row - 1);
+        // The swap keeps IDs attached to list positions, so afterwards the moved entry answers to
+        // the neighbour's old ID. That is the row to reselect.
+        const uint32_t neighborId = mModel.getIncludes().at(row - 1).getId();
+        mModel.swapIncludes(mModel.getIncludes().at(row).getId(), neighborId);
+        rebuildRows();
+        selectById(neighborId);
+        updateToolBottons(row - 1, static_cast<int>(mModel.getIncludes().size()));
         blockBasicSignals(false);
     }
 }
 
 void SIInclude::onMoveDownClicked()
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    if ((row >= 0) && (row < (table->topLevelItemCount() - 1)))
+    const int row = modelIndexOf(currentId());
+    if ((row >= 0) && (row < (mModel.getIncludes().size() - 1)))
     {
         blockBasicSignals(true);
-        uint32_t idFirst = table->topLevelItem(row)->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt();
-        uint32_t idSecond = table->topLevelItem(row + 1)->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt();
-        mModel.swapIncludes(idFirst, idSecond);
-        swapIncludes(row, row + 1);
+        const uint32_t neighborId = mModel.getIncludes().at(row + 1).getId();
+        mModel.swapIncludes(mModel.getIncludes().at(row).getId(), neighborId);
+        rebuildRows();
+        selectById(neighborId);
+        updateToolBottons(row + 1, static_cast<int>(mModel.getIncludes().size()));
         blockBasicSignals(false);
     }
 }
@@ -286,18 +275,18 @@ void SIInclude::onBrowseClicked()
     {
         blockBasicSignals(true);
 
-        QString location = dialog.getSelectedFileRelativePath();
+        const QString location = dialog.getSelectedFileRelativePath();
         mDetails->ctrlInclude()->setText(location);
         mDetails->ctrlDescription()->setFocus();
         mDetails->ctrlDescription()->selectAll();
 
-        QTreeWidget* table = mList->ctrlTableList();
-        int row = table->indexOfTopLevelItem(table->currentItem());
-        if (row >= 0)
+        const uint32_t id = currentId();
+        IncludeEntry* entry = mModel.findInclude(id);
+        if (entry != nullptr)
         {
-            IncludeEntry* entry = findInclude(row);
             entry->setLocation(location);
-            setTexts(row, *entry);
+            setTexts(mList->findRow(id), *entry);
+            selectById(id);
         }
 
         mCurUrl = dialog.directoryUrl().path();
@@ -314,84 +303,69 @@ void SIInclude::onUpdateClicked()
     // Re-derives the Type/Name/Version columns from the current locations. Once service
     // interface / data type includes are parsed, this is where their declared name and version
     // are re-read from disk; today it simply rebuilds the derived columns from the live model.
-    QTreeWidget* table = mList->ctrlTableList();
     blockBasicSignals(true);
-    int count = table->topLevelItemCount();
-    for (int i = 0; i < count; ++i)
-    {
-        IncludeEntry* entry = findInclude(i);
-        if (entry != nullptr)
-        {
-            setTexts(i, *entry);
-        }
-    }
-
+    const uint32_t id = currentId();
+    rebuildRows();
+    selectById(id);
     blockBasicSignals(false);
 }
 
 void SIInclude::onIncludeChanged(const QString& newText)
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    IncludeEntry* entry = findInclude(row);
+    const uint32_t id = currentId();
+    IncludeEntry* entry = mModel.findInclude(id);
     if (entry != nullptr)
     {
         blockBasicSignals(true);
         entry->setLocation(newText);
-        setTexts(row, *entry);
+        setTexts(mList->findRow(id), *entry);
+        selectById(id);
         blockBasicSignals(false);
     }
 }
 
 void SIInclude::onDescriptionChanged()
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    if (row != -1)
+    IncludeEntry* entry = mModel.findInclude(currentId());
+    if (entry != nullptr)
     {
-        IncludeEntry* entry = findInclude(row);
-        Q_ASSERT(entry != nullptr);
         entry->setDescription(mDetails->ctrlDescription()->toPlainText());
     }
 }
 
 void SIInclude::onDeprecatedChecked(bool isChecked)
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    if (row >= 0)
+    IncludeEntry* entry = mModel.findInclude(currentId());
+    if (entry != nullptr)
     {
-        IncludeEntry* entry = findInclude(row);
-        Q_ASSERT(entry != nullptr);
         SICommon::checkedDeprecated<IncludeDetailsView, IncludeEntry>(mDetails, entry, isChecked);
     }
 }
 
 void SIInclude::onDeprecateHint(const QString& newText)
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    int row = table->indexOfTopLevelItem(table->currentItem());
-    if (row != -1)
+    IncludeEntry* entry = mModel.findInclude(currentId());
+    if (entry != nullptr)
     {
-        IncludeEntry* entry = findInclude(row);
-        Q_ASSERT(entry != nullptr);
         SICommon::setDeprecateHint<IncludeDetailsView, IncludeEntry>(mDetails, entry, newText);
     }
 }
 
 void SIInclude::onEditorDataChanged(const QModelIndex &index, const QString &newValue)
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    if ((index.row() < 0) || (index.row() >= table->topLevelItemCount()) || (index.column() < 0))
+    QTreeWidgetItem* item = mList->itemAt(index);
+    const uint32_t id = IncludeListView::rowId(item);
+    if ((id == 0) || (index.column() < 0))
         return;
 
-    cellChanged(index.row(), index.column(), newValue);
+    cellChanged(static_cast<int>(id), index.column(), newValue);
 }
 
 void SIInclude::cellChanged(int row, int col, const QString& newValue)
 {
-    IncludeEntry* entry = findInclude(row);
-    Q_ASSERT(entry != nullptr);
+    IncludeEntry* entry = mModel.findInclude(static_cast<uint32_t>(row));
+    if (entry == nullptr)
+        return;
 
     if (col == COL_LOCATION)
     {
@@ -399,7 +373,8 @@ void SIInclude::cellChanged(int row, int col, const QString& newValue)
         {
             blockBasicSignals(true);
             entry->setLocation(newValue);
-            setTexts(row, *entry);
+            setTexts(mList->findRow(entry->getId()), *entry);
+            selectById(entry->getId());
             updateDetails(entry, false);
             blockBasicSignals(false);
         }
@@ -408,17 +383,8 @@ void SIInclude::cellChanged(int row, int col, const QString& newValue)
 
 void SIInclude::updateData()
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    const QList<IncludeEntry>& list = mModel.getIncludes();
-    if (list.isEmpty() == false)
-    {
-        for (const IncludeEntry& entry : list)
-        {
-            setTexts(-1, entry);
-        }
-
-        table->scrollToTop();
-    }
+    rebuildRows();
+    mList->ctrlTableList()->scrollToTop();
 }
 
 void SIInclude::updateWidgets()
@@ -451,7 +417,6 @@ void SIInclude::setupSignals()
     connect(mList->ctrlButtonMoveUp()   , &QToolButton::clicked, this, &SIInclude::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown() , &QToolButton::clicked, this, &SIInclude::onMoveDownClicked);
     connect(mList->ctrlButtonUpdate()   , &QToolButton::clicked, this, &SIInclude::onUpdateClicked);
-
     connect(mDetails->ctrlInclude()      , &QLineEdit::textChanged, this, &SIInclude::onIncludeChanged);
     connect(mDetails->ctrlBrowseButton() , &QPushButton::clicked, this, &SIInclude::onBrowseClicked);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled, this, &SIInclude::onDeprecatedChecked);
@@ -471,48 +436,71 @@ void SIInclude::blockBasicSignals(bool doBlock)
     mDetails->ctrlDeprecateHint()->blockSignals(doBlock);
 }
 
-inline void SIInclude::setTexts(int row, const IncludeEntry& entry, bool insert /*= false*/)
+inline void SIInclude::setTexts(QTreeWidgetItem* item, const IncludeEntry& entry)
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    const QString location = entry.getLocation();
-    if ((row < 0) || insert)
-    {
-        row = row < 0 ? table->topLevelItemCount() : row;
-        QTreeWidgetItem* item = new QTreeWidgetItem();
-        // Editable flag lets the TableCell delegate open an inline editor on double-click.
-        item->setFlags(item->flags() | Qt::ItemIsEditable);
-        item->setIcon(COL_LOCATION, entry.getIcon(ElementBase::eDisplay::DisplayName));
-        item->setText(COL_LOCATION, entry.getString(ElementBase::eDisplay::DisplayName));
-        item->setText(COL_TYPE    , mList->typeForLocation(location));
-        item->setText(COL_NAME    , mList->nameForLocation(location));
-        item->setText(COL_VERSION , QString());
-        item->setData(COL_LOCATION, Qt::ItemDataRole::UserRole, entry.getId());
-        table->insertTopLevelItem(row, item);
-    }
-    else
-    {
-        QTreeWidgetItem* item = table->topLevelItem(row);
-        Q_ASSERT(item->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt() == entry.getId());
+    if (item == nullptr)
+        return;
 
-        item->setIcon(COL_LOCATION, entry.getIcon(ElementBase::eDisplay::DisplayName));
-        item->setText(COL_LOCATION, entry.getString(ElementBase::eDisplay::DisplayName));
-        item->setText(COL_TYPE    , mList->typeForLocation(location));
-        item->setText(COL_NAME    , mList->nameForLocation(location));
+    const QString location = entry.getLocation();
+    const eIncludeKind kind = mList->kindForLocation(location);
+    mList->placeRow(item, kind, entry.getId());
+    item->setIcon(COL_LOCATION, mList->iconForKind(kind));
+    item->setText(COL_LOCATION, entry.getString(ElementBase::eDisplay::DisplayName));
+    item->setText(COL_TYPE    , mList->typeForLocation(location));
+    item->setText(COL_NAME    , mList->nameForLocation(location));
+    item->setText(COL_VERSION , QString());
+}
+
+inline void SIInclude::rebuildRows()
+{
+    mList->clearRows();
+    int counts[3]{ 0, 0, 0 };
+    for (const IncludeEntry& entry : mModel.getIncludes())
+    {
+        const eIncludeKind kind = mList->kindForLocation(entry.getLocation());
+        setTexts(mList->placeRow(nullptr, kind, entry.getId()), entry);
+        ++counts[static_cast<int>(kind)];
+    }
+
+    mList->updateGroupCounts(counts[static_cast<int>(eIncludeKind::Source)]
+                             , counts[static_cast<int>(eIncludeKind::DataType)]
+                             , counts[static_cast<int>(eIncludeKind::Document)]);
+}
+
+inline uint32_t SIInclude::currentId() const
+{
+    return IncludeListView::rowId(mList->ctrlTableList()->currentItem());
+}
+
+inline int SIInclude::modelIndexOf(uint32_t id) const
+{
+    const QList<IncludeEntry>& list = mModel.getIncludes();
+    for (int i = 0; i < list.size(); ++i)
+    {
+        if (list.at(i).getId() == id)
+            return i;
+    }
+
+    return -1;
+}
+
+inline void SIInclude::selectById(uint32_t id)
+{
+    QTreeWidgetItem* item = mList->findRow(id);
+    if (item != nullptr)
+    {
+        mList->ctrlTableList()->setCurrentItem(item);
     }
 }
 
 inline void SIInclude::updateDetails(const IncludeEntry* entry, bool updateAll /*= false*/)
 {
-    QTreeWidget* table = mList->ctrlTableList();
     if (entry != nullptr)
     {
         mDetails->ctrlInclude()->setEnabled(true);
         mDetails->ctrlInclude()->setText(entry->getName());
-        if (table->indexOfTopLevelItem(table->currentItem()) >= 0)
-        {
-            mDetails->ctrlBrowseButton()->setEnabled(true);
-            mList->ctrlButtonRemove()->setEnabled(true);
-        }
+        mDetails->ctrlBrowseButton()->setEnabled(true);
+        mList->ctrlButtonRemove()->setEnabled(true);
 
         if (updateAll)
         {
@@ -536,69 +524,12 @@ inline void SIInclude::updateDetails(const IncludeEntry* entry, bool updateAll /
     }
 }
 
-inline IncludeEntry* SIInclude::findInclude(int row)
-{
-    QTreeWidget* table = mList->ctrlTableList();
-    if ((row < 0) || (row >= table->topLevelItemCount()))
-        return nullptr;
-
-    QTreeWidgetItem* item = table->topLevelItem(row);
-    uint32_t id = item->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt();
-    return mModel.findInclude(id);
-}
-
-inline const IncludeEntry* SIInclude::findInclude(int row) const
-{
-    QTreeWidget* table = mList->ctrlTableList();
-    if ((row < 0) || (row >= table->topLevelItemCount()))
-        return nullptr;
-
-    QTreeWidgetItem* item = table->topLevelItem(row);
-    uint32_t id = item->data(COL_LOCATION, Qt::ItemDataRole::UserRole).toUInt();
-    return mModel.findInclude(id);
-}
-
-inline void SIInclude::swapIncludes(int firstRow, int secondRow)
-{
-    QTreeWidget* table = mList->ctrlTableList();
-    Q_ASSERT(firstRow >= 0 && firstRow < table->topLevelItemCount());
-    Q_ASSERT(secondRow >= 0 && secondRow < table->topLevelItemCount());
-
-    const IncludeEntry* first = findInclude(firstRow);
-    const IncludeEntry* second = findInclude(secondRow);
-
-    Q_ASSERT((first != nullptr) && (second != nullptr));
-    setTexts(firstRow, *first);
-    setTexts(secondRow, *second);
-    table->setCurrentItem(table->topLevelItem(secondRow));
-    updateToolBottons(secondRow, table->topLevelItemCount());
-}
-
 inline void SIInclude::updateToolBottons(int row, int rowCount)
 {
     if ((row >= 0) && (row < rowCount))
     {
-        if ((row == 0) && (rowCount == 1))
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(false);
-            mList->ctrlButtonMoveDown()->setEnabled(false);
-        }
-        else if (row == 0)
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(false);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-        else if (row == (rowCount - 1))
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(false);
-        }
-        else
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-
+        mList->ctrlButtonMoveUp()->setEnabled(row > 0);
+        mList->ctrlButtonMoveDown()->setEnabled(row < (rowCount - 1));
         mList->ctrlButtonRemove()->setEnabled(true);
     }
     else
@@ -613,12 +544,21 @@ inline QString SIInclude::genName()
 {
     static const QString _defName("NewInclude");
 
-    QTreeWidget* table = mList->ctrlTableList();
     QString name;
-    do
+    bool taken = true;
+    while (taken)
     {
         name = _defName + QString::number(++mCount);
-    } while (table->findItems(name, Qt::MatchFlag::MatchExactly, COL_LOCATION).isEmpty() == false);
+        taken = false;
+        for (const IncludeEntry& entry : mModel.getIncludes())
+        {
+            if (entry.getLocation() == name)
+            {
+                taken = true;
+                break;
+            }
+        }
+    }
 
     return name;
 }

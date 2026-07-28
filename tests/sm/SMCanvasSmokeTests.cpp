@@ -30,6 +30,7 @@
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMClipboard.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
@@ -52,6 +53,7 @@
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
+#include <QAction>
 #include <QApplication>
 #include <QComboBox>
 #include <QClipboard>
@@ -3535,6 +3537,86 @@ int main(int argc, char* argv[])
         CHECK(composite->getHistory() != SMStateEntry::eHistory::Deep);
         SMStateItem* again = canvas.stateItem(composite->getId());
         CHECK((again != nullptr) && (again->getHistoryBadge() != SMStateEntry::eHistory::Deep));
+    }
+
+    // --- SM-29-EXT: one control, three meanings, and the label says which ---
+    {
+        std::printf("[SM-29-EXT] the enter/add button renames itself with the selection\n");
+
+        QAction* enterAction = design.actionEnterSubmachine();
+        CHECK(enterAction != nullptr);
+
+        // A state of its own rather than one borrowed from the fixture: the sections above have
+        // already made every root Normal state composite.
+        SMCreateStateCommand* create = new SMCreateStateCommand(data, model.getNotifier(), data.getStates()
+                                                                , QStringLiteral("ExtProbe"), SMStateEntry::eStateKind::Normal
+                                                                , QRectF(900.0, 600.0, 160.0, 80.0), QStringLiteral("Add state"));
+        model.getUndoStack().push(create);
+        const uint32_t plainId = create->getStateId();
+        CHECK(data.findStateById(plainId) != nullptr);
+        if (plainId != 0)
+        {
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(enterAction->isEnabled());
+            CHECK(enterAction->text() == QStringLiteral("Add Substate"));
+
+            // Painted: the only thing left to do with it is descend.
+            SMConvertToCompositeCommand* convert =
+                    new SMConvertToCompositeCommand(data, model.getNotifier(), plainId, QStringLiteral("ExtStart")
+                                                    , QRectF(32.0, 32.0, 48.0, 48.0), QStringLiteral("Add substate"));
+            CHECK(convert->isEffective());
+            model.getUndoStack().push(convert);
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(enterAction->text() == QStringLiteral("Enter Submachine"));
+
+            // Removing the painted subtree gives the state back its plain meaning, in one step.
+            SMRemoveCompositeCommand* flatten =
+                    new SMRemoveCompositeCommand(data, model.getNotifier(), plainId, QStringLiteral("Remove submachine"));
+            CHECK(flatten->isEffective());
+            CHECK(flatten->removedStateCount() == 1);
+            model.getUndoStack().push(flatten);
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(data.findStateById(plainId)->hasNestedStates() == false);
+            CHECK(enterAction->text() == QStringLiteral("Add Substate"));
+
+            // Imported: the machine lives in another file, so the button opens it instead.
+            IncludeEntry* import = data.getIncludes().createInclude(QStringLiteral("./ExtCycle.fsml"));
+            CHECK(import != nullptr);
+            if (import != nullptr)
+            {
+                import->setAlias(QStringLiteral("ExtCycle"));
+            }
+
+            SMSetSubmachineCommand* link = new SMSetSubmachineCommand(data, model.getNotifier(), plainId
+                                                                      , QStringLiteral("ExtCycle"), QStringLiteral("Host"));
+            CHECK(link->isEffective());
+            model.getUndoStack().push(link);
+            model.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+            QApplication::processEvents();
+            CHECK(enterAction->text() == QStringLiteral("Open Imported Machine"));
+            CHECK(design.actionRemoveSubmachine()->isEnabled());
+
+            // Start states host nothing, so every one of them is dead here.
+            const SMStateEntry* start = data.findState(QStringLiteral("Off"));
+            if (start != nullptr)
+            {
+                model.getSelectionModel().setSelection(QList<uint32_t>{ start->getId() });
+                QApplication::processEvents();
+                CHECK(enterAction->isEnabled() == false);
+                CHECK(design.actionRemoveSubmachine()->isEnabled() == false);
+            }
+
+            model.getUndoStack().undo();            // the link
+            model.getUndoStack().undo();            // the flatten
+            model.getUndoStack().undo();            // the convert
+            model.getUndoStack().undo();            // the probe state
+            model.getSelectionModel().clearSelection();
+            QApplication::processEvents();
+            CHECK(data.findStateById(plainId) == nullptr);
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

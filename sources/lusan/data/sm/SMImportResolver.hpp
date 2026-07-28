@@ -32,7 +32,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class SMImportEntry;
+class IncludeEntry;
 class StateMachineData;
 
 /**
@@ -49,6 +49,15 @@ class StateMachineData;
  **/
 namespace SMImportResolver
 {
+    /**
+     * \brief   The deepest chain of imported documents a machine may sit on top of. Bounds the
+     *          cost of the import walk, which the cycle check alone does not.
+     *
+     *          It applies to imported documents only. Painted nesting -- states inside states
+     *          inside one document -- has no depth limit and must not acquire one.
+     **/
+    static constexpr int MAX_IMPORT_DEPTH { 10 };
+
     /**
      * \enum    eState
      * \brief   The outcome of resolving one import.
@@ -94,7 +103,7 @@ namespace SMImportResolver
     /**
      * \brief   Resolves one import registration of \p host.
      **/
-    Resolution resolve(const StateMachineData& host, const SMImportEntry& entry);
+    Resolution resolve(const StateMachineData& host, const IncludeEntry& entry);
 
     /**
      * \brief   Detects an import cycle reachable through \p entry: the host importing itself,
@@ -105,7 +114,19 @@ namespace SMImportResolver
      *                  found; untouched otherwise.
      * \return  True when following the import leads back to the host.
      **/
-    bool findCycle(const StateMachineData& host, const SMImportEntry& entry, QStringList& chain);
+    bool findCycle(const StateMachineData& host, const IncludeEntry& entry, QStringList& chain);
+
+    /**
+     * \brief   How many document boundaries the import chain rooted at \p absoluteFilePath
+     *          crosses: 1 when that document imports nothing, 2 when it imports a machine that
+     *          imports nothing, and so on. A file that does not resolve counts as 0.
+     *
+     *          The walk stops as soon as the answer is known to exceed \p limit and returns
+     *          \p limit + 1 -- the caller only ever needs to know that much, and stopping keeps
+     *          a wide or cyclic graph from costing more than the limit allows.
+     * \param   chain   Receives the document names along the deepest chain found, nearest first.
+     **/
+    int importDepth(const QString& absoluteFilePath, int limit, QStringList& chain);
 }
 
 #endif  // LUSAN_DATA_SM_SMIMPORTRESOLVER_HPP

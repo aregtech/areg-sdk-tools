@@ -20,19 +20,29 @@
 #include "lusan/view/common/IncludeListView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QEvent>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QModelIndex>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+
+namespace
+{
+    constexpr int IncludeIdRole { Qt::UserRole };
+}
 
 IncludeListView::IncludeListView(const IncludeTypeConfig& config, QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mConfig           (config)
     , mTable            (nullptr)
+    , mGroupSource      (nullptr)
+    , mGroupDataType    (nullptr)
+    , mGroupDocument    (nullptr)
     , mButtonAdd        (nullptr)
     , mButtonInsert     (nullptr)
     , mButtonRemove     (nullptr)
@@ -60,6 +70,10 @@ void IncludeListView::buildUi()
     mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected include entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
     mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new include entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
+    // Add has no kind menu on purpose. The extension of the location decides the group, and it
+    // decides it with certainty, so asking the user first would be asking for something the
+    // editor is about to work out anyway. A new entry starts under Include Files and moves the
+    // moment its location says otherwise.
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
     sep->setMaximumSize(24, 24);
@@ -90,7 +104,6 @@ void IncludeListView::buildUi()
     mTable->setDropIndicatorShown(false);
     mTable->setIconSize(QSize(16, 16));
     mTable->setSortingEnabled(false);
-    mTable->setRootIsDecorated(false);
     mTable->setAllColumnsShowFocus(false);
     mTable->setColumnCount(4);
     mTable->header()->setStretchLastSection(false);
@@ -101,32 +114,203 @@ void IncludeListView::buildUi()
     mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColName)    , QHeaderView::ResizeToContents);
     mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColVersion) , QHeaderView::ResizeToContents);
 
+    mGroupSource   = new QTreeWidgetItem(mTable);
+    mGroupDataType = new QTreeWidgetItem(mTable);
+    mGroupDocument = new QTreeWidgetItem(mTable);
+    for (eIncludeKind kind : { eIncludeKind::Source, eIncludeKind::DataType, eIncludeKind::Document })
+    {
+        QTreeWidgetItem* item = ctrlGroup(kind);
+        item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        // Show the expand indicator even while empty, so a heading reads as a container.
+        item->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
+        item->setExpanded(true);
+        item->setIcon(static_cast<int>(eColumn::ColLocation), iconForKind(kind));
+    }
+
+    updateGroupCounts(0, 0, 0);
+
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);
 }
 
+void IncludeListView::decorateGroup(QTreeWidgetItem* group)
+{
+    QFont font{ mTable->font() };
+    font.setBold(true);
+    group->setFont(static_cast<int>(eColumn::ColLocation), font);
+    group->setFirstColumnSpanned(true);
+
+    QColor tint{ mTable->palette().color(QPalette::Highlight) };
+    tint.setAlpha(28);
+    group->setBackground(static_cast<int>(eColumn::ColLocation), tint);
+}
+
+void IncludeListView::updateGroupCounts(int sourceCount, int dataTypeCount, int documentCount)
+{
+    // Re-applied on every refresh: removing the last child otherwise takes the expand indicator
+    // with it, and an empty heading has to keep reading as a place to put something.
+    for (QTreeWidgetItem* group : { mGroupSource, mGroupDataType, mGroupDocument })
+    {
+        group->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
+    }
+
+    mGroupSource->setText(static_cast<int>(eColumn::ColLocation), tr("Include Files (%1)").arg(sourceCount));
+    // The Data Types group is a placeholder until `.dtml` becomes a real document type: entries
+    // are listed and classified, never resolved, version-checked or validated. Do not give it a
+    // status, a version or an Update path before that parser exists.
+    mGroupDataType->setText(static_cast<int>(eColumn::ColLocation), tr("Data Types (%1)").arg(dataTypeCount));
+    mGroupDocument->setText(static_cast<int>(eColumn::ColLocation), QStringLiteral("%1 (%2)").arg(mConfig.groupDocLabel).arg(documentCount));
+    decorateGroup(mGroupSource);
+    decorateGroup(mGroupDataType);
+    decorateGroup(mGroupDocument);
+}
+
+void IncludeListView::refreshGroupCounts()
+{
+    updateGroupCounts(mGroupSource->childCount(), mGroupDataType->childCount(), mGroupDocument->childCount());
+}
+
+void IncludeListView::changeEvent(QEvent* event)
+{
+    if ((event->type() == QEvent::PaletteChange) && (mGroupSource != nullptr))
+    {
+        decorateGroup(mGroupSource);
+        decorateGroup(mGroupDataType);
+        decorateGroup(mGroupDocument);
+    }
+
+    QWidget::changeEvent(event);
+}
+
+void IncludeListView::clearRows()
+{
+    for (QTreeWidgetItem* group : { mGroupSource, mGroupDataType, mGroupDocument })
+    {
+        while (group->childCount() > 0)
+        {
+            delete group->takeChild(0);
+        }
+    }
+}
+
+QTreeWidgetItem* IncludeListView::placeRow(QTreeWidgetItem* existing, eIncludeKind kind, uint32_t id)
+{
+    QTreeWidgetItem* target = ctrlGroup(kind);
+    QTreeWidgetItem* item   = existing;
+    if (item == nullptr)
+    {
+        item = new QTreeWidgetItem();
+        // The editable flag lets the delegate open the inline Location editor on double-click;
+        // the page's editable-check keeps every other column read-only.
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+    }
+    else if (item->parent() == target)
+    {
+        return item;
+    }
+    else if (item->parent() != nullptr)
+    {
+        item->parent()->removeChild(item);
+    }
+
+    item->setData(static_cast<int>(eColumn::ColLocation), IncludeIdRole, id);
+    target->addChild(item);
+    target->setExpanded(true);
+    return item;
+}
+
+QTreeWidgetItem* IncludeListView::findRow(uint32_t id) const
+{
+    if (id == 0)
+    {
+        return nullptr;
+    }
+
+    for (QTreeWidgetItem* group : { mGroupSource, mGroupDataType, mGroupDocument })
+    {
+        for (int i = 0; i < group->childCount(); ++i)
+        {
+            if (rowId(group->child(i)) == id)
+            {
+                return group->child(i);
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+uint32_t IncludeListView::rowId(const QTreeWidgetItem* item)
+{
+    return (((item != nullptr) && (item->parent() != nullptr))
+            ? item->data(static_cast<int>(eColumn::ColLocation), IncludeIdRole).toUInt()
+            : 0u);
+}
+
+bool IncludeListView::isGroup(const QTreeWidgetItem* item) const
+{
+    return (item == mGroupSource) || (item == mGroupDataType) || (item == mGroupDocument);
+}
+
+QTreeWidgetItem* IncludeListView::itemAt(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+    {
+        return nullptr;
+    }
+
+    const QModelIndex parent = index.parent();
+    if (parent.isValid() == false)
+    {
+        return mTable->topLevelItem(index.row());
+    }
+
+    QTreeWidgetItem* group = mTable->topLevelItem(parent.row());
+    return ((group != nullptr) && (index.row() < group->childCount()) ? group->child(index.row()) : nullptr);
+}
+
+QTreeWidgetItem* IncludeListView::ctrlGroup(eIncludeKind kind) const
+{
+    switch (kind)
+    {
+    case eIncludeKind::DataType:    return mGroupDataType;
+    case eIncludeKind::Document:    return mGroupDocument;
+    default:                        return mGroupSource;
+    }
+}
+
+QIcon IncludeListView::iconForKind(eIncludeKind kind) const
+{
+    switch (kind)
+    {
+    case eIncludeKind::DataType:    return NELusanCommon::iconStructure(NELusanCommon::SizeSmall);
+    case eIncludeKind::Document:    return mConfig.docIcon;
+    default:                        return NELusanCommon::iconInclude(NELusanCommon::SizeSmall);
+    }
+}
+
+eIncludeKind IncludeListView::kindForLocation(const QString& location) const
+{
+    return includeKindOf(location, mConfig.docExtension);
+}
+
 QString IncludeListView::typeForLocation(const QString& location) const
 {
-    const QString suffix = QFileInfo(location).suffix().toLower();
-    if (suffix == mConfig.docExtension.toLower())
-        return mConfig.docTypeLabel;
-    else if (suffix == QStringLiteral("dtml"))
-        return tr("Data Type");
-    else
-        return tr("Source");
+    switch (kindForLocation(location))
+    {
+    case eIncludeKind::Document:    return mConfig.docTypeLabel;
+    case eIncludeKind::DataType:    return tr("Data Type");
+    default:                        return tr("Source");
+    }
 }
 
 QString IncludeListView::nameForLocation(const QString& location) const
 {
     const QFileInfo info(location);
-    const QString suffix = info.suffix().toLower();
     // A document or data type include carries a declared name; until the file is parsed the
     // base name (no extension) is its best proxy. A source include is shown by its file name.
-    if ((suffix == mConfig.docExtension.toLower()) || (suffix == QStringLiteral("dtml")))
-        return info.completeBaseName();
-    else
-        return info.fileName();
+    return (kindForLocation(location) == eIncludeKind::Source ? info.fileName() : info.completeBaseName());
 }
 
 QTreeWidget* IncludeListView::ctrlTableList() const
@@ -163,3 +347,4 @@ QToolButton* IncludeListView::ctrlButtonUpdate() const
 {
     return mButtonUpdate;
 }
+

@@ -159,6 +159,49 @@ namespace
         }
     }
 
+    // A 1.0.0 document keeps its machine imports in a separate <ImportList>. Loading folds them
+    // into the include list and saving writes 1.1.0 without the old section -- the one deliberate
+    // exception to the byte-identical save rule, so it gets its own fixture and its own test.
+    void testLegacyImportMigration()
+    {
+        std::printf("[SM-29-EXT] 1.0.0 ImportList folds into the include list and saves as 1.1.0\n");
+
+        const QString refPath = dataFile("LegacyImports.fsml");
+        StateMachineData doc;
+        CHECK(doc.readFromFile(refPath));
+        CHECK(doc.openSucceeded());
+        CHECK(doc.getFormatVersion() == VersionNumber(StateMachineData::XML_FORMAT_110));
+
+        // Document order survives the fold: the source include first, the folded import after it.
+        CHECK(doc.getIncludes().getElementCount() == 2);
+        CHECK(doc.getIncludes().getElements().at(0).getLocation() == QStringLiteral("areg/base/GEGlobal.h"));
+        CHECK(doc.getIncludes().getElements().at(0).getAlias().isEmpty());
+
+        const IncludeEntry* folded = doc.findImportByAlias(QStringLiteral("TurnCycle"));
+        CHECK(folded != nullptr);
+        CHECK((folded != nullptr) && (folded->getId() == 30u));
+        CHECK((folded != nullptr) && (folded->getLocation() == QStringLiteral("./TurnCycle.fsml")));
+        CHECK((folded != nullptr) && (folded->getVersion().toString() == QStringLiteral("1.2.0")));
+        CHECK((folded != nullptr) && (folded->getDescription().isEmpty() == false));
+        CHECK(doc.machineImports().size() == 1);
+
+        const QString outPath = outFile("sm29ext_legacy.fsml");
+        CHECK(doc.writeToFile(outPath));
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("FormatVersion=\"1.1.0\""));
+        CHECK(written.contains("<ImportList>") == false);
+        CHECK(written.contains("<MachineImport") == false);
+        CHECK(written.contains("Alias=\"TurnCycle\""));
+        CHECK(written.contains("Version=\"1.2.0\""));
+
+        // Second save is byte-identical: the migration is one-way, not per-save churn.
+        StateMachineData migrated;
+        CHECK(migrated.readFromFile(outPath));
+        const QString twicePath = outFile("sm29ext_legacy_twice.fsml");
+        CHECK(migrated.writeToFile(twicePath));
+        CHECK(readAllBytes(twicePath) == written);
+    }
+
     void testRoundTrip()
     {
         std::printf("[SM-02] byte-identical round-trip (TrafficLight.fsml)\n");
@@ -489,7 +532,7 @@ namespace
         CHECK(original.isEmpty() == false);
 
         QByteArray older = original;
-        CHECK(replaceOnce(older, "FormatVersion=\"1.0.0\"", "FormatVersion=\"0.9.0\""));
+        CHECK(replaceOnce(older, "FormatVersion=\"1.1.0\"", "FormatVersion=\"0.9.0\""));
 
         const QString olderPath = outFile("sm03_older.fsml");
         CHECK(writeAllBytes(olderPath, older));
@@ -513,8 +556,8 @@ namespace
 
         QByteArray future = original;
         CHECK(replaceOnce(future,
-                          "<StateMachine FormatVersion=\"1.0.0\">",
-                          "<StateMachine FormatVersion=\"1.1.0\" FutureAttr=\"KeepMe\">"));
+                          "<StateMachine FormatVersion=\"1.1.0\">",
+                          "<StateMachine FormatVersion=\"1.2.0\" FutureAttr=\"KeepMe\">"));
         CHECK(replaceOnce(future,
                           "</StateMachine>",
                           "    <FutureSection Flag=\"x\"><FutureLeaf Value=\"42\"/></FutureSection>\n</StateMachine>"));
@@ -525,13 +568,13 @@ namespace
         StateMachineData doc;
         CHECK(doc.readFromFile(inPath));
         CHECK(doc.openSucceeded());
-        CHECK(doc.getFormatVersion().toString() == QString("1.1.0"));
+        CHECK(doc.getFormatVersion().toString() == QString("1.2.0"));
 
         const QString outPath = outFile("sm03_future_minor_out.fsml");
         CHECK(doc.writeToFile(outPath));
 
         const QByteArray written = readAllBytes(outPath);
-        CHECK(written.contains("FormatVersion=\"1.1.0\""));
+        CHECK(written.contains("FormatVersion=\"1.2.0\""));
         CHECK(written.contains("FutureAttr=\"KeepMe\""));
         CHECK(written.contains("<FutureSection"));
         CHECK(written.contains("<FutureLeaf"));
@@ -545,7 +588,7 @@ namespace
         CHECK(original.isEmpty() == false);
 
         QByteArray newerMajor = original;
-        CHECK(replaceOnce(newerMajor, "FormatVersion=\"1.0.0\"", "FormatVersion=\"2.0.0\""));
+        CHECK(replaceOnce(newerMajor, "FormatVersion=\"1.1.0\"", "FormatVersion=\"2.0.0\""));
 
         const QString newerPath = outFile("sm03_newer_major.fsml");
         CHECK(writeAllBytes(newerPath, newerMajor));
@@ -1032,7 +1075,10 @@ namespace
 
         StateMachineData doc;
         doc.getOverview().setName("HistoryModes");
-        doc.getImports().createImport("Lib");
+        if (IncludeEntry* import = doc.getIncludes().createInclude("./Lib.fsml"))
+        {
+            import->setAlias("Lib");
+        }
 
         doc.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
 
@@ -1080,6 +1126,7 @@ int main(int /*argc*/, char** /*argv*/)
 
     testRoundTrip();
     testFullFeatureRoundTrip();
+    testLegacyImportMigration();
     testLayoutLogicSeparation();
     testCData();
     testNestedConditions();

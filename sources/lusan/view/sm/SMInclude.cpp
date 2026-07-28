@@ -20,24 +20,33 @@
 #include "lusan/view/sm/SMInclude.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/view/common/IncludeDetailsView.hpp"
 #include "lusan/view/common/IncludeListView.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
-#include "lusan/view/sm/SMImports.hpp"
 
+#include <QAction>
 #include <QCheckBox>
 #include <QEvent>
+#include <QFileInfo>
 #include <QFont>
+#include <QFormLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QModelIndex>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QSignalBlocker>
+#include <QStackedWidget>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
@@ -45,6 +54,9 @@
 
 namespace
 {
+    constexpr int PageFile    { 0 };
+    constexpr int PageMachine { 1 };
+
     //!< Refreshes a deprecated checkbox + hint pair from an entry's current state, without
     //!< re-triggering the edit signals that would otherwise push a spurious command.
     void applyDeprecatedDisplay(QCheckBox* checkBox, QLineEdit* hintEdit, const IncludeEntry* entry)
@@ -56,14 +68,47 @@ namespace
         hintEdit->setEnabled(deprecated);
         hintEdit->setText(deprecated ? entry->getDeprecateHint() : QString());
     }
+
+    //!< The message shown when an add-time check refuses a candidate machine.
+    QString refusalText(SMIncludeModel::eImportRefusal refusal, const QString& file, const QStringList& chain)
+    {
+        const QString name = QFileInfo(file).fileName();
+        switch (refusal)
+        {
+        case SMIncludeModel::eImportRefusal::HostNotSaved:
+            return QObject::tr("Save this machine before importing another -- import locations are stored relative to its own folder.");
+
+        case SMIncludeModel::eImportRefusal::SelfImport:
+            return QObject::tr("'%1' cannot be imported: a machine cannot import itself.").arg(name);
+
+        case SMIncludeModel::eImportRefusal::Cycle:
+            return QObject::tr("'%1' cannot be imported: it would create a cycle.\n%2")
+                    .arg(name, chain.join(QStringLiteral(" -> ")));
+
+        case SMIncludeModel::eImportRefusal::TooDeep:
+            return QObject::tr("'%1' cannot be imported: its own imports already nest %2 levels deep.\n%3")
+                    .arg(name).arg(SMImportResolver::MAX_IMPORT_DEPTH).arg(chain.join(QStringLiteral(" -> ")));
+
+        default:
+            return QString();
+        }
+    }
 }
 
-SMInclude::SMInclude(SMIncludeModel& model, SMImportModel& imports, QWidget* parent /*= nullptr*/)
+SMInclude::SMInclude(SMIncludeModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new IncludeListView(IncludeTypeConfig{ QStringLiteral("fsml"), tr("State Machine") }, this))
+    , mList             (new IncludeListView(IncludeTypeConfig{ QStringLiteral("fsml"), tr("State Machine"), tr("State Machines")
+                                                                  , NELusanCommon::iconStateMachine(NELusanCommon::SizeSmall) }, this))
+    , mDetailsStack     (nullptr)
     , mDetails          (new IncludeDetailsView(this))
-    , mImports          (new SMImports(imports, this))
+    , mMachinePage      (nullptr)
+    , mMachineAlias     (nullptr)
+    , mMachineLocation  (nullptr)
+    , mMachineBrowse    (nullptr)
+    , mMachineDescription(nullptr)
+    , mMachineStatus    (nullptr)
+    , mMachineUpdate    (nullptr)
     , mTableCell        (nullptr)
     , mNameCounter      (0)
 {
@@ -74,10 +119,62 @@ SMInclude::SMInclude(SMIncludeModel& model, SMImportModel& imports, QWidget* par
 
 QStringList SMInclude::getSupportedExtensions()
 {
+    // A State Machine is a behaviour, a Service Interface is an API contract, and neither can
+    // consume the other -- so `.siml` is not offered here. A data type belongs to neither and is
+    // shared by both, which is why `.dtml` is.
     QStringList exts{};
     exts.append(LusanApplication::getExternalFileExtensions());
-    exts.append(LusanApplication::getInternalFileExtensions());
+    exts.append(LusanApplication::buildFileFilter(tr("State Machine Files")
+                                                 , QStringList{ QStringLiteral("*.fsml"), QStringLiteral("*.dtml") }));
     return exts;
+}
+
+QStringList SMInclude::getMachineExtensions()
+{
+    return QStringList{ LusanApplication::buildFileFilter(tr("State Machines"), QStringList{ QStringLiteral("*.fsml") }) };
+}
+
+bool SMInclude::acceptMachine(SMIncludeModel& model, const QString& absoluteFilePath, QWidget* parent)
+{
+    QStringList chain;
+    const SMIncludeModel::eImportRefusal refusal = model.canImport(absoluteFilePath, chain);
+    if ((refusal != SMIncludeModel::eImportRefusal::None) && (refusal != SMIncludeModel::eImportRefusal::Unreadable))
+    {
+        QMessageBox::warning(parent, QObject::tr("Cannot Import"), refusalText(refusal, absoluteFilePath, chain));
+        return false;
+    }
+
+    if (refusal == SMIncludeModel::eImportRefusal::Unreadable)
+    {
+        QMessageBox::warning(parent, QObject::tr("Import Added")
+                            , QObject::tr("'%1' cannot be read as a state machine. It is registered anyway and is flagged by validation.")
+                              .arg(QFileInfo(absoluteFilePath).fileName()));
+    }
+
+    return true;
+}
+
+QString SMInclude::browseForMachine(SMIncludeModel& model, QWidget* parent)
+{
+    WorkspaceFileDialog dialog(   true
+                                , false
+                                , LusanApplication::getWorkspaceDirectories()
+                                , SMInclude::getMachineExtensions()
+                                , QObject::tr("Select State Machine to Import")
+                                , parent);
+    dialog.clearHistory();
+    if (dialog.exec() != static_cast<int>(QDialog::DialogCode::Accepted))
+    {
+        return QString();
+    }
+
+    const QString picked = dialog.getSelectedFilePath();
+    if (picked.isEmpty() || (acceptMachine(model, picked, parent) == false))
+    {
+        return QString();
+    }
+
+    return picked;
 }
 
 int SMInclude::getColumnCount() const
@@ -87,7 +184,7 @@ int SMInclude::getColumnCount() const
 
 QString SMInclude::getCellText(const QModelIndex& cell) const
 {
-    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(cell.row());
+    QTreeWidgetItem* item = mList->itemAt(cell);
     return (item != nullptr ? item->text(cell.column()) : QString());
 }
 
@@ -106,22 +203,21 @@ void SMInclude::buildUi()
 
     QHBoxLayout* columns = new QHBoxLayout();
 
-    // Left panel: the multi-column include list.
     mList->setParent(content);
     mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     columns->addWidget(mList, 1);
 
-    // Right panel: the selected-include details editor.
-    mDetails->setParent(content);
-    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    columns->addWidget(mDetails, 1);
+    // One editor slot, two contents. A machine import and a header have almost nothing in common
+    // beyond a path, so the fields swap rather than half of them greying out.
+    mDetailsStack = new QStackedWidget(content);
+    mDetails->setParent(mDetailsStack);
+    mMachinePage = buildMachineDetails();
+    mDetailsStack->insertWidget(PageFile, mDetails);
+    mDetailsStack->insertWidget(PageMachine, mMachinePage);
+    mDetailsStack->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    columns->addWidget(mDetailsStack, 1);
 
     root->addLayout(columns, 1);
-
-    // Imported machines are the page's second registry; they sit below the include files so the
-    // two file-facing lists read top to bottom instead of competing for the same width.
-    mImports->setParent(content);
-    root->addWidget(mImports, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -129,8 +225,8 @@ void SMInclude::buildUi()
     setWidget(content);
 
     // Inline editing of the Location column: commit once on editing-finished so a single undo
-    // command is pushed (matching the details field). Type and Name are derived from the location
-    // and must not be edited, so the delegate refuses an editor on every other column.
+    // command is pushed (matching the details field). Type, Name and Version are derived and must
+    // not be edited, so the delegate refuses an editor on every other column.
     QTreeWidget* table = mList->ctrlTableList();
     mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(IncludeListView::eColumn::ColLocation), TableCell::eCellValidation::Path);
@@ -138,6 +234,55 @@ void SMInclude::buildUi()
         return index.column() == static_cast<int>(IncludeListView::eColumn::ColLocation);
     });
     table->setItemDelegate(mTableCell);
+}
+
+QWidget* SMInclude::buildMachineDetails()
+{
+    QWidget* page = new QWidget(mDetailsStack);
+    QVBoxLayout* root = new QVBoxLayout(page);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* group = new QGroupBox(tr("Submachine Details:"), page);
+    QVBoxLayout* groupLayout = new QVBoxLayout(group);
+    QFormLayout* form = new QFormLayout();
+
+    mMachineAlias = new QLineEdit(group);
+    mMachineAlias->setMaxLength(StateMachineData::MAX_IDENTIFIER_LENGTH);
+    // The alias becomes part of a generated state identity, so it obeys the same identifier rule
+    // as every other declared name.
+    mMachineAlias->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mMachineAlias));
+
+    QWidget* locationRow = new QWidget(group);
+    QHBoxLayout* locationLayout = new QHBoxLayout(locationRow);
+    locationLayout->setContentsMargins(0, 0, 0, 0);
+    mMachineLocation = new QLineEdit(locationRow);
+    mMachineBrowse = new QPushButton(tr("Browse..."), locationRow);
+    locationLayout->addWidget(mMachineLocation, 1);
+    locationLayout->addWidget(mMachineBrowse);
+
+    mMachineDescription = new QPlainTextEdit(group);
+    mMachineDescription->setPlaceholderText(tr("Description"));
+    mMachineDescription->setMaximumHeight(90);
+
+    mMachineStatus = new QLabel(group);
+    mMachineStatus->setWordWrap(true);
+
+    QWidget* statusRow = new QWidget(group);
+    QHBoxLayout* statusLayout = new QHBoxLayout(statusRow);
+    statusLayout->setContentsMargins(0, 0, 0, 0);
+    mMachineUpdate = new QPushButton(tr("Update"), statusRow);
+    mMachineUpdate->setToolTip(tr("Pin the version currently in the imported file"));
+    statusLayout->addWidget(mMachineStatus, 1);
+    statusLayout->addWidget(mMachineUpdate, 0, Qt::AlignTop);
+
+    form->addRow(tr("Machine:"), mMachineAlias);
+    form->addRow(tr("Location:"), locationRow);
+    form->addRow(tr("Description:"), mMachineDescription);
+    form->addRow(tr("Status:"), statusRow);
+    groupLayout->addLayout(form);
+    groupLayout->addStretch(1);
+    root->addWidget(group);
+    return page;
 }
 
 void SMInclude::setupSignals()
@@ -149,44 +294,73 @@ void SMInclude::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMInclude::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMInclude::onMoveDownClicked);
     connect(mList->ctrlButtonUpdate()  , &QToolButton::clicked           , this, &SMInclude::onUpdateClicked);
-
     // The include path keystroke validator lives inside the shared IncludeDetailsView.
     connect(mDetails->ctrlInclude()      , &QLineEdit::editingFinished, this, &SMInclude::onLocationCommitted);
     // Live-preview the typed path into the selected include's row (location + derived type/name
     // columns); the change commits on editingFinished. Selection sets the field under a blocker.
     connect(mDetails->ctrlInclude()      , &QLineEdit::textChanged    , this, [this](const QString& text) {
-        if (currentIncludeId() != 0)
+        const uint32_t id = currentIncludeId();
+        QTreeWidgetItem* item = (id != 0 ? mList->ctrlTableList()->currentItem() : nullptr);
+        if (item == nullptr)
         {
-            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
-            {
-                item->setText(static_cast<int>(IncludeListView::eColumn::ColLocation), text);
-                item->setText(static_cast<int>(IncludeListView::eColumn::ColType)    , mList->typeForLocation(text));
-                item->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , mList->nameForLocation(text));
-            }
+            return;
         }
+
+        // The heading a row sits under is part of what the location says, so the row moves while
+        // it is typed rather than at commit -- otherwise it reads "Data Type" under "Include
+        // Files" until focus leaves.
+        const eIncludeKind kind = mList->kindForLocation(text);
+        const QSignalBlocker blocker(mList->ctrlTableList());
+        mList->placeRow(item, kind, id);
+        mList->refreshGroupCounts();
+        item->setIcon(static_cast<int>(IncludeListView::eColumn::ColLocation), mList->iconForKind(kind));
+        item->setText(static_cast<int>(IncludeListView::eColumn::ColLocation), text);
+        item->setText(static_cast<int>(IncludeListView::eColumn::ColType)    , mList->typeForLocation(text));
+        item->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , mList->nameForLocation(text));
+        mList->ctrlTableList()->setCurrentItem(item);
     });
     connect(mDetails->ctrlBrowseButton() , &QPushButton::clicked      , this, &SMInclude::onBrowseClicked);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMInclude::onDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMInclude::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
+    connect(mMachineAlias   , &QLineEdit::editingFinished, this, &SMInclude::onAliasCommitted);
+    connect(mMachineLocation, &QLineEdit::editingFinished, this, &SMInclude::onMachineLocationCommitted);
+    connect(mMachineBrowse  , &QPushButton::clicked      , this, &SMInclude::onMachineBrowseClicked);
+    connect(mMachineUpdate  , &QPushButton::clicked      , this, &SMInclude::onUpdateVersionClicked);
+    mMachineDescription->installEventFilter(this);
+
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SMInclude::onInlineLocationEdited);
 
-    connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMInclude::onNotifierChanged);
-    connect(&mModel.getNotifier(), &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Include) onNotifierChanged(); });
-    connect(&mModel.getNotifier(), &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Include) onNotifierChanged(); });
-    connect(&mModel.getNotifier(), &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Include) onNotifierChanged(); });
-    connect(&mModel.getNotifier(), &DocModelNotifier::listReordered, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Include) onNotifierChanged(); });
+    DocModelNotifier& notifier = mModel.getNotifier();
+    auto onKind = [this](uint32_t, eDocElementKind kind) {
+        if ((kind == eDocElementKind::Include) || (kind == eDocElementKind::Import))
+        {
+            onNotifierChanged();
+        }
+    };
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMInclude::onNotifierChanged);
+    connect(&notifier, &DocModelNotifier::elementAdded  , this, onKind);
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, onKind);
+    connect(&notifier, &DocModelNotifier::elementChanged, this, onKind);
+    connect(&notifier, &DocModelNotifier::listReordered , this, onKind);
 }
 
 bool SMInclude::eventFilter(QObject* watched, QEvent* event)
 {
-    if ((watched == mDetails->ctrlDescription()) && (event->type() == QEvent::FocusOut))
+    if (event->type() == QEvent::FocusOut)
     {
         const uint32_t id = currentIncludeId();
         if (id != 0)
         {
-            mModel.setDescription(id, mDetails->ctrlDescription()->toPlainText());
+            if (watched == mDetails->ctrlDescription())
+            {
+                mModel.setDescription(id, mDetails->ctrlDescription()->toPlainText());
+            }
+            else if (watched == mMachineDescription)
+            {
+                mModel.setDescription(id, mMachineDescription->toPlainText());
+            }
         }
     }
 
@@ -196,28 +370,18 @@ bool SMInclude::eventFilter(QObject* watched, QEvent* event)
 void SMInclude::setNodeText(QTreeWidgetItem* node, const IncludeEntry& entry) const
 {
     const QString location = entry.getLocation();
-    // Editable flag lets the TableCell delegate open the inline Location editor on double-click;
-    // the editable-check keeps Type/Name/Version read-only.
-    node->setFlags(node->flags() | Qt::ItemIsEditable);
-    node->setIcon(static_cast<int>(IncludeListView::eColumn::ColLocation), entry.getIcon(ElementBase::eDisplay::DisplayName));
+    const eIncludeKind kind = mList->kindForLocation(location);
+    const bool machine = (kind == eIncludeKind::Document);
+    node->setIcon(static_cast<int>(IncludeListView::eColumn::ColLocation), mList->iconForKind(kind));
     node->setText(static_cast<int>(IncludeListView::eColumn::ColLocation), entry.getString(ElementBase::eDisplay::DisplayName));
     node->setText(static_cast<int>(IncludeListView::eColumn::ColType)    , mList->typeForLocation(location));
-    node->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , mList->nameForLocation(location));
-    // Version is populated once state machine / data type includes are parsed; blank for now.
-    node->setText(static_cast<int>(IncludeListView::eColumn::ColVersion) , QString());
-    node->setData(static_cast<int>(IncludeListView::eColumn::ColLocation), Qt::ItemDataRole::UserRole, entry.getId());
+    node->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , machine ? entry.getAlias() : mList->nameForLocation(location));
+    node->setText(static_cast<int>(IncludeListView::eColumn::ColVersion) , machine ? entry.getVersion().toString() : QString());
 }
 
 void SMInclude::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*previous*/)
 {
-    if (current == nullptr)
-    {
-        showClean();
-        return;
-    }
-
-    const uint32_t id = current->data(0, Qt::ItemDataRole::UserRole).toUInt();
-    IncludeEntry* entry = mModel.findInclude(id);
+    IncludeEntry* entry = mModel.findInclude(IncludeListView::rowId(current));
     if (entry == nullptr)
     {
         showClean();
@@ -229,25 +393,78 @@ void SMInclude::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*pr
 
 void SMInclude::selectedInclude(const IncludeEntry* entry)
 {
+    const uint32_t id = entry->getId();
+    const eIncludeKind kind = mList->kindForLocation(entry->getLocation());
+    if (kind == eIncludeKind::Document)
     {
-        const QSignalBlocker blockInclude(mDetails->ctrlInclude());
-        const QSignalBlocker blockDescr(mDetails->ctrlDescription());
-        mDetails->ctrlInclude()->setText(entry->getLocation());
-        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-    }
-    applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), entry);
+        mDetailsStack->setCurrentIndex(PageMachine);
 
-    mDetails->ctrlInclude()->setEnabled(true);
-    mDetails->ctrlBrowseButton()->setEnabled(true);
-    mDetails->ctrlDescription()->setEnabled(true);
-    mDetails->ctrlDeprecated()->setEnabled(true);
+        const QSignalBlocker blockAlias(mMachineAlias);
+        const QSignalBlocker blockLocation(mMachineLocation);
+        const QSignalBlocker blockDescr(mMachineDescription);
+        mMachineAlias->setText(entry->getAlias());
+        mMachineLocation->setText(entry->getLocation());
+        mMachineDescription->setPlainText(entry->getDescription());
+
+        const SMImportResolver::Resolution resolution = mModel.resolutionOf(id);
+        QString status;
+        switch (resolution.state)
+        {
+        case SMImportResolver::eState::NoLocation:
+            status = tr("No file is selected.");
+            break;
+
+        case SMImportResolver::eState::NotFound:
+            status = tr("The file was not found: %1").arg(entry->getLocation());
+            break;
+
+        case SMImportResolver::eState::ParseFailed:
+            status = tr("The file cannot be read as a state machine: %1").arg(entry->getLocation());
+            break;
+
+        case SMImportResolver::eState::Resolved:
+            status = (resolution.actualVersion == entry->getVersion())
+                     ? tr("Up to date, version %1.").arg(entry->getVersion().toString())
+                     : tr("Pinned to version %1, the file is now %2. Use Update to accept it.")
+                        .arg(entry->getVersion().toString(), resolution.actualVersion.toString());
+            break;
+        }
+
+        mMachineStatus->setText(status);
+        const bool writable = (mModel.isReadOnly() == false);
+        mMachineAlias->setEnabled(writable);
+        mMachineLocation->setEnabled(writable);
+        mMachineBrowse->setEnabled(writable);
+        mMachineDescription->setEnabled(writable);
+        mMachineUpdate->setEnabled(writable && resolution.isResolved());
+    }
+    else
+    {
+        mDetailsStack->setCurrentIndex(PageFile);
+
+        {
+            const QSignalBlocker blockInclude(mDetails->ctrlInclude());
+            const QSignalBlocker blockDescr(mDetails->ctrlDescription());
+            mDetails->ctrlInclude()->setText(entry->getLocation());
+            mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+        }
+        applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), entry);
+
+        // A data type document is not a header, so there is nothing to deprecate on it.
+        mDetails->setDeprecationVisible(kind == eIncludeKind::Source);
+        mDetails->ctrlInclude()->setEnabled(true);
+        mDetails->ctrlBrowseButton()->setEnabled(true);
+        mDetails->ctrlDescription()->setEnabled(true);
+        mDetails->ctrlDeprecated()->setEnabled(kind == eIncludeKind::Source);
+    }
 
     mList->ctrlButtonRemove()->setEnabled(true);
-    updateMoveButtons(mModel.findIndex(entry->getId()), mModel.getIncludeCount());
+    updateMoveButtons(mModel.findIndex(id), mModel.getIncludeCount());
 }
 
 void SMInclude::showClean()
 {
+    mDetailsStack->setCurrentIndex(PageFile);
     applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), nullptr);
 
     const QSignalBlocker blockInclude(mDetails->ctrlInclude());
@@ -255,6 +472,7 @@ void SMInclude::showClean()
     mDetails->ctrlInclude()->clear();
     mDetails->ctrlDescription()->clear();
 
+    mDetails->setDeprecationVisible(true);
     mDetails->ctrlInclude()->setEnabled(false);
     mDetails->ctrlBrowseButton()->setEnabled(false);
     mDetails->ctrlDescription()->setEnabled(false);
@@ -280,13 +498,25 @@ void SMInclude::updateMoveButtons(int row, int rowCount)
 
 uint32_t SMInclude::currentIncludeId() const
 {
-    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-    return (item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).toUInt() : 0u);
+    return IncludeListView::rowId(mList->ctrlTableList()->currentItem());
 }
 
 bool SMInclude::revealElement(uint32_t id)
 {
-    return mImports->revealElement(id);
+    QTreeWidgetItem* item = mList->findRow(id);
+    if (item == nullptr)
+    {
+        return false;
+    }
+
+    if (item->parent() != nullptr)
+    {
+        item->parent()->setExpanded(true);
+    }
+
+    mList->ctrlTableList()->setCurrentItem(item);
+    mList->ctrlTableList()->scrollToItem(item);
+    return true;
 }
 
 QString SMInclude::genName()
@@ -301,10 +531,30 @@ QString SMInclude::genName()
     return name;
 }
 
+bool SMInclude::acceptTypedLocation(const QString& location)
+{
+    if (mList->kindForLocation(location) != eIncludeKind::Document)
+    {
+        return true;
+    }
+
+    // Only a location that actually names a file can be checked: an empty or not-yet-created
+    // path cannot close a cycle or sit too deep, and refusing it would fight a user who is
+    // typing the name of a file they are about to make. Validation reports it either way.
+    const QString absolute = mModel.absolutePathOf(location);
+    if (absolute.isEmpty() || (QFileInfo(absolute).isFile() == false))
+    {
+        return true;
+    }
+
+    return acceptMachine(mModel, absolute, this);
+}
+
 void SMInclude::onAddClicked()
 {
-    const QString location = genName();
-    IncludeEntry* entry = mModel.createInclude(location);
+    // A new entry starts as a plain include file: its group follows its location, and it has
+    // none yet. Picking or typing one moves the row.
+    IncludeEntry* entry = mModel.createInclude(genName());
     if (entry != nullptr)
     {
         selectInclude(entry->getId());
@@ -317,8 +567,7 @@ void SMInclude::onInsertClicked()
 {
     const uint32_t id = currentIncludeId();
     const int position = (id != 0 ? mModel.findIndex(id) : 0);
-    const QString location = genName();
-    IncludeEntry* entry = mModel.insertInclude(position < 0 ? 0 : position, location);
+    IncludeEntry* entry = mModel.insertInclude(position < 0 ? 0 : position, genName());
     if (entry != nullptr)
     {
         selectInclude(entry->getId());
@@ -332,6 +581,34 @@ void SMInclude::onRemoveClicked()
     const uint32_t id = currentIncludeId();
     if (id == 0)
         return;
+
+    // Removing a hosted machine breaks its states visibly: each keeps its alias and is reported
+    // as an unresolved reference, which is easier to act on than a silently emptied state.
+    const IncludeEntry* entry = mModel.findInclude(id);
+    if ((entry != nullptr) && (mList->kindForLocation(entry->getLocation()) == eIncludeKind::Document))
+    {
+        const QList<SMReferences::Use> uses = mModel.whereUsed(id);
+        if (uses.isEmpty() == false)
+        {
+            QStringList places;
+            for (const SMReferences::Use& use : uses)
+            {
+                places.append(QStringLiteral("  - ") + use.location);
+            }
+
+            const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Submachine is used")
+                                , tr("'%1' is hosted by %2 state%3:\n%4\n\nRemove anyway? Those states lose their machine and are listed by validation.")
+                                  .arg(entry->getAlias())
+                                  .arg(uses.size())
+                                  .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
+                                  .arg(places.join(QLatin1Char('\n')))
+                                , QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+            if (choice != QMessageBox::Yes)
+            {
+                return;
+            }
+        }
+    }
 
     const QList<IncludeEntry>& list = mModel.getIncludes();
     const int index = mModel.findIndex(id);
@@ -390,7 +667,7 @@ void SMInclude::onLocationCommitted()
         // a spurious editingFinished must not push an empty undo step.
         const IncludeEntry* entry = mModel.findInclude(id);
         const QString text = mDetails->ctrlInclude()->text();
-        if ((entry == nullptr) || (entry->getLocation() != text))
+        if ((entry != nullptr) && (entry->getLocation() != text) && acceptTypedLocation(text))
         {
             mModel.setLocation(id, text);
         }
@@ -399,19 +676,15 @@ void SMInclude::onLocationCommitted()
 
 void SMInclude::onInlineLocationEdited(const QModelIndex& index, const QString& newValue)
 {
-    if ((index.isValid() == false) || (index.column() != static_cast<int>(IncludeListView::eColumn::ColLocation)))
+    if (index.column() != static_cast<int>(IncludeListView::eColumn::ColLocation))
         return;
 
-    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(index.row());
-    if (item == nullptr)
-        return;
-
-    const uint32_t id = item->data(0, Qt::ItemDataRole::UserRole).toUInt();
+    const uint32_t id = IncludeListView::rowId(mList->itemAt(index));
     const IncludeEntry* entry = mModel.findInclude(id);
-    if ((entry != nullptr) && (entry->getLocation() != newValue))
+    if ((entry != nullptr) && (entry->getLocation() != newValue) && acceptTypedLocation(newValue))
     {
-        // The undo command fires an Include-kind notifier, which rebuilds the list with the
-        // re-derived Type/Name columns.
+        // The undo command fires an include notifier, which rebuilds the list with the re-derived
+        // Type/Name columns and moves the row if its kind changed.
         mModel.setLocation(id, newValue);
     }
 }
@@ -431,7 +704,22 @@ void SMInclude::onBrowseClicked()
     dialog.clearHistory();
     if (dialog.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
-        mModel.setLocation(id, dialog.getSelectedFileRelativePath());
+        const QString absolute = dialog.getSelectedFilePath();
+        if (mList->kindForLocation(absolute) == eIncludeKind::Document)
+        {
+            // Changing a path to a `.fsml` is a registration too, so it passes the same add-time
+            // checks -- otherwise the safe route is only the slow one.
+            if (acceptMachine(mModel, absolute, this) == false)
+            {
+                return;
+            }
+
+            mModel.setLocation(id, mModel.storableLocation(absolute));
+        }
+        else
+        {
+            mModel.setLocation(id, dialog.getSelectedFileRelativePath());
+        }
     }
 }
 
@@ -461,6 +749,58 @@ void SMInclude::onDeprecateHintCommitted()
     }
 }
 
+void SMInclude::onAliasCommitted()
+{
+    const uint32_t id = currentIncludeId();
+    if (id != 0)
+    {
+        mModel.setAlias(id, mMachineAlias->text());
+        IncludeEntry* entry = mModel.findInclude(id);
+        if (entry != nullptr)
+        {
+            selectedInclude(entry);
+        }
+    }
+}
+
+void SMInclude::onMachineLocationCommitted()
+{
+    const uint32_t id = currentIncludeId();
+    const IncludeEntry* entry = mModel.findInclude(id);
+    const QString text = mMachineLocation->text();
+    if ((entry != nullptr) && (entry->getLocation() != text) && acceptTypedLocation(text))
+    {
+        mModel.setLocation(id, text);
+    }
+}
+
+void SMInclude::onMachineBrowseClicked()
+{
+    const uint32_t id = currentIncludeId();
+    if (id == 0)
+        return;
+
+    const QString picked = browseForMachine(mModel, this);
+    if (picked.isEmpty() == false)
+    {
+        mModel.setLocation(id, mModel.storableLocation(picked));
+    }
+}
+
+void SMInclude::onUpdateVersionClicked()
+{
+    const uint32_t id = currentIncludeId();
+    if (id == 0)
+        return;
+
+    if (mModel.updateVersion(id) == false)
+    {
+        // Nothing to re-pin: say so rather than leaving the click unanswered.
+        QMessageBox::information(this, tr("Import Version")
+                                , tr("The pinned version already matches the imported file."));
+    }
+}
+
 void SMInclude::refreshAll()
 {
     QTreeWidget* table = mList->ctrlTableList();
@@ -468,13 +808,19 @@ void SMInclude::refreshAll()
 
     {
         const QSignalBlocker blocker(table);
-        table->clear();
+        mList->clearRows();
+        int counts[3]{ 0, 0, 0 };
         for (const IncludeEntry& entry : mModel.getIncludes())
         {
-            QTreeWidgetItem* item = new QTreeWidgetItem();
+            const eIncludeKind kind = mList->kindForLocation(entry.getLocation());
+            QTreeWidgetItem* item = mList->placeRow(nullptr, kind, entry.getId());
             setNodeText(item, entry);
-            table->addTopLevelItem(item);
+            ++counts[static_cast<int>(kind)];
         }
+
+        mList->updateGroupCounts(counts[static_cast<int>(eIncludeKind::Source)]
+                                 , counts[static_cast<int>(eIncludeKind::DataType)]
+                                 , counts[static_cast<int>(eIncludeKind::Document)]);
     }
 
     if ((selId == 0) || (selectInclude(selId) == false))
@@ -485,25 +831,13 @@ void SMInclude::refreshAll()
 
 bool SMInclude::selectInclude(uint32_t id)
 {
-    QTreeWidget* table = mList->ctrlTableList();
-    for (int i = 0; i < table->topLevelItemCount(); ++i)
-    {
-        QTreeWidgetItem* item = table->topLevelItem(i);
-        if (item->data(0, Qt::ItemDataRole::UserRole).toUInt() == id)
-        {
-            table->setCurrentItem(item);
-            return true;
-        }
-    }
-
-    return false;
+    return revealElement(id);
 }
 
 void SMInclude::onUpdateClicked()
 {
-    // Re-derives the Type/Name/Version columns from the current locations. Once state machine
-    // and data type includes are parsed, this is where their declared name and version are
-    // re-read from disk; today it simply rebuilds the list from the live model.
+    // Re-derives the Type/Name/Version columns and the resolution status from the current
+    // locations: the imported files live outside the document and change under the editor.
     refreshAll();
 }
 

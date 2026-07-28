@@ -22,7 +22,9 @@
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
+#include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
@@ -41,6 +43,7 @@
 
 #include <QAction>
 #include <QDir>
+#include <QFileInfo>
 #include <QLabel>
 #include <QMessageBox>
 #include <QTimer>
@@ -341,9 +344,52 @@ void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t dec
     }
 }
 
+void StateMachine::onAddSubmachineRequested(uint32_t hostStateId)
+{
+    SMIncludeModel& includes = mModel.getIncludeModel();
+    const QString picked = SMInclude::browseForMachine(includes, this);
+    if (picked.isEmpty())
+    {
+        return;
+    }
+
+    // One registration per file, hosted by as many states as the user likes -- so a file that is
+    // already in the list is linked, not registered again under a second alias.
+    const QString location = includes.storableLocation(picked);
+    const IncludeEntry* existing = includes.findInclude(location);
+    if ((existing != nullptr) && (hostStateId == 0))
+    {
+        QMessageBox::information(this, tr("Already Imported")
+                                , tr("'%1' is already registered as '%2'. Select a plain state to host it.")
+                                  .arg(QFileInfo(picked).fileName(), existing->getAlias()));
+        return;
+    }
+
+    // Registering and hosting are one gesture, so they are one undo entry. Without the link the
+    // button would be a tab shortcut wearing a misleading name.
+    mModel.getUndoStack().beginMacro(tr("Add submachine"));
+    const IncludeEntry* entry = (existing != nullptr ? existing : includes.createInclude(location));
+    if ((entry != nullptr) && (hostStateId != 0))
+    {
+        SMSetSubmachineCommand* link = new SMSetSubmachineCommand(mModel.getData(), mModel.getNotifier(), hostStateId
+                                                                 , entry->getAlias()
+                                                                 , tr("Host submachine %1").arg(entry->getAlias()));
+        if (link->isEffective())
+        {
+            mModel.getUndoStack().push(link);
+        }
+        else
+        {
+            delete link;
+        }
+    }
+
+    mModel.getUndoStack().endMacro();
+}
+
 void StateMachine::onOpenImport(uint32_t stateId, const QString& alias)
 {
-    const SMImportEntry* entry = mModel.getData().getImports().findElement(alias);
+    const IncludeEntry* entry = mModel.getData().findImportByAlias(alias);
     if (entry == nullptr)
     {
         QMessageBox::warning(this, tr("Submachine")
@@ -721,13 +767,14 @@ void StateMachine::ensureTabInitialized(int index)
     }
     else if (index == static_cast<int>(PageIncludes))
     {
-        page = new SMInclude(mModel.getIncludeModel(), mModel.getImportModel(), &mTabWidget);
+        page = new SMInclude(mModel.getIncludeModel(), &mTabWidget);
     }
     else if (index == static_cast<int>(PageDesign))
     {
         SMDesign* design = new SMDesign(mModel, &mTabWidget);
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
+        connect(design, &SMDesign::signalAddSubmachineRequested, this, &StateMachine::onAddSubmachineRequested);
         connect(design, &SMDesign::signalNavigateToPage, this, &StateMachine::onNavigateToPage);
         connect(design, &SMDesign::signalNavigateToDefinition, this, &StateMachine::navigateToDefinition);
         // The canvas View submenu moves the toolbar / Properties / Outline between the Design

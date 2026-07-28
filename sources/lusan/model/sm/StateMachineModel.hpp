@@ -28,7 +28,6 @@
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMConstantModel.hpp"
-#include "lusan/model/sm/SMImportModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMUndoStack.hpp"
@@ -90,7 +89,6 @@ public:
     inline SMMethodModel& getMethodModel();
     inline SMConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
-    inline SMImportModel& getImportModel();
     inline SMSelectionModel& getSelectionModel();
     inline SMValidationController& getValidationController();
 
@@ -119,7 +117,6 @@ private:
     SMMethodModel   mMethodModel;
     SMConstantModel mConstantModel;
     SMIncludeModel  mIncludeModel;
-    SMImportModel   mImportModel;
     SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
     QString         mReadOnlyOrigin;    //!< Non-empty only for a read-only import view.
@@ -215,11 +212,6 @@ inline SMConstantModel& StateMachineModel::getConstantModel()
 inline SMIncludeModel& StateMachineModel::getIncludeModel()
 {
     return mIncludeModel;
-}
-
-inline SMImportModel& StateMachineModel::getImportModel()
-{
-    return mImportModel;
 }
 
 inline SMSelectionModel& StateMachineModel::getSelectionModel()
