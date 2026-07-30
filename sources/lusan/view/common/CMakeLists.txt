@@ -36,6 +36,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/OutputWindow.cpp
     ${LUSAN}/view/common/ProjectSettings.cpp
     ${LUSAN}/view/common/SearchLineEdit.cpp
+    ${LUSAN}/view/common/SourceViewer.cpp
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/common/Workspace.cpp
     ${LUSAN}/view/common/WorkspaceFileDialog.cpp
@@ -78,6 +79,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/OutputWindow.hpp
     ${LUSAN}/view/common/ProjectSettings.hpp
     ${LUSAN}/view/common/SearchLineEdit.hpp
+    ${LUSAN}/view/common/SourceViewer.hpp
     ${LUSAN}/view/common/TableCell.hpp
     ${LUSAN}/view/common/Workspace.hpp
     ${LUSAN}/view/common/WorkspaceFileDialog.hpp

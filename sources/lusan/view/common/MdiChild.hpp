@@ -47,6 +47,7 @@ public:
         , MdiStateMachine           //!< State Machine MDI Window type
         , MdiLogViewer              //!< Log Viewer MDI Window type
         , MdiOfflineLogViewer       //!< Offline Log Viewer MDI window type
+        , MdiSourceViewer           //!< Read-only text / source file MDI window type
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,6 +95,12 @@ public:
      * \return  True if it is an Offline Log Viewer window, false otherwise.
      **/
     inline bool isOfflineLogViewerWindow() const;
+
+    /**
+     * \brief   Checks if the MDI child is a read-only text / source viewer window.
+     * \return  True if it is a source viewer window, false otherwise.
+     **/
+    inline bool isSourceViewerWindow() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Actions
@@ -392,6 +399,11 @@ inline bool MdiChild::isLogViewerWindow() const
 inline bool MdiChild::isOfflineLogViewerWindow() const
 {
     return (mMdiWindowType == MdiOfflineLogViewer);
+}
+
+inline bool MdiChild::isSourceViewerWindow() const
+{
+    return (mMdiWindowType == MdiSourceViewer);
 }
 
 inline const QString & MdiChild::currentFile() const

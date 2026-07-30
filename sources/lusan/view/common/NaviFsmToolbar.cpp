@@ -24,10 +24,15 @@
 
 #include <QAction>
 #include <QEvent>
+#include <QIcon>
 #include <QLayout>
+#include <QPalette>
+#include <QRect>
 #include <QScrollArea>
 #include <QSizePolicy>
 #include <QStyle>
+#include <QStyleOptionToolButton>
+#include <QStylePainter>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -152,6 +157,69 @@ namespace
         QList<QLayoutItem*> mItems;     //!< The flowed items.
         int                 mHSpace;    //!< Horizontal spacing (-1 = style default).
         int                 mVSpace;    //!< Vertical spacing (-1 = style default).
+    };
+
+    //!< Horizontal and vertical inset of a row button's label. Feeds both the stylesheet that
+    //!< sizes the button and the rect RowToolButton draws its own text into, so the two agree.
+    constexpr int _rowPaddingH{ 6 };
+    constexpr int _rowPaddingV{ 2 };
+
+    /**
+     * \class   RowToolButton
+     * \brief   A tool button whose label sits on the left in the text-only row mode.
+     *
+     *          The row modes give every button the full width of the panel, so a centred label
+     *          leaves each name floating in the middle of its own row and the column of names
+     *          never lines up. "Text beside icon" reads correctly because the style aligns an
+     *          icon-and-text label to the left of its own accord. "Text only" does not, and
+     *          nothing declarative repairs it -- measured against Qt 6.8 and the windows11
+     *          style: `text-align: left` in a stylesheet is ignored for a tool button in every
+     *          mode, and handing the style a "text beside icon" option with the icon taken out
+     *          is centred as well, because that branch only aligns left when there is really an
+     *          icon to align against.
+     *
+     *          So the label is painted here. The style still draws the frame from the real
+     *          option -- hover, pressed, checked and disabled all keep coming from it -- but it
+     *          is handed no text, and what it never sees it cannot centre.
+     **/
+    class RowToolButton : public QToolButton
+    {
+    public:
+        explicit RowToolButton(QWidget* parent)
+            : QToolButton(parent)
+        {
+        }
+
+    protected:
+        void paintEvent(QPaintEvent* event) override
+        {
+            if (toolButtonStyle() != Qt::ToolButtonTextOnly)
+            {
+                QToolButton::paintEvent(event);
+                return;
+            }
+
+            QStylePainter painter(this);
+            QStyleOptionToolButton option;
+            initStyleOption(&option);
+
+            QStyleOptionToolButton frame = option;
+            frame.text.clear();
+            frame.icon = QIcon();
+            painter.drawComplexControl(QStyle::CC_ToolButton, frame);
+
+            // The button area rather than the whole widget, so a menu arrow (if a tool ever
+            // grows one) keeps its own room.
+            QRect area = style()->subControlRect(QStyle::CC_ToolButton, &option, QStyle::SC_ToolButton, this);
+            if (area.isEmpty())
+            {
+                area = rect();
+            }
+
+            painter.drawItemText( area.adjusted(_rowPaddingH, 0, -_rowPaddingH, 0)
+                                , Qt::AlignLeft | Qt::AlignVCenter | Qt::TextShowMnemonic
+                                , option.palette, isEnabled(), option.text, QPalette::ButtonText);
+        }
     };
 }
 
@@ -343,15 +411,20 @@ QWidget* NaviFsmToolbar::buildGroup(const QString& title, const QList<QAction*>&
 
 QToolButton* NaviFsmToolbar::buildToolButton(QAction* action)
 {
-    QToolButton* button = new QToolButton(this);
+    QToolButton* button = new RowToolButton(this);
     button->setDefaultAction(action);
     button->setToolButtonStyle(mStyle);
     button->setAutoRaise(true);
 
     if (showsText())
     {
+        // Padding only. `text-align: left` used to be here and was measured to do nothing at all
+        // -- a tool button ignores it in every mode -- so it is gone rather than left standing as
+        // an explanation of an alignment it never produced. RowToolButton is what aligns the
+        // text-only label; the icon+text mode is aligned by the style itself.
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        button->setStyleSheet(QStringLiteral("QToolButton { text-align: left; padding: 2px 6px; }"));
+        button->setStyleSheet(QStringLiteral("QToolButton { padding: %1px %2px; }")
+                                .arg(_rowPaddingV).arg(_rowPaddingH));
     }
     else
     {

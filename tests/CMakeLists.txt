@@ -134,7 +134,12 @@ qt_add_executable(lusan_sm_validation_tests
     ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_validation_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
-target_compile_definitions(lusan_sm_validation_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_compile_definitions(lusan_sm_validation_tests PRIVATE
+    ${COMMON_COMPILE_DEF}
+    IMP_LOGGER_DLL
+    # The reference-fixture sweep validates the documents that ship next to the spec.
+    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/.claude"
+)
 target_link_libraries(lusan_sm_validation_tests PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     areg::areg
