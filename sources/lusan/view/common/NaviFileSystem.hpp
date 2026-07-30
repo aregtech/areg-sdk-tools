@@ -154,16 +154,17 @@ private slots:
     void onToolNaviRootClicked(bool checked);
     
     /**
-     * \brief   Triggered when the tree view is double clicked.
-     * \param   index   The index of the tree view.
+     * \brief   Triggered when the user asks to open the item under the cursor -- by
+     *          double-clicking it or by pressing Enter on it with the keyboard. Both gestures
+     *          arrive through QAbstractItemView::activated, which is the view's own "open this"
+     *          signal; connecting `doubleClicked` instead is what used to leave the tree
+     *          mouse-only (issue: no keyboard open).
+     *
+     *          Directories are left alone: Right and Left already unfold and fold them, and the
+     *          view expands a double-clicked directory by itself.
+     * \param   index   The index of the item to open.
      **/
-    void onTreeViewDoubleClicked(const QModelIndex &index);
-
-    /**
-     * \brief   Triggered when the tree view is activated.
-     * \param   index   The index of the tree view.
-     **/
-    void onTreeViewActivated(const QModelIndex &index);
+    void onTreeViewOpenRequested(const QModelIndex &index);
 
     /**
      * \brief   Triggered when the tree view selection is changed.
@@ -233,6 +234,14 @@ private:
      * \brief   Returns the delete tool button control.
      **/
     QToolButton* ctrlToolDelete() const;
+
+    /**
+     * \brief   Enables or disables the toolbar buttons that act on one item, according to what
+     *          the given index is. Driven both by the selection moving and by the mouse passing
+     *          over a row.
+     * \param   index   The index the buttons should describe.
+     **/
+    void updateToolButtons(const QModelIndex &index);
 
     /**
      * \brief   Updates the data of the file system.

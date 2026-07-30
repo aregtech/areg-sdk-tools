@@ -327,7 +327,7 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
     }
 }
 
-void NaviFileSystem::onTreeViewDoubleClicked(const QModelIndex &index)
+void NaviFileSystem::onTreeViewOpenRequested(const QModelIndex &index)
 {
     if (index.isValid() == false)
         return;
@@ -340,7 +340,7 @@ void NaviFileSystem::onTreeViewDoubleClicked(const QModelIndex &index)
     }
 }
 
-void NaviFileSystem::onTreeViewActivated(const QModelIndex &index)
+void NaviFileSystem::updateToolButtons(const QModelIndex &index)
 {
     bool enable = (mNaviModel != nullptr) && (mNaviModel->isRoot(index) == false) && index.isValid();
     ctrlToolDelete()->setEnabled(enable && (mNaviModel->isWorkspaceEntry(index) == false));
@@ -352,7 +352,7 @@ void NaviFileSystem::onTreeViewActivated(const QModelIndex &index)
 
 void NaviFileSystem::onTreeSelectinoRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
-    onTreeViewActivated(current);
+    updateToolButtons(current);
 }
 
 void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
@@ -407,8 +407,11 @@ void NaviFileSystem::setupSignals()
     connect(ctrlToolOpen()          , &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
     connect(ctrlToolDelete()        , &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
     connect(ctrlToolNaviRoot()      , &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
-    connect(ctrlTable()             , &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
-    connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
+    // `activated` -- not `doubleClicked` -- is the view's "the user wants this item opened"
+    // signal: it covers both the double-click and Enter, and it is emitted once per gesture, so
+    // a file that fails to open cannot report its failure twice.
+    connect(ctrlTable()             , &QTreeView::activated,      this, &NaviFileSystem::onTreeViewOpenRequested);
+    connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::updateToolButtons);
     connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
 
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &NaviFileSystem::onEditorDataChanged);

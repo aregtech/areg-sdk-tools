@@ -46,6 +46,7 @@
 #include <QFile>
 #include <QTemporaryDir>
 
+#include <algorithm>
 #include <cstdio>
 
 //////////////////////////////////////////////////////////////////////////
@@ -398,6 +399,47 @@ namespace
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
             call->addArgument("p", eSource::Value, "1");
+            CHECK(countRule(SMValidator::validate(doc), 10) == 0);
+        }
+        {   // An empty Stimulus is the INITIAL transition and is legal on a Start state only.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            doc.getStates().createState("Next", eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Next"));
+            CHECK(countRule(SMValidator::validate(doc), 6) == 0);
+        }
+        {   // The same empty Stimulus on an ordinary state names a stimulus no registry declares.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* mid = doc.getStates().createState("Mid", eKind::Normal);
+            doc.getStates().createState("End", eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Mid"));
+            mid->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "End"));
+            CHECK(hasRule(SMValidator::validate(doc), 6));
+        }
+        {   // Positive: OnFinal names an event with a parameter that has no default. The hook is a
+            // bare attribute with no ArgumentList anywhere, so nothing can ever supply that value.
+            StateMachineData doc;
+            addStart(doc);
+            SMEventEntry* done = doc.getEvents().createEvent("Done");
+            done->addParam("code");
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
+            comp->setOnFinal("Done");
+            CHECK(hasRule(SMValidator::validate(doc), 10));
+        }
+        {   // Negative: the same hook, once every parameter carries its own default.
+            StateMachineData doc;
+            addStart(doc);
+            SMEventEntry* done = doc.getEvents().createEvent("Done");
+            // setDefaultValue only edits a parameter that is ALREADY defaulted, so the flag has
+            // to be raised first -- otherwise the call silently does nothing.
+            MethodParameter* code = done->addParam("code");
+            code->setDefault(true);
+            code->setValue(QStringLiteral("0"));
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
+            comp->setOnFinal("Done");
             CHECK(countRule(SMValidator::validate(doc), 10) == 0);
         }
     }
@@ -1273,10 +1315,12 @@ namespace
 {
     //!< Writes a minimal, error-free machine to \p path, optionally importing other documents.
     void writeMachine(const QString& path, const QString& name, const QString& version
-                     , const QList<QPair<QString, QString> >& imports = QList<QPair<QString, QString> >())
+                     , const QList<QPair<QString, QString> >& imports = QList<QPair<QString, QString> >()
+                     , SMOverviewData::eThreading threading = SMOverviewData::eThreading::Local)
     {
         std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument(name);
         doc->getOverview().setVersion(version);
+        doc->getOverview().setThreading(threading);
         for (const QPair<QString, QString>& one : imports)
         {
             IncludeEntry* entry = doc->getIncludes().createInclude(one.second);
@@ -1305,6 +1349,68 @@ namespace
 
         doc->setFilePath(path);
         return doc;
+    }
+
+    //!< Every reference fixture that ships next to the spec, validated. A fixture nobody
+    //!< validates is a fixture that can go quietly wrong -- and one did: TurnCycle.fsml carried an
+    //!< empty Stimulus on an ordinary state for as long as nothing checked it.
+    void testReferenceFixtures()
+    {
+        std::printf("- reference fixtures validate as expected\n");
+        // The expected ERROR rules of each fixture, pinned. "Deliberate" means the fixture exists
+        // partly to exercise that refusal; anything not listed here is a defect in the fixture.
+        struct Expect { const char* name; QList<int> errors; const char* why; };
+        const QList<Expect> expected =
+        {
+              { "TrafficLight.fsml"     , {}          , "the golden machine: must be clean" }
+            , { "FullFeature.fsml"      , {18, 19, 25}, "deliberate: History on a non-composite, an unresolved import, a draft guard" }
+            , { "GuardDemo.fsml"        , {}          , "every guard node kind, all resolved" }
+            , { "SubmachineDemo.fsml"   , {}          , "one import hosted twice: the fixture that must GENERATE" }
+            , { "UnresolvedImport.fsml" , {19}        , "deliberate: the import file does not exist" }
+            , { "TurnCycle.fsml"        , {}          , "the imported machine: must be clean" }
+            , { "LegacyImports.fsml"    , {}          , "1.0.0 migration path" }
+            , { "ThreadingMismatch.fsml", {26}        , "deliberate: Shared host, Local import" }
+        };
+
+        for (const Expect& one : expected)
+        {
+            const char* const name = one.name;
+            const QString path = QString(LUSAN_TEST_DATA_DIR) + QDir::separator() + QString::fromLatin1(name);
+            StateMachineData doc;
+            if (doc.readFromFile(path) == false)
+            {
+                std::printf("    %-24s COULD NOT OPEN\n", name);
+                continue;
+            }
+
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            QList<int> errs;
+            for (const SMIssue& i : issues)
+                if ((i.severity == SMIssue::eSeverity::Error) && (errs.contains(i.rule) == false))
+                    errs.append(i.rule);
+            std::sort(errs.begin(), errs.end());
+
+            QStringList text;
+            for (int r : errs) text << QString::number(r);
+            std::printf("    %-24s errors: %s\n", name
+                       , errs.isEmpty() ? "none" : text.join(QStringLiteral(",")).toStdString().c_str());
+
+            // When a fixture does carry errors, the message is what tells you whether it is
+            // deliberate or rotten. Printing it here is the difference between a number to
+            // look up and a defect you can act on.
+            for (const SMIssue& i : issues)
+            {
+                if (i.severity == SMIssue::eSeverity::Error)
+                    std::printf("      rule %-3d %s\n", i.rule, i.message.toStdString().c_str());
+            }
+
+            QList<int> want = one.errors;
+            std::sort(want.begin(), want.end());
+            CHECK(errs == want);
+            if (errs != want)
+                std::printf("      [EXPECTED] %s\n", one.why);
+        }
     }
 
     void testImports()
@@ -1424,6 +1530,45 @@ namespace
             const QList<SMIssue> exactIssues = SMValidator::validate(*exact);
             CHECK(countWarn(exactIssues, 12) == 0);
             CHECK(countRule(exactIssues, 22) == 0);
+        }
+
+        {   // Threading pairing (10.1 rule 26, 10.2 rule 13). Each document is generated by its own
+            // Threading, so the two settings an import brings together have to be compatible.
+            writeMachine(at("local.fsml"), QStringLiteral("LocalMachine"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >(), SMOverviewData::eThreading::Local);
+            writeMachine(at("shared.fsml"), QStringLiteral("SharedMachine"), QStringLiteral("1.0.0")
+                        , QList<QPair<QString, QString> >(), SMOverviewData::eThreading::Shared);
+
+            // Shared host + Local import: the import would be reachable from several threads with
+            // no locking generated anywhere in it.
+            std::unique_ptr<StateMachineData> bad = hostMachine(at("t1.fsml"), QStringLiteral("L"), QStringLiteral("./local.fsml"), QStringLiteral("1.0.0"), 1);
+            bad->getOverview().setThreading(SMOverviewData::eThreading::Shared);
+            SMDocumentCache::getInstance().clear();
+            CHECK(hasRule(SMValidator::validate(*bad), 26));
+
+            // Local host + Shared import: safe, only wasteful.
+            std::unique_ptr<StateMachineData> waste = hostMachine(at("t2.fsml"), QStringLiteral("S"), QStringLiteral("./shared.fsml"), QStringLiteral("1.0.0"), 1);
+            waste->getOverview().setThreading(SMOverviewData::eThreading::Local);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> wasteIssues = SMValidator::validate(*waste);
+            CHECK(hasWarn(wasteIssues, 13));
+            CHECK(warnSeverityIs(wasteIssues, 13, SMIssue::eSeverity::Warning));
+            CHECK(countRule(wasteIssues, 26) == 0);
+
+            // Matching modes are silent, in both directions.
+            std::unique_ptr<StateMachineData> same = hostMachine(at("t3.fsml"), QStringLiteral("L"), QStringLiteral("./local.fsml"), QStringLiteral("1.0.0"), 1);
+            same->getOverview().setThreading(SMOverviewData::eThreading::Local);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> sameIssues = SMValidator::validate(*same);
+            CHECK(countRule(sameIssues, 26) == 0);
+            CHECK(countWarn(sameIssues, 13) == 0);
+
+            std::unique_ptr<StateMachineData> both = hostMachine(at("t4.fsml"), QStringLiteral("S"), QStringLiteral("./shared.fsml"), QStringLiteral("1.0.0"), 1);
+            both->getOverview().setThreading(SMOverviewData::eThreading::Shared);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> bothIssues = SMValidator::validate(*both);
+            CHECK(countRule(bothIssues, 26) == 0);
+            CHECK(countWarn(bothIssues, 13) == 0);
         }
 
         {   // An absolute location resolves too, and a picked file is stored relative to the host.
@@ -1697,6 +1842,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testErrorsDoNotBlock();
     testPseudoStateAndKindNamespace();
     testUnifiedEngine();
+    testReferenceFixtures();
     testImports();
     testImportDepth();
     testIncludeRegistry();

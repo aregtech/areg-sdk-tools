@@ -32,6 +32,7 @@
 #include "lusan/view/common/NaviFsmToolbar.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
+#include "lusan/view/common/SourceViewer.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
 #include "lusan/view/log/OfflineLogViewer.hpp"
 
@@ -47,6 +48,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileIconProvider>
 #include <QFileInfo>
 #include <QLabel>
 #include <QMdiSubWindow>
@@ -1113,9 +1115,12 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
     bool hasMdiChild = (mdiActive != nullptr);
     // Find and where-used are FSM-only; the base MdiChild has no search/reference facility.
     const bool isStateMachine = (qobject_cast<StateMachine*>(mdiActive) != nullptr);
-    mActFileSave.setEnabled(hasMdiChild);
-    mActFileSaveAs.setEnabled(hasMdiChild);
-    mActEditPaste.setEnabled(hasMdiChild);
+    // A source viewer shows a file Lusan does not own and cannot change, so the commands that
+    // would write to it are off rather than enabled and inert.
+    const bool isWritable = hasMdiChild && (mdiActive->isSourceViewerWindow() == false);
+    mActFileSave.setEnabled(isWritable);
+    mActFileSaveAs.setEnabled(isWritable);
+    mActEditPaste.setEnabled(isWritable);
     mActEditFind.setEnabled(isStateMachine);
     mActEditWhereUsed.setEnabled(isStateMachine);
     mActEditGotoDef.setEnabled(isStateMachine);
@@ -1208,7 +1213,14 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     {
         result = createOfflineLogViewer(filePath, false);
     }
-    
+    else
+    {
+        // Everything Lusan has no editor for -- the C and C++ sources and headers the navigation
+        // tree lists, and whatever else the user picks in the Open dialog. Before this the chain
+        // ended here with a nullptr, so opening a header silently did nothing at all.
+        result = createSourceViewer(filePath);
+    }
+
     return result;
 }
 
@@ -1321,6 +1333,31 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
         child->openDatabase(filePath);
     }
 
+    return child;
+}
+
+SourceViewer* MdiMainWindow::createSourceViewer(const QString& filePath)
+{
+    SourceViewer* child = new SourceViewer(this, filePath, &mMdiArea);
+    if (child->openSucceeded() == false)
+    {
+        const QString reason{ child->errorText() };
+        delete child;
+        QMessageBox::warning( this
+                            , tr("Cannot Show File")
+                            , tr("Lusan cannot show this file:\n%1\n\n%2").arg(filePath, reason));
+        return nullptr;
+    }
+
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
+
+    // The platform's own icon for the file type: there is no Lusan icon for "some source file",
+    // and the shell already has one the user recognises.
+    mdiSub->setWindowIcon(QFileIconProvider().icon(QFileInfo(filePath)));
+    child->setCurrentFile(filePath);
+    mMdiArea.setActiveSubWindow(mdiSub);
+    mdiSub->showMaximized();
     return child;
 }
 

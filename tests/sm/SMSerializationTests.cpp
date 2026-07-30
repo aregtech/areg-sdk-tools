@@ -216,9 +216,15 @@ namespace
         std::printf("[SM-27] byte-identical round-trip (reference documents)\n");
         roundTripDocument("FullFeature.fsml", "sm27_fullfeature.fsml");
         roundTripDocument("GuardDemo.fsml", "sm27_guarddemo.fsml");
-        // The import pair: one import instantiated by two states, plus one that does not resolve.
+        // The import pair: one import instantiated by two states, both resolving.
         roundTripDocument("SubmachineDemo.fsml", "sm29_submachinedemo.fsml");
         roundTripDocument("TurnCycle.fsml", "sm29_turncycle.fsml");
+        // An import that does not resolve persists like any other: the registration is kept so the
+        // user can repair it, which is why it round-trips rather than being dropped on save.
+        roundTripDocument("UnresolvedImport.fsml", "sm29_unresolvedimport.fsml");
+        // Invalid by design (a Shared host importing a Local machine), but a document that fails
+        // validation is still a document: it must persist in canonical form like any other.
+        roundTripDocument("ThreadingMismatch.fsml", "sm29_threadingmismatch.fsml");
     }
 }
 

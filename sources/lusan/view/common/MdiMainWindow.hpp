@@ -43,6 +43,7 @@ class NaviDesignPanel;
 class LiveLogViewer;
 class OfflineLogViewer;
 class ScopeOutputViewer;
+class SourceViewer;
 
 QT_BEGIN_NAMESPACE
 class QActionGroup;
@@ -532,6 +533,15 @@ private:
      * \return  A pointer to the new Offline Log Viewer View.
      **/
     OfflineLogViewer* createOfflineLogViewer(const QString& filePath = QString(), bool cloneLive = false);
+
+    /**
+     * \brief   Creates a read-only viewer for a file Lusan has no editor for -- a C or C++
+     *          source or header, or any other text file. This is the fallback of the extension
+     *          dispatch, so it is also what refuses the files that are not text at all.
+     * \param   filePath   The path to the file to show.
+     * \return  A pointer to the new viewer, or nullptr when the file cannot be shown.
+     **/
+    SourceViewer* createSourceViewer(const QString& filePath);
 
     /**
      * \brief   Returns the file filter string, which contains the list of supported extensions.
