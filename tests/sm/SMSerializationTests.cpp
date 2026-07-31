@@ -258,8 +258,13 @@ namespace
         cond->setImplement(SMMethodEntry::eImplement::Embedded);
         cond->setBody(body);
 
-        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
+        // and the read shim would rewrite a merged-form one on the next load.
+        SMStateEntry* begin = doc.getStates().createState("Begin", SMStateEntry::eStateKind::Start);
+        SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
+        CHECK(begin != nullptr);
         CHECK(root != nullptr);
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
 
         SMInlineCode* inline1 = new SMInlineCode();
         inline1->setBody(body);
@@ -337,8 +342,13 @@ namespace
         doc.getOverview().setName("NestedCond");
         doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
 
-        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
+        // and the read shim would rewrite a merged-form one on the next load.
+        SMStateEntry* begin = doc.getStates().createState("Begin", SMStateEntry::eStateKind::Start);
+        SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
+        CHECK(begin != nullptr);
         CHECK(root != nullptr);
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
         SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
         CHECK(trans != nullptr);
 
@@ -426,8 +436,13 @@ namespace
         doc.getOverview().setName("FlatCond");
         doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
 
-        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
+        // and the read shim would rewrite a merged-form one on the next load.
+        SMStateEntry* begin = doc.getStates().createState("Begin", SMStateEntry::eStateKind::Start);
+        SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
+        CHECK(begin != nullptr);
         CHECK(root != nullptr);
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
         SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
         CHECK(trans != nullptr);
 
@@ -954,8 +969,13 @@ namespace
         doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
 
         // Root: a timer-loop Do activity -- interval and stop-condition both set.
-        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
+        // and the read shim would rewrite a merged-form one on the next load.
+        SMStateEntry* begin = doc.getStates().createState("Begin", SMStateEntry::eStateKind::Start);
+        SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
+        CHECK(begin != nullptr);
         CHECK(root != nullptr);
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
         SMInlineCode* work = new SMInlineCode();
         work->setBody("tick();");
         root->getDoList().addOperation(work);
@@ -1123,6 +1143,101 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// L1: the legacy merged Kind="Start" is rewritten on load
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< The state \p transition targets, or nullptr.
+    const SMStateEntry* targetOf(const StateMachineData& doc, const SMTransitionEntry& transition)
+    {
+        return doc.findStateById(transition.getToId());
+    }
+
+    void testLegacyMergedStart()
+    {
+        std::printf("[L1] the legacy merged Kind=\"Start\" converts on load and saves corrected\n");
+
+        StateMachineData doc;
+        CHECK(doc.readFromFile(dataFile("LegacyStart.fsml")));
+        CHECK(doc.openSucceeded());
+
+        // (b) the old state keeps everything it carried, and is now Normal.
+        const SMStateEntry* idle = doc.findState(QStringLiteral("Idle"));
+        CHECK(idle != nullptr);
+        CHECK((idle != nullptr) && (idle->getKind() == SMStateEntry::eStateKind::Normal));
+        CHECK((idle != nullptr) && (idle->getEntryList().getOperations().size() == 2));
+        CHECK((idle != nullptr) && (idle->getExitList().getOperations().size() == 1));
+        CHECK((idle != nullptr) && (idle->getTransitions().getElementCount() == 1));
+        CHECK((idle != nullptr) && (idle->getTransitions().getElements().at(0)->getStimulus() == QStringLiteral("Begin")));
+
+        // (a) a pseudo-state was inserted at that level, (c) wired by ONE unguarded initial
+        // transition that names no stimulus, and it sits in front of its target in document order.
+        const SMStateEntry* rootStart = doc.getStates().getStartState();
+        CHECK(rootStart != nullptr);
+        CHECK((rootStart != nullptr) && (rootStart->getName() == QStringLiteral("Start")));
+        CHECK((rootStart != nullptr) && (rootStart->hasOperations() == false));
+        CHECK((rootStart != nullptr) && (rootStart->getTransitions().getElementCount() == 1));
+        CHECK(doc.getStates().getElements().at(0) == rootStart);
+        if ((rootStart != nullptr) && (rootStart->getTransitions().getElementCount() == 1))
+        {
+            const SMTransitionEntry* initial = rootStart->getTransitions().getElements().at(0);
+            CHECK(initial->getStimulus().isEmpty());
+            CHECK(initial->hasCondition() == false);
+            CHECK(targetOf(doc, *initial) == idle);
+        }
+
+        // The nested level was in the merged form too, and gets its own uniquely named pseudo-state.
+        const SMStateEntry* running = doc.findState(QStringLiteral("Running"));
+        CHECK(running != nullptr);
+        const SMStateData* nested = (running != nullptr ? running->getNestedStates() : nullptr);
+        CHECK(nested != nullptr);
+        const SMStateEntry* polling = doc.findState(QStringLiteral("Polling"));
+        CHECK((polling != nullptr) && (polling->getKind() == SMStateEntry::eStateKind::Normal));
+        CHECK((polling != nullptr) && (polling->getDoList().getOperations().size() == 1));
+        CHECK((polling != nullptr) && (polling->getDoInterval() == 250u));
+        if (nested != nullptr)
+        {
+            const SMStateEntry* innerStart = nested->getStartState();
+            CHECK(innerStart != nullptr);
+            CHECK((innerStart != nullptr) && (innerStart->getName() == QStringLiteral("Start1")));   // unique document-wide
+            CHECK(nested->getElements().at(0) == innerStart);
+            CHECK((innerStart != nullptr) && (innerStart->getTransitions().getElementCount() == 1));
+            if ((innerStart != nullptr) && (innerStart->getTransitions().getElementCount() == 1))
+            {
+                CHECK(targetOf(doc, *innerStart->getTransitions().getElements().at(0)) == polling);
+            }
+        }
+
+        // (d) each pseudo-state's node sits above its target.
+        if ((rootStart != nullptr) && (idle != nullptr))
+        {
+            const SMLayoutNode* pseudoNode = doc.getLayout().findNode(rootStart->getId());
+            const SMLayoutNode* targetNode = doc.getLayout().findNode(idle->getId());
+            CHECK(pseudoNode != nullptr);
+            CHECK(targetNode != nullptr);
+            CHECK((pseudoNode != nullptr) && (targetNode != nullptr) && (pseudoNode->y < targetNode->y));
+        }
+
+        // The conversion is lossless in both directions of a save: the next save writes the
+        // corrected form, and reloading THAT changes nothing -- the shim is one-way, not churn.
+        const QString outPath = outFile("l1_legacystart.fsml");
+        CHECK(doc.writeToFile(outPath));
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("Name=\"Idle\" Kind=\"Normal\""));
+        CHECK(written.contains("Name=\"Start\" Kind=\"Start\""));
+        CHECK(written.contains("Name=\"Start1\" Kind=\"Start\""));
+        CHECK(written.contains("Name=\"Polling\" Kind=\"Normal\""));
+
+        StateMachineData again;
+        CHECK(again.readFromFile(outPath));
+        const QString twicePath = outFile("l1_legacystart_twice.fsml");
+        CHECK(again.writeToFile(twicePath));
+        CHECK(readAllBytes(twicePath) == written);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
 
@@ -1149,6 +1264,7 @@ int main(int /*argc*/, char** /*argv*/)
     testDoActivity();
     testEphemeralSubmachine();
     testHistoryModes();
+    testLegacyMergedStart();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

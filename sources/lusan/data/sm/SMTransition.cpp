@@ -255,17 +255,23 @@ void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
 SMTransitionData::SMTransitionData(ElementBase* parent /*= nullptr*/)
     : TEDataContainer<SMTransitionEntry*, DocumentElem>(parent)
 {
+    // Document order here is PRIORITY order, so transitions are reordered on purpose -- and the
+    // layout `Edge` entries name them by ID. Re-numbering on a list change would re-key the
+    // geometry of every sibling. Same reason as SMStateData.
+    setIdReordering(false);
 }
 
 SMTransitionData::SMTransitionData(const SMTransitionData& src)
     : TEDataContainer<SMTransitionEntry*, DocumentElem>(src.getParent())
 {
+    setIdReordering(false);
     cloneFrom(src);
 }
 
 SMTransitionData::SMTransitionData(SMTransitionData&& src) noexcept
     : TEDataContainer<SMTransitionEntry*, DocumentElem>(std::move(src))
 {
+    setIdReordering(false);
 }
 
 SMTransitionData::~SMTransitionData()

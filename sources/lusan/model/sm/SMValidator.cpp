@@ -198,7 +198,8 @@ namespace
         void checkRegistryNames();
 
         void validateLevel(const LevelInfo& info);
-        void validateState(const SMStateEntry& state, const SMStateData& level);
+        void validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel);
+        void validatePseudoStart(const SMStateEntry& state, bool isRootLevel);
         void validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr);
         void validateOperations(const SMOperationList& ops, const Scope& scope);
         void validateArguments(uint32_t ownerId, eDocElementKind kind, const MethodBase* target, const QList<SMArgumentEntry>& args, const Scope& scope);
@@ -559,11 +560,11 @@ namespace
         for (SMStateEntry* state : info.level->getElements())
         {
             if (state != nullptr)
-                validateState(*state, *info.level);
+                validateState(*state, *info.level, info.isRoot);
         }
     }
 
-    void Ctx::validateState(const SMStateEntry& state, const SMStateData& level)
+    void Ctx::validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel)
     {
         const uint32_t id = state.getId();
         checkIdentifier(id, eDocElementKind::State, state.getName());
@@ -579,10 +580,12 @@ namespace
             if (hasSubstates)
                 add(id, eDocElementKind::State, eSeverity::Error, 8, vtr("A Final state cannot have substates"));
         }
-        else if (state.getKind() == SMStateEntry::eStateKind::Start)
+        else if (state.isPseudoStart())
         {
             if (hasSubstates)
                 add(id, eDocElementKind::State, eSeverity::Error, 9, vtr("A Start state cannot own substates"));
+
+            validatePseudoStart(state, isRootLevel);
         }
 
         // A painted submachine and an imported one are mutually exclusive, neither belongs on
@@ -634,6 +637,81 @@ namespace
         }
     }
 
+    void Ctx::validatePseudoStart(const SMStateEntry& state, bool isRootLevel)
+    {
+        // Rule 27: a Kind="Start" is a pseudo-state, not a state. It never becomes an entry in the
+        // generated enum and the machine never occupies it, so everything that only a state can do
+        // is a fault here, and every one of them names the state.
+        const uint32_t id   = state.getId();
+        const QString& name = state.getName();
+
+        if (state.getEntryList().isEmpty() == false)
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has entry operations; a Start is a marker and performs nothing").arg(name));
+        if (state.getExitList().isEmpty() == false)
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has exit operations; a Start is a marker and performs nothing").arg(name));
+        if (state.getDoList().isEmpty() == false)
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has a Do activity; a Start is a marker and performs nothing").arg(name));
+
+        // The outgoing transitions are the level's INITIAL transitions. They are taken as the
+        // machine enters the level, so nothing triggers them and none may name a stimulus. An
+        // internal one (no target) initialises nothing, so it does not count as outgoing either.
+        int outgoing = 0;
+        int unguarded = 0;
+        for (const SMTransitionEntry* tr : state.getTransitions().getElements())
+        {
+            if (tr == nullptr)
+                continue;
+
+            if (tr->getStimulus().isEmpty() == false)
+            {
+                add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                   , vtr("The initial transition of Start state '%1' cannot react to a stimulus ('%2'): it is taken on entering the level")
+                        .arg(name, tr->getStimulus()));
+            }
+
+            if (tr->isExternal() == false)
+                continue;
+
+            ++outgoing;
+            if (tr->hasCondition() == false)
+                ++unguarded;
+
+            if (isRootLevel && tr->hasCondition())
+            {
+                // At the root there is no parent state to remain in when a condition does not
+                // hold, so a condition there has no defined meaning.
+                add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                   , vtr("The root Start state '%1' has a conditional initial transition; there is no parent state to remain in, so the condition has no meaning")
+                        .arg(name));
+            }
+        }
+
+        if (outgoing == 0)
+        {
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has no outgoing transition, so the level never initialises").arg(name));
+        }
+        else if (isRootLevel)
+        {
+            if (outgoing > 1)
+            {
+                add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                   , vtr("The root Start state '%1' must have exactly one initial transition, not %2").arg(name).arg(outgoing));
+            }
+        }
+        else if ((outgoing > 1) && (unguarded > 0))
+        {
+            // Document order is priority order and the first condition that holds wins, so an
+            // unguarded sibling always holds -- every later one would be dead.
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has %2 initial transitions, of which %3 carry no condition; with more than one every transition must carry one")
+                    .arg(name).arg(outgoing).arg(unguarded));
+        }
+    }
+
     void Ctx::validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr)
     {
         const uint32_t id = tr.getId();
@@ -642,13 +720,26 @@ namespace
         if (tr.isExternal())
         {
             const uint32_t targetId = tr.getToId();
-            if (level.findStateById(targetId) == nullptr)
+            const SMStateEntry* sibling = level.findStateById(targetId);
+            if (sibling == nullptr)
             {
                 const SMStateEntry* target = mData.findStateById(targetId);
                 if (target == nullptr)
                     add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target does not resolve"));
                 else
                     add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
+            }
+            else if (sibling->isPseudoStart())
+            {
+                // Rule 27: a pseudo-state exists to be passed through. Entering it is meaningless,
+                // and a Start whose own transition comes back to itself never leaves, so the level
+                // stays uninitialised forever -- there is no behaviour either could have meant.
+                if (targetId == owner.getId())
+                    add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                       , vtr("The initial transition of Start state '%1' targets the Start itself, so the level never initialises").arg(sibling->getName()));
+                else
+                    add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                       , vtr("Transition targets the Start state '%1'; a Start is a marker the machine never occupies").arg(sibling->getName()));
             }
         }
 
@@ -659,10 +750,11 @@ namespace
         scope.stimKind = tr.getStimulusKind();
         const QString& stim = tr.getStimulus();
 
-        // Start is a pseudo-state: its outgoing transition is the initial one, taken as the
-        // machine enters the level, so it needs no stimulus to trigger it. An empty stimulus
-        // there is the normal case, not a missing declaration.
-        const bool initialTransition = (owner.getKind() == SMStateEntry::eStateKind::Start) && stim.isEmpty();
+        // Start is a pseudo-state: its outgoing transitions are the level's initial ones, taken as
+        // the machine enters the level, so nothing triggers them and they name no stimulus at all.
+        // An empty stimulus there is the normal case, not a missing declaration -- and a NON-empty
+        // one is reported by rule 27 as the fault it is, not twice as an unresolved reference.
+        const bool initialTransition = owner.isPseudoStart();
         if (initialTransition == false)
         {
             switch (tr.getStimulusKind())

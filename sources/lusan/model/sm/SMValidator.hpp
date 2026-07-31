@@ -82,6 +82,18 @@ public:
      **/
     static constexpr int RULE_GUARD { 25 };
 
+    /**
+     * \brief   The 10.1 rule the `Kind="Start"` pseudo-state faults are filed under, all of them,
+     *          the way rule 25 collects every guard fault: operations on a Start, a stimulus on
+     *          one of its initial transitions, a Start nothing leaves, a Start something enters
+     *          (its own transition included), two or more initial transitions where any carries
+     *          no condition, and a ROOT Start that does not have exactly one unconditional
+     *          transition. One id, because they are one rule -- a Start is not a state -- and
+     *          because the code generator has to file the same faults under the same number
+     *          (`20260731-validation-parity.md`).
+     **/
+    static constexpr int RULE_PSEUDO_START { 27 };
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

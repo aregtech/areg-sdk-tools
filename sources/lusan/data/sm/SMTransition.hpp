@@ -37,6 +37,10 @@
  *          sibling state (external transition); absent `To` means an internal transition.
  *          A transition names exactly one stimulus via `StimulusKind` + `Stimulus`, and
  *          owns an optional condition list and an operation list.
+ *
+ *          One exception: a transition owned by a `Kind="Start"` pseudo-state is the level's
+ *          INITIAL transition, taken as the machine enters the level, so it names NO stimulus.
+ *          Its condition is the only thing that decides between it and its siblings.
  **/
 class SMTransitionEntry : public DocumentElem
 {
@@ -135,6 +139,15 @@ public:
      **/
     inline const SMGuard& getGuard() const;
     inline SMGuard& getGuard();
+
+    /**
+     * \brief   True when the transition carries a condition in either storage: the canonical
+     *          guard (resolved or draft) or the legacy condition list a pre-guard document
+     *          still holds. On an INITIAL transition -- one leaving a `Kind="Start"` -- this is
+     *          the only thing allowed to decide between siblings, so the rule that two or more
+     *          of them must all be guarded asks exactly this question.
+     **/
+    inline bool hasCondition() const;
 
     inline const SMOperationList& getOperations() const;
     inline SMOperationList& getOperations();
@@ -293,6 +306,11 @@ inline const SMGuard& SMTransitionEntry::getGuard() const
 inline SMGuard& SMTransitionEntry::getGuard()
 {
     return mGuard;
+}
+
+inline bool SMTransitionEntry::hasCondition() const
+{
+    return ((mGuard.isEmpty() == false) || (mConditions.isEmpty() == false));
 }
 
 inline const SMOperationList& SMTransitionEntry::getOperations() const

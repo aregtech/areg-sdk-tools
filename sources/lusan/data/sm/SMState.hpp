@@ -50,7 +50,7 @@ public:
      **/
     enum class eStateKind
     {
-          Start     //!< The entry state of its level; exactly one per level.
+          Start     //!< The level's entry PSEUDO-state; exactly one per level.
         , Normal    //!< A regular state.
         , Final     //!< The terminal state of its level.
     };
@@ -100,6 +100,34 @@ public:
 
     inline eStateKind getKind() const;
     inline void setKind(eStateKind kind);
+
+    /**
+     * \brief   True when this is the level's `Start` PSEUDO-state.
+     *
+     *          A `Start` is not a state: it is a decorative marker saying where a level begins.
+     *          It never becomes a state in the generated code and the machine never occupies it,
+     *          so it carries no operations and no description-worthy behaviour, it is never the
+     *          target of a transition, and its own outgoing transitions -- the level's INITIAL
+     *          transitions -- name no stimulus. They may carry a guard, which is the only thing
+     *          allowed to decide between them, and document order is priority order. When no
+     *          guard holds no substate is entered and the machine rests in the parent state.
+     **/
+    inline bool isPseudoStart() const;
+
+    /**
+     * \brief   True when the state carries any entry, exit or `do` operation.
+     **/
+    inline bool hasOperations() const;
+
+    /**
+     * \brief   True when this is a LEGACY merged-form `Start`: a document written before the
+     *          pseudo-state rule spelled the level's first REAL state as `Kind="Start"`, giving
+     *          it operations and stimulus-driven transitions. Detected by exactly those two
+     *          marks -- any operation, or any outgoing transition naming a stimulus -- and
+     *          rewritten on load into a pseudo-state plus a demoted `Normal` state
+     *          (\ref StateMachineData::readFromXml).
+     **/
+    bool isLegacyMergedStart() const;
 
     inline eHistory getHistory() const;
     inline void setHistory(eHistory history);
@@ -327,6 +355,16 @@ inline SMStateEntry::eStateKind SMStateEntry::getKind() const
 inline void SMStateEntry::setKind(eStateKind kind)
 {
     mKind = kind;
+}
+
+inline bool SMStateEntry::isPseudoStart() const
+{
+    return (mKind == eStateKind::Start);
+}
+
+inline bool SMStateEntry::hasOperations() const
+{
+    return ((mEntryList.isEmpty() == false) || (mExitList.isEmpty() == false) || (mDoList.isEmpty() == false));
 }
 
 inline SMStateEntry::eHistory SMStateEntry::getHistory() const

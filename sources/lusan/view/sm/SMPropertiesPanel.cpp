@@ -197,6 +197,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mUpdating     (false)
     , mStateTabs    (nullptr)
     , mStateGeneral (nullptr)
+    , mStateForm    (nullptr)
     , mBtnEnterSubmachine(nullptr)
     , mBtnGoToParent(nullptr)
     , mBtnAddSubmachine(nullptr)
@@ -316,6 +317,7 @@ void SMPropertiesPanel::buildStatePage()
 
     // The transitions list stays compact; the multi-line description takes the room below it.
     mTransitions->setMaximumHeight(120);
+    mStateDesc->setObjectName(QStringLiteral("smStateDescription"));
     mStateDesc->setPlaceholderText(tr("Description"));
     mStateDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
@@ -324,6 +326,7 @@ void SMPropertiesPanel::buildStatePage()
     // Compact defaults UNCHECKED here (few sections): the details and the transitions read together.
     QWidget* details = new QWidget(this);
     QFormLayout* form = new QFormLayout(details);
+    mStateForm = form;
     form->setContentsMargins(6, 6, 6, 6);
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
@@ -665,8 +668,34 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mCurrentId = stateId;
 
     mStateName->setText(state->getName());
-    mStateName->setReadOnly(state->getKind() == SMStateEntry::eStateKind::Start);
+    mStateName->setReadOnly(state->isPseudoStart());
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
+
+    // A Kind="Start" is a pseudo-state: a marker saying where the level begins. It never becomes a
+    // state in the generated code and the machine never occupies it, so it cannot act -- no entry,
+    // exit or Do operations, and nothing to describe. The editor must not OFFER what the document
+    // may not carry, so the three activity tabs and the rows that only a real state can use go
+    // away entirely rather than sit there disabled: a greyed field still reads as "not yet", and
+    // this one is "never". What stays is the name, the kind, and the initial transitions, which is
+    // everything a Start has.
+    const bool pseudoStart = state->isPseudoStart();
+    for (const ActionSlot& slot : mActionSlots)
+    {
+        mStateTabs->setTabVisible(slot.tabIndex, pseudoStart == false);
+    }
+
+    if (mStateForm != nullptr)
+    {
+        mStateForm->setRowVisible(mStateSubmachine, pseudoStart == false);
+        mStateForm->setRowVisible(mStateOnFinal, pseudoStart == false);
+        mStateForm->setRowVisible(mStateHistory, pseudoStart == false);
+        mStateForm->setRowVisible(mStateDesc, pseudoStart == false);
+    }
+
+    if (pseudoStart)
+    {
+        mStateTabs->setCurrentIndex(0);
+    }
     // Only a composite has substates to remember, so a plain state gets a disabled field that
     // says why instead of a silently missing one -- the same field then comes alive the moment
     // the state grows a submachine.
@@ -794,6 +823,10 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
         return;
     }
 
+    // A Start's transitions are the level's INITIAL transitions: nothing triggers them, so there
+    // is no stimulus to show and a `<stimulus>` placeholder would invite the author to fill one in.
+    // What decides between them is the condition, so that is what the row carries instead.
+    const bool pseudoStart = state->isPseudoStart();
     for (SMTransitionEntry* transition : state->getTransitions().getElements())
     {
         if (transition == nullptr)
@@ -801,10 +834,23 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
             continue;
         }
 
-        const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
-        const QString label = transition->isExternal()
-                ? (stimulus + QStringLiteral(" -> ") + transition->getTargetName())
-                : (stimulus + QStringLiteral(" ") + internalLabel());
+        QString label;
+        if (pseudoStart)
+        {
+            label = tr("initial -> %1").arg(transition->getTargetName());
+            if (transition->hasCondition())
+            {
+                label += QStringLiteral(" ") + tr("[when]");
+            }
+        }
+        else
+        {
+            const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
+            label = transition->isExternal()
+                    ? (stimulus + QStringLiteral(" -> ") + transition->getTargetName())
+                    : (stimulus + QStringLiteral(" ") + internalLabel());
+        }
+
         QListWidgetItem* item = new QListWidgetItem(label, mTransitions);
         item->setData(RoleTransitionId, transition->getId());
     }
@@ -844,10 +890,21 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     // offered as a Source. Omitting them from the lists is the primary enforcement; the commit slots
     // add a backstop in case a stale selection slips through.
     mTarget->clear();
-    mTarget->addItem(internalLabel(), 0u);
-    mSource->clear();
     const SMStateEntry* owner = data.findTransitionOwner(transitionId);
     const uint32_t sourceId = (owner != nullptr ? owner->getId() : 0u);
+
+    // A transition owned by a Start is the level's INITIAL transition. It is taken as the machine
+    // enters the level, so nothing triggers it: the stimulus picker is not merely empty, it has
+    // nothing to offer, and it must have a target because its whole job is to say where the level
+    // begins. Its condition is the only thing that may decide between it and its siblings, and the
+    // Conditions tab already edits that.
+    const bool initial = (owner != nullptr) && owner->isPseudoStart();
+    if (initial == false)
+    {
+        mTarget->addItem(internalLabel(), 0u);
+    }
+
+    mSource->clear();
     const SMStateData* level = data.findLevel(mModel.getSelectionModel().getActiveLevel());
     if (level != nullptr)
     {
@@ -858,16 +915,33 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
                 continue;
             }
 
-            if (sibling->getKind() != SMStateEntry::eStateKind::Start)
+            if (sibling->isPseudoStart() == false)
             {
                 mTarget->addItem(sibling->getName(), sibling->getId());
             }
 
-            if (sibling->getKind() != SMStateEntry::eStateKind::Final)
+            // A Start is offered as a source only when it already owns this transition: moving an
+            // ordinary transition onto one would hand a pseudo-state a stimulus to react to.
+            const bool selectableSource = sibling->isPseudoStart()
+                                        ? (initial && (sibling->getId() == sourceId))
+                                        : (sibling->getKind() != SMStateEntry::eStateKind::Final);
+            if (selectableSource)
             {
                 mSource->addItem(sibling->getName(), sibling->getId());
             }
         }
+    }
+
+    mStimulusName->setEnabled(initial == false);
+    mSource->setEnabled(initial == false);
+    if (initial)
+    {
+        mStimulusName->setToolTip(tr("An initial transition is taken on entering the level, so nothing triggers it"));
+        mStimulusSig->setText(tr("initial transition (no stimulus)"));
+    }
+    else
+    {
+        mStimulusName->setToolTip(QString());
     }
 
     const int targetRow = mTarget->findData(transition->getToId());
@@ -1115,6 +1189,14 @@ void SMPropertiesPanel::onStimulusCommit()
         return;
     }
 
+    // Backstop for the pseudo-state rule: an initial transition names no stimulus. The picker is
+    // disabled for one, so this only fires if a stale or programmatic change slips through.
+    const SMStateEntry* owner = mModel.getData().findTransitionOwner(mCurrentId);
+    if ((owner != nullptr) && owner->isPseudoStart())
+    {
+        return;
+    }
+
     applyStimulus();
 }
 
@@ -1276,6 +1358,15 @@ void SMPropertiesPanel::onSourceCommit()
     // Backstop for the spec rule: a Final state has no outgoing transition. The picker already omits
     // Final rows, so this only fires if a stale/programmatic selection slips through.
     if (newSource->getKind() == SMStateEntry::eStateKind::Final)
+    {
+        return;
+    }
+
+    // Same for the pseudo-state rule, in both directions: a Start's transitions are the level's
+    // initial ones, so an ordinary transition may not be moved ONTO a Start (it would hand a
+    // marker a stimulus to react to) and an initial one may not be moved OFF it (it would leave an
+    // ordinary state with a transition nothing can trigger).
+    if (newSource->isPseudoStart() || oldSource->isPseudoStart())
     {
         return;
     }

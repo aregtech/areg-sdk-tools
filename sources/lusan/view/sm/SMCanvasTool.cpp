@@ -714,7 +714,15 @@ void SMTransitionTool::completeInternal()
     StateMachineModel& model = canvas.getModel();
     StateMachineData&  data  = model.getData();
 
+    // A Start is a pseudo-state: its transitions are the level's initial ones and each must say
+    // where the level begins, so an internal one -- which initialises nothing -- is not a thing it
+    // can own. The Design menu's action is already disabled for a Start; this covers the gesture.
     SMStateEntry* source = data.findStateById(mSourceId);
+    if ((source != nullptr) && source->isPseudoStart())
+    {
+        source = nullptr;
+    }
+
     if (source != nullptr)
     {
         const QString text = QCoreApplication::translate("SMTransitionTool", "Add internal transition");

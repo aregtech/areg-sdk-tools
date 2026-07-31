@@ -2906,8 +2906,15 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
                 continue;
             }
 
+            // An INITIAL transition (one leaving the Start pseudo-state) is not an element the
+            // author looks for by the name of the state it enters: it has no stimulus of its own,
+            // and it is FIRST in document order, so matching it on the target name would put the
+            // level's entry marker ahead of the very state that was typed. It still matches by
+            // its own ID.
+            const bool byTargetName = (state->isPseudoStart() == false)
+                                    && matchText(transition->getTargetName(), query);
             if (matchText(transition->getStimulus(), query)
-                || matchText(transition->getTargetName(), query)
+                || byTargetName
                 || (numeric && (transition->getId() == queryId)))
             {
                 out.append({ levelId, transition->getId(), false });

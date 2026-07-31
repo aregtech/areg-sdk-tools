@@ -285,6 +285,32 @@ bool SMStateEntry::isValid() const
     return (mName.isEmpty() == false);
 }
 
+bool SMStateEntry::isLegacyMergedStart() const
+{
+    if (isPseudoStart() == false)
+    {
+        return false;
+    }
+
+    if (hasOperations())
+    {
+        return true;
+    }
+
+    // A stimulus is the second mark, and it is the decisive one: a pseudo-state's transitions are
+    // the level's initial ones, taken on entry, so they can never name what triggers them. Any
+    // transition here that does is a real state's reaction wearing the wrong kind.
+    for (const SMTransitionEntry* transition : mTransitions.getElements())
+    {
+        if ((transition != nullptr) && (transition->getStimulus().isEmpty() == false))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() != XmlSM::xmlSMElementState)
@@ -418,17 +444,25 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
 SMStateData::SMStateData(ElementBase* parent /*= nullptr*/)
     : TEDataContainer<SMStateEntry*, DocumentElem>(parent)
 {
+    // A state's ID is its identity, not its position: transitions name it in `To` and every
+    // Layout entry names it in `Owner`, and none of those are rewritten when the container
+    // re-numbers. Leaving the default on is how a `Start` written first with the highest ID
+    // came back from a plain load owning its neighbour's number, with a self-loop the file
+    // never contained.
+    setIdReordering(false);
 }
 
 SMStateData::SMStateData(const SMStateData& src)
     : TEDataContainer<SMStateEntry*, DocumentElem>(src.getParent())
 {
+    setIdReordering(false);
     cloneFrom(src);
 }
 
 SMStateData::SMStateData(SMStateData&& src) noexcept
     : TEDataContainer<SMStateEntry*, DocumentElem>(std::move(src))
 {
+    setIdReordering(false);
 }
 
 SMStateData::~SMStateData()

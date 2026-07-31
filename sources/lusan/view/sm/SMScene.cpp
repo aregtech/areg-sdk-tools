@@ -852,6 +852,14 @@ void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateI
         return;
     }
 
+    // Same backstop for the Start pseudo-state, in both directions: its transitions are the
+    // level's initial ones, taken on entry and naming no stimulus, so an ordinary transition may
+    // not be moved onto one and an initial one may not be moved off it.
+    if (newSource->isPseudoStart() || oldSource->isPseudoStart())
+    {
+        return;
+    }
+
     // One undo step: persist the drop geometry under the current (old) id first, then reparent --
     // the reparent captures that edge and re-keys it to the new source, so the begin anchor lands
     // at the release position, the label re-centres, and the edge never flashes back to its old

@@ -417,9 +417,24 @@ protected:
     inline void fixEntries();
 
     /**
-     * \brief   Reorders the IDs of the elements in the list.
+     * \brief   Re-assigns the element IDs so that they ascend with the list position: the
+     *          existing IDs are sorted and handed back out in document order. It keeps a
+     *          saved file tidy for a container whose entries are referenced by NAME, and it
+     *          does nothing once \ref setIdReordering has turned it off.
      **/
     inline void reorderIds();
+
+    /**
+     * \brief   Turns the \ref reorderIds re-numbering on (the default) or off.
+     *
+     *          It must be OFF for a container whose entries are referenced by ID, because the
+     *          references are not rewritten with them -- a state list is the example, where an
+     *          inserted or removed state re-keys every sibling and leaves every `To` and every
+     *          layout `Owner` pointing at whatever now carries that number. Called from the
+     *          derived container's constructors (\ref SMStateData, \ref SMTransitionData).
+     * \param   reorder     True to re-number on every list change, false to leave IDs alone.
+     **/
+    inline void setIdReordering(bool reorder);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -427,6 +442,7 @@ protected:
 protected:
     QList<Data>                 mElementList; //!< The list of data elements.
     NELusanCommon::eSortingType mSorting;     //!< The sorting type.
+    bool                        mReorderIds;  //!< Whether a list change re-numbers the elements.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -438,6 +454,7 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(ElementBase* parent)
     : ElemBase(parent)
     , mElementList()
     , mSorting(NELusanCommon::eSortingType::NoSorting)
+    , mReorderIds(true)
 {
 }
 
@@ -446,6 +463,7 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(unsigned int id, ElementBase* p
     : ElemBase(id, parent)
     , mElementList()
     , mSorting(NELusanCommon::eSortingType::NoSorting)
+    , mReorderIds(true)
 {
 }
 
@@ -454,6 +472,7 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(const TEDataContainer& src)
     : ElemBase      (src)
     , mElementList  (src.mElementList)
     , mSorting      (src.mSorting)
+    , mReorderIds   (src.mReorderIds)
 {
 }
 
@@ -462,6 +481,7 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(TEDataContainer&& src) noexcept
     : ElemBase      (std::move(src))
     , mElementList  (std::move(src.mElementList))
     , mSorting      (src.mSorting)
+    , mReorderIds   (src.mReorderIds)
 {
 }
 
@@ -470,6 +490,7 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(const QList<Data>& entries, Ele
     : ElemBase      (parent)
     , mElementList  (entries)
     , mSorting      (NELusanCommon::eSortingType::NoSorting)
+    , mReorderIds   (true)
 {
     fixEntries();
 }
@@ -479,6 +500,7 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(QList<Data>&& entries, ElementB
     : ElemBase      (parent)
     , mElementList  (std::move(entries))
     , mSorting      (NELusanCommon::eSortingType::NoSorting)
+    , mReorderIds   (true)
 {
 }
 
@@ -490,6 +512,7 @@ TEDataContainer<Data, ElemBase>& TEDataContainer<Data, ElemBase>::operator = (co
         ElemBase::operator=(other);
         mElementList = other.mElementList;
         mSorting     = other.mSorting;
+        mReorderIds  = other.mReorderIds;
         fixEntries();
     }
 
@@ -504,6 +527,7 @@ TEDataContainer<Data, ElemBase>& TEDataContainer<Data, ElemBase>::operator = (TE
         ElemBase::operator=(std::move(other));
         mElementList = std::move(other.mElementList);
         mSorting     = other.mSorting;
+        mReorderIds  = other.mReorderIds;
         fixEntries();
     }
 
@@ -1132,9 +1156,15 @@ inline void TEDataContainer<Data, ElemBase>::fixEntries()
 }
 
 template<class Data, class ElemBase>
+inline void TEDataContainer<Data, ElemBase>::setIdReordering(bool reorder)
+{
+    mReorderIds = reorder;
+}
+
+template<class Data, class ElemBase>
 inline void TEDataContainer<Data, ElemBase>::reorderIds()
 {
-    if (mElementList.size() > 1)
+    if (mReorderIds && (mElementList.size() > 1))
     {
         QList<uint32_t> ids;
         getIdsSorted(ids, true);

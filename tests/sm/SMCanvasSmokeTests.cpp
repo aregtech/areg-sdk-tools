@@ -339,9 +339,14 @@ int main(int argc, char* argv[])
         const SMLayoutEdge geom = *zdata.getLayout().findEdge(27);
 
         // Retargeting a transition onto the Start state is rejected (no incoming into Start).
+        // The Start is the level's pseudo-state, NOT the first ordinary state: this used to name
+        // `LightOff`, which carried Kind="Start" before the pseudo-state form.
+        const SMStateData* zlevel = zdata.findLevel(zscene.getLevelId());
+        const SMStateEntry* zstart = (zlevel != nullptr ? zlevel->getStartState() : nullptr);
+        CHECK(zstart != nullptr);
         const uint32_t to27Before = zdata.findTransitionById(27)->getToId();
         const int      undoA = zmodel.getUndoStack().count();
-        zscene.reconnectTransitionTarget(27, zoff->getId(), geom);
+        zscene.reconnectTransitionTarget(27, (zstart != nullptr ? zstart->getId() : 0u), geom);
         CHECK(zdata.findTransitionById(27)->getToId() == to27Before);    // unchanged
         CHECK(zmodel.getUndoStack().count() == undoA);                   // nothing pushed
 
@@ -1055,9 +1060,17 @@ int main(int argc, char* argv[])
     std::printf("sect: SM-15 add substate (painted)\n");
     // --- Convert a plain state: nested list + auto Start + Node layout, one undo step ---
     // Start and Final states can never become composite.
+    // The Start is the level's pseudo-state, not the first ordinary state: this used to name
+    // `LightOff`, which carried Kind="Start" before the pseudo-state form.
+    const SMStateData* addLevel = data.findLevel(design.getScene().getLevelId());
+    const SMStateEntry* addStart = (addLevel != nullptr ? addLevel->getStartState() : nullptr);
+    CHECK(addStart != nullptr);
     design.getScene().clearSelection();
-    design.getScene().stateItem(lightOff->getId())->setSelected(true);      // the Start state
-    CHECK(design.actionAddSubstate()->isEnabled() == false);
+    if (addStart != nullptr)
+    {
+        design.getScene().stateItem(addStart->getId())->setSelected(true);
+        CHECK(design.actionAddSubstate()->isEnabled() == false);
+    }
 
     standby = data.findState("Standby");
     CHECK((standby != nullptr) && (standby->hasNestedStates() == false));
@@ -1981,7 +1994,9 @@ int main(int argc, char* argv[])
                 normal = s;
             }
 
-            if ((firstTxId == 0) && (s->getTransitions().getElementCount() >= 1))
+            // Skip the Start: its transitions are the level's INITIAL ones, which name no
+            // stimulus and whose picker is disabled, so they cannot exercise the stimulus path.
+            if ((firstTxId == 0) && (s->isPseudoStart() == false) && (s->getTransitions().getElementCount() >= 1))
             {
                 firstTxId = s->getTransitions().getElements().first()->getId();
                 ownerWithTxId = s->getId();
@@ -3674,6 +3689,80 @@ int main(int argc, char* argv[])
             QApplication::processEvents();
             CHECK(dock->width() == dragged);
         }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // L1: the Start pseudo-state offers nothing to act with
+    //////////////////////////////////////////////////////////////////////////
+    {
+        std::printf("[L1] the Start pseudo-state offers no operations, and its transition no stimulus\n");
+
+        StateMachineModel lmodel;
+        CHECK(lmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign ldesign(lmodel);
+        ldesign.resize(1400, 900);
+        ldesign.show();
+        QApplication::processEvents();
+
+        QDockWidget* ldock = ldesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* lpanel = (ldock != nullptr ? qobject_cast<SMPropertiesPanel*>(ldock->widget()) : nullptr);
+        StateMachineData& ldata = lmodel.getData();
+        const SMStateData* lroot = ldata.findLevel(ldesign.getScene().getLevelId());
+        const SMStateEntry* start = (lroot != nullptr ? lroot->getStartState() : nullptr);
+        const SMStateEntry* plain = ldata.findState(QStringLiteral("LightOff"));
+        CHECK(lpanel != nullptr);
+        CHECK(start != nullptr);
+        CHECK(plain != nullptr);
+
+        QTabWidget* stateTabs = (lpanel != nullptr ? lpanel->findChild<QTabWidget*>(QStringLiteral("smStateTabs")) : nullptr);
+        CHECK(stateTabs != nullptr);
+        if ((lpanel != nullptr) && (stateTabs != nullptr) && (start != nullptr) && (plain != nullptr))
+        {
+            // An ordinary state offers all four tabs: General, Enter, Do, Exit.
+            lmodel.getSelectionModel().setSelection(QList<uint32_t>{ plain->getId() });
+            QApplication::processEvents();
+            CHECK(stateTabs->count() == 4);
+            CHECK(stateTabs->isTabVisible(1) && stateTabs->isTabVisible(2) && stateTabs->isTabVisible(3));
+
+            // The Start offers only General: a pseudo-state performs nothing, so the editor must
+            // not present a place to put operations, and there is no behaviour to describe.
+            lmodel.getSelectionModel().setSelection(QList<uint32_t>{ start->getId() });
+            QApplication::processEvents();
+            CHECK(stateTabs->isTabVisible(1) == false);
+            CHECK(stateTabs->isTabVisible(2) == false);
+            CHECK(stateTabs->isTabVisible(3) == false);
+            CHECK(stateTabs->currentIndex() == 0);
+            QPlainTextEdit* desc = lpanel->findChild<QPlainTextEdit*>(QStringLiteral("smStateDescription"));
+            CHECK(desc != nullptr);
+            CHECK((desc != nullptr) && (desc->isVisibleTo(lpanel) == false));
+
+            // Its outgoing transition is the level's initial one: the stimulus picker has nothing
+            // to offer and the source may not be moved off the Start.
+            CHECK(start->getTransitions().getElementCount() >= 1);
+            if (start->getTransitions().getElementCount() >= 1)
+            {
+                const uint32_t initialId = start->getTransitions().getElements().first()->getId();
+                lmodel.getSelectionModel().setSelection(QList<uint32_t>{ initialId });
+                QApplication::processEvents();
+                CHECK(lpanel->currentElementId() == initialId);
+                CHECK(lpanel->stimulusNameCombo() != nullptr);
+                CHECK((lpanel->stimulusNameCombo() != nullptr) && (lpanel->stimulusNameCombo()->isEnabled() == false));
+                CHECK((lpanel->sourceCombo() != nullptr) && (lpanel->sourceCombo()->isEnabled() == false));
+
+                // And the document keeps saying so: committing a stimulus onto it is refused.
+                const QString before = ldata.findTransitionById(initialId)->getStimulus();
+                if ((lpanel->stimulusNameCombo() != nullptr) && (lpanel->stimulusNameCombo()->count() > 1))
+                {
+                    lpanel->stimulusNameCombo()->setCurrentIndex(1);
+                    QMetaObject::invokeMethod(lpanel, "onStimulusCommit");
+                    QApplication::processEvents();
+                }
+
+                CHECK(ldata.findTransitionById(initialId)->getStimulus() == before);
+            }
+        }
+
+        grab(ldesign, "l1-pseudo-start");
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

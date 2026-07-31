@@ -1774,15 +1774,23 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
                 const SMStateEntry::eStateKind overKind =
                         (overState != nullptr ? overState->getKind() : SMStateEntry::eStateKind::Normal);
                 const bool rejectEnd   = (drag == eDrag::End)   && (overKind == SMStateEntry::eStateKind::Start);
-                const bool rejectBegin = (drag == eDrag::Begin) && (overKind == SMStateEntry::eStateKind::Final);
+                // A Start is a source only for its OWN initial transitions, which are taken on
+                // entering the level and name no stimulus. Dragging an ordinary transition's
+                // begin onto one would hand a marker a stimulus to react to, and dragging an
+                // initial one off it would leave an ordinary state with a transition nothing can
+                // trigger -- so the begin endpoint may neither land on a Start nor leave one.
+                const bool startSource = (overKind == SMStateEntry::eStateKind::Start) || mSourceIsStart;
+                const bool rejectBegin = (drag == eDrag::Begin)
+                                      && ((overKind == SMStateEntry::eStateKind::Final) || startSource);
                 if (rejectEnd || rejectBegin)
                 {
                     updateFromModel();      // snap the endpoint back to the unchanged connection
                     const QList<QGraphicsView*> viewList = canvas->views();
-                    QToolTip::showText(QCursor::pos()
-                                     , rejectEnd ? translate("A transition cannot enter a Start state.")
-                                                 : translate("A transition cannot leave a Final state.")
-                                     , (viewList.isEmpty() ? nullptr : viewList.first()));
+                    const QString reason = rejectEnd
+                            ? translate("A transition cannot enter a Start state.")
+                            : (startSource ? translate("An initial transition belongs to its Start state and cannot be moved.")
+                                           : translate("A transition cannot leave a Final state."));
+                    QToolTip::showText(QCursor::pos(), reason, (viewList.isEmpty() ? nullptr : viewList.first()));
                     break;
                 }
 

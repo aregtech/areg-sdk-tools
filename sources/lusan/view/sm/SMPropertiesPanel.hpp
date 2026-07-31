@@ -34,6 +34,7 @@
 class QAction;
 class QComboBox;
 class QEvent;
+class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -261,6 +262,9 @@ private:
     QComboBox*          mStateSubmachine;   //!< The hosted import alias; empty means no import.
     QComboBox*          mStateOnFinal;      //!< The event sent when the submachine finishes.
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
+    QFormLayout*        mStateForm;     //!< The Details form, so the rows a Start has no use for
+                                        //!< (submachine, completion, history, description) can be
+                                        //!< hidden rather than shown disabled.
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
     SMOperationsEditor* mDoOps;         //!< The Do-activity operations editor (Actions tab).

@@ -68,6 +68,99 @@ namespace
         }
     }
 
+    //!< The default geometry of a pseudo-state's node, matching what the designer draws for the
+    //!< Start marker, and the gap it is placed above its target by.
+    constexpr double PSEUDO_NODE_WIDTH  { 64.0 };
+    constexpr double PSEUDO_NODE_HEIGHT { 32.0 };
+    constexpr double PSEUDO_NODE_GAP    { 48.0 };
+
+    //!< A state name no state in the document uses yet: `Start`, then `Start1`, `Start2`, ...
+    //!< State names are unique across the whole document, not only within a level, so the search
+    //!< is document-wide.
+    QString uniqueStartName(const StateMachineData& doc)
+    {
+        const QString base{ QString::fromLatin1(SMStateEntry::STR_KIND_START) };
+        if (doc.findState(base) == nullptr)
+        {
+            return base;
+        }
+
+        for (int suffix = 1; ; ++suffix)
+        {
+            const QString candidate = base + QString::number(suffix);
+            if (doc.findState(candidate) == nullptr)
+            {
+                return candidate;
+            }
+        }
+    }
+
+    //!< Gives the new pseudo-state a node ABOVE its target, so the level reads top-down the way
+    //!< the designer draws it. Without a node for the target there is nothing to be above, and the
+    //!< canvas auto-places the pseudo-state like any other node with no geometry.
+    void placePseudoNode(StateMachineData& doc, uint32_t pseudoId, uint32_t targetId)
+    {
+        const SMLayoutNode* target = doc.getLayout().findNode(targetId);
+        if (target == nullptr)
+        {
+            return;
+        }
+
+        SMLayoutNode& node = doc.getLayout().addNode(pseudoId);
+        node.x      = target->x;
+        node.y      = target->y - (PSEUDO_NODE_HEIGHT + PSEUDO_NODE_GAP);
+        node.width  = PSEUDO_NODE_WIDTH;
+        node.height = PSEUDO_NODE_HEIGHT;
+    }
+
+    //!< Rewrites the LEGACY MERGED FORM in memory, level by level. A document written before
+    //!< `Kind="Start"` became a pseudo-state spelled the same thing by marking the level's first
+    //!< REAL state as the Start and giving it operations and stimulus-driven transitions. Such a
+    //!< state is split in two: a new pseudo-state takes the Start kind and the old state is demoted
+    //!< to `Normal` with everything it carries untouched, wired together by one unguarded initial
+    //!< transition. Nothing is dropped, so the transformation is lossless and the next save writes
+    //!< the corrected form.
+    void convertLegacyStartStates(StateMachineData& doc, SMStateData& level)
+    {
+        // The list is mutated while walking it, so take the states first.
+        const QList<SMStateEntry*> states = level.getElements();
+        for (SMStateEntry* state : states)
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            if (state->hasNestedStates())
+            {
+                convertLegacyStartStates(doc, *state->getNestedStates());
+            }
+
+            if (state->isLegacyMergedStart() == false)
+            {
+                continue;
+            }
+
+            SMStateEntry* pseudo = new SMStateEntry(doc.getNextId(), uniqueStartName(doc), SMStateEntry::eStateKind::Start, &level);
+            state->setKind(SMStateEntry::eStateKind::Normal);
+
+            // One initial transition, no stimulus and no guard: the old state was where the level
+            // began unconditionally, and that is what the pseudo-state now says.
+            pseudo->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), state->getId());
+
+            // In front of its target, so document order still opens with the level's entry point.
+            const int at = level.findIndex(state->getId());
+            if (level.insertElement(at >= 0 ? at : 0, pseudo, false) == false)
+            {
+                delete pseudo;
+                state->setKind(SMStateEntry::eStateKind::Start);
+                continue;
+            }
+
+            placePseudoNode(doc, pseudo->getId(), state->getId());
+        }
+    }
+
     //!< Collects every layout owner ID (each state and its transitions) in a submachine subtree.
     void collectSubtreeOwners(const SMStateData& level, QSet<uint32_t>& owners)
     {
@@ -552,6 +645,11 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     }
 
     resolvePendingTargets(*this, mStates);
+    // The legacy merged `Kind="Start"` is a content shim, not a version one: a document carrying
+    // the current FormatVersion can still hold the old spelling, so the test is what the states
+    // say and not what the header claims. Runs after the by-name targets are bound, so a demoted
+    // state is already reachable by ID.
+    convertLegacyStartStates(*this, mStates);
 
     if (mFormatVersion < current)
     {
