@@ -113,6 +113,7 @@ public:
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
+    inline QComboBox* transitionKindCombo() const;
     inline QComboBox* sourceCombo() const;
 
 signals:
@@ -161,6 +162,7 @@ private slots:
     void onDoUntilCommit();
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
+    void onTransKindCommit();
     void onTargetCommit();
     void onSourceCommit();
     void onTransitionActivated();
@@ -278,7 +280,10 @@ private:
     QLabel*             mStimulusSig;   //!< Read-only stimulus signature (`walk(count)`).
     QComboBox*          mStimulusName;  //!< The stimulus picker (fixed list of triggers/events/
                                         //!< timers; editing is search-only, no free rename).
-    QComboBox*          mTarget;        //!< The target sibling state (or internal). Start states
+    QFormLayout*        mTransForm;     //!< The transition Trigger form, so rows can be hidden by kind.
+    QComboBox*          mTransKind;     //!< What the transition IS: External / Internal / Initial.
+                                        //!< Locked to Initial on a Start, which owns nothing else.
+    QComboBox*          mTarget;        //!< The target sibling state (or not connected). Start states
                                         //!< are omitted: a Start has no incoming transition.
     QComboBox*          mSource;        //!< The source sibling state (the transition's owner). Final
                                         //!< states are omitted: a Final has no outgoing transition.
@@ -338,6 +343,11 @@ inline QComboBox* SMPropertiesPanel::stimulusNameCombo() const
 inline QComboBox* SMPropertiesPanel::targetCombo() const
 {
     return mTarget;
+}
+
+inline QComboBox* SMPropertiesPanel::transitionKindCombo() const
+{
+    return mTransKind;
 }
 
 inline QComboBox* SMPropertiesPanel::sourceCombo() const

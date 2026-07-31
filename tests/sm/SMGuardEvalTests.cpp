@@ -292,7 +292,7 @@ static void testGuardTruthAndSiblings()
     SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
     // And one on a different stimulus that must NOT count as a sibling.
     data.getMethods().createMethod(QStringLiteral("RequestRest"), SMMethodEntry::eMethodType::Trigger);
-    idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), 0u);
+    idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), 0u, SMTransitionEntry::eTransitionKind::Internal);
 
     const QList<uint32_t> siblings = SMGuardEval::siblingTransitions(data, tid);
     check(siblings.size() == 2, "two transitions share the stimulus");

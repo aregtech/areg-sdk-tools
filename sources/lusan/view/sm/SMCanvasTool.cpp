@@ -695,10 +695,16 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         points.append(end);
     }
 
+    // An edge drawn OUT of a Start is the level's initial transition, not an external one: it is
+    // taken on entering the level and there is no stimulus to pick for it. Saying so at creation
+    // is what keeps the author from being offered a stimulus they then have to remove.
     const QString text = QCoreApplication::translate("SMTransitionTool", "Add transition");
+    const SMTransitionEntry::eTransitionKind transKind = source->isPseudoStart()
+                                                         ? SMTransitionEntry::eTransitionKind::Initial
+                                                         : SMTransitionEntry::eTransitionKind::External;
     SMCreateTransitionCommand* command = new SMCreateTransitionCommand(  data, model.getNotifier(), *source
                                                                        , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                                       , target->getId(), points, text);
+                                                                       , target->getId(), points, text, nullptr, transKind);
     model.getUndoStack().push(command);
     const uint32_t transitionId = command->getTransitionId();
 
@@ -728,7 +734,8 @@ void SMTransitionTool::completeInternal()
         const QString text = QCoreApplication::translate("SMTransitionTool", "Add internal transition");
         model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *source
                                                                 , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                                , 0u, QList<QPointF>(), text));
+                                                                , 0u, QList<QPointF>(), text, nullptr
+                                                                , SMTransitionEntry::eTransitionKind::Internal));
     }
 
     clearPreview();

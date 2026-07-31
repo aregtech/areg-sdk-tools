@@ -618,7 +618,7 @@ void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
     {
         const SMTransitionEntry* transition = mModel.getData().findTransitionById(id);
         SMEdgeItem* edge = edgeItem(id);
-        if ((transition != nullptr) && transition->isExternal())
+        if ((transition != nullptr) && transition->hasTarget())
         {
             if (edge != nullptr)
             {
@@ -626,12 +626,12 @@ void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
             }
             else
             {
-                createEdgeItem(id);     // became external
+                createEdgeItem(id);     // gained a target
             }
         }
         else if (edge != nullptr)
         {
-            delete edge;                // became internal (or gone)
+            delete edge;                // became internal, lost its target, or is gone
         }
 
         refreshStateBodies();
@@ -1010,7 +1010,7 @@ void SMScene::populateFromModel()
         {
             for (const SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal())
+                if (transition->hasTarget())
                 {
                     createEdgeItem(transition->getId());
                 }
@@ -1046,9 +1046,9 @@ void SMScene::createEdgeItem(uint32_t transitionId)
 
     const SMTransitionEntry* transition = mModel.getData().findTransitionById(transitionId);
     const SMStateEntry* owner = mModel.getData().findTransitionOwner(transitionId);
-    if ((transition == nullptr) || (transition->isExternal() == false) || (owner == nullptr) || (isOnThisLevel(owner->getId()) == false))
+    if ((transition == nullptr) || (transition->hasTarget() == false) || (owner == nullptr) || (isOnThisLevel(owner->getId()) == false))
     {
-        return;     // internal transitions are shown as a state-body row, not an edge
+        return;     // no target, no edge: it is shown as a state-body row instead
     }
 
     SMEdgeItem* item = new SMEdgeItem(transitionId);
@@ -1250,7 +1250,7 @@ void SMScene::updateConnHighlights()
         selectedIds.insert(state->getId());
         for (const SMTransitionEntry* transition : state->getTransitions().getElements())
         {
-            if (transition->isExternal())
+            if (transition->hasTarget())
             {
                 outgoing.insert(transition->getId());
             }
@@ -1265,7 +1265,7 @@ void SMScene::updateConnHighlights()
         {
             for (const SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal() && selectedIds.contains(transition->getToId()))
+                if (transition->hasTarget() && selectedIds.contains(transition->getToId()))
                 {
                     incoming.insert(transition->getId());
                 }

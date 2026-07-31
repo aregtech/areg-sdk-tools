@@ -1117,13 +1117,19 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     appendGroup(state.getEntryList(), eRowZone::Enter);
     appendGroup(state.getDoList(), eRowZone::Middle);
 
-    // External transitions show their operations on the edge (below the line); internal ones have no
-    // edge, so each reads here as its own group under an "on <stimulus>" header row.
+    // A transition with a target shows its operations on its edge (below the line). One without a
+    // target has no edge, so it reads here as its own group under a header row -- and the header
+    // says WHICH of the two edgeless cases it is: `on x` for an internal transition, which is
+    // finished and deliberate, and `on x (not connected)` for an external one that has no target
+    // yet, which is not. Those used to look the same, in the document and here.
     for (const SMTransitionEntry* transition : state.getTransitions().getElements())
     {
-        if (transition->isExternal() == false)
+        if (transition->hasTarget() == false)
         {
             const QString stim = (data != nullptr) ? SMOperationSummary::stimulusSignature(*data, *transition) : transition->getStimulus();
+            const QString head = transition->isInternal()
+                                 ? (QStringLiteral("on ") + stim)
+                                 : (QStringLiteral("on ") + stim + translate(" (not connected)"));
 
             // The header row links to the stimulus declaration (trigger / event / timer that fires
             // the internal transition); its operations become their own navigable rows below.
@@ -1141,7 +1147,7 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
                 stimRef.append({ stimKind, transition->getStimulus() });
             }
 
-            mRows.append(BodyRow{ SMKindGlyph::eGlyph::Internal, QStringLiteral("on ") + stim, eRowZone::Middle, false, false, stimRef });
+            mRows.append(BodyRow{ SMKindGlyph::eGlyph::Internal, head, eRowZone::Middle, false, false, stimRef });
             appendGroup(transition->getOperations(), eRowZone::Middle, false);
         }
     }

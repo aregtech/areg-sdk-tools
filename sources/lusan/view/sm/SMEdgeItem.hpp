@@ -451,6 +451,9 @@ private:
     int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
     int                     mActionSeverity;//!< The operation mapping's NEGuardStyle severity for the action tint, or -1 (clean).
     bool                    mSourceIsStart; //!< The source is the Start pseudo-state (no stimulus placeholder).
+    bool                    mIsInitial;     //!< The transition is the level's INITIAL one: nothing fires it,
+                                            //!< so it carries no label and is drawn with the entry ball
+                                            //!< rather than an ordinary begin dot.
     bool                    mHasNote;       //!< A note is bound to this transition (badge shown).
     SMNoteEditor            mNoteEditor;    //!< The open in-place note editor (if any).
     QList<QPointF>          mWaypoints;     //!< The interior waypoints, in order.

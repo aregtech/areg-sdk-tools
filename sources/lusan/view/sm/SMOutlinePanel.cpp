@@ -48,14 +48,25 @@ namespace
     constexpr int KindTransition{ 2 };
     constexpr int KindRegistry  { 3 };
 
-    //!< A short label for a transition: its stimulus and target (or an internal marker).
+    //!< A short label for a transition, spelling its kind out: `on -> Idle`, `on (internal)`,
+    //!< `initial -> Idle`, and `on (not connected)` for an external edge with no target yet.
     QString transitionLabel(const SMTransitionEntry& transition)
     {
+        if (transition.isInitial())
+        {
+            return transition.hasTarget()
+                    ? (QObject::tr("initial -> ") + transition.getTargetName())
+                    : QObject::tr("initial (not connected)");
+        }
+
         const QString stimulus = transition.getStimulus().isEmpty()
                 ? QObject::tr("<stimulus>") : transition.getStimulus();
-        return transition.isExternal()
+        if (transition.isInternal())
+            return stimulus + QObject::tr(" (internal)");
+
+        return transition.hasTarget()
                 ? (stimulus + QStringLiteral(" -> ") + transition.getTargetName())
-                : (stimulus + QObject::tr(" (internal)"));
+                : (stimulus + QObject::tr(" (not connected)"));
     }
 }
 

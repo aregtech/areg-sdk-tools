@@ -200,6 +200,7 @@ namespace
         void validateLevel(const LevelInfo& info);
         void validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel);
         void validatePseudoStart(const SMStateEntry& state, bool isRootLevel);
+        void validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr);
         void validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr);
         void validateOperations(const SMOperationList& ops, const Scope& scope);
         void validateArguments(uint32_t ownerId, eDocElementKind kind, const MethodBase* target, const QList<SMArgumentEntry>& args, const Scope& scope);
@@ -656,8 +657,11 @@ namespace
                , vtr("Start state '%1' has a Do activity; a Start is a marker and performs nothing").arg(name));
 
         // The outgoing transitions are the level's INITIAL transitions. They are taken as the
-        // machine enters the level, so nothing triggers them and none may name a stimulus. An
-        // internal one (no target) initialises nothing, so it does not count as outgoing either.
+        // machine enters the level, so nothing triggers them. That a Start owns only `Initial`
+        // transitions, and that an initial one names no stimulus, is rule 28's business -- what is
+        // asked here is only whether the level initialises and what decides between the ways it
+        // can. A transition with no target initialises nothing, so it does not count as outgoing,
+        // whatever kind it claims: counting by target keeps one mistake to one finding.
         int outgoing = 0;
         int unguarded = 0;
         for (const SMTransitionEntry* tr : state.getTransitions().getElements())
@@ -665,14 +669,7 @@ namespace
             if (tr == nullptr)
                 continue;
 
-            if (tr->getStimulus().isEmpty() == false)
-            {
-                add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
-                   , vtr("The initial transition of Start state '%1' cannot react to a stimulus ('%2'): it is taken on entering the level")
-                        .arg(name, tr->getStimulus()));
-            }
-
-            if (tr->isExternal() == false)
+            if (tr->hasTarget() == false)
                 continue;
 
             ++outgoing;
@@ -712,12 +709,82 @@ namespace
         }
     }
 
+    void Ctx::validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr)
+    {
+        // Rule 28: `Kind` says what the transition is, so `To` and `Stimulus` are then required or
+        // forbidden rather than being the thing the meaning is read off. Every finding names the
+        // transition; the owner's name is in the message because a transition has no name of its own.
+        const uint32_t id    = tr.getId();
+        const QString& where = owner.getName();
+        const bool startOwned = owner.isPseudoStart();
+
+        switch (tr.getKind())
+        {
+        case SMTransitionEntry::eTransitionKind::External:
+            if (startOwned)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("Start state '%1' owns an External transition; a Start is left on entering the level, so everything it owns is an Initial transition").arg(where));
+            }
+            if (tr.hasTarget() == false)
+            {
+                // The whole reason `Kind` exists: this used to be byte-identical to an internal
+                // transition, so a half-drawn edge silently meant "run the operations in place".
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The transition on '%1' names no target state: it is an unfinished edge. Connect it, or make it Internal if it was meant to stay in the state").arg(where));
+            }
+            break;
+
+        case SMTransitionEntry::eTransitionKind::Internal:
+            if (startOwned)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("Start state '%1' owns an Internal transition; a Start performs nothing and everything it owns is an Initial transition").arg(where));
+            }
+            if (tr.hasTarget())
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The Internal transition on '%1' names a target state; an internal transition runs its operations without leaving the state").arg(where));
+            }
+            break;
+
+        case SMTransitionEntry::eTransitionKind::Initial:
+            if (startOwned == false)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("State '%1' owns an Initial transition, but only a Start state has one: an initial transition is taken on entering the level, and nothing enters a real state that way").arg(where));
+            }
+            if (tr.hasTarget() == false)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The initial transition of '%1' names no target state, so the level never initialises").arg(where));
+            }
+            if (tr.getStimulus().isEmpty() == false)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The initial transition of '%1' names a stimulus ('%2'); it is taken on entering the level, so nothing fires it").arg(where, tr.getStimulus()));
+            }
+            break;
+        }
+
+        // Required for the two kinds that react to something. Reported here rather than as an
+        // unresolved reference, because an empty name is a transition nobody finished writing --
+        // "Trigger '' is not declared" said the same thing and said it worse.
+        if ((tr.isInitial() == false) && tr.getStimulus().isEmpty())
+        {
+            add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+               , vtr("The transition on '%1' names no stimulus; only an initial transition may leave it out").arg(where));
+        }
+    }
+
     void Ctx::validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr)
     {
         const uint32_t id = tr.getId();
 
-        // An external target must resolve to a state, and that state must be a sibling of the owner.
-        if (tr.isExternal())
+        validateTransitionKind(owner, tr);
+
+        // A named target must resolve to a state, and that state must be a sibling of the owner.
+        if (tr.hasTarget())
         {
             const uint32_t targetId = tr.getToId();
             const SMStateEntry* sibling = level.findStateById(targetId);
@@ -750,12 +817,11 @@ namespace
         scope.stimKind = tr.getStimulusKind();
         const QString& stim = tr.getStimulus();
 
-        // Start is a pseudo-state: its outgoing transitions are the level's initial ones, taken as
-        // the machine enters the level, so nothing triggers them and they name no stimulus at all.
-        // An empty stimulus there is the normal case, not a missing declaration -- and a NON-empty
-        // one is reported by rule 27 as the fault it is, not twice as an unresolved reference.
-        const bool initialTransition = owner.isPseudoStart();
-        if (initialTransition == false)
+        // An initial transition names no stimulus at all: there is nothing to resolve, and an empty
+        // name is the normal case rather than a missing declaration. A stimulus that IS named on one
+        // -- and an empty one on a transition that should have had it -- are rule 28's, reported once
+        // there as the fault they are instead of a second time as an unresolved reference.
+        if ((tr.isInitial() == false) && (stim.isEmpty() == false))
         {
             switch (tr.getStimulusKind())
             {
@@ -1492,7 +1558,7 @@ namespace
                 const bool fromStart = (st->getKind() == SMStateEntry::eStateKind::Start);
                 for (SMTransitionEntry* tr : st->getTransitions().getElements())
                 {
-                    if ((tr == nullptr) || (tr->isExternal() == false))
+                    if ((tr == nullptr) || (tr->hasTarget() == false))
                         continue;
                     targets.insert(tr->getToId());
                     if (fromStart == false)
@@ -1540,19 +1606,25 @@ namespace
                         continue;
                     const uint32_t tid = tr->getId();
                     const QString& stim = tr->getStimulus();
-                    switch (tr->getStimulusKind())
+                    // An initial transition reacts to nothing, so it is not a use of anything in the
+                    // stimulus registries -- and counting its empty name as one would let a declared
+                    // trigger named "" look referenced.
+                    if (tr->isInitial() == false)
                     {
-                    case SMTransitionEntry::eStimulusKind::Trigger:
-                        triggersUsed.insert(stim);
-                        break;
-                    case SMTransitionEntry::eStimulusKind::Event:
-                        eventsReacted.insert(stim);
-                        reactedEvents.append({ tid, eDocElementKind::Transition, stim });
-                        break;
-                    case SMTransitionEntry::eStimulusKind::Timer:
-                        timersReacted.insert(stim);
-                        reactedTimers.append({ tid, eDocElementKind::Transition, stim });
-                        break;
+                        switch (tr->getStimulusKind())
+                        {
+                        case SMTransitionEntry::eStimulusKind::Trigger:
+                            triggersUsed.insert(stim);
+                            break;
+                        case SMTransitionEntry::eStimulusKind::Event:
+                            eventsReacted.insert(stim);
+                            reactedEvents.append({ tid, eDocElementKind::Transition, stim });
+                            break;
+                        case SMTransitionEntry::eStimulusKind::Timer:
+                            timersReacted.insert(stim);
+                            reactedTimers.append({ tid, eDocElementKind::Transition, stim });
+                            break;
+                        }
                     }
 
                     for (SMConditionEntry* leaf : tr->getConditions().collectLeaves())
@@ -1579,14 +1651,20 @@ namespace
                     // Condition-free means neither a legacy condition row nor a canonical guard.
                     const bool unconditional = tr->getConditions().collectLeaves().isEmpty() && (tr->getGuard().hasContent() == false);
 
-                    if ((tr->isExternal() == false) && tr->getOperations().isEmpty() && unconditional)
+                    if (tr->isInternal() && tr->getOperations().isEmpty() && unconditional)
                         add(tid, eDocElementKind::Transition, eSeverity::Warning, 7, vtr("Internal transition on '%1' has no operations or conditions").arg(stim));
 
-                    const QString key = QString::number(static_cast<int>(tr->getStimulusKind())) + QLatin1Char(':') + stim;
-                    if (unconditionalStimuli.contains(key))
-                        add(tid, eDocElementKind::Transition, eSeverity::Warning, 3, vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
-                    if (unconditional)
-                        unconditionalStimuli.insert(key);
+                    // Shadowing is a question about reacting to the same stimulus twice, which an
+                    // initial transition never does -- and every one of them would share the one
+                    // empty key. Two initial transitions competing is rule 27's question, not this.
+                    if (tr->isInitial() == false)
+                    {
+                        const QString key = QString::number(static_cast<int>(tr->getStimulusKind())) + QLatin1Char(':') + stim;
+                        if (unconditionalStimuli.contains(key))
+                            add(tid, eDocElementKind::Transition, eSeverity::Warning, 3, vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
+                        if (unconditional)
+                            unconditionalStimuli.insert(key);
+                    }
                 }
             }
         }

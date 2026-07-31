@@ -58,6 +58,7 @@
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QRegularExpression>
+#include <QStandardItemModel>
 #include <QRegularExpressionValidator>
 #include <QSignalBlocker>
 #include <QSpinBox>
@@ -100,10 +101,30 @@ namespace
         return SMKindGlyph::prefix(stimulusGlyph(kind)) + name;
     }
 
-    //!< The label shown for a transition with no target (an internal transition).
+    //!< Greys one row of a closed picker out instead of removing it, so the vocabulary a transition
+    //!< kind has stays visible and only what THIS owner can hold is selectable.
+    void setComboRowEnabled(QComboBox& combo, int row, bool enabled)
+    {
+        QStandardItemModel* model = qobject_cast<QStandardItemModel*>(combo.model());
+        QStandardItem* item = (model != nullptr ? model->item(row) : nullptr);
+        if (item != nullptr)
+        {
+            item->setEnabled(enabled);
+        }
+    }
+
+    //!< The label shown for an internal transition, which has no target by design.
     QString internalLabel()
     {
         return QObject::tr("(internal)");
+    }
+
+    //!< The label shown for a transition that SHOULD have a target and does not: an edge the
+    //!< author started drawing. Distinct from `(internal)` on purpose -- the two used to be the
+    //!< same document and read the same everywhere, which is the ambiguity `Kind` removes.
+    QString unconnectedLabel()
+    {
+        return QObject::tr("(not connected)");
     }
 
     //!< A one-line summary of an operation list for a State-Actions section header: the operation
@@ -217,6 +238,8 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mTransGeneral (nullptr)
     , mStimulusSig  (nullptr)
     , mStimulusName (nullptr)
+    , mTransForm    (nullptr)
+    , mTransKind    (nullptr)
     , mTarget       (nullptr)
     , mSource       (nullptr)
     , mTransDesc    (nullptr)
@@ -473,6 +496,18 @@ void SMPropertiesPanel::buildTransitionPage()
     mStimulusName = new QComboBox(trigger);
     mStimulusName->setEditable(false);
 
+    // What the transition IS, said outright instead of read off which attributes are missing. It
+    // sits ABOVE the endpoints because it decides what they may say: Internal has no target at all,
+    // and Initial has no stimulus.
+    mTransKind = new QComboBox(trigger);
+    mTransKind->setEditable(false);
+    mTransKind->addItem(tr("External (leaves the state)"), static_cast<int>(SMTransitionEntry::eTransitionKind::External));
+    mTransKind->setItemData(0, tr("Moves the machine to the target state on its stimulus."), Qt::ToolTipRole);
+    mTransKind->addItem(tr("Internal (stays in the state)"), static_cast<int>(SMTransitionEntry::eTransitionKind::Internal));
+    mTransKind->setItemData(1, tr("Runs its operations on its stimulus without leaving the state, so no entry or exit action runs."), Qt::ToolTipRole);
+    mTransKind->addItem(tr("Initial (entering the level)"), static_cast<int>(SMTransitionEntry::eTransitionKind::Initial));
+    mTransKind->setItemData(2, tr("Taken as the machine enters this level. Nothing fires it; only a Start state has one."), Qt::ToolTipRole);
+
     mTarget = new QComboBox(trigger);
     mTarget->setEditable(false);
 
@@ -487,10 +522,12 @@ void SMPropertiesPanel::buildTransitionPage()
     mTransDesc->setPlaceholderText(tr("Description"));
     mTransDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
+    form->addRow(tr("Kind:"), mTransKind);
     form->addRow(tr("Stimulus:"), mStimulusName);
     form->addRow(tr("Signature:"), mStimulusSig);
     form->addRow(tr("Source:"), mSource);
     form->addRow(tr("Target:"), mTarget);
+    mTransForm = form;
 
     mTransGeneral = new SMSectionChrome(this);
     mTransGeneral->setTitle(tr("Transition"));
@@ -503,6 +540,7 @@ void SMPropertiesPanel::buildTransitionPage()
     mTransGeneral->addFooterStretch();
 
     connect(mStimulusName, &QComboBox::activated, this, &SMPropertiesPanel::onStimulusCommit);
+    connect(mTransKind, &QComboBox::activated, this, &SMPropertiesPanel::onTransKindCommit);
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
     connect(mSource, &QComboBox::activated, this, &SMPropertiesPanel::onSourceCommit);
 
@@ -835,9 +873,11 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
         }
 
         QString label;
-        if (pseudoStart)
+        if (pseudoStart || transition->isInitial())
         {
-            label = tr("initial -> %1").arg(transition->getTargetName());
+            label = transition->hasTarget()
+                    ? tr("initial -> %1").arg(transition->getTargetName())
+                    : (tr("initial") + QStringLiteral(" ") + unconnectedLabel());
             if (transition->hasCondition())
             {
                 label += QStringLiteral(" ") + tr("[when]");
@@ -846,9 +886,10 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
         else
         {
             const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
-            label = transition->isExternal()
-                    ? (stimulus + QStringLiteral(" -> ") + transition->getTargetName())
-                    : (stimulus + QStringLiteral(" ") + internalLabel());
+            if (transition->hasTarget())
+                label = stimulus + QStringLiteral(" -> ") + transition->getTargetName();
+            else
+                label = stimulus + QStringLiteral(" ") + (transition->isInternal() ? internalLabel() : unconnectedLabel());
         }
 
         QListWidgetItem* item = new QListWidgetItem(label, mTransitions);
@@ -898,11 +939,12 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     // nothing to offer, and it must have a target because its whole job is to say where the level
     // begins. Its condition is the only thing that may decide between it and its siblings, and the
     // Conditions tab already edits that.
-    const bool initial = (owner != nullptr) && owner->isPseudoStart();
-    if (initial == false)
-    {
-        mTarget->addItem(internalLabel(), 0u);
-    }
+    const bool initial = transition->isInitial() || ((owner != nullptr) && owner->isPseudoStart());
+
+    // `To` means the target and nothing else now, so the row that used to double as "make this
+    // internal" is gone: the empty row says only that no target is named yet, and the Kind combo
+    // is where an internal transition is asked for.
+    mTarget->addItem(unconnectedLabel(), 0u);
 
     mSource->clear();
     const SMStateData* level = data.findLevel(mModel.getSelectionModel().getActiveLevel());
@@ -932,6 +974,20 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
         }
     }
 
+    // A Start owns nothing but initial transitions and a real state owns no initial one, so the
+    // combo offers only what the owner can actually hold -- the kind is editable, but not into a
+    // document that would immediately fail validation.
+    const bool internal = transition->isInternal();
+    setComboRowEnabled(*mTransKind, 0, initial == false);   // External: on a real state only
+    setComboRowEnabled(*mTransKind, 1, initial == false);   // Internal: on a real state only
+    setComboRowEnabled(*mTransKind, 2, initial);            // Initial: on a Start only
+    const int kindRow = mTransKind->findData(static_cast<int>(transition->getKind()));
+    mTransKind->setCurrentIndex(kindRow >= 0 ? kindRow : 0);
+    mTransKind->setEnabled(initial == false);
+    mTransKind->setToolTip(initial
+                           ? tr("Everything a Start state owns is an initial transition")
+                           : QString());
+
     mStimulusName->setEnabled(initial == false);
     mSource->setEnabled(initial == false);
     if (initial)
@@ -942,6 +998,15 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     else
     {
         mStimulusName->setToolTip(QString());
+    }
+
+    // An internal transition has no target at all -- the row is hidden rather than disabled,
+    // because a greyed picker reads as "not yet" and this one is "never".
+    if (mTransForm != nullptr)
+    {
+        mTransForm->setRowVisible(mTarget, internal == false);
+        mTransForm->setRowVisible(mStimulusName, initial == false);
+        mTransForm->setRowVisible(mStimulusSig, initial == false);
     }
 
     const int targetRow = mTarget->findData(transition->getToId());
@@ -1291,6 +1356,46 @@ void SMPropertiesPanel::applyStimulus()
     mModel.getUndoStack().push(new SMSetStimulusCommand(data, mModel.getNotifier(), mCurrentId, kind, name, tr("Set stimulus")));
 }
 
+void SMPropertiesPanel::onTransKindCommit()
+{
+    if (mUpdating || (mPage != PageTransition))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMTransitionEntry* transition = data.findTransitionById(mCurrentId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
+    const int row = mTransKind->currentIndex();
+    if (row < 0)
+    {
+        return;
+    }
+
+    const SMTransitionEntry::eTransitionKind kind =
+            static_cast<SMTransitionEntry::eTransitionKind>(mTransKind->itemData(row).toInt());
+    if (kind == transition->getKind())
+    {
+        return;
+    }
+
+    // Backstop for what the greyed rows already prevent: a Start owns nothing but initial
+    // transitions, and no real state owns one.
+    const SMStateEntry* owner = data.findTransitionOwner(mCurrentId);
+    const bool startOwned = (owner != nullptr) && owner->isPseudoStart();
+    if (startOwned != (kind == SMTransitionEntry::eTransitionKind::Initial))
+    {
+        showTransition(mCurrentId);     // put the picker back on what the document says
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetTransitionKindCommand(data, mModel.getNotifier(), mCurrentId, kind, tr("Set transition kind")));
+}
+
 void SMPropertiesPanel::onTargetCommit()
 {
     if (mUpdating || (mPage != PageTransition))
@@ -1305,13 +1410,15 @@ void SMPropertiesPanel::onTargetCommit()
         return;
     }
 
-    // The picker is a closed list; each row carries its state's element ID (0 = internal).
+    // The picker is a closed list; each row carries its state's element ID (0 = not connected).
     const uint32_t targetId = mTarget->currentData().toUInt();
     if (targetId == 0)
     {
-        if (transition->isExternal())
+        // Disconnecting no longer changes what the transition IS. It says the edge has no target
+        // yet -- which validation reports -- and the Kind combo is where "internal" is asked for.
+        if (transition->hasTarget())
         {
-            mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, 0u, tr("Make internal")));
+            mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, 0u, tr("Disconnect target")));
         }
 
         return;

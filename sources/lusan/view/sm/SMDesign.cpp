@@ -1824,7 +1824,8 @@ void SMDesign::addInternalToSelection()
     mModel.getUndoStack().push(new SMCreateTransitionCommand(  data, mModel.getNotifier(), *state
                                                              , SMTransitionEntry::eStimulusKind::Trigger, QString()
                                                              , 0u, QList<QPointF>()
-                                                             , tr("Add internal transition to %1").arg(state->getName())));
+                                                             , tr("Add internal transition to %1").arg(state->getName())
+                                                             , nullptr, SMTransitionEntry::eTransitionKind::Internal));
 }
 
 void SMDesign::addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge)

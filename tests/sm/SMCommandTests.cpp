@@ -238,7 +238,7 @@ namespace
         SMStateEntry* parent = doc.getStates().createState("Parent", SMStateEntry::eStateKind::Normal);
         SMStateData*  nested = parent->getOrCreateNestedStates();
         nested->createState("Child", SMStateEntry::eStateKind::Start);
-        parent->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", 0u);
+        parent->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", 0u, SMTransitionEntry::eTransitionKind::Internal);
         const uint32_t parentId = parent->getId();
         doc.getLayout().addNode(parentId).x = 3.0;
 
@@ -274,7 +274,7 @@ namespace
         CHECK((start != nullptr) && (worker != nullptr) && (other != nullptr));
 
         // Start -> Worker, and a self-referencing loop Worker -> Worker; Other -> itself stays put.
-        SMTransitionEntry* toWorker = start->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", worker->getId());
+        SMTransitionEntry* toWorker = start->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, QString(), worker->getId(), SMTransitionEntry::eTransitionKind::Initial);
         SMTransitionEntry* loop     = worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "L", worker->getId());
         SMTransitionEntry* toOther  = other->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "O", other->getId());
         CHECK((toWorker != nullptr) && (loop != nullptr) && (toOther != nullptr));
@@ -764,7 +764,7 @@ namespace
         SMStateEntry* inner  = nested->createState("Inner", SMStateEntry::eStateKind::Normal);
 
         worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evGo", idle->getId());
-        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "tmPoll", inner->getId());
+        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, QString(), inner->getId(), SMTransitionEntry::eTransitionKind::Initial);
         worker->getEntryList().addOperation(new SMActionCall(0u, "doWork"));
         worker->getEntryList().addOperation(new SMEventSend(0u, "evGo"));
         worker->getExitList().addOperation(new SMTimerStart(0u, "tmPoll"));
@@ -821,14 +821,16 @@ namespace
         CHECK(ownedIdSet(*worker).intersects(ownedIdSet(*copy)) == false);
 
         // A target inside the copied set is remapped to the copy's new ID; a target leaving the
-        // copied set (Idle) is dropped to internal, while the stimulus (evGo) is kept.
+        // copied set (Idle) is dropped, while the stimulus (evGo) and the KIND are kept -- an
+        // external transition that lost its target is an edge to reconnect, not an internal one.
         SMStateEntry* wstartCopy = copy->getNestedStates()->getStartState();
         CHECK((wstartCopy != nullptr) && (wstartCopy->getName() != QStringLiteral("WStart")));
         SMStateEntry* innerCopy = copy->getNestedStates()->getElements().last();
         CHECK(innerCopy->getName() != QStringLiteral("Inner"));
         CHECK(wstartCopy->getTransitions().getElements().first()->getToId() == innerCopy->getId());
         SMTransitionEntry* outTx = copy->getTransitions().getElements().first();
-        CHECK(outTx->isExternal() == false);        // target Idle lay outside the pasted set
+        CHECK(outTx->isExternal());                 // still external: only its target was lost
+        CHECK(outTx->hasTarget() == false);         // target Idle lay outside the pasted set
         CHECK(outTx->getStimulus() == QStringLiteral("evGo"));
 
         // Registries merged in place: nothing duplicated within the same document.

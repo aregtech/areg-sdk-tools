@@ -132,6 +132,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mGuardSeverity(-1)
     , mActionSeverity(-1)
     , mSourceIsStart(false)
+    , mIsInitial    (false)
     , mHasNote      (false)
     , mWaypoints    ( )
     , mHasAnchors   (false)
@@ -223,7 +224,7 @@ void SMEdgeItem::updateFromModel()
 
     StateMachineData& data = canvas->getModel().getData();
     const SMTransitionEntry* transition = data.findTransitionById(getElementId());
-    if ((transition == nullptr) || (transition->isExternal() == false))
+    if ((transition == nullptr) || (transition->hasTarget() == false))
     {
         mValid = false;
         return;
@@ -234,6 +235,7 @@ void SMEdgeItem::updateFromModel()
     // A transition out of the Start pseudo-state fires automatically: it never carries a stimulus,
     // so no `<stimulus>` placeholder is shown for it.
     mSourceIsStart = (owner != nullptr) && (owner->getKind() == SMStateEntry::eStateKind::Start);
+    mIsInitial     = transition->isInitial();
     mTargetId    = transition->getToId();
     const SMStateEntry* target = data.findStateById(mTargetId);
     mTargetName  = (target != nullptr ? target->getName() : QString());
@@ -567,7 +569,7 @@ QString SMEdgeItem::labelText() const
 
     // No stimulus and no guard: a Start-state transition shows nothing (it fires automatically);
     // any other transition shows a subtle hint that a stimulus can be set.
-    return mSourceIsStart ? QString() : translate("<stimulus>");
+    return (mIsInitial || mSourceIsStart) ? QString() : translate("<stimulus>");
 }
 
 QRectF SMEdgeItem::labelRect() const
@@ -837,10 +839,16 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
     painter->setBrush(Qt::NoBrush);
     painter->drawPolyline(mPath.constData(), mPath.size());
 
-    // Begin dot on the source border.
+    // Begin dot on the source border -- doubled into the filled entry ball for an INITIAL
+    // transition. That is the one drawing difference between the two kinds that carry an edge, and
+    // it is the notation an author already reads as "this is where the level begins"; the absent
+    // stimulus label is the other half of it.
+    const double beginDot = mIsInitial
+                            ? (NESMDesign::EdgeBeginDotRadius * 2.0)
+                            : NESMDesign::EdgeBeginDotRadius;
     painter->setPen(Qt::NoPen);
     painter->setBrush(color);
-    painter->drawEllipse(mBegin, NESMDesign::EdgeBeginDotRadius, NESMDesign::EdgeBeginDotRadius);
+    painter->drawEllipse(mBegin, beginDot, beginDot);
 
     paintArrowHead(painter, mPath.at(mPath.size() - 2), mEnd, color);
 

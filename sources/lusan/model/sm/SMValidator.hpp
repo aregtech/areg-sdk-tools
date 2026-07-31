@@ -94,6 +94,20 @@ public:
      **/
     static constexpr int RULE_PSEUDO_START { 27 };
 
+    /**
+     * \brief   The 10.1 rule the transition `Kind` contract is filed under: an `External`
+     *          transition with no target (the unfinished edge that used to be indistinguishable
+     *          from an internal one), an `Internal` one that names a target, an `Initial` one
+     *          with no target or with a stimulus, an `External`/`Internal` one with no stimulus,
+     *          an `Initial` transition on a state that is not a `Kind="Start"`, and a `Start`
+     *          owning anything other than `Initial` transitions.
+     *
+     *          One id, because they are one rule -- `Kind` says what the transition is, and `To`
+     *          and `Stimulus` then mean only what they say -- and because the code generator has
+     *          to file the same faults under the same number (`20260731-validation-parity.md`).
+     **/
+    static constexpr int RULE_TRANSITION_KIND { 28 };
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

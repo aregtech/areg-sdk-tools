@@ -85,7 +85,7 @@ namespace
         lambda->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
-        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u);
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u, SMTransitionEntry::eTransitionKind::Internal);
         return trans->getId();
     }
 

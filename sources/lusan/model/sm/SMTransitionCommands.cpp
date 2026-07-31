@@ -32,7 +32,8 @@ SMCreateTransitionCommand::SMCreateTransitionCommand(  StateMachineData& data, D
                                                      , SMStateEntry& source, SMTransitionEntry::eStimulusKind kind
                                                      , const QString& stimulus, uint32_t targetId
                                                      , const QList<QPointF>& edgePoints
-                                                     , const QString& text, QUndoCommand* parent /*= nullptr*/)
+                                                     , const QString& text, QUndoCommand* parent /*= nullptr*/
+                                                     , SMTransitionEntry::eTransitionKind transKind /*= External*/)
     : SMCompositeCommand(data, notifier, text, parent)
     , mTransition       (new SMTransitionEntry(0, kind, stimulus, &source.getTransitions()))
 {
@@ -40,6 +41,9 @@ SMCreateTransitionCommand::SMCreateTransitionCommand(  StateMachineData& data, D
     {
         mTransition->setToId(targetId);
     }
+
+    // After the target: setting the kind to Internal is what drops one.
+    mTransition->setKind(transKind);
 
     // The add runs first on redo and allocates the ID the edge child reads.
     new TDocAddCommand<SMTransitionEntry*, DocumentElem>(notifier, source.getTransitions(), mTransition, eDocElementKind::Transition, text, this);
@@ -68,6 +72,54 @@ SMRemoveTransitionCommand::SMRemoveTransitionCommand(  StateMachineData& data, D
 {
     new SMRemoveLayoutCommand(data, notifier, QList<uint32_t>{ transitionId }, text, this);
     new TDocRemoveCommand<SMTransitionEntry*, DocumentElem>(notifier, source.getTransitions(), transitionId, eDocElementKind::Transition, text, this);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetTransitionKindCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetTransitionKindCommand::SMSetTransitionKindCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                       , uint32_t transitionId, SMTransitionEntry::eTransitionKind kind
+                                                       , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mId       (transitionId)
+    , mNewKind  (kind)
+{
+}
+
+void SMSetTransitionKindCommand::apply(SMTransitionEntry::eTransitionKind kind, uint32_t targetId)
+{
+    SMTransitionEntry* transition = data().findTransitionById(mId);
+    if (transition != nullptr)
+    {
+        // The kind first, then the target: setKind(Internal) drops the target, and undo has to put
+        // back the one the switch to Internal took away.
+        transition->setKind(kind);
+        if (kind != SMTransitionEntry::eTransitionKind::Internal)
+        {
+            transition->setToId(targetId);
+        }
+
+        notifier().notifyElementChanged(mId, eDocElementKind::Transition);
+    }
+}
+
+void SMSetTransitionKindCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMTransitionEntry* transition = data().findTransitionById(mId);
+        mOldKind   = (transition != nullptr ? transition->getKind() : SMTransitionEntry::eTransitionKind::External);
+        mOldTarget = (transition != nullptr ? transition->getToId() : 0u);
+        mCaptured  = true;
+    }
+
+    apply(mNewKind, mOldTarget);
+}
+
+void SMSetTransitionKindCommand::undo()
+{
+    apply(mOldKind, mOldTarget);
 }
 
 //////////////////////////////////////////////////////////////////////////

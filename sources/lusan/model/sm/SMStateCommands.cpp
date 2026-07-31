@@ -72,7 +72,7 @@ namespace
 
             for (SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal() && removedIds.contains(transition->getToId()))
+                if (transition->hasTarget() && removedIds.contains(transition->getToId()))
                 {
                     incoming.append(IncomingRef{ &state->getTransitions(), transition->getId() });
                 }

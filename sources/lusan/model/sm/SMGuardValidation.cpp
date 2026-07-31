@@ -190,7 +190,7 @@ namespace
         }
 
         QString location = state.getName() + QStringLiteral(" : ") + transition.getStimulus();
-        if (transition.isExternal())
+        if (transition.hasTarget())
         {
             location += QStringLiteral(" -> ") + transition.getTargetName();
         }

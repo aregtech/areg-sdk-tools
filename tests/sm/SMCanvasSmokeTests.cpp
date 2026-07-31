@@ -642,9 +642,10 @@ int main(int argc, char* argv[])
     // Internal transition (no target): the path the tool takes on Enter / empty drop.
     model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *onState
                                                            , SMTransitionEntry::eStimulusKind::Trigger, QString(), 0u
-                                                           , QList<QPointF>(), QStringLiteral("internal")));
+                                                           , QList<QPointF>(), QStringLiteral("internal"), nullptr
+                                                           , SMTransitionEntry::eTransitionKind::Internal));
     const uint32_t internalTx = onState->getTransitions().getElements().last()->getId();
-    CHECK(data.findTransitionById(internalTx)->isExternal() == false);
+    CHECK(data.findTransitionById(internalTx)->isInternal());
     CHECK(scene.findCanvasItem(internalTx) == nullptr);                      // no edge for an internal
     model.getUndoStack().undo();
 
@@ -3763,6 +3764,90 @@ int main(int argc, char* argv[])
         }
 
         grab(ldesign, "l1-pseudo-start");
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // L2: a transition's kind is a visible, editable property
+    //////////////////////////////////////////////////////////////////////////
+    {
+        std::printf("[L2] the transition Kind is shown and editable, and the canvas follows it\n");
+
+        StateMachineModel kmodel;
+        CHECK(kmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign kdesign(kmodel);
+        kdesign.resize(1400, 900);
+        kdesign.show();
+        QApplication::processEvents();
+
+        QDockWidget* kdock = kdesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* kpanel = (kdock != nullptr ? qobject_cast<SMPropertiesPanel*>(kdock->widget()) : nullptr);
+        StateMachineData& kdata = kmodel.getData();
+        SMScene& kscene = kdesign.getScene();
+        const SMStateData* kroot = kdata.findLevel(kscene.getLevelId());
+        const SMStateEntry* kstart = (kroot != nullptr ? kroot->getStartState() : nullptr);
+        CHECK(kpanel != nullptr);
+        CHECK(kstart != nullptr);
+
+        if ((kpanel != nullptr) && (kstart != nullptr) && (kroot != nullptr))
+        {
+            QComboBox* kindCombo = kpanel->transitionKindCombo();
+            CHECK(kindCombo != nullptr);
+
+            // An ordinary external transition: the kind is shown, and it is editable.
+            uint32_t externalId = 0;
+            for (const SMStateEntry* st : kroot->getElements())
+            {
+                if ((st == nullptr) || st->isPseudoStart())
+                    continue;
+                for (const SMTransitionEntry* tr : st->getTransitions().getElements())
+                {
+                    if ((externalId == 0) && (tr != nullptr) && tr->isExternal())
+                        externalId = tr->getId();
+                }
+            }
+
+            CHECK(externalId != 0);
+            if ((externalId != 0) && (kindCombo != nullptr))
+            {
+                kmodel.getSelectionModel().setSelection(QList<uint32_t>{ externalId });
+                QApplication::processEvents();
+                CHECK(kpanel->currentElementId() == externalId);
+                CHECK(kindCombo->isEnabled());
+                CHECK(kindCombo->currentData().toInt() == static_cast<int>(SMTransitionEntry::eTransitionKind::External));
+
+                // An external transition has an edge on the canvas; making it internal takes the
+                // edge away, and undo brings both the kind and the target back.
+                const uint32_t oldTarget = kdata.findTransitionById(externalId)->getToId();
+                CHECK(kscene.findCanvasItem(externalId) != nullptr);
+                kindCombo->setCurrentIndex(1);
+                QMetaObject::invokeMethod(kpanel, "onTransKindCommit");
+                QApplication::processEvents();
+                CHECK(kdata.findTransitionById(externalId)->isInternal());
+                CHECK(kdata.findTransitionById(externalId)->hasTarget() == false);
+                CHECK(kscene.findCanvasItem(externalId) == nullptr);
+
+                kmodel.getUndoStack().undo();
+                QApplication::processEvents();
+                CHECK(kdata.findTransitionById(externalId)->isExternal());
+                CHECK(kdata.findTransitionById(externalId)->getToId() == oldTarget);
+                CHECK(kscene.findCanvasItem(externalId) != nullptr);
+            }
+
+            // The level's initial transition: the kind is Initial, and it is not editable -- a
+            // Start owns nothing else, so there is no other kind to offer.
+            CHECK(kstart->getTransitions().getElementCount() >= 1);
+            if ((kstart->getTransitions().getElementCount() >= 1) && (kindCombo != nullptr))
+            {
+                const uint32_t initialId = kstart->getTransitions().getElements().first()->getId();
+                CHECK(kdata.findTransitionById(initialId)->isInitial());
+                kmodel.getSelectionModel().setSelection(QList<uint32_t>{ initialId });
+                QApplication::processEvents();
+                CHECK(kindCombo->currentData().toInt() == static_cast<int>(SMTransitionEntry::eTransitionKind::Initial));
+                CHECK(kindCombo->isEnabled() == false);
+            }
+        }
+
+        grab(kdesign, "l2-transition-kind");
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

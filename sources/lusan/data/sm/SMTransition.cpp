@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/common/XmlSM.hpp"
 
@@ -49,12 +50,34 @@ const char* SMTransitionEntry::toString(SMTransitionEntry::eStimulusKind kind)
     }
 }
 
+SMTransitionEntry::eTransitionKind SMTransitionEntry::fromTransitionKindString(const QString& kind)
+{
+    if (kind.compare(STR_TRANS_INTERNAL, Qt::CaseInsensitive) == 0)
+        return eTransitionKind::Internal;
+    else if (kind.compare(STR_TRANS_INITIAL, Qt::CaseInsensitive) == 0)
+        return eTransitionKind::Initial;
+    else
+        return eTransitionKind::External;
+}
+
+const char* SMTransitionEntry::toString(SMTransitionEntry::eTransitionKind kind)
+{
+    switch (kind)
+    {
+    case eTransitionKind::Internal: return STR_TRANS_INTERNAL;
+    case eTransitionKind::Initial:  return STR_TRANS_INITIAL;
+    case eTransitionKind::External:
+    default:                        return STR_TRANS_EXTERNAL;
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 // SMTransitionEntry implementation
 //////////////////////////////////////////////////////////////////////////
 
 SMTransitionEntry::SMTransitionEntry(ElementBase* parent /*= nullptr*/)
     : DocumentElem  (parent)
+    , mKind         (eTransitionKind::External)
     , mStimulusKind (eStimulusKind::Trigger)
     , mStimulus     ( )
     , mToId         (0)
@@ -71,6 +94,7 @@ SMTransitionEntry::SMTransitionEntry(  uint32_t id
                                      , const QString& stimulus
                                      , ElementBase* parent /*= nullptr*/)
     : DocumentElem  (id, parent)
+    , mKind         (eTransitionKind::External)
     , mStimulusKind (kind)
     , mStimulus     (stimulus)
     , mToId         (0)
@@ -84,6 +108,7 @@ SMTransitionEntry::SMTransitionEntry(  uint32_t id
 
 SMTransitionEntry::SMTransitionEntry(const SMTransitionEntry& src)
     : DocumentElem  (src)
+    , mKind         (src.mKind)
     , mStimulusKind (src.mStimulusKind)
     , mStimulus     (src.mStimulus)
     , mToId         (src.mToId)
@@ -99,6 +124,7 @@ SMTransitionEntry::SMTransitionEntry(const SMTransitionEntry& src)
 
 SMTransitionEntry::SMTransitionEntry(SMTransitionEntry&& src) noexcept
     : DocumentElem  (std::move(src))
+    , mKind         (src.mKind)
     , mStimulusKind (src.mStimulusKind)
     , mStimulus     (std::move(src.mStimulus))
     , mToId         (src.mToId)
@@ -117,6 +143,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (const SMTransitionEntry& other
     if (this != &other)
     {
         DocumentElem::operator = (other);
+        mKind         = other.mKind;
         mStimulusKind = other.mStimulusKind;
         mStimulus     = other.mStimulus;
         mToId         = other.mToId;
@@ -137,6 +164,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
     if (this != &other)
     {
         DocumentElem::operator = (std::move(other));
+        mKind         = other.mKind;
         mStimulusKind = other.mStimulusKind;
         mStimulus     = std::move(other.mStimulus);
         mToId         = other.mToId;
@@ -150,6 +178,39 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
     }
 
     return *this;
+}
+
+void SMTransitionEntry::setKind(SMTransitionEntry::eTransitionKind kind)
+{
+    mKind = kind;
+    if (mKind == eTransitionKind::Internal)
+    {
+        // An internal transition has no target by definition. Dropping it here is what keeps the
+        // document honest: `To` then means "the target" and nothing else, and there is no state
+        // in which a transition claims to be internal while still naming somewhere to go.
+        mToId = 0;
+        mToName.clear();
+    }
+    else if (mKind == eTransitionKind::Initial)
+    {
+        // Nothing fires an initial transition -- it is taken on entering the level -- so it names
+        // no stimulus at all. The condition is the only thing allowed to decide between siblings.
+        mStimulus.clear();
+        mStimulusKind = eStimulusKind::Trigger;
+    }
+}
+
+const SMStateEntry* SMTransitionEntry::owningState() const
+{
+    // parent chain: transition -> its state's TransitionList -> the state.
+    const ElementBase* list = getParent();
+    return (list != nullptr ? dynamic_cast<const SMStateEntry*>(list->getParent()) : nullptr);
+}
+
+bool SMTransitionEntry::isSelfTransition() const
+{
+    const SMStateEntry* owner = owningState();
+    return (mToId != 0) && (owner != nullptr) && (owner->getId() == mToId);
 }
 
 QString SMTransitionEntry::getTargetName() const
@@ -193,6 +254,34 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
     mToName = (numeric || to.isEmpty()) ? QString() : to.toString();
     mDescription.clear();
 
+    // `Kind` says what the transition IS. A document written before it said nothing, and the
+    // meaning had to be inferred from which attributes were missing -- which is precisely the
+    // ambiguity the attribute removes, so the inference survives here as a READ SHIM and nowhere
+    // else. What the attribute states is taken as written, faults included: a `Kind="Internal"`
+    // that still names a target, or a `Kind="Initial"` that still names a stimulus, is kept and
+    // reported rather than quietly repaired, because only the author knows which half was meant.
+    const QStringView kindText = attributes.value(XmlSM::xmlSMAttributeKind);
+    if (kindText.isEmpty() == false)
+    {
+        mKind = fromTransitionKindString(kindText.toString());
+    }
+    else
+    {
+        // The stimulus test is what keeps this composable with the `Kind="Start"` read shim: a
+        // Start-owned transition that names a stimulus belongs to a legacy MERGED start, whose
+        // state is demoted to Normal on load -- so it is an ordinary external transition, and its
+        // stimulus is real content, not the placeholder an initial transition used to carry.
+        const SMStateEntry* owner = owningState();
+        const bool initial = (owner != nullptr) && (owner->getKind() == SMStateEntry::eStateKind::Start)
+                          && mStimulus.isEmpty();
+        if (initial)
+            mKind = eTransitionKind::Initial;
+        else if ((mToId != 0) || (mToName.isEmpty() == false))
+            mKind = eTransitionKind::External;
+        else
+            mKind = eTransitionKind::Internal;
+    }
+
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTransition))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement)
@@ -225,8 +314,18 @@ void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSM::xmlSMElementTransition);
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSM::xmlSMAttributeStimulusKind, SMTransitionEntry::toString(mStimulusKind));
-    xml.writeAttribute(XmlSM::xmlSMAttributeStimulus, mStimulus);
+    // Always written, including at its `External` default. Omitting it would put the format back
+    // where it started: an unconnected external edge and an internal transition would again be the
+    // same bytes, and the reader would have to guess which one the author meant.
+    xml.writeAttribute(XmlSM::xmlSMAttributeKind, SMTransitionEntry::toString(mKind));
+    // An initial transition names no stimulus, so the two placeholder attributes it used to fill
+    // are simply not written -- unless a hand-edited document actually put a name there, which is
+    // a fault the file has to keep carrying until its author resolves it.
+    if ((mKind != eTransitionKind::Initial) || (mStimulus.isEmpty() == false))
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeStimulusKind, SMTransitionEntry::toString(mStimulusKind));
+        xml.writeAttribute(XmlSM::xmlSMAttributeStimulus, mStimulus);
+    }
     if (mToId != 0)
     {
         xml.writeAttribute(XmlSM::xmlSMAttributeTo, QString::number(mToId));
@@ -312,7 +411,10 @@ void SMTransitionData::cloneFrom(const SMTransitionData& src)
     }
 }
 
-SMTransitionEntry* SMTransitionData::createTransition(SMTransitionEntry::eStimulusKind kind, const QString& stimulus, uint32_t targetId /*= 0*/)
+SMTransitionEntry* SMTransitionData::createTransition(  SMTransitionEntry::eStimulusKind kind
+                                                      , const QString& stimulus
+                                                      , uint32_t targetId /*= 0*/
+                                                      , SMTransitionEntry::eTransitionKind transKind /*= External*/)
 {
     SMTransitionEntry* entry = new SMTransitionEntry(getNextId(), kind, stimulus, this);
     if (targetId != 0)
@@ -320,6 +422,8 @@ SMTransitionEntry* SMTransitionData::createTransition(SMTransitionEntry::eStimul
         entry->setToId(targetId);
     }
 
+    // After the target, because setting the kind to Internal is what drops one.
+    entry->setKind(transKind);
     addElement(entry, false);
     return entry;
 }

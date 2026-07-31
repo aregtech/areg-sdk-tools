@@ -30,17 +30,23 @@
 
 #include <QString>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class SMStateEntry;
+
 /**
  * \class   SMTransitionEntry
  * \brief   One transition: a reaction of its owning state to a stimulus.
- *          Owned by (nested inside) its source state — there is no `From`. `To` names a
- *          sibling state (external transition); absent `To` means an internal transition.
- *          A transition names exactly one stimulus via `StimulusKind` + `Stimulus`, and
- *          owns an optional condition list and an operation list.
+ *          Owned by (nested inside) its source state — there is no `From`.
  *
- *          One exception: a transition owned by a `Kind="Start"` pseudo-state is the level's
- *          INITIAL transition, taken as the machine enters the level, so it names NO stimulus.
- *          Its condition is the only thing that decides between it and its siblings.
+ *          What the transition IS is said by its `Kind`, not inferred from which attributes
+ *          happen to be missing (see \ref eTransitionKind). `To` therefore means only "the
+ *          target" and `Stimulus` only "what fires it": an `External` transition with no `To`
+ *          is an edge the author has not connected yet, and it reads as exactly that instead
+ *          of silently becoming an internal transition.
+ *
+ *          A transition owns an optional guard and an operation list whatever its kind.
  **/
 class SMTransitionEntry : public DocumentElem
 {
@@ -56,12 +62,44 @@ public:
         , Timer     //!< A timer expiration.
     };
 
+    /**
+     * \enum    eTransitionKind
+     * \brief   What the transition does, stated in the document rather than inferred.
+     *
+     *          | Kind     | `To`      | `Stimulus`/`StimulusKind` | Guard    | allowed on     |
+     *          |----------|-----------|---------------------------|----------|----------------|
+     *          | External | required  | required                  | optional | a real state   |
+     *          | Internal | forbidden | required                  | optional | a real state   |
+     *          | Initial  | required  | forbidden                 | optional | a `Kind="Start"` |
+     *
+     *          A self-transition -- an `External` whose `To` is its own owner -- is a second
+     *          spelling of `Internal` and behaves IDENTICALLY: both generators skip exit and
+     *          entry when the target is the owner, and always have. The two are drawn and read
+     *          differently; they never run differently.
+     **/
+    enum class eTransitionKind
+    {
+          External  //!< Leaves the owner for `To`, on its stimulus.
+        , Internal  //!< Runs its operations in place, on its stimulus; the state is not left.
+        , Initial   //!< The level's entry transition; taken on entering the level, so nothing fires it.
+    };
+
     static constexpr const char* const  STR_KIND_TRIGGER    { "Trigger" };
     static constexpr const char* const  STR_KIND_EVENT      { "Event"   };
     static constexpr const char* const  STR_KIND_TIMER      { "Timer"   };
 
+    static constexpr const char* const  STR_TRANS_EXTERNAL  { "External" };
+    static constexpr const char* const  STR_TRANS_INTERNAL  { "Internal" };
+    static constexpr const char* const  STR_TRANS_INITIAL   { "Initial"  };
+
     static SMTransitionEntry::eStimulusKind fromKindString(const QString& kind);
     static const char* toString(SMTransitionEntry::eStimulusKind kind);
+
+    /**
+     * \brief   Reads a `Kind` attribute; anything unrecognized reads as `External`, the default.
+     **/
+    static SMTransitionEntry::eTransitionKind fromTransitionKindString(const QString& kind);
+    static const char* toString(SMTransitionEntry::eTransitionKind kind);
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -92,9 +130,18 @@ public:
     inline void setStimulus(const QString& stimulus);
 
     /**
-     * \brief   The target sibling state's element ID; 0 when this is an internal transition.
-     *          The target is referenced by ID (not by name), so renaming the target state
-     *          never breaks the connection.
+     * \brief   What this transition is: \ref eTransitionKind. Setting it to `Internal` drops the
+     *          target, because an internal transition has none by definition -- the one place the
+     *          two attributes are still coupled, and it is a write, not an inference.
+     **/
+    inline eTransitionKind getKind() const;
+    void setKind(eTransitionKind kind);
+
+    /**
+     * \brief   The target sibling state's element ID; 0 when there is none. The target is
+     *          referenced by ID (not by name), so renaming the target state never breaks the
+     *          connection. An `External` or `Initial` transition with no target is an unfinished
+     *          edge, reported as such -- it is NOT an internal transition.
      **/
     inline uint32_t getToId() const;
     inline void setToId(uint32_t targetId);
@@ -109,9 +156,28 @@ public:
     QString getTargetName() const;
 
     /**
-     * \brief   True for an external transition (a target state is present).
+     * \brief   True when a target state is named. Ask this -- not \ref isExternal -- whenever the
+     *          question is "does this transition point somewhere": an `Initial` transition points
+     *          somewhere too, and an `External` one may not point anywhere yet.
      **/
-    inline bool isExternal() const;
+    inline bool hasTarget() const;
+
+    inline bool isExternal() const;     //!< The kind is `External`.
+    inline bool isInternal() const;     //!< The kind is `Internal`.
+    inline bool isInitial() const;      //!< The kind is `Initial` (the level's entry transition).
+
+    /**
+     * \brief   True when the target is the owning state itself. Such a transition behaves exactly
+     *          as an `Internal` one -- no exit, no entry, no state change -- and differs only in
+     *          how the document draws and reads it.
+     **/
+    bool isSelfTransition() const;
+
+    /**
+     * \brief   The state that owns this transition (through its `TransitionList`), or nullptr
+     *          when the transition is not attached to one.
+     **/
+    const SMStateEntry* owningState() const;
 
     /**
      * \brief   The target state name read from a document written before targets became IDs,
@@ -169,9 +235,10 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
+    eTransitionKind mKind;          //!< What the transition is (External / Internal / Initial).
     eStimulusKind   mStimulusKind;  //!< The stimulus kind.
     QString         mStimulus;      //!< The stimulus name.
-    uint32_t        mToId;          //!< The target sibling state's ID (0 = internal).
+    uint32_t        mToId;          //!< The target sibling state's ID (0 = no target named).
     QString         mToName;        //!< Pre-ID document target name awaiting resolution; not serialized.
     QString         mDescription;   //!< The description text.
     SMConditionList mConditions;    //!< Legacy condition tree (read-shim only; not written when a guard exists).
@@ -204,10 +271,14 @@ public:
      * \brief   Creates a new transition appended at the end (lowest priority).
      * \param   kind        The stimulus kind.
      * \param   stimulus    The stimulus name.
-     * \param   targetId    The target sibling state's ID, or 0 for an internal transition.
+     * \param   targetId    The target sibling state's ID, or 0 for no target.
+     * \param   transKind   What the transition is; `Internal` ignores \p targetId.
      * \return  Pointer to the created transition.
      **/
-    SMTransitionEntry* createTransition(SMTransitionEntry::eStimulusKind kind, const QString& stimulus, uint32_t targetId = 0);
+    SMTransitionEntry* createTransition(  SMTransitionEntry::eStimulusKind kind
+                                        , const QString& stimulus
+                                        , uint32_t targetId = 0
+                                        , SMTransitionEntry::eTransitionKind transKind = SMTransitionEntry::eTransitionKind::External);
 
     /**
      * \brief   Deletes and removes all transitions.
@@ -247,6 +318,11 @@ inline void SMTransitionEntry::setStimulus(const QString& stimulus)
     mStimulus = stimulus;
 }
 
+inline SMTransitionEntry::eTransitionKind SMTransitionEntry::getKind() const
+{
+    return mKind;
+}
+
 inline uint32_t SMTransitionEntry::getToId() const
 {
     return mToId;
@@ -262,9 +338,24 @@ inline void SMTransitionEntry::clearTo()
     mToId = 0;
 }
 
-inline bool SMTransitionEntry::isExternal() const
+inline bool SMTransitionEntry::hasTarget() const
 {
     return (mToId != 0);
+}
+
+inline bool SMTransitionEntry::isExternal() const
+{
+    return (mKind == eTransitionKind::External);
+}
+
+inline bool SMTransitionEntry::isInternal() const
+{
+    return (mKind == eTransitionKind::Internal);
+}
+
+inline bool SMTransitionEntry::isInitial() const
+{
+    return (mKind == eTransitionKind::Initial);
 }
 
 inline const QString& SMTransitionEntry::getPendingTargetName() const

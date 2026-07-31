@@ -82,6 +82,7 @@ namespace
     using eSource = SMArgumentEntry::eValueSource;
     using eMethod = SMMethodEntry::eMethodType;
     using eOp     = SMConditionEntry::eOperator;
+    using eTrans  = SMTransitionEntry::eTransitionKind;
 
     int countRule(const QList<SMIssue>& issues, int rule)
     {
@@ -139,7 +140,7 @@ namespace
         SMStateEntry* work = doc.getStates().createState(name, eKind::Normal);
         if ((start != nullptr) && (work != nullptr))
         {
-            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
         }
 
         return work;
@@ -422,7 +423,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             doc.getMethods().createMethod("Warmup", eMethod::Action);
             start->getEntryList().addOperation(new SMActionCall(0, "Warmup"));
 
@@ -437,7 +438,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             doc.getMethods().createMethod("Cooldown", eMethod::Action);
             doc.getMethods().createMethod("Poll", eMethod::Action);
             start->getExitList().addOperation(new SMActionCall(0, "Cooldown"));
@@ -448,7 +449,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             doc.getMethods().createMethod("go", eMethod::Trigger);
             work->getTransitions().createTransition(eStim::Trigger, "go", start->getId());
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
@@ -457,7 +458,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), start->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), start->getId(), eTrans::Initial);
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(hasRule(issues, rule));
             bool saysNeverInitialises = false;
@@ -471,35 +472,26 @@ namespace
             doc.getStates().createState("Work", eKind::Normal);
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
         }
-        {   // Rule 3: an INTERNAL transition initialises nothing, so it is not an outgoing one.
+        {   // Rule 3: a transition that names no target initialises nothing, so it is not an
+            // outgoing one -- the level still never begins. The missing target itself is rule 28's.
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), 0u);
-            CHECK(countRule(SMValidator::validate(doc), rule) == 1);
-        }
-        {   // Rule 4: an initial transition carrying a stimulus.
-            StateMachineData doc;
-            SMStateEntry* start = addStart(doc);
-            SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
-            start->getTransitions().createTransition(eStim::Trigger, "go", work->getId());
-
+            start->getTransitions().createTransition(eStim::Trigger, QString(), 0u, eTrans::Initial);
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(countRule(issues, rule) == 1);
-            // ...and it is NOT also reported as an unresolved reference: one fault, one finding.
-            CHECK(countRule(issues, 6) == 0);
+            CHECK(countRule(issues, SMValidator::RULE_TRANSITION_KIND) == 1);
         }
         {   // Rule 5: two initial transitions where one carries no condition.
             StateMachineData doc;
             addStart(doc);
             SMStateData* level = nullptr;
             SMStateEntry* start = nestedLevel(doc, level);
-            SMTransitionEntry* first  = start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Left")->getId());
-            start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Right")->getId());
+            SMTransitionEntry* first  = start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Left")->getId(), eTrans::Initial);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Right")->getId(), eTrans::Initial);
             guardIt(doc, *first, QStringLiteral("IsLeft"));
             // Wire the root Start too, so the nested level is the only thing judged.
-            doc.getStates().getStartState()->getTransitions().createTransition(eStim::Trigger, QString(), doc.findState("Comp")->getId());
+            doc.getStates().getStartState()->getTransitions().createTransition(eStim::Trigger, QString(), doc.findState("Comp")->getId(), eTrans::Initial);
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
         }
         {   // Rule 5, negative: two initial transitions, both guarded, is the legal shape. Rule 6
@@ -509,19 +501,19 @@ namespace
             addStart(doc);
             SMStateData* level = nullptr;
             SMStateEntry* start = nestedLevel(doc, level);
-            SMTransitionEntry* first  = start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Left")->getId());
-            SMTransitionEntry* second = start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Right")->getId());
+            SMTransitionEntry* first  = start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Left")->getId(), eTrans::Initial);
+            SMTransitionEntry* second = start->getTransitions().createTransition(eStim::Trigger, QString(), level->findState("Right")->getId(), eTrans::Initial);
             guardIt(doc, *first, QStringLiteral("IsLeft"));
             guardIt(doc, *second, QStringLiteral("IsRight"));
             // The root Start still has nowhere to go; wire it so only the nested level is judged.
-            doc.getStates().getStartState()->getTransitions().createTransition(eStim::Trigger, QString(), doc.findState("Comp")->getId());
+            doc.getStates().getStartState()->getTransitions().createTransition(eStim::Trigger, QString(), doc.findState("Comp")->getId(), eTrans::Initial);
             CHECK(countRule(SMValidator::validate(doc), rule) == 0);
         }
         {   // Rule 7: at the ROOT there is no parent to remain in, so a condition is refused.
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            SMTransitionEntry* only = start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId());
+            SMTransitionEntry* only = start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             guardIt(doc, *only, QStringLiteral("IsReady"));
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
         }
@@ -530,8 +522,8 @@ namespace
             SMStateEntry* start = addStart(doc);
             SMStateEntry* left  = doc.getStates().createState("Left", eKind::Normal);
             SMStateEntry* right = doc.getStates().createState("Right", eKind::Normal);
-            SMTransitionEntry* first  = start->getTransitions().createTransition(eStim::Trigger, QString(), left->getId());
-            SMTransitionEntry* second = start->getTransitions().createTransition(eStim::Trigger, QString(), right->getId());
+            SMTransitionEntry* first  = start->getTransitions().createTransition(eStim::Trigger, QString(), left->getId(), eTrans::Initial);
+            SMTransitionEntry* second = start->getTransitions().createTransition(eStim::Trigger, QString(), right->getId(), eTrans::Initial);
             guardIt(doc, *first, QStringLiteral("IsLeft"));
             guardIt(doc, *second, QStringLiteral("IsRight"));
             // One "not exactly one" on the state, one "no meaning" per conditional transition.
@@ -541,7 +533,121 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
+            CHECK(countRule(SMValidator::validate(doc), rule) == 0);
+        }
+    }
+
+    //!< L2 rule 28: `Kind` says what a transition is, so `To` and `Stimulus` mean only what they
+    //!< say. Each case is one document with one fault, and each names the element it is on.
+    void testTransitionKindRules()
+    {
+        std::printf("- L2: the transition Kind contract (rule 28)\n");
+        const int rule = SMValidator::RULE_TRANSITION_KIND;
+
+        {   // An External transition with no target: the unfinished edge that used to be
+            // byte-identical to a deliberate internal transition, and so meant something.
+            StateMachineData doc;
+            SMStateEntry* work = addWorkingState(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            work->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::External);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, rule) == 1);
+            bool named = false;
+            for (const SMIssue& i : issues)
+                named = named || ((i.rule == rule) && i.message.contains(QStringLiteral("'Work'")));
+            CHECK(named);
+            // ...and it is NOT reported as an empty internal transition: it is not internal.
+            CHECK(countWarn(issues, 7) == 0);
+        }
+        {   // The same shape as an Internal transition is the negative case: no target is correct.
+            StateMachineData doc;
+            SMStateEntry* work = addWorkingState(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("act", eMethod::Action);
+            SMTransitionEntry* tr = work->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
+            tr->getOperations().addOperation(new SMActionCall(0, "act"));
+            CHECK(countRule(SMValidator::validate(doc), rule) == 0);
+        }
+        {   // An Internal transition that still names a target -- only a hand-edited document can
+            //  say this, and it has to be told rather than silently repaired on load.
+            StateMachineData doc;
+            SMStateEntry* work = addWorkingState(doc);
+            SMStateEntry* other = doc.getStates().createState("Other", eKind::Normal);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            SMTransitionEntry* tr = work->getTransitions().createTransition(eStim::Trigger, "go", other->getId());
+            tr->setToId(other->getId());
+            // setKind(Internal) drops the target on purpose, so the fault is built by hand.
+            tr->setKind(eTrans::Internal);
+            tr->setToId(other->getId());
+            CHECK(countRule(SMValidator::validate(doc), rule) == 1);
+        }
+        {   // An Initial transition on a state that is not a Start.
+            StateMachineData doc;
+            SMStateEntry* work = addWorkingState(doc);
+            SMStateEntry* other = doc.getStates().createState("Other", eKind::Normal);
+            work->getTransitions().createTransition(eStim::Trigger, QString(), other->getId(), eTrans::Initial);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, rule) == 1);
+            bool named = false;
+            for (const SMIssue& i : issues)
+                named = named || ((i.rule == rule) && i.message.contains(QStringLiteral("'Work'")));
+            CHECK(named);
+        }
+        {   // A Start carrying an External transition, and one carrying an Internal transition:
+            // everything a Start owns is the level's initial transition.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
+            SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            start->getTransitions().createTransition(eStim::Trigger, "go", work->getId(), eTrans::External);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, rule) == 1);
+            bool named = false;
+            for (const SMIssue& i : issues)
+                named = named || ((i.rule == rule) && i.message.contains(QStringLiteral("'Begin'")));
+            CHECK(named);
+            // The level does initialise -- the transition has a target -- so rule 27 stays quiet
+            // and one mistake is one finding.
+            CHECK(countRule(issues, SMValidator::RULE_PSEUDO_START) == 0);
+        }
+        {
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
+            start->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
+            CHECK(countRule(SMValidator::validate(doc), rule) == 1);
+        }
+        {   // An Initial transition naming a stimulus: nothing fires it, so there is none to name.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
+            SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            SMTransitionEntry* tr = start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
+            tr->setStimulus(QStringLiteral("go"));      // setKind(Initial) clears it; forced back
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, rule) == 1);
+            // ...and never a second time as an unresolved reference.
+            CHECK(countRule(issues, 6) == 0);
+        }
+        {   // Negative: the three kinds in their correct shapes, in one document, are clean.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
+            SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
+            SMStateEntry* done  = doc.getStates().createState("Done", eKind::Normal);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("poke", eMethod::Trigger);
+            doc.getMethods().createMethod("act", eMethod::Action);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
+            work->getTransitions().createTransition(eStim::Trigger, "go", done->getId(), eTrans::External);
+            SMTransitionEntry* internalTx = work->getTransitions().createTransition(eStim::Trigger, "poke", 0u, eTrans::Internal);
+            internalTx->getOperations().addOperation(new SMActionCall(0, "act"));
             CHECK(countRule(SMValidator::validate(doc), rule) == 0);
         }
     }
@@ -587,17 +693,20 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Next", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Next"));
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Next"), eTrans::Initial);
             CHECK(countRule(SMValidator::validate(doc), 6) == 0);
         }
-        {   // The same empty Stimulus on an ordinary state names a stimulus no registry declares.
+        {   // The same empty Stimulus on an ordinary state is a transition nobody finished writing.
+            // Rule 28 says that in those words; it used to arrive as "Trigger '' is not declared".
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* mid = doc.getStates().createState("Mid", eKind::Normal);
             doc.getStates().createState("End", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Mid"));
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Mid"), eTrans::Initial);
             mid->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "End"));
-            CHECK(hasRule(SMValidator::validate(doc), 6));
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(hasRule(issues, SMValidator::RULE_TRANSITION_KIND));
+            CHECK(countRule(issues, 6) == 0);
         }
         {   // Positive: OnFinal names an event with a parameter that has no default. The hook is a
             // bare attribute with no ArgumentList anywhere, so nothing can ever supply that value.
@@ -657,7 +766,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addWorkingState(doc);
             doc.getTimers().createTimer("tick");
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Timer, "tick");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Timer, "tick", 0u, eTrans::Internal);
             mappedCall(doc, tr->getOperations(), "amount");
             CHECK(hasRule(SMValidator::validate(doc), 12));
         }
@@ -665,7 +774,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addWorkingState(doc);
             doc.getMethods().createMethod("onTick", eMethod::Trigger);  // no parameters.
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "onTick");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "onTick", 0u, eTrans::Internal);
             mappedCall(doc, tr->getOperations(), "amount");
             CHECK(hasRule(SMValidator::validate(doc), 12));
         }
@@ -673,7 +782,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addWorkingState(doc);
             doc.getMethods().createMethod("onTick", eMethod::Trigger)->addParam("amount");
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "onTick");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "onTick", 0u, eTrans::Internal);
             mappedCall(doc, tr->getOperations(), "amount");
             CHECK(countRule(SMValidator::validate(doc), 12) == 0);
         }
@@ -774,7 +883,7 @@ namespace
     {
         if (doc.getMethods().findMethod("go") == nullptr)
             doc.getMethods().createMethod("go", eMethod::Trigger);
-        return owner->getTransitions().createTransition(eStim::Trigger, "go");
+        return owner->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
     }
 
     void testConditionLhsOnly()
@@ -980,7 +1089,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("label")->setType("String");
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("label");
             row->setOperator(eOp::Greater);
@@ -993,7 +1102,7 @@ namespace
             doc.getDataTypes().addStructure("Rec");
             doc.getAttributes().createAttribute("r")->setType("Rec");
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("r");
             row->setOperator(eOp::Equal);
@@ -1005,7 +1114,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("n")->setType("uint16");
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("n");
             row->setOperator(eOp::Greater);
@@ -1051,7 +1160,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("cnt")->setType("uint16");
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("cnt");    // no operator: boolean test.
             CHECK(hasRule(SMValidator::validate(doc), 16));
@@ -1061,7 +1170,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("flag")->setType("bool");
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("flag");
             CHECK(countRule(SMValidator::validate(doc), 16) == 0);
@@ -1216,14 +1325,14 @@ namespace
             s->getEntryList().addOperation(new SMEventSend(0, "ping"));
             CHECK(hasWarn(SMValidator::validate(doc), 5));
 
-            s->getTransitions().createTransition(eStim::Event, "ping");
+            s->getTransitions().createTransition(eStim::Event, "ping", 0u, eTrans::Internal);
             CHECK(countWarn(SMValidator::validate(doc), 5) == 0);
         }
         {   // W6: a timer reacted to but never started; negative once a TimerStart appears.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getTimers().createTimer("tick");
-            s->getTransitions().createTransition(eStim::Timer, "tick");
+            s->getTransitions().createTransition(eStim::Timer, "tick", 0u, eTrans::Internal);
             CHECK(hasWarn(SMValidator::validate(doc), 6));
 
             s->getEntryList().addOperation(new SMTimerStart(0, "tick"));
@@ -1233,7 +1342,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getTimers().createTimer("tick");
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Timer, "tick");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Timer, "tick", 0u, eTrans::Internal);
             CHECK(hasWarn(SMValidator::validate(doc), 7));
 
             doc.getMethods().createMethod("act", eMethod::Action);
@@ -1254,7 +1363,7 @@ namespace
 
             doc.getAttributes().createAttribute("r")->setType("int32");
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("r");
             row->setOperator(eOp::Greater);
@@ -1271,7 +1380,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Value); row->setLhs("1");
             row->setOperator(eOp::Equal);
@@ -1366,7 +1475,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
-            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Work"));
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Work"), eTrans::Initial);
             CHECK(hasRule(SMValidator::validate(doc), 6) == false);
         }
         {   // Positive: an ordinary state still has to name a declared stimulus.
@@ -1434,7 +1543,7 @@ namespace
         SMActionCall* call = new SMActionCall(0, "Walk");
         work->getEntryList().addOperation(call);
         const uint32_t stateId = work->getId();
-        start->getTransitions().createTransition(eStim::Trigger, QString(), stateId);
+        start->getTransitions().createTransition(eStim::Trigger, QString(), stateId, eTrans::Initial);
 
         // The document run reports the unmapped formal WITH a message -- before unification the
         // canvas knew about this fault and the results list could not say what it was.
@@ -1504,7 +1613,7 @@ namespace
         SMStateEntry* start  = doc.getStates().getStartState();
         if ((start != nullptr) && (target != nullptr))
         {
-            start->getTransitions().createTransition(eStim::Trigger, QString(), target->getId());
+            start->getTransitions().createTransition(eStim::Trigger, QString(), target->getId(), eTrans::Initial);
         }
 
         return target;
@@ -1570,6 +1679,8 @@ namespace
             , { "UnresolvedImport.fsml" , {19}        , "deliberate: the import file does not exist" }
             , { "TurnCycle.fsml"        , {}          , "the imported machine: must be clean" }
             , { "LegacyImports.fsml"    , {}          , "1.0.0 migration path" }
+            , { "LegacyStart.fsml"      , {}          , "the merged Kind=\"Start\": converts on load, then clean" }
+            , { "LegacyKind.fsml"       , {}          , "no Transition Kind: the read shim recovers all three" }
             , { "ThreadingMismatch.fsml", {26}        , "deliberate: Shared host, Local import" }
         };
 
@@ -2033,6 +2144,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testReferences();
     testFinalStart();
     testPseudoStartRules();
+    testTransitionKindRules();
     testArguments();
     testParamScope();
     testComposite();

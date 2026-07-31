@@ -144,9 +144,24 @@ namespace
             SMStateEntry* pseudo = new SMStateEntry(doc.getNextId(), uniqueStartName(doc), SMStateEntry::eStateKind::Start, &level);
             state->setKind(SMStateEntry::eStateKind::Normal);
 
+            // The demoted state is a real state now, so nothing it owns is an initial transition
+            // any more. Only a document that mixed the two spellings -- an operation-carrying Start
+            // whose transitions had no stimulus -- reaches this, and leaving them Initial would put
+            // an initial transition on a Normal state, an error the author never wrote.
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if ((transition != nullptr) && transition->isInitial())
+                {
+                    transition->setKind(transition->hasTarget()
+                                        ? SMTransitionEntry::eTransitionKind::External
+                                        : SMTransitionEntry::eTransitionKind::Internal);
+                }
+            }
+
             // One initial transition, no stimulus and no guard: the old state was where the level
             // began unconditionally, and that is what the pseudo-state now says.
-            pseudo->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), state->getId());
+            pseudo->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString()
+                                                     , state->getId(), SMTransitionEntry::eTransitionKind::Initial);
 
             // In front of its target, so document order still opens with the level's entry point.
             const int at = level.findIndex(state->getId());

@@ -264,7 +264,7 @@ namespace
         SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
         CHECK(begin != nullptr);
         CHECK(root != nullptr);
-        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
 
         SMInlineCode* inline1 = new SMInlineCode();
         inline1->setBody(body);
@@ -348,7 +348,7 @@ namespace
         SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
         CHECK(begin != nullptr);
         CHECK(root != nullptr);
-        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
         SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
         CHECK(trans != nullptr);
 
@@ -442,7 +442,7 @@ namespace
         SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
         CHECK(begin != nullptr);
         CHECK(root != nullptr);
-        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
         SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
         CHECK(trans != nullptr);
 
@@ -975,7 +975,7 @@ namespace
         SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
         CHECK(begin != nullptr);
         CHECK(root != nullptr);
-        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId());
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
         SMInlineCode* work = new SMInlineCode();
         work->setBody("tick();");
         root->getDoList().addOperation(work);
@@ -1235,6 +1235,107 @@ namespace
         CHECK(again.writeToFile(twicePath));
         CHECK(readAllBytes(twicePath) == written);
     }
+
+    void testTransitionKind()
+    {
+        std::printf("[L2] the transition Kind round-trips, and a document without it converts\n");
+
+        // 1. Each of the three kinds survives a save and a load, in a document built in memory.
+        {
+            StateMachineData doc;
+            SMStateEntry* start = doc.getStates().createState(QStringLiteral("Start"), SMStateEntry::eStateKind::Start);
+            SMStateEntry* idle  = doc.getStates().createState(QStringLiteral("Idle"), SMStateEntry::eStateKind::Normal);
+            SMStateEntry* work  = doc.getStates().createState(QStringLiteral("Work"), SMStateEntry::eStateKind::Normal);
+            doc.getMethods().createMethod(QStringLiteral("Begin"), SMMethodEntry::eMethodType::Trigger);
+            doc.getMethods().createMethod(QStringLiteral("Poke"), SMMethodEntry::eMethodType::Trigger);
+
+            const uint32_t initialId = start->getTransitions().createTransition(
+                    SMTransitionEntry::eStimulusKind::Trigger, QString(), idle->getId()
+                    , SMTransitionEntry::eTransitionKind::Initial)->getId();
+            const uint32_t externalId = idle->getTransitions().createTransition(
+                    SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("Begin"), work->getId()
+                    , SMTransitionEntry::eTransitionKind::External)->getId();
+            const uint32_t internalId = work->getTransitions().createTransition(
+                    SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("Poke"), 0u
+                    , SMTransitionEntry::eTransitionKind::Internal)->getId();
+
+            const QString outPath = outFile("l2_kinds.fsml");
+            CHECK(doc.writeToFile(outPath));
+            const QByteArray written = readAllBytes(outPath);
+            // Written explicitly, at the default too: it is what keeps an unconnected external
+            // edge and an internal transition from being the same bytes again.
+            CHECK(written.contains("Kind=\"Initial\" To="));
+            CHECK(written.contains("Kind=\"External\" StimulusKind=\"Trigger\" Stimulus=\"Begin\" To="));
+            CHECK(written.contains("Kind=\"Internal\" StimulusKind=\"Trigger\" Stimulus=\"Poke\""));
+            // The initial transition carries no stimulus attributes at all -- the two placeholders
+            // the format used to demand of it are gone.
+            CHECK(written.contains("Kind=\"Initial\" StimulusKind") == false);
+
+            StateMachineData back;
+            CHECK(back.readFromFile(outPath));
+            CHECK(back.findTransitionById(initialId) != nullptr);
+            CHECK((back.findTransitionById(initialId) != nullptr) && back.findTransitionById(initialId)->isInitial());
+            CHECK((back.findTransitionById(initialId) != nullptr) && back.findTransitionById(initialId)->hasTarget());
+            CHECK((back.findTransitionById(initialId) != nullptr) && back.findTransitionById(initialId)->getStimulus().isEmpty());
+            CHECK((back.findTransitionById(externalId) != nullptr) && back.findTransitionById(externalId)->isExternal());
+            CHECK((back.findTransitionById(externalId) != nullptr) && back.findTransitionById(externalId)->hasTarget());
+            CHECK((back.findTransitionById(internalId) != nullptr) && back.findTransitionById(internalId)->isInternal());
+            CHECK((back.findTransitionById(internalId) != nullptr) && (back.findTransitionById(internalId)->hasTarget() == false));
+            CHECK((back.findTransitionById(internalId) != nullptr) && (back.findTransitionById(internalId)->getStimulus() == QStringLiteral("Poke")));
+
+            // An UNCONNECTED external transition survives as one. Before Kind this was the whole
+            // problem: saved and reloaded, it came back as an internal transition -- a half-drawn
+            // edge silently turned into behaviour.
+            SMTransitionEntry* dangling = work->getTransitions().createTransition(
+                    SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("Begin"), 0u
+                    , SMTransitionEntry::eTransitionKind::External);
+            const uint32_t danglingId = dangling->getId();
+            const QString danglingPath = outFile("l2_dangling.fsml");
+            CHECK(doc.writeToFile(danglingPath));
+
+            StateMachineData reread;
+            CHECK(reread.readFromFile(danglingPath));
+            CHECK((reread.findTransitionById(danglingId) != nullptr) && reread.findTransitionById(danglingId)->isExternal());
+            CHECK((reread.findTransitionById(danglingId) != nullptr) && (reread.findTransitionById(danglingId)->hasTarget() == false));
+        }
+
+        // 2. A document written before the attribute existed converts on load: the meaning is
+        //    recovered from the absences that used to carry it, and the next save states it.
+        {
+            StateMachineData doc;
+            CHECK(doc.readFromFile(dataFile("LegacyKind.fsml")));
+            CHECK(doc.openSucceeded());
+
+            const SMTransitionEntry* initial  = doc.findTransitionById(23u);
+            const SMTransitionEntry* external = doc.findTransitionById(22u);
+            const SMTransitionEntry* internal = doc.findTransitionById(25u);
+            CHECK(initial != nullptr);
+            CHECK(external != nullptr);
+            CHECK(internal != nullptr);
+            // Owned by a Kind="Start" and naming no stimulus -> Initial, placeholders dropped.
+            CHECK((initial != nullptr) && initial->isInitial());
+            CHECK((initial != nullptr) && initial->getStimulus().isEmpty());
+            CHECK((initial != nullptr) && (initial->getToId() == 21u));
+            // A To -> External. No To -> Internal.
+            CHECK((external != nullptr) && external->isExternal());
+            CHECK((internal != nullptr) && internal->isInternal());
+            CHECK((internal != nullptr) && (internal->getOperations().getOperations().size() == 1));
+
+            const QString outPath = outFile("l2_legacykind.fsml");
+            CHECK(doc.writeToFile(outPath));
+            const QByteArray written = readAllBytes(outPath);
+            CHECK(written.contains("<Transition ID=\"23\" Kind=\"Initial\" To=\"21\"/>"));
+            CHECK(written.contains("Stimulus=\"\"") == false);
+
+            // One-way, not per-save churn: reloading the corrected form and saving it again is
+            // byte-identical.
+            StateMachineData again;
+            CHECK(again.readFromFile(outPath));
+            const QString twicePath = outFile("l2_legacykind_twice.fsml");
+            CHECK(again.writeToFile(twicePath));
+            CHECK(readAllBytes(twicePath) == written);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1265,6 +1366,7 @@ int main(int /*argc*/, char** /*argv*/)
     testEphemeralSubmachine();
     testHistoryModes();
     testLegacyMergedStart();
+    testTransitionKind();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;
