@@ -717,7 +717,7 @@ namespace
             { "To=\"43\"",                      "To=\"9999\""                    },  // target that does not exist
             { "To=\"60\"",                      "To=\"\""                        },  // empty target
             { "StimulusKind=\"Trigger\"",       "StimulusKind=\"Rumor\""         },  // unknown stimulus kind
-            { "Stimulus=\"PowerOn\"",           "Stimulus=\"NeverDeclared\""     },  // undeclared stimulus
+            { "Stimulus=\"power_on\"",          "Stimulus=\"NeverDeclared\""     },  // undeclared stimulus
             { "Kind=\"Start\"",                 "Kind=\"Pseudo\""                },  // unknown state kind
             { "History=\"Shallow\"",            "History=\"Sideways\""           },  // unknown history mode
             { "Source=\"Constant\"",            "Source=\"Telepathy\""           },  // unknown value source
@@ -1185,7 +1185,7 @@ namespace
         CHECK((idle != nullptr) && (idle->getEntryList().getOperations().size() == 2));
         CHECK((idle != nullptr) && (idle->getExitList().getOperations().size() == 1));
         CHECK((idle != nullptr) && (idle->getTransitions().getElementCount() == 1));
-        CHECK((idle != nullptr) && (idle->getTransitions().getElements().at(0)->getStimulus() == QStringLiteral("Begin")));
+        CHECK((idle != nullptr) && (idle->getTransitions().getElements().at(0)->getStimulus() == QStringLiteral("begin")));
 
         // (a) a pseudo-state was inserted at that level, (c) wired by ONE unguarded initial
         // transition that names no stimulus, and it sits in front of its target in document order.

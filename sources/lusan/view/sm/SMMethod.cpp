@@ -681,7 +681,7 @@ void SMMethod::updateMoveButtons(int row, int rowCount)
 
 QString SMMethod::genMethodName()
 {
-    static const QString _defName("NewMethod");
+    static const QString _defName("new_method");
     QString name;
     do
     {

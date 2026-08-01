@@ -651,6 +651,117 @@ namespace
             CHECK(countRule(SMValidator::validate(doc), rule) == 0);
         }
     }
+
+    //!< The four reachability rules of L8. Rules 3 and 4 (a Start that targets itself, a Start
+    //!< nothing leaves) are rule 27's and were implemented with the pseudo-state; they are
+    //!< re-checked here under their L8 numbering so a change to either is caught by both names.
+    void testReachabilityRules()
+    {
+        std::printf("- L8: reachability (rules 30, W1, 27)\n");
+        const int shadow = SMValidator::RULE_ANCESTOR_SHADOW;
+
+        //!< A composite `Session` holding `Step1`, both reacting to the trigger `poke`. The
+        //!< ancestor's transition is returned so a test can guard it.
+        auto shadowDoc = [](StateMachineData& doc) -> SMTransitionEntry*
+        {
+            SMStateEntry* start   = addStart(doc);
+            SMStateEntry* session = doc.getStates().createState(QStringLiteral("Session"), eKind::Normal);
+            SMStateEntry* other   = doc.getStates().createState(QStringLiteral("Other"), eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), session->getId(), eTrans::Initial);
+            doc.getMethods().createMethod(QStringLiteral("poke"), eMethod::Trigger);
+
+            SMStateData* inner = session->getOrCreateNestedStates();
+            SMStateEntry* innerStart = inner->createState(QStringLiteral("InnerStart"), eKind::Start);
+            SMStateEntry* step1 = inner->createState(QStringLiteral("Step1"), eKind::Normal);
+            SMStateEntry* step2 = inner->createState(QStringLiteral("Step2"), eKind::Normal);
+            innerStart->getTransitions().createTransition(eStim::Trigger, QString(), step1->getId(), eTrans::Initial);
+            step1->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), step2->getId());
+            return session->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
+        };
+
+        {   // Rule 1: the ancestor's candidate carries no guard, so the descendant's is dead code.
+            StateMachineData doc;
+            shadowDoc(doc);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, shadow) == 1);
+            bool named = false;
+            for (const SMIssue& i : issues)
+            {
+                named = named || ((i.rule == shadow)
+                                  && i.message.contains(QStringLiteral("'Step1'"))
+                                  && i.message.contains(QStringLiteral("'Session'")));
+            }
+            CHECK(named);
+            // It is an error, not an advisory: the transition generates and can never run.
+            for (const SMIssue& i : issues)
+                if (i.rule == shadow) CHECK(i.severity == SMIssue::eSeverity::Error);
+        }
+        {   // Rule 1, negative: guarding the ancestor clears it. The descendant then fires whenever
+            // the ancestor's guard is false, which is the normal way to write a fallback.
+            StateMachineData doc;
+            SMTransitionEntry* ancestor = shadowDoc(doc);
+            guardIt(doc, *ancestor, QStringLiteral("IsBusy"));
+            CHECK(countRule(SMValidator::validate(doc), shadow) == 0);
+        }
+        {   // Rule 1, negative: a different stimulus is a different question, guard or no guard.
+            StateMachineData doc;
+            SMTransitionEntry* ancestor = shadowDoc(doc);
+            doc.getMethods().createMethod(QStringLiteral("prod"), eMethod::Trigger);
+            ancestor->setStimulus(QStringLiteral("prod"));
+            CHECK(countRule(SMValidator::validate(doc), shadow) == 0);
+        }
+        {   // Rule 1, negative: a SIBLING reacting to the same stimulus shadows nothing -- the two
+            // are never eligible at the same time. That case is 10.2 warning 3's, same owner only.
+            StateMachineData doc;
+            SMStateEntry* work  = addWorkingState(doc);
+            SMStateEntry* other = doc.getStates().createState(QStringLiteral("Other"), eKind::Normal);
+            doc.getMethods().createMethod(QStringLiteral("poke"), eMethod::Trigger);
+            work->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
+            other->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), work->getId());
+            CHECK(countRule(SMValidator::validate(doc), shadow) == 0);
+        }
+        {   // Rule 2: an unreachable state is a WARNING and one finding, and the document still
+            // saves -- a half-drawn machine is the normal intermediate state of an editor.
+            StateMachineData doc;
+            addWorkingState(doc);
+            doc.getStates().createState(QStringLiteral("Orphan"), eKind::Normal);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countWarn(issues, 1) == 1);
+            CHECK(warnSeverityIs(issues, 1, SMIssue::eSeverity::Warning));
+            bool named = false;
+            for (const SMIssue& i : issues)
+                named = named || ((i.rule == (SMValidator::WARNING_RULE_BASE + 1)) && i.message.contains(QStringLiteral("'Orphan'")));
+            CHECK(named);
+        }
+        {   // Rule 2, negative: the state the level's Start descends into is reached, not orphaned.
+            StateMachineData doc;
+            addWorkingState(doc);
+            CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
+        }
+        {   // Rule 3: a Start whose transition targets the Start itself. Error, under rule 27.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            doc.getStates().createState(QStringLiteral("Work"), eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), start->getId(), eTrans::Initial);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(hasRule(issues, SMValidator::RULE_PSEUDO_START));
+            for (const SMIssue& i : issues)
+                if (i.rule == SMValidator::RULE_PSEUDO_START) CHECK(i.severity == SMIssue::eSeverity::Error);
+        }
+        {   // Rule 4: a Start with no outgoing transition. Error, under rule 27.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState(QStringLiteral("Work"), eKind::Normal);
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, SMValidator::RULE_PSEUDO_START) == 1);
+            for (const SMIssue& i : issues)
+                if (i.rule == SMValidator::RULE_PSEUDO_START) CHECK(i.severity == SMIssue::eSeverity::Error);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1196,6 +1307,114 @@ namespace
             CHECK(countRule(SMValidator::validate(doc), 17) == 0);
         }
     }
+
+    //!< L7 Part 1: a narrowing is a warning, a mismatch stays an error. The two are one rule with
+    //!< two verdicts -- the author may have meant the narrowing and the generator casts it, so an
+    //!< error there would block a document that builds.
+    void testNarrowingIsAWarning()
+    {
+        std::printf("- L7: narrowing warns, mismatch errors (rules 13/17)\n");
+
+        {   // uint32 -> uint16 parameter: one warning, filed under the offset id, no error.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getAttributes().createAttribute("wide")->setType("uint32");
+            SMActionCall* call = new SMActionCall(0, "act");
+            s->getEntryList().addOperation(call);
+            call->addArgument("p", eSource::Attribute, "wide");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countWarn(issues, 13) == 1);
+            CHECK(warnSeverityIs(issues, 13, SMIssue::eSeverity::Warning));
+            CHECK(countRule(issues, 13) == 0);       // the plain id is the error id, and no error fired
+        }
+        {   // The signed ladder narrows the same way the unsigned one does.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("int16");
+            doc.getAttributes().createAttribute("wide")->setType("int32");
+            SMActionCall* call = new SMActionCall(0, "act");
+            s->getEntryList().addOperation(call);
+            call->addArgument("p", eSource::Attribute, "wide");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countWarn(issues, 13) == 1);
+            CHECK(countRule(issues, 13) == 0);
+        }
+        {   // AttributeSet narrows: same split, under its own rule (17 -> 117).
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getAttributes().createAttribute("count")->setType("uint16");
+            doc.getAttributes().createAttribute("total")->setType("uint32");
+            SMAttributeSet* set = new SMAttributeSet(0, "count");
+            s->getEntryList().addOperation(set);
+            set->setSource(eSource::Attribute); set->setValue("total");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countWarn(issues, 17) == 1);
+            CHECK(warnSeverityIs(issues, 17, SMIssue::eSeverity::Warning));
+            CHECK(countRule(issues, 17) == 0);
+        }
+        {   // A mismatch is still an error, and says so in words a narrowing never uses.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getAttributes().createAttribute("count")->setType("uint16");
+            doc.getAttributes().createAttribute("label")->setType("String");
+            SMAttributeSet* set = new SMAttributeSet(0, "count");
+            s->getEntryList().addOperation(set);
+            set->setSource(eSource::Attribute); set->setValue("label");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, 17) == 1);
+            CHECK(countWarn(issues, 17) == 0);
+            bool worded = false;
+            for (const SMIssue& i : issues)
+                worded = worded || ((i.rule == 17) && i.message.contains(QStringLiteral("No conversion")));
+            CHECK(worded);
+        }
+        {   // Matching types raise neither, on either surface.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getAttributes().createAttribute("count")->setType("uint16");
+            SMActionCall* call = new SMActionCall(0, "act");
+            s->getEntryList().addOperation(call);
+            call->addArgument("p", eSource::Attribute, "count");
+            SMAttributeSet* set = new SMAttributeSet(0, "count");
+            s->getEntryList().addOperation(set);
+            set->setSource(eSource::Attribute); set->setValue("count");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, 13) == 0);
+            CHECK(countWarn(issues, 13) == 0);
+            CHECK(countRule(issues, 17) == 0);
+            CHECK(countWarn(issues, 17) == 0);
+        }
+        {   // A narrowing is a finding the user can act on: it names both types and navigates.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getAttributes().createAttribute("wide")->setType("uint32");
+            SMActionCall* call = new SMActionCall(0, "act");
+            s->getEntryList().addOperation(call);
+            call->addArgument("p", eSource::Attribute, "wide");
+
+            bool found = false;
+            for (const SMIssue& i : SMValidator::validate(doc))
+            {
+                if (i.rule != (SMValidator::WARNING_RULE_BASE + 13))
+                    continue;
+                found = true;
+                CHECK(i.message.contains(QStringLiteral("uint32")) && i.message.contains(QStringLiteral("uint16")));
+                CHECK(i.detail.isEmpty() == false);
+                CHECK(i.elementId == call->getId());
+                CHECK(i.kind == eDocElementKind::Operation);
+            }
+
+            CHECK(found);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1627,8 +1846,8 @@ namespace
         doc->getOverview().setVersion(version);
         doc->getOverview().setThreading(threading);
         // A fresh document is a Start with nowhere to go, which is 10.1 rule 27 -- correctly, the
-        // level never initialises. These machines are IMPORTED, and an import that fails its own
-        // validation is rule 19 on the host, so each one gets the real state its Start points at.
+        // level never initialises. A host no longer inherits its import's findings, but these
+        // machines are opened on their own in some of the tests, so each is a real machine.
         finishStart(*doc);
         for (const QPair<QString, QString>& one : imports)
         {
@@ -1673,7 +1892,11 @@ namespace
         const QList<Expect> expected =
         {
               { "TrafficLight.fsml"     , {}          , "the golden machine: must be clean" }
-            , { "FullFeature.fsml"      , {18, 19, 25}, "deliberate: History on a non-composite, an unresolved import, a draft guard" }
+            , { "FullFeature.fsml"      , {18, 19, 25, 30}, "deliberate: History on a non-composite, an unresolved import, a draft guard."
+                                                           " Rule 30 is a REAL fault of the fixture, not a deliberate one: 'Operational' reacts to"
+                                                           " Dispensed unguarded, so 'Dispensing' never reaches the Final state 'Complete' and the"
+                                                           " OnFinal it exists to raise cannot fire. Pinned rather than silently absorbed --"
+                                                           " the fixture is shared with the generator's refusal gate and is corrected there" }
             , { "GuardDemo.fsml"        , {}          , "every guard node kind, all resolved" }
             , { "SubmachineDemo.fsml"   , {}          , "one import hosted twice: the fixture that must GENERATE" }
             , { "UnresolvedImport.fsml" , {19}        , "deliberate: the import file does not exist" }
@@ -1883,6 +2106,31 @@ namespace
             CHECK(countWarn(bothIssues, 13) == 0);
         }
 
+        {   // L7 Part 2: an imported document is validated when it is OPENED, not through its host.
+            // Its Start goes nowhere, which is rule 27 -- a real error, in that document, on an
+            // element only that document contains.
+            {
+                std::unique_ptr<StateMachineData> inner = StateMachineData::createNewDocument(QStringLiteral("Inert"));
+                inner->getOverview().setVersion(QStringLiteral("1.0.0"));
+                CHECK(inner->writeToFile(at("inert.fsml")));
+                SMDocumentCache::getInstance().clear();
+            }
+
+            // Opened directly, the finding is there and names its own element.
+            StateMachineData opened;
+            CHECK(opened.readFromFile(at("inert.fsml")));
+            SMDocumentCache::getInstance().clear();
+            CHECK(hasRule(SMValidator::validate(opened), SMValidator::RULE_PSEUDO_START));
+
+            // Opened as a host, none of it appears: the host reports the relationship only, and
+            // the relationship is sound -- the file is there, it parses, the pin matches.
+            std::unique_ptr<StateMachineData> host = hostMachine(at("inerthost.fsml"), QStringLiteral("Inert"), QStringLiteral("./inert.fsml"), QStringLiteral("1.0.0"), 1);
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> hostIssues = SMValidator::validate(*host);
+            CHECK(countRule(hostIssues, SMValidator::RULE_PSEUDO_START) == 0);
+            CHECK(countRule(hostIssues, 19) == 0);
+        }
+
         {   // An absolute location resolves too, and a picked file is stored relative to the host.
             writeMachine(at("abs.fsml"), QStringLiteral("Abs"), QStringLiteral("1.0.0"));
             std::unique_ptr<StateMachineData> host = hostMachine(at("h5.fsml"), QStringLiteral("Abs"), at("abs.fsml"), QStringLiteral("1.0.0"), 1);
@@ -1907,7 +2155,7 @@ namespace
         for (int i = count; i >= 1; --i)
         {
             std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument(QStringLiteral("Link%1").arg(i));
-            finishStart(*doc);   // every link is an import, so it must pass its own validation
+            finishStart(*doc);   // every link is a real machine, so the depth is the only fault
             if (i < count)
             {
                 IncludeEntry* entry = doc->getIncludes().createInclude(QStringLiteral("./link%1.fsml").arg(i + 1));
@@ -2145,6 +2393,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testFinalStart();
     testPseudoStartRules();
     testTransitionKindRules();
+    testReachabilityRules();
     testArguments();
     testParamScope();
     testComposite();
@@ -2154,6 +2403,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testFindingShape();
     testWideningTable();
     testTypeRules();
+    testNarrowingIsAWarning();
     testWarnings();
     testErrorsDoNotBlock();
     testPseudoStateAndKindNamespace();

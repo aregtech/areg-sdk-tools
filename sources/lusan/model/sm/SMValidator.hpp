@@ -65,6 +65,13 @@ public:
      *          error rule ids stay the plain 10.1 numbers. The two numbering spaces share the
      *          single `SMIssue::rule` field, so the warning offset keeps them from colliding
      *          (warning 2 and error 2 are distinguishable by id, not only by severity).
+     *
+     *          A 10.1 rule whose SEVERITY depends on what it found is offset too, under its own
+     *          10.1 number: a narrowing conversion is rule 13 (17 for an `AttributeSet`) reported
+     *          as a warning, so it arrives as 113 (117). Id 113 therefore has two producers --
+     *          the narrowing, and 10.2 rule 13's threading advisory -- told apart by the element
+     *          each blames. A finding in that position should carry its own `DocIssue::detail`
+     *          rather than rely on a display table keyed by the number alone.
      **/
     static constexpr int WARNING_RULE_BASE { 100 };
 
@@ -89,8 +96,7 @@ public:
      *          (its own transition included), two or more initial transitions where any carries
      *          no condition, and a ROOT Start that does not have exactly one unconditional
      *          transition. One id, because they are one rule -- a Start is not a state -- and
-     *          because the code generator has to file the same faults under the same number
-     *          (`20260731-validation-parity.md`).
+     *          because the code generator has to file the same faults under the same number.
      **/
     static constexpr int RULE_PSEUDO_START { 27 };
 
@@ -104,7 +110,7 @@ public:
      *
      *          One id, because they are one rule -- `Kind` says what the transition is, and `To`
      *          and `Stimulus` then mean only what they say -- and because the code generator has
-     *          to file the same faults under the same number (`20260731-validation-parity.md`).
+     *          to file the same faults under the same number.
      **/
     static constexpr int RULE_TRANSITION_KIND { 28 };
 
@@ -125,6 +131,26 @@ public:
      *          predicate's; only the timer is this rule's business.
      **/
     static constexpr int RULE_DO_ACTIVITY { 29 };
+
+    /**
+     * \brief   The rule a transition that can never fire is filed under: a descendant reacting to a
+     *          stimulus one of its ancestors already reacts to with no guard.
+     *
+     *          A composite's transitions are eligible while the composite or ANY of its descendants
+     *          is active, and a composite's candidate is tried before its children's. The first
+     *          candidate whose guard holds wins, and a candidate with no guard always holds -- so an
+     *          unguarded ancestor candidate on a stimulus makes every descendant candidate on that
+     *          same stimulus dead: it is emitted, it compiles, it never runs.
+     *
+     *          A GUARDED ancestor candidate is not a fault and produces no finding. The descendant's
+     *          then fires whenever the ancestor's guard is false, which is the normal way to write
+     *          "handle this here unless the outer condition applies".
+     *
+     *          The finding blames the descendant's transition -- the one that will never fire -- and
+     *          names the ancestor whose candidate wins, because either end is a valid place to fix
+     *          it: guard the ancestor's, or delete the descendant's.
+     **/
+    static constexpr int RULE_ANCESTOR_SHADOW { 30 };
 
 //////////////////////////////////////////////////////////////////////////
 // Operations

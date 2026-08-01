@@ -180,7 +180,7 @@ namespace
         QList<SMIssue> run();
 
     private:
-        void add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message);
+        void add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message, const QString& detail = QString());
 
         //!< Collects every machine level (root + painted nested) with its owner state ID.
         struct LevelInfo { const SMStateData* level; bool isRoot; uint32_t ownerId; };
@@ -198,6 +198,7 @@ namespace
         void checkRegistryNames();
 
         void validateLevel(const LevelInfo& info);
+        void checkAncestorShadowing(const SMStateData& level, QList<const SMStateEntry*>& ancestors);
         void validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel);
         void validatePseudoStart(const SMStateEntry& state, bool isRootLevel);
         void validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr);
@@ -231,7 +232,7 @@ namespace
         QList<SMIssue>          mIssues;
     };
 
-    void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message)
+    void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message, const QString& detail)
     {
         SMIssue issue;
         issue.elementId = id;
@@ -243,6 +244,7 @@ namespace
         // kind and a warning for another (rule 4) keeps one number and must keep one offset.
         issue.rule      = (sev != eSeverity::Error) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
         issue.message   = message;
+        issue.detail    = detail;
         mIssues.append(issue);
     }
 
@@ -562,6 +564,61 @@ namespace
         {
             if (state != nullptr)
                 validateState(*state, *info.level, info.isRoot);
+        }
+    }
+
+    void Ctx::checkAncestorShadowing(const SMStateData& level, QList<const SMStateEntry*>& ancestors)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+                continue;
+
+            for (const SMTransitionEntry* tr : state->getTransitions().getElements())
+            {
+                // An initial transition reacts to nothing, so nothing can shadow it -- and every one
+                // of them would compare equal on the empty stimulus they all share.
+                if ((tr == nullptr) || tr->isInitial() || tr->getStimulus().isEmpty())
+                    continue;
+
+                // Outermost ancestor first: that is the order the candidates are tried in, so the
+                // first unguarded match is the one that actually wins and the one worth naming.
+                const SMStateEntry* winner = nullptr;
+                for (const SMStateEntry* ancestor : ancestors)
+                {
+                    for (const SMTransitionEntry* other : ancestor->getTransitions().getElements())
+                    {
+                        if ((other == nullptr) || other->isInitial() || other->hasCondition())
+                            continue;
+
+                        if ((other->getStimulusKind() == tr->getStimulusKind()) && (other->getStimulus() == tr->getStimulus()))
+                        {
+                            winner = ancestor;
+                            break;
+                        }
+                    }
+
+                    if (winner != nullptr)
+                        break;
+                }
+
+                if (winner != nullptr)
+                {
+                    add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_ANCESTOR_SHADOW
+                       , vtr("The transition of '%1' on '%2' can never fire: its ancestor '%3' reacts to the same stimulus with no guard")
+                            .arg(state->getName(), tr->getStimulus(), winner->getName())
+                       , vtr("A composite's transition is eligible while any of its descendants is active and is tried before the descendant's own. "
+                             "The first candidate with no guard always wins, so this one is dead code. Guard the transition on '%1', or remove this one.")
+                            .arg(winner->getName()));
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                ancestors.append(state);
+                checkAncestorShadowing(*state->getNestedStates(), ancestors);
+                ancestors.removeLast();
+            }
         }
     }
 
@@ -1188,9 +1245,27 @@ namespace
         if (sourceType.isEmpty())
             return;                                     // unresolved source is rule 6's concern.
 
-        const SMTypeCompat::eRank rank = SMTypeCompat::rank(sourceType, targetType);
-        if ((rank == SMTypeCompat::eRank::Mismatch) || (rank == SMTypeCompat::eRank::Narrows))
-            add(id, kind, eSeverity::Error, mismatchRule, vtr("Type '%1' is not compatible with '%2'").arg(sourceType, targetType));
+        // Two different verdicts, and the difference is what the author can do about it. A
+        // narrowing is legal C++ that the generator writes as `static_cast<Target>(...)`, so the
+        // document still builds and the author may well have meant it -- there is no edit that
+        // makes an intended truncation correct. A mismatch has no conversion to write.
+        switch (SMTypeCompat::rank(sourceType, targetType))
+        {
+        case SMTypeCompat::eRank::Narrows:
+            add(id, kind, eSeverity::Warning, mismatchRule
+              , vtr("Narrowing '%1' to '%2': the value may be truncated").arg(sourceType, targetType)
+              , vtr("A legal but lossy conversion. The generated code casts it explicitly, so this does not block generation -- check that the value cannot exceed the target's range."));
+            break;
+
+        case SMTypeCompat::eRank::Mismatch:
+            add(id, kind, eSeverity::Error, mismatchRule
+              , vtr("No conversion from '%1' to '%2'").arg(sourceType, targetType)
+              , vtr("The two types are unrelated, so there is no cast the generated code could write. Change the source or the declared type."));
+            break;
+
+        default:
+            break;      // Exact, Converts, Unknown: nothing to report.
+        }
     }
 
     void Ctx::checkComparisonTypes(const SMConditionEntry& leaf, const Scope& scope)
@@ -1264,6 +1339,9 @@ namespace
         for (const LevelInfo& info : levels)
             validateLevel(info);
 
+        QList<const SMStateEntry*> ancestors;
+        checkAncestorShadowing(mData.getStates(), ancestors);
+
         checkDuplicateIds();
         checkDuplicateStateNames(levels);
         checkRegistryNames();
@@ -1324,11 +1402,10 @@ namespace
 
     void Ctx::checkImports(const QList<LevelInfo>& levels)
     {
-        // Guards the recursive "the imported document fails its own validation" check. A cycle
-        // is caught below, but a document reached through a chain that does not close is still
-        // reached once per host, so the depth stops the work from multiplying.
-        static thread_local int _depth = 0;
-
+        // What a host validates about an import is the RELATIONSHIP: the alias resolves, the file
+        // is there and readable, the closure does not cycle or run away, the pinned version still
+        // matches, and the two threading modes pair. The imported document's own contents are not
+        // this document's business -- see the note at the end of the loop.
         QSet<QString> brokenAliases;
         for (const IncludeEntry* import : mData.machineImports())
         {
@@ -1424,22 +1501,11 @@ namespace
                     , vtr("Import '%1' is a Shared machine but this machine is Local: the import pays for locking it cannot need").arg(name));
             }
 
-            if (_depth == 0)
-            {
-                ++_depth;
-                const QList<SMIssue> nested = SMValidator::validate(*resolution.document);
-                --_depth;
-                for (const SMIssue& issue : nested)
-                {
-                    if (issue.severity == eSeverity::Error)
-                    {
-                        add(id, eDocElementKind::Import, eSeverity::Error, 19
-                            , vtr("Imported machine '%1' has errors of its own: %2").arg(name, issue.message));
-                        brokenAliases.insert(name);
-                        break;
-                    }
-                }
-            }
+            // And that is every question a host may ask about an import. What is INSIDE the
+            // imported document is validated when the user opens THAT document, where the
+            // finding names an element they can select and fix. Reported here it would name an
+            // element this document does not contain, appear twice once both are open, and be
+            // fixable from neither.
         }
 
         if (brokenAliases.isEmpty())
@@ -1618,8 +1684,18 @@ namespace
                     typesUsed      += until.types;
                 }
 
+                // Unreachable: nothing at this level targets it, and the level's Start does not
+                // descend into it either -- the Start's initial transitions are in `targets` too.
+                // A warning and never an error: a half-drawn machine is the normal intermediate
+                // state of an editor, and the author is the one who knows whether it is finished.
                 if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
-                    add(sid, eDocElementKind::State, eSeverity::Warning, 1, vtr("State '%1' is unreachable (no incoming transition)").arg(st->getName()));
+                {
+                    const SMStateEntry* owner = (info.isRoot ? nullptr : mData.findStateById(info.ownerId));
+                    const QString where = (owner != nullptr ? QLatin1Char('\'') + owner->getName() + QLatin1Char('\'')
+                                                            : vtr("the root level"));
+                    add(sid, eDocElementKind::State, eSeverity::Warning, 1
+                       , vtr("State '%1' on %2 is unreachable: no transition targets it and no Start enters it").arg(st->getName(), where));
+                }
 
                 if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false) && (st->getTransitions().hasElements() == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 2, vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));

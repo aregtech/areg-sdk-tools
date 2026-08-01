@@ -945,9 +945,9 @@ int main(int argc, char* argv[])
     // --- Stimulus assignment over the shared registry ---
     const uint32_t createdTx = lightOff->getTransitions().getElements().last()->getId();
     model.getUndoStack().push(new SMSetStimulusCommand(  data, model.getNotifier(), createdTx
-                                                       , SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("PowerOn")
+                                                       , SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("power_on")
                                                        , QStringLiteral("set stimulus")));
-    CHECK(data.findTransitionById(createdTx)->getStimulus() == QStringLiteral("PowerOn"));
+    CHECK(data.findTransitionById(createdTx)->getStimulus() == QStringLiteral("power_on"));
 
     std::printf("sect: SM-14 arc geometry\n");
     // --- Arc renders from two points + bulge (apex bows off the chord) ---
@@ -2621,13 +2621,13 @@ int main(int argc, char* argv[])
             CHECK((secondHit != 0u) && (secondHit != firstHit));    // cycled to the next match
 
             // A transition stimulus matches its transition.
-            box->setText(QStringLiteral("PowerOn"));
+            box->setText(QStringLiteral("power_on"));
             QApplication::processEvents();
             SMStateEntry* offOwner = d.findState("LightOff");
             uint32_t powerOnId = 0;
             for (const SMTransitionEntry* t : offOwner->getTransitions().getElements())
             {
-                if (t->getStimulus() == QStringLiteral("PowerOn")) { powerOnId = t->getId(); break; }
+                if (t->getStimulus() == QStringLiteral("power_on")) { powerOnId = t->getId(); break; }
             }
             CHECK(powerOnId != 0);
             CHECK(doc.getSelectionModel().getSelection().contains(powerOnId));

@@ -576,6 +576,29 @@ target_link_libraries(lusan_sm_l4_proof PRIVATE
 set_target_properties(lusan_sm_l4_proof PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
+# L8 acceptance: the canvas draws the document's TransitionList and nothing else,
+# and no gesture can draw a transition into a Start. Registered as the ctest entry
+# sm_l8_proof (offscreen QPA); can also be run by hand for the pictures:
+#   lusan_sm_l8_proof <FullFeature.fsml> <output directory>
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_l8_proof
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SML8ProofTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_l8_proof PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_l8_proof PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_l8_proof PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_l8_proof PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
 # SM-27: the responsiveness gate. Generates a large synthetic document and times the
 # interactions spec 9.9 requires to feel immediate. Registered as the ctest entry
 # sm_perf (offscreen QPA); can also be run manually: lusan_sm_perf [output dir].
@@ -816,9 +839,15 @@ add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
 add_test(NAME sm_canvas_tests COMMAND lusan_sm_canvas_tests
          ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/canvas-shots)
 
+# The drawn graph must be the document's graph. FullFeature.fsml is the acceptance document
+# because eight of its eleven transitions carry no persisted route, so the audit lands on the
+# auto-routed case.
+add_test(NAME sm_l8_proof COMMAND lusan_sm_l8_proof
+         ${LUSAN_ROOT}/.claude/FullFeature.fsml ${CMAKE_CURRENT_BINARY_DIR}/l8-shots)
+
 # The responsiveness gate. Its budgets are generous enough for a debug build on a loaded
 # machine, so a failure means a real algorithmic regression, not timing noise.
 add_test(NAME sm_perf COMMAND lusan_sm_perf ${CMAKE_CURRENT_BINARY_DIR}/perf)
 
-set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_perf PROPERTIES
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_perf PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
