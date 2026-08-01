@@ -62,9 +62,58 @@ namespace
     }
 
     /**
+     * \brief   The L3 read-shim: a `DoList` whose stop condition is still the pre-L3 free-text
+     *          `Until` attribute is resolved ONCE, here, into the ID-bound tree every other
+     *          predicate in the format already is. Resolution needs the grammar and the document
+     *          registries, neither of which the data layer knows, which is why the reader keeps
+     *          the bytes and this decides what they mean.
+     *
+     *          `allowRaw` is on: the text was verbatim C++ and may legitimately be something the
+     *          guard grammar has no node for. Whatever resolves becomes real references -- which
+     *          is the point, because a rename then follows them -- and whatever does not becomes
+     *          a single `Raw` node, which is exactly what the whole attribute already was. The
+     *          scope is 0: a `do/` activity ticks on a timer with no stimulus in hand, so no
+     *          parameter is in scope and a parameter name in the old text was never bindable.
+     **/
+    void convertLegacyDoUntil(const StateMachineData& data, SMStateData& level)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            const QString legacy = state->getDoUntilLegacy().trimmed();
+            if ((legacy.isEmpty() == false) && state->getDoUntil().isEmpty())
+            {
+                SMGuard parsed = SMGuardParser::parseToGuard(data, 0u, legacy, true);
+                if (parsed.isOk() == false)
+                {
+                    // Not parseable at all: keep it whole and verbatim rather than as a draft.
+                    // A draft would say "the user is mid-edit"; this text was never edited here.
+                    parsed = SMGuard();
+                    parsed.setTree(SMGuardNode::makeVerbatim(SMGuardNode::eKind::Raw, legacy));
+                }
+
+                state->setDoUntil(parsed);
+            }
+
+            state->clearDoUntilLegacy();
+
+            if (state->hasNestedStates())
+            {
+                convertLegacyDoUntil(data, *state->getNestedStates());
+            }
+        }
+    }
+
+    /**
      * \brief   Refreshes the advisory `name` (R19) on every guard tree in the document just
      *          before a save, so the human-readable names written to `.fsml` reflect the current
      *          declarations even after a rename. The name is never read back -- the id binds.
+     *          A `DoList`'s `<Until>` is a guard tree too, and it gets the same pass for the same
+     *          reason: it is the rename safety the whole L3 change exists to buy.
      **/
     void refreshGuardNames(const StateMachineData& data, SMStateData& level)
     {
@@ -82,6 +131,12 @@ namespace
                 {
                     SMGuardRender::refreshNames(data, transition->getId(), *tree);
                 }
+            }
+
+            SMGuardNode* until = state->getDoUntil().getTree();
+            if (until != nullptr)
+            {
+                SMGuardRender::refreshNames(data, 0u, *until);
             }
 
             if (state->hasNestedStates())
@@ -155,6 +210,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
 
     loaded->setFilePath(documentPath);
     convertLegacyGuards(loaded->getStates());
+    convertLegacyDoUntil(*loaded, loaded->getStates());
     mData = std::move(loaded);
     mOpenSuccess = true;
 

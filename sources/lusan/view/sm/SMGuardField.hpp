@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QTextEdit>
 
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
@@ -82,9 +83,17 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< Points the field at a transition (0 clears it); rebuilds the catalog and the text.
-    void setTransition(uint32_t transitionId);
+    /**
+     * rief   Points the field at the guard it edits -- a transition's `<Guard>` or a state
+     *          `DoList`'s `<Until>` stop condition -- and rebuilds the catalog and the text. An
+     *          invalid ref clears it. A bare transition id converts, so the transition callers
+     *          read exactly as they did.
+     **/
+    void setTarget(const SMGuardRef& target);
 
+    inline const SMGuardRef& target() const;
+
+    //!< The edited transition, or 0 when the field is on something that is not one.
     inline uint32_t transitionId() const;
 
     //!< Opens the completion catalog at the caret (Ctrl+Space).
@@ -383,7 +392,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     StateMachineModel&      mModel;         //!< The document facade.
-    uint32_t                mTransitionId;  //!< The edited transition (0 = none).
+    SMGuardRef              mTarget;        //!< The edited guard (transition guard / Do stop condition).
     QString                 mCommittedText; //!< The last committed text (Esc target).
     bool                    mAllowRaw;      //!< Unresolved fragments become raw nodes.
     bool                    mRebuildPending;//!< Coalesces deferred rebuilds.
@@ -426,9 +435,14 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
+inline const SMGuardRef& SMGuardField::target() const
+{
+    return mTarget;
+}
+
 inline uint32_t SMGuardField::transitionId() const
 {
-    return mTransitionId;
+    return mTarget.getScopeId();
 }
 
 inline bool SMGuardField::hintsEnabled() const

@@ -71,34 +71,33 @@ namespace
     }
 
     //!< Builds an `ok` guard around \p tree with its `<Rendered>` cache filled.
-    SMGuard okGuard(const StateMachineData& data, uint32_t transitionId, SMGuardNode* tree)
+    SMGuard okGuard(const StateMachineData& data, const SMGuardRef& target, SMGuardNode* tree)
     {
         SMGuard guard;
         guard.setTree(tree);
         if (tree != nullptr)
         {
-            guard.setRendered(SMGuardRender::text(data, transitionId, *tree));
+            guard.setRendered(SMGuardRender::text(data, target.getScopeId(), *tree));
         }
 
         return guard;
     }
 
-    //!< A deep copy of a transition's current `ok` tree, or nullptr when it has none.
-    SMGuardNode* cloneCurrentTree(StateMachineData& data, uint32_t transitionId)
+    //!< A deep copy of the addressed guard's current `ok` tree, or nullptr when it has none.
+    SMGuardNode* cloneCurrentTree(StateMachineData& data, const SMGuardRef& target)
     {
-        const SMTransitionEntry* transition = data.findTransitionById(transitionId);
-        if (transition == nullptr)
+        const SMGuard* guard = data.findGuard(target);
+        if (guard == nullptr)
         {
             return nullptr;
         }
 
-        const SMGuard& guard = transition->getGuard();
-        return (guard.isOk() && (guard.getTree() != nullptr)) ? guard.getTree()->clone() : nullptr;
+        return (guard->isOk() && (guard->getTree() != nullptr)) ? guard->getTree()->clone() : nullptr;
     }
 
     //!< Wraps a transformed tree in a set-guard command; deletes \p tree and returns nullptr
     //!< when the transform failed (\p ok is false).
-    SMSetGuardCommand* commandFor(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, SMGuardNode* tree, bool ok, const QString& text)
+    SMSetGuardCommand* commandFor(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, SMGuardNode* tree, bool ok, const QString& text)
     {
         if ((ok == false) || (tree == nullptr))
         {
@@ -106,7 +105,7 @@ namespace
             return nullptr;
         }
 
-        return new SMSetGuardCommand(data, notifier, transitionId, okGuard(data, transitionId, tree), text);
+        return new SMSetGuardCommand(data, notifier, target, okGuard(data, target, tree), text);
     }
 }
 
@@ -115,10 +114,10 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 
 SMSetGuardCommand::SMSetGuardCommand(  StateMachineData& data, DocModelNotifier& notifier
-                                     , uint32_t transitionId, const SMGuard& guard
+                                     , const SMGuardRef& target, const SMGuard& guard
                                      , const QString& text, QUndoCommand* parent)
     : SMCommand (data, notifier, text, parent)
-    , mTransId  (transitionId)
+    , mTarget   (target)
     , mNew      (guard)
     , mOld      ( )
     , mCaptured (false)
@@ -127,24 +126,29 @@ SMSetGuardCommand::SMSetGuardCommand(  StateMachineData& data, DocModelNotifier&
 
 void SMSetGuardCommand::apply(const SMGuard& guard)
 {
-    SMTransitionEntry* transition = data().findTransitionById(mTransId);
-    if (transition == nullptr)
+    SMGuard* slot = data().findGuard(mTarget);
+    if (slot == nullptr)
     {
         return;
     }
 
-    transition->getGuard() = guard;
-    notifier().notifyElementChanged(mTransId, eDocElementKind::Transition);
+    *slot = guard;
+    // The notification names the element the user sees, not the value that changed: a transition
+    // guard changes the transition, a Do stop condition changes the state that owns the activity.
+    notifier().notifyElementChanged(mTarget.getId()
+                                   , (mTarget.getOwner() == SMGuardRef::eOwner::DoActivity)
+                                        ? eDocElementKind::State
+                                        : eDocElementKind::Transition);
 }
 
 void SMSetGuardCommand::redo()
 {
     if (mCaptured == false)
     {
-        SMTransitionEntry* transition = data().findTransitionById(mTransId);
-        if (transition != nullptr)
+        const SMGuard* slot = data().findGuard(mTarget);
+        if (slot != nullptr)
         {
-            mOld = transition->getGuard();
+            mOld = *slot;
         }
         mCaptured = true;
     }
@@ -161,37 +165,37 @@ void SMSetGuardCommand::undo()
 // SMGuardCommands factories
 //////////////////////////////////////////////////////////////////////////
 
-SMSetGuardCommand* SMGuardCommands::setGuard(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const SMGuard& guard, const QString& text)
+SMSetGuardCommand* SMGuardCommands::setGuard(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const SMGuard& guard, const QString& text)
 {
     SMGuard withCache(guard);
     if (withCache.isOk() && (withCache.getTree() != nullptr) && withCache.getRendered().isEmpty())
     {
-        withCache.setRendered(SMGuardRender::text(data, transitionId, *withCache.getTree()));
+        withCache.setRendered(SMGuardRender::text(data, target.getScopeId(), *withCache.getTree()));
     }
 
-    return new SMSetGuardCommand(data, notifier, transitionId, withCache, text);
+    return new SMSetGuardCommand(data, notifier, target, withCache, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::setTree(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, SMGuardNode* tree, const QString& text)
+SMSetGuardCommand* SMGuardCommands::setTree(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, SMGuardNode* tree, const QString& text)
 {
-    return new SMSetGuardCommand(data, notifier, transitionId, okGuard(data, transitionId, tree), text);
+    return new SMSetGuardCommand(data, notifier, target, okGuard(data, target, tree), text);
 }
 
-SMSetGuardCommand* SMGuardCommands::setDraft(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QString& draftText, SMGuardNode* lastGood, const QString& text)
+SMSetGuardCommand* SMGuardCommands::setDraft(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QString& draftText, SMGuardNode* lastGood, const QString& text)
 {
     SMGuard guard;
     guard.setDraft(draftText, lastGood);
-    return new SMSetGuardCommand(data, notifier, transitionId, guard, text);
+    return new SMSetGuardCommand(data, notifier, target, guard, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::clearGuard(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QString& text)
+SMSetGuardCommand* SMGuardCommands::clearGuard(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QString& text)
 {
-    return new SMSetGuardCommand(data, notifier, transitionId, SMGuard(), text);
+    return new SMSetGuardCommand(data, notifier, target, SMGuard(), text);
 }
 
-SMSetGuardCommand* SMGuardCommands::replaceArg(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, int argIndex, SMGuardNode* newArg, const QString& text)
+SMSetGuardCommand* SMGuardCommands::replaceArg(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& callPath, int argIndex, SMGuardNode* newArg, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { delete newArg; return nullptr; }
 
     SMGuardNode* call = nodeAt(root, callPath);
@@ -207,7 +211,7 @@ SMSetGuardCommand* SMGuardCommands::replaceArg(StateMachineData& data, DocModelN
         delete newArg;
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
 namespace
@@ -262,9 +266,9 @@ namespace
     }
 }
 
-SMSetGuardCommand* SMGuardCommands::setArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, SMGuardNode* newArg, const QString& text)
+SMSetGuardCommand* SMGuardCommands::setArgByFormal(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& callPath, uint32_t formalId, SMGuardNode* newArg, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if ((root == nullptr) || (formalId == 0u)) { delete newArg; delete root; return nullptr; }
 
     SMGuardNode* call = nodeAt(root, callPath);
@@ -291,12 +295,12 @@ SMSetGuardCommand* SMGuardCommands::setArgByFormal(StateMachineData& data, DocMo
         delete newArg;
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::clearArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, const QString& text)
+SMSetGuardCommand* SMGuardCommands::clearArgByFormal(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& callPath, uint32_t formalId, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { return nullptr; }
 
     SMGuardNode* call = nodeAt(root, callPath);
@@ -314,12 +318,12 @@ SMSetGuardCommand* SMGuardCommands::clearArgByFormal(StateMachineData& data, Doc
     }
 
     // A no-op (nothing was bound) returns nullptr, so a plain focus-out never grows the stack.
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::flipCombinator(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& path, const QString& text)
+SMSetGuardCommand* SMGuardCommands::flipCombinator(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& path, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { return nullptr; }
 
     SMGuardNode* node = nodeAt(root, path);
@@ -330,12 +334,12 @@ SMSetGuardCommand* SMGuardCommands::flipCombinator(StateMachineData& data, DocMo
         ok = true;
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::setNegated(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& path, bool negate, const QString& text)
+SMSetGuardCommand* SMGuardCommands::setNegated(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& path, bool negate, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { return nullptr; }
 
     SMGuardNode* node = nodeAt(root, path);
@@ -358,12 +362,12 @@ SMSetGuardCommand* SMGuardCommands::setNegated(StateMachineData& data, DocModelN
         }
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::insertClause(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& groupPath, int index, SMGuardNode* clause, const QString& text)
+SMSetGuardCommand* SMGuardCommands::insertClause(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& groupPath, int index, SMGuardNode* clause, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { delete clause; return nullptr; }
 
     SMGuardNode* group = nodeAt(root, groupPath);
@@ -379,12 +383,12 @@ SMSetGuardCommand* SMGuardCommands::insertClause(StateMachineData& data, DocMode
         delete clause;
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::removeClause(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& groupPath, int index, const QString& text)
+SMSetGuardCommand* SMGuardCommands::removeClause(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& groupPath, int index, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { return nullptr; }
 
     SMGuardNode* group = nodeAt(root, groupPath);
@@ -403,12 +407,12 @@ SMSetGuardCommand* SMGuardCommands::removeClause(StateMachineData& data, DocMode
         }
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::reorderClause(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& groupPath, int index1, int index2, const QString& text)
+SMSetGuardCommand* SMGuardCommands::reorderClause(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& groupPath, int index1, int index2, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { return nullptr; }
 
     SMGuardNode* group = nodeAt(root, groupPath);
@@ -421,12 +425,12 @@ SMSetGuardCommand* SMGuardCommands::reorderClause(StateMachineData& data, DocMod
         ok = true;
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::wrapInGroup(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& path, SMGuardNode::eKind groupKind, const QString& text)
+SMSetGuardCommand* SMGuardCommands::wrapInGroup(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& path, SMGuardNode::eKind groupKind, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { return nullptr; }
 
     SMGuardNode* node = nodeAt(root, path);
@@ -438,14 +442,14 @@ SMSetGuardCommand* SMGuardCommands::wrapInGroup(StateMachineData& data, DocModel
         ok = replaceAt(root, path, SMGuardNode::makeGroup(groupKind, kids));
     }
 
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }
 
-SMSetGuardCommand* SMGuardCommands::replaceSubtree(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& path, SMGuardNode* newSubtree, const QString& text)
+SMSetGuardCommand* SMGuardCommands::replaceSubtree(StateMachineData& data, DocModelNotifier& notifier, const SMGuardRef& target, const QList<int>& path, SMGuardNode* newSubtree, const QString& text)
 {
-    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    SMGuardNode* root = cloneCurrentTree(data, target);
     if (root == nullptr) { delete newSubtree; return nullptr; }
 
     const bool ok = replaceAt(root, path, newSubtree);
-    return commandFor(data, notifier, transitionId, root, ok, text);
+    return commandFor(data, notifier, target, root, ok, text);
 }

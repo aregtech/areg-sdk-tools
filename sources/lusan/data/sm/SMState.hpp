@@ -24,6 +24,7 @@
  ************************************************************************/
 #include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 
@@ -65,6 +66,24 @@ public:
         , Shallow   //!< Re-entry activates the last active direct substate.
         , Deep      //!< Re-entry restores the entire last active path to the leaf.
     };
+
+    /**
+     * \brief   The smallest legal `DoList@Interval`. A `Do` activity is a timer loop and
+     *          nothing else, so it must say how often it ticks: `Interval="0"` -- which used to
+     *          mean "run on every handled trigger" -- and an absent `Interval` are both refused
+     *          (\ref SMValidator rule 29). Reacting to one named stimulus without leaving the
+     *          state is what an INTERNAL TRANSITION is for, and it names which stimulus, which
+     *          a `Do` never could.
+     **/
+    static constexpr uint32_t           MIN_DO_INTERVAL     { 1u };
+
+    /**
+     * \brief   The interval a `DoList` created in the editor starts with, so a new activity is
+     *          valid the moment it exists. A document is never given this silently: what it
+     *          says is what is stored, and an interval it does not have stays 0 so validation
+     *          can report it (\ref MIN_DO_INTERVAL).
+     **/
+    static constexpr uint32_t           DEFAULT_DO_INTERVAL { 1000u };
 
     static constexpr const char* const  STR_KIND_START      { "Start"   };
     static constexpr const char* const  STR_KIND_NORMAL     { "Normal"  };
@@ -152,28 +171,52 @@ public:
     inline SMOperationList& getExitList();
 
     /**
-     * \brief   The `do/` activity operations, run repeatedly while the state is active
-     *          (started after entry, cancelled on exit). Empty when the state has none.
+     * \brief   The `do/` activity operations -- a TIMER LOOP and nothing else. The timer starts
+     *          when the state is entered, after its entry operations, and stops when the state
+     *          is exited, before its exit operations; the first tick is one \ref getDoInterval
+     *          AFTER entry, never at entry (work that must happen on arrival belongs in
+     *          \ref getEntryList). On a composite the activity runs for as long as the composite
+     *          is active -- while a descendant is active, and equally while none is. Empty when
+     *          the state has no activity, in which case no timer is generated at all.
      **/
     inline const SMOperationList& getDoList() const;
     inline SMOperationList& getDoList();
 
     /**
-     * \brief   The `do/` repeat interval in milliseconds. 0 means trigger-driven -- the Do
-     *          operations re-run on each trigger handled while the machine stays in the state;
-     *          a positive value means a timer loop firing every that-many milliseconds. The
-     *          runtime semantics are realized by the external code generator, not by Lusan.
+     * \brief   The `do/` tick period in milliseconds; at least \ref MIN_DO_INTERVAL. 0 is what a
+     *          document that omits `Interval` -- or that still carries the removed trigger-driven
+     *          `Interval="0"` -- reads back as, and it is kept exactly as read so validation can
+     *          report it instead of silently inventing a period. The runtime semantics are
+     *          realized by the external code generator, not by Lusan.
      **/
     inline uint32_t getDoInterval() const;
     inline void setDoInterval(uint32_t interval);
 
     /**
-     * \brief   The optional `do/` stop-condition: a free-text expression evaluated by the
-     *          generator; when it holds the repetition stops without leaving the state. Empty
-     *          means the activity runs until the state is exited. Advisory storage only.
+     * \brief   The optional `do/` stop condition: the same resolved, ID-bound guard tree a
+     *          transition guard is, so a rename of an attribute it references re-renders it
+     *          instead of quietly breaking it. It is tested BEFORE each tick and it stops the
+     *          activity for the REST OF THE VISIT -- the timer is stopped and only a fresh entry
+     *          to the state starts it again -- so the operations never run once it holds. Empty
+     *          means the activity runs until the state is exited.
+     *
+     *          An author who wants a resumable activity writes the test inside the operation and
+     *          sets no `Until`; that is why the permanent reading is the one stored -- it can
+     *          express the other, and a re-evaluating `Until` has no way to say "stop for good".
      **/
-    inline const QString& getDoUntil() const;
-    inline void setDoUntil(const QString& until);
+    inline const SMGuard& getDoUntil() const;
+    inline SMGuard& getDoUntil();
+    inline void setDoUntil(const SMGuard& until);
+
+    /**
+     * \brief   The verbatim `DoList@Until` text of a document written before the stop condition
+     *          became a tree, kept exactly as read and NOT resolved here: the data layer does not
+     *          know the guard grammar. \ref StateMachineModel parses it once on load into
+     *          \ref getDoUntil -- a single `Raw` node when it cannot be parsed, which is what the
+     *          free text already was -- and then clears it. Empty in every other case.
+     **/
+    inline const QString& getDoUntilLegacy() const;
+    inline void clearDoUntilLegacy();
 
     inline const SMTransitionData& getTransitions() const;
     inline SMTransitionData& getTransitions();
@@ -238,8 +281,9 @@ private:
     SMOperationList     mEntryList;     //!< Operations executed on entry, in order.
     SMOperationList     mExitList;      //!< Operations executed on exit, in order.
     SMOperationList     mDoList;        //!< Operations repeated while active (the `do/` activity).
-    uint32_t            mDoInterval;    //!< The `do/` repeat interval in ms (0 = trigger-driven).
-    QString             mDoUntil;       //!< The optional `do/` stop-condition expression (advisory).
+    uint32_t            mDoInterval;    //!< The `do/` tick period in ms (0 = the document said none).
+    SMGuard             mDoUntil;       //!< The optional `do/` stop condition (an ID-bound tree).
+    QString             mDoUntilLegacy; //!< The pre-L3 free-text `Until`, awaiting the load shim.
     SMTransitionData    mTransitions;   //!< The outgoing transitions (priority order).
     SMStateData*        mNested;        //!< The painted nested StateList (owned) or nullptr.
 };
@@ -447,14 +491,29 @@ inline void SMStateEntry::setDoInterval(uint32_t interval)
     mDoInterval = interval;
 }
 
-inline const QString& SMStateEntry::getDoUntil() const
+inline const SMGuard& SMStateEntry::getDoUntil() const
 {
     return mDoUntil;
 }
 
-inline void SMStateEntry::setDoUntil(const QString& until)
+inline SMGuard& SMStateEntry::getDoUntil()
+{
+    return mDoUntil;
+}
+
+inline void SMStateEntry::setDoUntil(const SMGuard& until)
 {
     mDoUntil = until;
+}
+
+inline const QString& SMStateEntry::getDoUntilLegacy() const
+{
+    return mDoUntilLegacy;
+}
+
+inline void SMStateEntry::clearDoUntilLegacy()
+{
+    mDoUntilLegacy.clear();
 }
 
 inline const SMTransitionData& SMStateEntry::getTransitions() const

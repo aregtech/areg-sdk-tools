@@ -386,7 +386,7 @@ static void testGatesAndWhereUsed()
     check(SMGuardWhereUsed::useCount(data, handler->getId()) == 1, "one use after guard 1");
 
     const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(data, handler->getId());
-    check((uses.size() == 1) && (uses.at(0).transitionId == trans1), "the use points at transition 1");
+    check((uses.size() == 1) && (uses.at(0).target == SMGuardRef(trans1)), "the use points at transition 1");
     check(uses.at(0).location.contains(QStringLiteral("Idle")), "the location names the state");
 }
 

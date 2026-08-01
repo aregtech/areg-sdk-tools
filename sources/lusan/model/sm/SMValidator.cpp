@@ -631,6 +631,17 @@ namespace
         validateOperations(state.getExitList(), entryScope);
         validateOperations(state.getDoList(), entryScope);
 
+        // Rule 29: a Do activity is a timer loop, so it has to say how often it ticks. An absent
+        // Interval and the removed trigger-driven Interval="0" both read back as 0 and are one
+        // fault -- the activity does not know when to run -- so they are one message.
+        if ((state.getDoList().isEmpty() == false) && (state.getDoInterval() < SMStateEntry::MIN_DO_INTERVAL))
+        {
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_DO_ACTIVITY
+               , vtr("State '%1' has a Do activity with no repeat interval; a Do is a timer loop and Interval must be at least %2 ms. "
+                     "To react to one stimulus without leaving the state, use an internal transition -- it names which stimulus.")
+                    .arg(state.getName()).arg(SMStateEntry::MIN_DO_INTERVAL));
+        }
+
         for (SMTransitionEntry* tr : state.getTransitions().getElements())
         {
             if (tr != nullptr)
@@ -1459,8 +1470,13 @@ namespace
         for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
         {
             SMIssue issue;
-            issue.elementId = finding.transitionId;
-            issue.kind      = eDocElementKind::Transition;
+            issue.elementId = finding.target.getId();
+            // The finding navigates to whatever OWNS the predicate: the transition for a guard,
+            // the state for a Do stop condition. Filing both under Transition would send a
+            // double-click on the second one to a page that does not contain it.
+            issue.kind      = (finding.target.getOwner() == SMGuardRef::eOwner::DoActivity)
+                                    ? eDocElementKind::State
+                                    : eDocElementKind::Transition;
             issue.severity  = finding.severity;
             issue.rule      = SMValidator::RULE_GUARD;
             issue.message   = finding.message;
@@ -1589,6 +1605,18 @@ namespace
                 noteOps(st->getEntryList());
                 noteOps(st->getExitList());
                 noteOps(st->getDoList());
+
+                // A Do stop condition is a use of everything it references, exactly as a guard is:
+                // an attribute read only by an `Until` is read, and reporting it unreferenced was
+                // the whole class of wrongness the reference-counting walk exists to avoid.
+                {
+                    GuardUses until;
+                    collectGuardUses(mData, st->getDoUntil().getTree(), until);
+                    attrsRead      += until.attributes;
+                    constsUsed     += until.constants;
+                    conditionsUsed += until.conditions;
+                    typesUsed      += until.types;
+                }
 
                 if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 1, vtr("State '%1' is unreachable (no incoming transition)").arg(st->getName()));

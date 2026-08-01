@@ -962,13 +962,17 @@ namespace
 {
     void testDoActivity()
     {
-        std::printf("[SM-21-R24] state Do activity: interval + stop-condition round-trip\n");
+        std::printf("[L3] state Do activity: interval + Until TREE round-trip\n");
 
         StateMachineData doc;
         doc.getOverview().setName("DoActivity");
         doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+        SMAttributeEntry* done = doc.getAttributes().createAttribute("IsDone");
+        CHECK(done != nullptr);
 
-        // Root: a timer-loop Do activity -- interval and stop-condition both set.
+        // Root: a timer loop with a stop condition. Since L3 the stop condition is the same
+        // ID-bound tree a transition guard is, so it is written as a `<Until>` CHILD of the
+        // DoList and not as a string attribute -- which is what makes a rename follow it.
         // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
         // and the read shim would rewrite a merged-form one on the next load.
         SMStateEntry* begin = doc.getStates().createState("Begin", SMStateEntry::eStateKind::Start);
@@ -980,15 +984,19 @@ namespace
         work->setBody("tick();");
         root->getDoList().addOperation(work);
         root->setDoInterval(200u);
-        root->setDoUntil("isDone");
+        SMGuard until;
+        until.setTree(SMGuardNode::makeRef(SMGuardNode::eKind::Attr, done->getId()));
+        until.setRendered("IsDone");
+        root->setDoUntil(until);
 
-        // Loop: the trigger-driven variant -- a Do list with interval 0 and no stop-condition must
-        // omit both attributes on the wrapper.
+        // Loop: an activity with no stop condition at all. The interval is still written -- a Do
+        // is a timer loop, and the period is what makes it one.
         SMStateEntry* loop = doc.getStates().createState("Loop", SMStateEntry::eStateKind::Normal);
         CHECK(loop != nullptr);
         SMInlineCode* pump = new SMInlineCode();
         pump->setBody("pump();");
         loop->getDoList().addOperation(pump);
+        loop->setDoInterval(50u);
 
         const QString outPath = outFile("sm21_do.fsml");
         CHECK(doc.writeToFile(outPath));
@@ -996,7 +1004,10 @@ namespace
         const QByteArray written = readAllBytes(outPath);
         CHECK(written.contains("<DoList"));
         CHECK(written.contains("Interval=\"200\""));
-        CHECK(written.contains("Until=\"isDone\""));
+        CHECK(written.contains("Interval=\"50\""));
+        // The tree, not the old free text: an `Until=` attribute must be gone from the format.
+        CHECK(written.contains("<Until state=\"ok\">"));
+        CHECK(written.contains("Until=\"") == false);
 
         StateMachineData reread;
         CHECK(reread.readFromFile(outPath));
@@ -1008,7 +1019,12 @@ namespace
         {
             CHECK(rroot->getDoList().getCount() == 1);
             CHECK(rroot->getDoInterval() == 200u);
-            CHECK(rroot->getDoUntil() == QString("isDone"));
+            CHECK(rroot->getDoUntil().isOk());
+            const SMGuardNode* tree = rroot->getDoUntil().getTree();
+            CHECK(tree != nullptr);
+            CHECK((tree != nullptr) && (tree->getKind() == SMGuardNode::eKind::Attr));
+            CHECK((tree != nullptr) && (tree->getSymbolId() == done->getId()));
+            CHECK(rroot->getDoUntilLegacy().isEmpty());
         }
 
         SMStateEntry* rloop = reread.getStates().findState("Loop");
@@ -1016,7 +1032,7 @@ namespace
         if (rloop != nullptr)
         {
             CHECK(rloop->getDoList().getCount() == 1);
-            CHECK(rloop->getDoInterval() == 0u);
+            CHECK(rloop->getDoInterval() == 50u);
             CHECK(rloop->getDoUntil().isEmpty());
         }
 

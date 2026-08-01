@@ -401,6 +401,39 @@ target_link_libraries(lusan_sm_guard_eval_tests PRIVATE
 set_target_properties(lusan_sm_guard_eval_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
+# L3: the Do activity is a timer loop, and its Until is a guard tree. Headless:
+# the data layer + the guard model (parser/render/symbols, to run the load shim
+# and to render the renamed tree) + the validators that report the two faults.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_l3_proof
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN}/model/sm/SMConditionText.cpp
+    ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
+    ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
+    ${LUSAN}/model/sm/SMDocumentIndex.cpp
+    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN_ROOT}/tests/sm/SML3ProofTests.cpp
+    # Rule 15 literal checks load the predefined type catalog from the resources.
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_l3_proof PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_l3_proof PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_l3_proof PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_l3_proof PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
 # SM-13: design-canvas smoke test. Drives the real SMDesign/SMScene/SMStateItem
 # stack with synthetic mouse/key events on the Qt offscreen platform, so the
 # canvas interactions are verifiable without a display or input injection.

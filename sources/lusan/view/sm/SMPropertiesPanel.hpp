@@ -43,6 +43,8 @@ class QSpinBox;
 class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
+class SMGuardField;
+class SMGuardStatusLine;
 class SMInternalEditor;
 class SMOperationsEditor;
 class QToolButton;
@@ -171,7 +173,6 @@ private slots:
     void onStateOnFinalCommit();
     void onStateDescriptionCommit();
     void onDoIntervalCommit();
-    void onDoUntilCommit();
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
     void onTransKindCommit();
@@ -186,7 +187,8 @@ private:
     void buildStatePage();
 
     /**
-     * rief   Adds the state page's `Internal` tab, which hosts the shared ef SMInternalEditor.
+     * rief   Adds the state page's `Internal` tab, which hosts the shared 
+ef SMInternalEditor.
      *          Enter, Do, Exit and Internal are the four things a state does without leaving
      *          itself, and until now only three of them had a tab -- the fourth was reachable only
      *          by double-clicking a row in a collapsible list on the General tab. The canvas
@@ -276,8 +278,9 @@ private:
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
     SMOperationsEditor* mDoOps;         //!< The Do-activity operations editor (Actions tab).
-    QSpinBox*           mDoInterval;    //!< The Do repeat interval in ms (0 = trigger-driven).
-    QLineEdit*          mDoUntil;       //!< The optional Do stop-condition expression.
+    QSpinBox*           mDoInterval;    //!< The Do tick period in ms (never below MIN_DO_INTERVAL).
+    SMGuardField*       mDoUntil;       //!< The Do stop condition: the SHARED guard editing surface.
+    SMGuardStatusLine*  mDoUntilStatus; //!< That surface's verdict line (the one place it reports).
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
     QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
 

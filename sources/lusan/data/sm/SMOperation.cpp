@@ -893,6 +893,11 @@ void SMOperationList::writeToXml(QXmlStreamWriter& xml, QLatin1StringView wrappe
 
 bool SMOperationList::readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName)
 {
+    return readFromXml(xml, wrapperName, SMOperationList::ForeignElement());
+}
+
+bool SMOperationList::readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName, const SMOperationList::ForeignElement& onForeign)
+{
     if (xml.name() != QLatin1String(wrapperName))
         return false;
 
@@ -909,7 +914,9 @@ bool SMOperationList::readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapp
                 op->readFromXml(xml);
                 mOperations.append(op);
             }
-            else
+            // Not an operation: the owner gets first refusal (this is how `DoList` picks up its
+            // `<Until>`), and whatever it does not claim is skipped exactly as before.
+            else if ((onForeign == nullptr) || (onForeign(xml) == false))
             {
                 xml.skipCurrentElement();
             }

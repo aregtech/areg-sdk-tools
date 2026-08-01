@@ -28,6 +28,8 @@
 #include <QList>
 #include <QString>
 
+#include <functional>
+
 /**
  * \class   SMArgumentEntry
  * \brief   One parameter mapping : binds a declared parameter to a value
@@ -415,11 +417,27 @@ public:
     void writeToXml(QXmlStreamWriter& xml, QLatin1StringView wrapperName) const;
 
     /**
+     * \brief   The child element of an operation-list wrapper that is NOT an operation. It is
+     *          handed the reader positioned on that element's start; returning true means it
+     *          consumed the whole element, false leaves it to be skipped.
+     **/
+    using ForeignElement = std::function<bool(QXmlStreamReader&)>;
+
+    /**
      * \brief   Reads an operation-list wrapper (`EntryList` / `ExitList` /
      *          `OperationList`); the reader must be positioned on \p wrapperName. Each
      *          child operation element is created by kind and appended in document order.
      **/
     bool readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName);
+
+    /**
+     * \brief   The same, offering every child element the operation factory does not
+     *          recognize to \p onForeign first. `DoList` is the one wrapper that carries a
+     *          non-operation child -- its `<Until>` stop condition -- and this is how its
+     *          owner reads it without a second copy of the operation-reading loop, which is
+     *          the thing that would drift.
+     **/
+    bool readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName, const ForeignElement& onForeign);
 
     inline const QList<SMOperationBase*>& getOperations() const;
     inline int getCount() const;

@@ -40,6 +40,7 @@
 #include "lusan/view/sm/SMAccordion.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMOperationsEditor.hpp"
 #include "lusan/view/sm/SMInternalEditor.hpp"
@@ -211,6 +212,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mDoOps        (nullptr)
     , mDoInterval   (nullptr)
     , mDoUntil      (nullptr)
+    , mDoUntilStatus(nullptr)
     , mTransitions  (nullptr)
     , mInternal     (nullptr)
     , mInternalTab  (-1)
@@ -413,27 +415,67 @@ void SMPropertiesPanel::buildStatePage()
     mExitOps  = new SMOperationsEditor(mModel, this);
 
     // The Do repeat policy is its own collapsible `Repeat` section appended to the Do editor's
-    // accordion, under the same expand/collapse toolbar, so the interval and stop-condition sit
+    // accordion, under the same expand/collapse toolbar, so the interval and stop condition sit
     // beside the Action/Event/Timers sections instead of floating in a form above them. The circular
     // repeat glyph (SectionDo) marks it.
     mDoInterval = new QSpinBox(this);
-    mDoInterval->setRange(0, 3600000);
+    // The minimum is 1, not 0: a Do activity is a timer loop, and there is no such thing as a loop
+    // with no period. The value that used to mean "run on every trigger" is simply not offered --
+    // reacting to ONE named stimulus without leaving the state is an internal transition, which the
+    // state page has its own tab for.
+    mDoInterval->setRange(static_cast<int>(SMStateEntry::MIN_DO_INTERVAL), 3600000);
     mDoInterval->setSingleStep(50);
     mDoInterval->setSuffix(tr(" ms"));
-    mDoInterval->setToolTip(tr("Repeat interval; 0 runs the Do actions on each trigger while in the state"));
-    mDoUntil = new QLineEdit(this);
+    mDoInterval->setToolTip(tr("How often the Do operations run while the state is active. "
+                               "The first tick is one interval after entry, never at entry -- "
+                               "work that must happen on arrival belongs in Enter."));
+
+    // The stop condition is the SAME editing surface a transition guard uses, pointed at this
+    // state's activity instead of at a transition. Reusing it is the point of the change: one
+    // grammar, one completer, one set of diagnostics, and -- because the surface commits an
+    // ID-bound tree -- a rename of an attribute it names re-renders it instead of breaking it.
+    mDoUntil = new SMGuardField(mModel, this);
+    // The panel now hosts TWO guard surfaces -- this one and the Conditions tab's -- and both
+    // would otherwise answer to the object name the field gives itself. Naming this pair for what
+    // it edits keeps every by-name lookup (tests, stylesheets, accessibility) unambiguous.
+    mDoUntil->setObjectName(QStringLiteral("smDoUntilField"));
+    mDoUntil->setHeightLines(1, 4);
     mDoUntil->setPlaceholderText(tr("Stop condition (optional)"));
-    mDoUntil->setToolTip(tr("When this expression holds the repetition stops without leaving the state"));
+    mDoUntil->setToolTip(tr("Tested BEFORE each tick. Once it holds, the activity stops for the rest "
+                            "of the visit -- only a fresh entry to the state starts it again."));
+    mDoUntilStatus = new SMGuardStatusLine(this);
+    mDoUntilStatus->setObjectName(QStringLiteral("smDoUntilStatusLine"));
+    // The verdict LABEL inside it carries the name the lookups actually reach for, so it is the
+    // one that has to differ; the line itself is renamed above only so the pair reads as a pair.
+    if (QLabel* verdict = mDoUntilStatus->findChild<QLabel*>(QStringLiteral("smGuardStatus")))
+    {
+        verdict->setObjectName(QStringLiteral("smDoUntilStatus"));
+    }
 
     QWidget* repeatBody = new QWidget(this);
     QFormLayout* repeatForm = new QFormLayout(repeatBody);
     repeatForm->setContentsMargins(6, 6, 6, 6);
     repeatForm->addRow(tr("Repeat every:"), mDoInterval);
     repeatForm->addRow(tr("Until:"), mDoUntil);
+    repeatForm->addRow(QString(), mDoUntilStatus);
     mDoOps->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionDo), tr("Repeat"), repeatBody);
 
     connect(mDoInterval, &QSpinBox::editingFinished, this, &SMPropertiesPanel::onDoIntervalCommit);
-    connect(mDoUntil, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onDoUntilCommit);
+    // The field commits itself (Enter / focus-out) through SMGuardCommands, so there is no
+    // commit slot here -- only the verdict to relay, exactly as the Conditions tab does.
+    connect(mDoUntil, &SMGuardField::statusUpdated, this
+           , [this](int severity, const QString& verdict, const QString& preview, const QStringList& chips)
+    {
+        if (verdict.isEmpty())
+        {
+            mDoUntilStatus->clearStatus();
+        }
+        else
+        {
+            mDoUntilStatus->setStatus(static_cast<NEGuardStyle::eSeverity>(severity), verdict, preview, chips);
+        }
+    });
+    connect(mDoUntil, &SMGuardField::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
 
     mStateTabs = new QTabWidget(this);
     mStateTabs->setObjectName(QStringLiteral("smStateTabs"));
@@ -717,6 +759,14 @@ void SMPropertiesPanel::showEmpty()
         mConditions->setTransition(0u);
     }
 
+    // The Do tab's stop-condition surface is bound to the shown state for the same reason the
+    // Conditions tab is bound to the shown transition, so it is released for the same reason:
+    // its rebuild is deferred, and a deferred rebuild must not outlive the element it reads.
+    if (mDoUntil != nullptr)
+    {
+        mDoUntil->setTarget(SMGuardRef());
+    }
+
     // The Internal tab's editors hold a live pointer into the shown state's transition; drop it with
     // the page, or a deferred rebuild can outlive the document that owns it.
     if (mInternal != nullptr)
@@ -846,8 +896,11 @@ void SMPropertiesPanel::showState(uint32_t stateId)
         }
         slot.editor->bind(stateId, eDocElementKind::State, 0u, mutableState, list);
     }
-    mDoInterval->setValue(static_cast<int>(state->getDoInterval()));
-    mDoUntil->setText(state->getDoUntil());
+    // A document that names no interval reads back as 0, which the spin box cannot show and must
+    // not silently "correct" into a value the file does not contain. It shows the minimum, and the
+    // 0 stays in the model until the user commits -- so the rule 29 error stands until it is fixed.
+    mDoInterval->setValue(static_cast<int>(qMax(state->getDoInterval(), SMStateEntry::MIN_DO_INTERVAL)));
+    mDoUntil->setTarget(SMGuardRef::doActivity(stateId));
     refreshActionSummaries();
     populateTransitionList(stateId);
     mInternal->bind(stateId);
@@ -880,9 +933,13 @@ void SMPropertiesPanel::refreshActionSummaries()
             break;
         case eOpList::Do:
             list = &state->getDoList();
+            // A Do is a timer loop, so its label is its period. An activity with no period is not
+            // a second mode -- it is the rule 29 fault, and the tooltip says so rather than
+            // inventing a name for a behaviour that no longer exists.
             title = list->isEmpty() ? tr("Do")
-                  : (state->getDoInterval() > 0u ? tr("Do (every %1 ms)").arg(state->getDoInterval())
-                                                 : tr("Do (on trigger)"));
+                  : (state->getDoInterval() >= SMStateEntry::MIN_DO_INTERVAL
+                        ? tr("Do (every %1 ms)").arg(state->getDoInterval())
+                        : tr("Do (no interval set)"));
             break;
         case eOpList::Exit:
             list = &state->getExitList();
@@ -1268,7 +1325,7 @@ void SMPropertiesPanel::onDoIntervalCommit()
 
     StateMachineData& data = mModel.getData();
     const SMStateEntry* state = data.findStateById(mCurrentId);
-    const uint32_t value = static_cast<uint32_t>(mDoInterval->value());
+    const uint32_t value = qMax(static_cast<uint32_t>(mDoInterval->value()), SMStateEntry::MIN_DO_INTERVAL);
     if ((state == nullptr) || (value == state->getDoInterval()))
     {
         return;
@@ -1279,27 +1336,6 @@ void SMPropertiesPanel::onDoIntervalCommit()
     auto getter = [doc, id]() -> uint32_t { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoInterval() : 0u); };
     auto setter = [doc, id](const uint32_t& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoInterval(v); };
     mModel.getUndoStack().push(new TDocSetPropertyCommand<uint32_t>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, value, tr("Set Do interval")));
-}
-
-void SMPropertiesPanel::onDoUntilCommit()
-{
-    if (mUpdating || (mPage != PageState))
-    {
-        return;
-    }
-
-    StateMachineData& data = mModel.getData();
-    const SMStateEntry* state = data.findStateById(mCurrentId);
-    if ((state == nullptr) || (mDoUntil->text() == state->getDoUntil()))
-    {
-        return;
-    }
-
-    const uint32_t id = mCurrentId;
-    StateMachineData* doc = &data;
-    auto getter = [doc, id]() -> QString { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoUntil() : QString()); };
-    auto setter = [doc, id](const QString& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoUntil(v); };
-    mModel.getUndoStack().push(new TDocSetPropertyCommand<QString>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, mDoUntil->text(), tr("Set Do stop condition")));
 }
 
 void SMPropertiesPanel::onTransitionDescriptionCommit()

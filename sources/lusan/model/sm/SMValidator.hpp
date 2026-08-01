@@ -108,6 +108,24 @@ public:
      **/
     static constexpr int RULE_TRANSITION_KIND { 28 };
 
+    /**
+     * \brief   The 10.1 rule the `DoList` contract is filed under. A `Do` activity is a TIMER
+     *          LOOP and nothing else, so it must say how often it ticks: `Interval="0"` -- the
+     *          removed trigger-driven mode -- and an absent `Interval` are both refused, naming
+     *          the state.
+     *
+     *          Reacting to one stimulus without leaving the state is what an INTERNAL TRANSITION
+     *          is for, and it names WHICH stimulus, which a `Do` never could: its operations get
+     *          no stimulus context, so a trigger-driven activity was the same idea with the
+     *          discrimination removed, and how often it ran depended on unrelated traffic. The
+     *          document that still carries one is not converted silently -- there is no way to
+     *          guess which stimulus was meant -- it is refused so the author re-authors it.
+     *
+     *          The stop condition is a guard, so its own faults stay rule 25 with every other
+     *          predicate's; only the timer is this rule's business.
+     **/
+    static constexpr int RULE_DO_ACTIVITY { 29 };
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

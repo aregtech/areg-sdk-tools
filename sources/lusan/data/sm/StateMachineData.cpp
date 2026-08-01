@@ -900,6 +900,28 @@ SMTransitionEntry* StateMachineData::findTransitionById(uint32_t transitionId) c
     return nullptr;
 }
 
+SMGuard* StateMachineData::findGuard(const SMGuardRef& ref) const
+{
+    switch (ref.getOwner())
+    {
+    case SMGuardRef::eOwner::Transition:
+    {
+        SMTransitionEntry* transition = findTransitionById(ref.getId());
+        return (transition != nullptr) ? &transition->getGuard() : nullptr;
+    }
+
+    case SMGuardRef::eOwner::DoActivity:
+    {
+        SMStateEntry* state = findStateById(ref.getId());
+        return (state != nullptr) ? &state->getDoUntil() : nullptr;
+    }
+
+    case SMGuardRef::eOwner::None:
+    default:
+        return nullptr;
+    }
+}
+
 SMStateData* StateMachineData::findLevel(uint32_t levelId)
 {
     if (levelId == mOverview.getId())

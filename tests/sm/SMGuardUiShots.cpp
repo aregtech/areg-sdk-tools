@@ -259,7 +259,7 @@ int main(int argc, char** argv)
     ProbeField probe(model);
     probe.resize(600, 60);
     probe.show();
-    probe.setTransition(transId);
+    probe.setTarget(transId);
     pump(300);
     check(probe.islandCount() == 1, "the probe field folded the island");
 
@@ -466,7 +466,7 @@ int main(int argc, char** argv)
         ProbeField chipProbe(model);
         chipProbe.resize(600, 60);
         chipProbe.show();
-        chipProbe.setTransition(transId);
+        chipProbe.setTarget(transId);
         pump(300);
         check(chipProbe.chipCount() == 3, "the probe folded the same three chips");
         chipProbe.selectAll();
