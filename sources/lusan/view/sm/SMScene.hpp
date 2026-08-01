@@ -316,6 +316,15 @@ public:
     void requestGotoRefs(const QList<SMReferences::Ref>& refs);
 
     /**
+     * \brief   Requests that an internal transition be opened for editing (a Ctrl+Shift click on the
+     *          `on <stimulus>` row an internal transition draws inside its state box). An internal
+     *          transition has no edge item -- the row is its only representation on the canvas --
+     *          so this is the canvas's one route to it.
+     * \param   transitionId    The internal transition the clicked row stands for.
+     **/
+    void requestInternalEdit(uint32_t transitionId);
+
+    /**
      * \brief   Shows the submachine quick view over the composite state \p stateId (the Ctrl+Alt
      *          hover on its corner hint). The scene builds it, not the item: reading the nested
      *          level is a model read, and a canvas item holds no model data. Nothing is shown for
@@ -383,6 +392,12 @@ signals:
      *          owning page resolves the row's references and navigates.
      **/
     void signalGotoRefsRequested(const QList<SMReferences::Ref>& refs);
+
+    /**
+     * \brief   Emitted when the `on <stimulus>` row of an internal transition is clicked; the owning
+     *          page surfaces the Properties panel on that transition's Internal editor.
+     **/
+    void signalInternalEditRequested(uint32_t transitionId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

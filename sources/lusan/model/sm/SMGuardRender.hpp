@@ -160,9 +160,37 @@ public:
      *          - a raw C++ fragment reads `{...}`.
      *          References and literals are already short and are kept verbatim, so a plain guard
      *          such as `count > 3 && ready` summarises to itself.
-     *          An unresolved draft has no tree to walk and returns its raw text unchanged.
+     *          An unresolved draft has no tree to walk, so it collapses by SHAPE instead: a draft
+     *          that is one raw block reads `{ C++ }`, and a multi-line draft reads its first line.
      **/
     static QString canvasSummary(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard);
+
+    /**
+     * \brief   The guard on ONE line, inside a budget of \p maxChars -- the form every list row and
+     *          canvas label shows. The ladder, in order:
+     *            1. the full text, when it fits and carries no inline C++ block;
+     *            2. otherwise \ref canvasSummary, which shortens by MEANING rather than by length,
+     *               so the condition names survive and only the bulk collapses;
+     *            3. and only then a cut, taken at a TOKEN boundary. `count > 3 && !isNight...`
+     *               reads as a symbol named `isNight`; where the point of the text is telling
+     *               near-identical rows apart, a truncated identifier actively misleads, so the
+     *               last token is dropped whole: `count > 3 && ...`.
+     *          An empty guard renders as an empty string -- never as empty brackets.
+     *
+     *          Every surface that shows a guard in one line calls THIS: the transition edge label,
+     *          the internal-transition picker, the state-box rows and the transition list. They
+     *          differ only by their budget, so the vocabulary cannot drift between them.
+     **/
+    static QString chipText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, int maxChars);
+
+    /**
+     * \brief   The \ref chipText budgets, in characters, of the surfaces that show a guard chip.
+     *          They differ only because the surfaces differ in width; keeping them in one place is
+     *          what stops the shorthand drifting apart again.
+     **/
+    static constexpr int ChipEdge     { 40 };   //!< A transition edge label (the historical value).
+    static constexpr int ChipPicker   { 32 };   //!< The internal picker and the transition list.
+    static constexpr int ChipStateBox { 28 };   //!< A state-box body row, which competes with the box.
 };
 
 #endif  // LUSAN_MODEL_SM_SMGUARDRENDER_HPP

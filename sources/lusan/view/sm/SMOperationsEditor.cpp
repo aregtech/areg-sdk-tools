@@ -246,6 +246,19 @@ int SMOperationsEditor::addSection(const QIcon& icon, const QString& title, QWid
     return index;
 }
 
+void SMOperationsEditor::setSectionsCompact(bool compact)
+{
+    mChrome->setCompact(compact);
+    if (compact)
+    {
+        mChrome->setCurrentSection(0);      // the Action section: what a host asks for first
+    }
+    else
+    {
+        mChrome->openAllSections();
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Rebuild
 //////////////////////////////////////////////////////////////////////////

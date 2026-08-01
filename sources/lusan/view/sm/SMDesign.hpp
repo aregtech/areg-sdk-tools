@@ -587,6 +587,15 @@ private:
     void openStateOperationsDialog(uint32_t stateId, bool entry);
 
     /**
+     * \brief   Opens the internal transitions editor dialog for a state (the context-menu access
+     *          path, beside Enter/Exit Actions; the Properties panel's `Internal` tab embeds the
+     *          same editor).
+     * \param   stateId         The state whose internal transitions are edited.
+     * \param   transitionId    The one to preselect, or 0 for the first.
+     **/
+    void openInternalDialog(uint32_t stateId, uint32_t transitionId = 0u);
+
+    /**
      * \brief   Opens the operations editor dialog for a transition's operation list.
      **/
     void openTransitionOperationsDialog(uint32_t transitionId);

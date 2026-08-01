@@ -496,6 +496,9 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
+    ${LUSAN}/view/sm/SMInternalDialog.cpp
+    ${LUSAN}/view/sm/SMInternalEditor.cpp
+    ${LUSAN}/view/sm/SMStimulusPicker.cpp
     ${LUSAN}/view/sm/SMOperationsDialog.cpp
 )
 
@@ -514,6 +517,30 @@ target_link_libraries(lusan_sm_canvas_tests PRIVATE
     aregsqlite3
 )
 set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# L4 acceptance: edits the internal transition of TRAFFIC_LIGHT_RED through both
+# routes the task names, saves, reloads, and grabs the pictures. Deliberately NOT
+# registered with ctest and deliberately NOT offscreen -- it is run by hand against
+# a real document so its PNGs carry real text:
+#   lusan_sm_l4_proof <TrafficLight.fsml> <output directory>
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_l4_proof
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SML4ProofTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_l4_proof PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_l4_proof PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_l4_proof PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_l4_proof PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
 # SM-27: the responsiveness gate. Generates a large synthetic document and times the
@@ -645,6 +672,9 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
     ${LUSAN}/view/sm/SMKindGlyph.cpp
+    ${LUSAN}/view/sm/SMInternalDialog.cpp
+    ${LUSAN}/view/sm/SMInternalEditor.cpp
+    ${LUSAN}/view/sm/SMStimulusPicker.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp

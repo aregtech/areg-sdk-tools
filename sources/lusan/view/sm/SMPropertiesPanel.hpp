@@ -43,6 +43,7 @@ class QSpinBox;
 class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
+class SMInternalEditor;
 class SMOperationsEditor;
 class QToolButton;
 class SMSectionChrome;
@@ -100,6 +101,16 @@ public:
     void focusConditions(uint32_t transitionId);
 
     /**
+     * \brief   Selects the transition's OWNING STATE and opens its Internal tab on that transition
+     *          (a click on the `on <stimulus>` row inside a state box). It deliberately does not
+     *          select the transition itself: an internal transition is something the state does,
+     *          the author got here from the state's own box, and the Internal tab is where all four
+     *          of a state's in-place activities now live.
+     * \param   transitionId    The internal transition to edit. No-op for anything else.
+     **/
+    void focusInternal(uint32_t transitionId);
+
+    /**
      * \brief   Binds the four submachine buttons on the State/General header to the Design page's
      *          own actions. One QAction per operation: two action objects would mean two
      *          enable-state computations, and they would drift.
@@ -115,6 +126,7 @@ public:
     inline QComboBox* targetCombo() const;
     inline QComboBox* transitionKindCombo() const;
     inline QComboBox* sourceCombo() const;
+    inline SMInternalEditor* internalEditor() const;
 
 signals:
     //!< A Ctrl+Shift click on a referenced symbol in the Conditions guard field asks the host to
@@ -167,8 +179,20 @@ private slots:
     void onSourceCommit();
     void onTransitionActivated();
 
+    //!< The Internal tab's editor gained or lost a transition; the tab label carries the count.
+    void onInternalCountChanged(int count);
+
 private:
     void buildStatePage();
+
+    /**
+     * rief   Adds the state page's `Internal` tab, which hosts the shared ef SMInternalEditor.
+     *          Enter, Do, Exit and Internal are the four things a state does without leaving
+     *          itself, and until now only three of them had a tab -- the fourth was reachable only
+     *          by double-clicking a row in a collapsible list on the General tab. The canvas
+     *          context menu opens the SAME editor in an SMInternalDialog.
+     **/
+    void buildInternalTab();
     void buildTransitionPage();
     void buildRegistryPage();
 
@@ -181,24 +205,6 @@ private:
     void showTransition(uint32_t transitionId);
     void showRegistry(uint32_t elementId);
     void populateTransitionList(uint32_t stateId);
-
-    /**
-     * \brief   Applies the stimulus picked from the fixed list (a trigger, event, or timer) to
-     *          the current transition, as one undo step. The picker carries the real registry
-     *          name and its kind per row; a value that does not match a listed entry is rejected
-     *          (reverted) - the panel never creates or renames a registry entry.
-     **/
-    void applyStimulus();
-
-    /**
-     * \brief   Fills the stimulus picker with every trigger, event and timer under its DECLARED
-     *          name, marked by kind (a call, a lightning bolt, a clock) rather than by a
-     *          synthesized handler name -- how a handler is spelled is the code generator's
-     *          choice, not the editor's. Each row carries its kind and name as data, so the same
-     *          name in two registries stays unambiguous.
-     * \return  The row to select for the given (kind, name), 0 ("(none)") when there is none.
-     **/
-    int populateStimulusPicker(int currentKind, const QString& currentName);
 
     /**
      * \brief   Reorders the current state's transition at \p from to \p to as one undo step
@@ -274,6 +280,11 @@ private:
     QLineEdit*          mDoUntil;       //!< The optional Do stop-condition expression.
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
     QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
+
+    // State page, `Internal` tab -- the fourth thing a state does without leaving itself. The
+    // editor is SHARED with the canvas context menu, which opens it in SMInternalDialog.
+    SMInternalEditor*   mInternal;          //!< The state's internal transitions, edited in place.
+    int                 mInternalTab;       //!< The Internal tab's index in mStateTabs.
 
     // Transition page.
     SMSectionChrome*    mTransGeneral;  //!< The General tab chrome (Trigger / Description sections).
@@ -353,6 +364,11 @@ inline QComboBox* SMPropertiesPanel::transitionKindCombo() const
 inline QComboBox* SMPropertiesPanel::sourceCombo() const
 {
     return mSource;
+}
+
+inline SMInternalEditor* SMPropertiesPanel::internalEditor() const
+{
+    return mInternal;
 }
 
 #endif  // LUSAN_VIEW_SM_SMPROPERTIESPANEL_HPP

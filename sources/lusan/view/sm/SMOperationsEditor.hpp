@@ -104,6 +104,19 @@ public:
      **/
     int addSection(const QIcon& icon, const QString& title, QWidget* content);
 
+    /**
+     * \brief   Opens ONE of the Action / Event / Timers sections at a time (the `Action` one) rather
+     *          than all three together.
+     *
+     *          All three open is right where this editor owns a whole tab -- the state's Enter, Do
+     *          and Exit tabs, and the transition's Actions tab -- because the page then reads as one
+     *          short form instead of a stack of closed bars. It is wrong where the editor shares its
+     *          height with something else: on the state's `Internal` tab it sits under a transition
+     *          picker, a stimulus row and a tab bar, and three open sections pushed its own content
+     *          out of reach in a dock that another dock had made short.
+     **/
+    void setSectionsCompact(bool compact);
+
     //!< Test/host accessors.
     inline QComboBox* actionCombo() const;
     inline QComboBox* eventCombo() const;

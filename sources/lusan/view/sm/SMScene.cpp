@@ -944,6 +944,14 @@ void SMScene::requestGotoRefs(const QList<SMReferences::Ref>& refs)
     }
 }
 
+void SMScene::requestInternalEdit(uint32_t transitionId)
+{
+    if ((transitionId != 0u) && (mModel.getData().findTransitionById(transitionId) != nullptr))
+    {
+        emit signalInternalEditRequested(transitionId);
+    }
+}
+
 void SMScene::showSubmachinePeek(uint32_t stateId, const QPoint& globalPos)
 {
     const StateMachineData& data = mModel.getData();

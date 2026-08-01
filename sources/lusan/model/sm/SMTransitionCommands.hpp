@@ -180,4 +180,42 @@ private:
     bool                mHadEdge { false };
 };
 
+/**
+ * \class   SMMoveTransitionCommand
+ * \brief   Moves a transition to another position in its source state's list -- which IS its
+ *          priority, since document order decides which of several transitions on one stimulus
+ *          runs (see \ref SMTransitionData and the shadowing rule in SMValidator).
+ *
+ *          It moves the ENTRY and leaves every ID alone. The generic \ref TDocReorderCommand
+ *          cannot serve here: it swaps positions through `TEDataContainer::swapElements`, which
+ *          exchanges the two entries' IDs as well, so the layout `Edge` keyed by transition ID,
+ *          the guard's parameter scope and any queued command would follow the number onto the
+ *          wrong transition. \ref TEDataContainer::moveElement is the ID-preserving primitive.
+ *
+ *          A move is its own inverse in the obvious way -- undo moves it back -- and it notifies
+ *          `listReordered(stateId, Transition)`, which the canvas already answers by rebuilding
+ *          the state bodies and refreshing the edges.
+ **/
+class SMMoveTransitionCommand : public SMCommand
+{
+public:
+    SMMoveTransitionCommand(  StateMachineData& data, DocModelNotifier& notifier
+                            , SMStateEntry& owner, uint32_t transitionId, int newIndex
+                            , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(int from, int to);
+
+private:
+    SMTransitionData&   mList;          //!< The owning state's transition list.
+    uint32_t            mStateId;       //!< The owning state, for the notification.
+    uint32_t            mId;            //!< The transition being moved.
+    int                 mNewIndex;      //!< Where it goes.
+    int                 mOldIndex { -1 };//!< Where it came from, captured on the first redo.
+    bool                mCaptured { false };
+};
+
 #endif  // LUSAN_MODEL_SM_SMTRANSITIONCOMMANDS_HPP

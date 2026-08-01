@@ -22,6 +22,11 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+// Not a forward declaration: the kind -> mark decision belongs here, and stating it needs the
+// nested SMTransitionEntry::eStimulusKind. Every translation unit that draws a mark already has
+// the transition type in scope.
+#include "lusan/data/sm/SMTransition.hpp"
+
 #include <QString>
 
 /************************************************************************
@@ -32,13 +37,17 @@ class QIcon;
 class QPainter;
 class QRectF;
 class SMOperationBase;
-class SMTransitionEntry;
 
 /**
  * \namespace   SMKindGlyph
  * \brief       The one place that decides how a state machine surface announces WHAT a row is:
  *              an event send, a timer start or stop, a trigger, a plain action, or the
- *              enter/exit/do band a row belongs to.
+ *              enter/do/exit/internal band a row belongs to.
+ *
+ *              One concept, one mark: no two constructs share a glyph. The band marks say WHERE a
+ *              row runs (\c Entry, \c Do, \c Exit, \c Internal) and the kind marks say WHAT fires
+ *              or what it does (\c Trigger, \c Event, \c TimerStart, \c TimerStop, \c Action) --
+ *              which is what lets a reader tell a cause from an effect without reading the text.
  *
  *              Every design surface -- the state box body rows, the transition edge label, and
  *              the Properties stimulus picker -- draws its marks from here, so a change lands on
@@ -59,8 +68,12 @@ namespace SMKindGlyph
         , Entry         //!< The state's entry band: an arrow running INTO a bar, `->|`.
         , Exit          //!< The state's exit band: an arrow running away from a bar, `<-|`.
         , ExitAlt       //!< The alternative exit mark, `|<-` -- see \c ExitBandGlyph in the .cpp.
-        , Internal      //!< The do band and an internal transition: a self-loop.
-        , Trigger       //!< A trigger method as a stimulus. Carries NO mark -- see \ref isDrawn.
+        , Do            //!< The do band: a circular repeat arrow, the mark the `Do` tab already wears.
+        , Internal      //!< An internal transition: a hook that LEAVES the state's bar and returns
+                        //!< into it. Shares the bar with \c Entry and \c Exit, so the three read as
+                        //!< the family they are -- in, out, and back to the same state.
+        , Action        //!< A plain action call, the effect an internal transition performs: a gear.
+        , Trigger       //!< A trigger method as a stimulus: a push button in profile.
         , Event         //!< An event, sent or awaited: a lightning bolt.
         , TimerStart    //!< A timer start: a clock face with a play triangle.
         , TimerStop     //!< A timer stop: a clock face with a stop square.
@@ -87,12 +100,13 @@ namespace SMKindGlyph
     constexpr int       GlyphSize   { 12 };
 
     /**
-     * \brief   How much of the room it is given a STIMULUS mark actually fills -- the event bolt and
-     *          the timer clock, the only two marks left that stand for a kind. At full size they
-     *          weighed as much as the name beside them; the mark is a cue, not a second word.
-     *          One number resizes both without touching either mark's proportions: raise it to 1.0
-     *          to restore the original size. Band marks (enter / exit / do) are deliberately NOT
-     *          scaled -- they are position markers, and shrinking them blurs the enter/exit pair.
+     * \brief   How much of the room it is given a KIND mark actually fills -- the trigger button,
+     *          the event bolt, the timer clock and the action gear. At full size they weighed as
+     *          much as the name beside them; the mark is a cue, not a second word. One number
+     *          resizes them all without touching any mark's proportions: raise it to 1.0 to
+     *          restore the original size. Band marks (enter / do / exit / internal) are
+     *          deliberately NOT scaled -- they are position markers, and shrinking them blurs the
+     *          enter/exit pair, which is read as a shape comparison.
      **/
     constexpr double    StimulusGlyphScale { 0.70 };
 
@@ -139,8 +153,13 @@ namespace SMKindGlyph
     //!< The mark of a transition's stimulus (trigger / event / timer). \c None when it has none.
     eGlyph stimulusGlyph(const SMTransitionEntry& transition);
 
-    //!< The mark of one operation: the lightning for a send, a clock for a timer, \c None otherwise
-    //!< (a plain action call and an attribute assignment take their band's mark instead).
+    //!< The mark of a stimulus KIND, for a surface that has a kind but no transition (a picker row,
+    //!< a signature label). The overload above is this one plus the "no stimulus at all" case.
+    eGlyph stimulusGlyph(SMTransitionEntry::eStimulusKind kind);
+
+    //!< The mark of one operation: the lightning for a send, a clock for a timer, the gear for a
+    //!< plain action call or an attribute assignment. Never \c None -- an operation is an EFFECT,
+    //!< and a row that draws nothing cannot be told from the stimulus row above it.
     eGlyph operationGlyph(const SMOperationBase& op);
 }
 

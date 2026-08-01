@@ -329,6 +329,26 @@ public:
     void swapElements(uint32_t elem1Id, uint32_t elem2Id);
 
     /**
+     * \brief   Moves one element to another position WITHOUT touching any element ID.
+     *
+     *          This is the reordering primitive for a container whose entries are referenced BY ID
+     *          from outside it -- \ref SMTransitionData and \ref SMStateData, which both turn
+     *          \ref setIdReordering off for that reason. \ref swapElements cannot serve them: it
+     *          exchanges the two elements' IDs as well as their positions, unconditionally, so the
+     *          number would stay with the position and every ID-keyed reference elsewhere (a layout
+     *          `Edge` owner, a guard's parameter scope, a queued undo command) would silently
+     *          follow the number to the wrong element.
+     *
+     *          Renumbering afterwards is left to \ref reorderIds, which is a no-op exactly for
+     *          those containers, so a name-referenced container keeps its tidy ascending IDs and an
+     *          ID-referenced one keeps every reference valid.
+     *
+     * \param   from    The index to take the element from.
+     * \param   to      The index to place it at; both are ignored when out of range or equal.
+     **/
+    void moveElement(int from, int to);
+
+    /**
      * \brief   Sorts the elements by the given sorting type.
      * \param   sortingType The sorting type.
      **/
@@ -978,6 +998,21 @@ inline void TEDataContainer<Data, ElemBase>::swapElements(uint32_t elem1Id, uint
     {
         swapElements(index1, index2);
     }
+}
+
+template<class Data, class ElemBase>
+void TEDataContainer<Data, ElemBase>::moveElement(int from, int to)
+{
+    const int count = static_cast<int>(mElementList.size());
+    if ((from == to) || (from < 0) || (to < 0) || (from >= count) || (to >= count))
+    {
+        return;
+    }
+
+    // The element carries its ID with it. That is the whole difference from swapElements, and the
+    // reason an ID-referenced container can be reordered at all.
+    mElementList.move(from, to);
+    reorderIds();
 }
 
 template<class Data, class ElemBase>

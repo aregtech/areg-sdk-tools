@@ -288,7 +288,7 @@ void SMEdgeItem::updateFromModel()
     }
     else
     {
-        constexpr int MAX_SUMMARY = 40;
+        constexpr int MAX_SUMMARY = SMGuardRender::ChipEdge;
         // One glyph per severity: an error and a warning must not look alike on the canvas while
         // the status line calls them by different names. The glyph is the grayscale/color-blind
         // channel -- the severity color alone would carry the whole distinction.
@@ -302,18 +302,11 @@ void SMEdgeItem::updateFromModel()
             glyph = QStringLiteral("(!) ");
         }
 
-        // A short, plain guard reads best in full. A long one, or one carrying an inline C++ block,
-        // is cut down STRUCTURALLY rather than chopped mid-token: the condition names survive and
-        // the bulk collapses. The tooltip always carries the whole text.
-        QString label = summary;
-        if ((summary.length() > MAX_SUMMARY) || summary.contains(QLatin1Char('{')))
-        {
-            label = SMGuardRender::canvasSummary(data, getElementId(), transition->getGuard()).simplified();
-        }
-
-        const QString shortSummary = (label.length() > MAX_SUMMARY)
-                ? (label.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
-                : label;
+        // The shared one-line renderer: full text, else a structural summary, else a cut taken at a
+        // token boundary. It lives in SMGuardRender because the internal-transition picker, the
+        // state-box rows and the transition list must speak the same shorthand as this label; only
+        // the budget differs. The tooltip always carries the whole text.
+        const QString shortSummary = SMGuardRender::chipText(data, getElementId(), transition->getGuard(), MAX_SUMMARY);
         mGuardText = QChar('[') + glyph + shortSummary + QChar(']');
         // A tooltip cannot carry a drawn mark, so it spells the kind out instead.
         const QString kindWord = SMKindGlyph::word(mStimulusGlyph);

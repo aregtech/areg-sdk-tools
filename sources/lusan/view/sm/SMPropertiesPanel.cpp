@@ -29,6 +29,7 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMCommand.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
+#include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
@@ -41,7 +42,9 @@
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMOperationsEditor.hpp"
+#include "lusan/view/sm/SMInternalEditor.hpp"
 #include "lusan/view/sm/SMSectionChrome.hpp"
+#include "lusan/view/sm/SMStimulusPicker.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QAbstractButton>
@@ -74,32 +77,6 @@ namespace
 {
     //!< The transition ID carried by each row of the state page's transition list.
     constexpr int RoleTransitionId { Qt::UserRole + 1 };
-
-    //!< The stimulus kind (int of eStimulusKind) carried by each stimulus-picker row.
-    constexpr int RoleStimulusKind { Qt::UserRole };
-    //!< The real registry name carried by each stimulus-picker row (the label may be prefixed).
-    constexpr int RoleStimulusName { Qt::UserRole + 1 };
-
-    //!< The mark of a stimulus kind, shown on its picker row and beside the chosen stimulus.
-    SMKindGlyph::eGlyph stimulusGlyph(SMTransitionEntry::eStimulusKind kind)
-    {
-        switch (kind)
-        {
-        case SMTransitionEntry::eStimulusKind::Event: return SMKindGlyph::eGlyph::Event;
-        case SMTransitionEntry::eStimulusKind::Timer: return SMKindGlyph::eGlyph::TimerStart;
-        default:                                      return SMKindGlyph::eGlyph::Trigger;
-        }
-    }
-
-    //!< The display label for a stimulus: the REGISTRY name, exactly as declared. What kind it is
-    //!< comes from the row's mark, never from a synthesized handler name -- `on_event_<name>` and
-    //!< `on_timer_<name>` invented a method signature that is the code generator's to choose, not
-    //!< Lusan's, and it did not match what the transition then showed on the canvas (issue #543).
-    //!< A row is therefore identified by its (kind, name) data, not by its text.
-    QString stimulusDisplayLabel(SMTransitionEntry::eStimulusKind kind, const QString& name)
-    {
-        return SMKindGlyph::prefix(stimulusGlyph(kind)) + name;
-    }
 
     //!< Greys one row of a closed picker out instead of removing it, so the vocabulary a transition
     //!< kind has stays visible and only what THIS owner can hold is selectable.
@@ -235,6 +212,8 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mDoInterval   (nullptr)
     , mDoUntil      (nullptr)
     , mTransitions  (nullptr)
+    , mInternal     (nullptr)
+    , mInternalTab  (-1)
     , mTransGeneral (nullptr)
     , mStimulusSig  (nullptr)
     , mStimulusName (nullptr)
@@ -467,7 +446,32 @@ void SMPropertiesPanel::buildStatePage()
     mActionSlots.append({ eOpList::Do,    mDoOps,    doTab });
     mActionSlots.append({ eOpList::Exit,  mExitOps,  exitTab });
 
+    buildInternalTab();
+
     mStack->insertWidget(PageState, mStateTabs);
+}
+
+void SMPropertiesPanel::buildInternalTab()
+{
+    // The tab hosts the SHARED editor, not a copy of it: the canvas context menu opens the very
+    // same widget in SMInternalDialog, exactly as Enter/Exit Actions open SMOperationsEditor in
+    // SMOperationsDialog. One implementation, one undo path, and the two access paths cannot drift.
+    mInternal = new SMInternalEditor(mModel, this);
+    connect(mInternal, &SMInternalEditor::countChanged, this, &SMPropertiesPanel::onInternalCountChanged);
+    connect(mInternal, &SMInternalEditor::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
+
+    mInternalTab = mStateTabs->addTab(mInternal, tr("Internal"));
+    mStateTabs->setTabToolTip(mInternalTab, tr("The transitions this state takes without leaving itself"));
+}
+
+void SMPropertiesPanel::onInternalCountChanged(int count)
+{
+    // The tab itself carries the count. A tab reading `Internal (2)` is the discoverability the
+    // construct never had: the only route used to be a double-click on a row of a collapsible list.
+    if (mInternalTab >= 0)
+    {
+        mStateTabs->setTabText(mInternalTab, (count > 0) ? tr("Internal (%1)").arg(count) : tr("Internal"));
+    }
 }
 
 void SMPropertiesPanel::bindSubmachineActions(QAction* enterOrAdd, QAction* goToParent, QAction* addSubmachine, QAction* removeSubmachine)
@@ -655,6 +659,30 @@ void SMPropertiesPanel::focusConditions(uint32_t transitionId)
     }
 }
 
+void SMPropertiesPanel::focusInternal(uint32_t transitionId)
+{
+    StateMachineData& data = mModel.getData();
+    const SMTransitionEntry* transition = data.findTransitionById(transitionId);
+    const SMStateEntry* owner = data.findTransitionOwner(transitionId);
+    if ((transition == nullptr) || (owner == nullptr) || (transition->isInternal() == false))
+    {
+        return;
+    }
+
+    // Selecting the state (not the transition) is the point -- the author clicked a row inside that
+    // state's box and must land on the state, on the tab that owns the construct.
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ owner->getId() });
+    if ((mPage == PageState) && (mCurrentId == owner->getId()) && (mInternalTab >= 0))
+    {
+        // Select the row unconditionally: when that state was ALREADY the selection, the selection
+        // model has nothing to announce and showState() never runs, so nothing would move to the
+        // row the author clicked.
+        mInternal->setCurrentTransition(transitionId);
+        mStateTabs->setCurrentIndex(mInternalTab);
+        mInternal->list()->setFocus();
+    }
+}
+
 void SMPropertiesPanel::refresh()
 {
     const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
@@ -689,6 +717,13 @@ void SMPropertiesPanel::showEmpty()
         mConditions->setTransition(0u);
     }
 
+    // The Internal tab's editors hold a live pointer into the shown state's transition; drop it with
+    // the page, or a deferred rebuild can outlive the document that owns it.
+    if (mInternal != nullptr)
+    {
+        mInternal->bind(0u);
+    }
+
     mStack->setCurrentIndex(PageEmpty);
 }
 
@@ -720,6 +755,12 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     for (const ActionSlot& slot : mActionSlots)
     {
         mStateTabs->setTabVisible(slot.tabIndex, pseudoStart == false);
+    }
+
+    // Everything a Start owns is an initial transition, so it has no internal one to edit either.
+    if (mInternalTab >= 0)
+    {
+        mStateTabs->setTabVisible(mInternalTab, pseudoStart == false);
     }
 
     if (mStateForm != nullptr)
@@ -809,6 +850,7 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mDoUntil->setText(state->getDoUntil());
     refreshActionSummaries();
     populateTransitionList(stateId);
+    mInternal->bind(stateId);
 
     mStack->setCurrentIndex(PageState);
     mUpdating = false;
@@ -865,6 +907,16 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
     // is no stimulus to show and a `<stimulus>` placeholder would invite the author to fill one in.
     // What decides between them is the condition, so that is what the row carries instead.
     const bool pseudoStart = state->isPseudoStart();
+    int internalCount = 0;
+    for (const SMTransitionEntry* transition : state->getTransitions().getElements())
+    {
+        if ((transition != nullptr) && transition->isInternal())
+        {
+            ++internalCount;
+        }
+    }
+
+    int internalIndex = 0;
     for (SMTransitionEntry* transition : state->getTransitions().getElements())
     {
         if (transition == nullptr)
@@ -887,9 +939,30 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
         {
             const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
             if (transition->hasTarget())
+            {
                 label = stimulus + QStringLiteral(" -> ") + transition->getTargetName();
+            }
+            else if (transition->isInternal())
+            {
+                // The same shorthand the Internal tab and the state box use: the priority number
+                // when there is a priority to speak of, and the guard that tells two transitions on
+                // one stimulus apart.
+                ++internalIndex;
+                label = (internalCount > 1)
+                        ? (QStringLiteral("#") + QString::number(internalIndex) + QLatin1Char(' ') + stimulus)
+                        : stimulus;
+                label += QStringLiteral(" ") + internalLabel();
+                const QString chip = SMGuardRender::chipText(mModel.getData(), transition->getId()
+                                                            , transition->getGuard(), SMGuardRender::ChipPicker);
+                if (chip.isEmpty() == false)
+                {
+                    label += QStringLiteral(" [") + chip + QLatin1Char(']');
+                }
+            }
             else
-                label = stimulus + QStringLiteral(" ") + (transition->isInternal() ? internalLabel() : unconnectedLabel());
+            {
+                label = stimulus + QStringLiteral(" ") + unconnectedLabel();
+            }
         }
 
         QListWidgetItem* item = new QListWidgetItem(label, mTransitions);
@@ -913,13 +986,16 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
 
     // Fill the picker with every trigger/event/timer and select the transition's current one by
     // its (kind, name) display label.
-    mStimulusName->setCurrentIndex(populateStimulusPicker(static_cast<int>(transition->getStimulusKind())
+    mStimulusName->setCurrentIndex(SMStimulusPicker::fill(*mStimulusName, data
+                                                         , static_cast<int>(transition->getStimulusKind())
                                                          , transition->getStimulus()));
 
     // The read-only signature spells the kind out (`event NewEvent`): a QLabel carries no mark, and
     // this line is the one place that has room for the word.
     const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
-    const QString kindWord  = signature.isEmpty() ? QString() : SMKindGlyph::word(stimulusGlyph(transition->getStimulusKind()));
+    const QString kindWord  = signature.isEmpty()
+                              ? QString()
+                              : SMKindGlyph::word(SMKindGlyph::stimulusGlyph(transition->getStimulusKind()));
     mStimulusSig->setText(kindWord.isEmpty() ? signature : (kindWord + QLatin1Char(' ') + signature));
 
     // Populate the target and source pickers from the sibling states of the transition's level.
@@ -1262,98 +1338,7 @@ void SMPropertiesPanel::onStimulusCommit()
         return;
     }
 
-    applyStimulus();
-}
-
-int SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString& currentName)
-{
-    StateMachineData& data = mModel.getData();
-    mStimulusName->clear();
-
-    // Row 0 detaches the stimulus (an internal/initial transition may have none).
-    mStimulusName->addItem(tr("(none)"));
-    mStimulusName->setItemData(0, static_cast<int>(SMTransitionEntry::eStimulusKind::Trigger), RoleStimulusKind);
-    mStimulusName->setItemData(0, QString(), RoleStimulusName);
-
-    const auto addRow = [this](SMTransitionEntry::eStimulusKind kind, const QString& name)
-    {
-        if (name.isEmpty())
-        {
-            return;
-        }
-
-        const int row = mStimulusName->count();
-        mStimulusName->addItem(SMKindGlyph::icon(stimulusGlyph(kind), mStimulusName->palette().color(QPalette::Text))
-                              , stimulusDisplayLabel(kind, name));
-        mStimulusName->setItemData(row, static_cast<int>(kind), RoleStimulusKind);
-        mStimulusName->setItemData(row, name, RoleStimulusName);
-        // The kind is a mark, not a word, so the tooltip is what a screen reader and a hovering
-        // user get: `event NewEvent`.
-        mStimulusName->setItemData(row, SMKindGlyph::word(stimulusGlyph(kind)) + QLatin1Char(' ') + name, Qt::ToolTipRole);
-    };
-
-    for (const SMDocumentIndex::Stimulus& stimulus : SMDocumentIndex(data).stimuli())
-    {
-        addRow(stimulus.kind, stimulus.name);
-    }
-
-    if (currentName.isEmpty())
-    {
-        return 0;   // row 0 is "(none)"
-    }
-
-    // By DATA, never by text: two registries may legally hold the same name until validation
-    // objects, and the rows no longer carry a kind prefix to tell them apart.
-    for (int row = 1; row < mStimulusName->count(); ++row)
-    {
-        if ((mStimulusName->itemData(row, RoleStimulusKind).toInt() == currentKind)
-            && (mStimulusName->itemData(row, RoleStimulusName).toString() == currentName))
-        {
-            return row;
-        }
-    }
-
-    return 0;
-}
-
-void SMPropertiesPanel::applyStimulus()
-{
-    StateMachineData& data = mModel.getData();
-    const SMTransitionEntry* transition = data.findTransitionById(mCurrentId);
-    if (transition == nullptr)
-    {
-        return;
-    }
-
-    // The picker is a closed list (row 0 = "(none)"); read the selected row's real kind + name.
-    const int row = mStimulusName->currentIndex();
-    if (row < 0)
-    {
-        return;
-    }
-
-    const SMTransitionEntry::eStimulusKind kind =
-            static_cast<SMTransitionEntry::eStimulusKind>(mStimulusName->itemData(row, RoleStimulusKind).toInt());
-    const QString name = mStimulusName->itemData(row, RoleStimulusName).toString();
-
-    // "(none)" (empty name) detaches the stimulus; the picker never renames or creates a registry
-    // entry.
-    if (name.isEmpty())
-    {
-        if (transition->getStimulus().isEmpty() == false)
-        {
-            mModel.getUndoStack().push(new SMSetStimulusCommand(data, mModel.getNotifier(), mCurrentId, transition->getStimulusKind(), QString(), tr("Clear stimulus")));
-        }
-
-        return;
-    }
-
-    if ((kind == transition->getStimulusKind()) && (name == transition->getStimulus()))
-    {
-        return;
-    }
-
-    mModel.getUndoStack().push(new SMSetStimulusCommand(data, mModel.getNotifier(), mCurrentId, kind, name, tr("Set stimulus")));
+    SMStimulusPicker::apply(mModel, *mStimulusName, mCurrentId);
 }
 
 void SMPropertiesPanel::onTransKindCommit()
@@ -1594,6 +1579,7 @@ void SMPropertiesPanel::onListReordered(uint32_t ownerId, eDocElementKind kind)
     if ((mPage == PageState) && (ownerId == mCurrentId) && (kind == eDocElementKind::Transition))
     {
         populateTransitionList(mCurrentId);
+        mInternal->refresh();
     }
     else if ((mPage == PageTransition) && (isEditing() == false) && (kind == eDocElementKind::Method))
     {

@@ -144,6 +144,12 @@ signals:
     void signalGotoRefsRequested(const QList<SMReferences::Ref>& refs);
 
     /**
+     * \brief   Re-emitted from any level's scene: open an internal transition for editing (a click
+     *          on the `on <stimulus>` row it draws inside its state box).
+     **/
+    void signalInternalEditRequested(uint32_t transitionId);
+
+    /**
      * \brief   Re-emitted from any level's scene: descend into a state's submachine, creating
      *          one on the fly when the state has none (body double-click). The Design page owns
      *          the create-or-enter decision.

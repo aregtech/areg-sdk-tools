@@ -289,3 +289,49 @@ void SMReparentTransitionCommand::undo()
     notifier().notifyElementAdded(mOldId, eDocElementKind::Transition);
     notifier().notifyLayoutChanged(QList<uint32_t>{ mOldId, mNewId });
 }
+
+//////////////////////////////////////////////////////////////////////////
+// SMMoveTransitionCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMMoveTransitionCommand::SMMoveTransitionCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                 , SMStateEntry& owner, uint32_t transitionId, int newIndex
+                                                 , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mList     (owner.getTransitions())
+    , mStateId  (owner.getId())
+    , mId       (transitionId)
+    , mNewIndex (newIndex)
+{
+}
+
+void SMMoveTransitionCommand::apply(int from, int to)
+{
+    if ((from < 0) || (to < 0) || (from == to))
+    {
+        return;
+    }
+
+    // moveElement, never swapElements: the entry travels and its ID stays with it, so the layout
+    // Edge keyed by that ID, the guard parameter scope and the selection all keep pointing at the
+    // transition the author moved. See TEDataContainer::moveElement.
+    mList.moveElement(from, to);
+    notifier().notifyListReordered(mStateId, eDocElementKind::Transition);
+}
+
+void SMMoveTransitionCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        mOldIndex = mList.findIndex(mId);
+        mCaptured = true;
+    }
+
+    apply(mOldIndex, mNewIndex);
+}
+
+void SMMoveTransitionCommand::undo()
+{
+    // A list move is undone by the mirrored move: what went from A to B goes from B back to A.
+    apply(mNewIndex, mOldIndex);
+}

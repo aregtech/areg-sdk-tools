@@ -80,6 +80,16 @@ public:
         bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the band mark).
         bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
         QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
+
+        //!< A SECOND mark, drawn after \ref icon, or \c None. Exactly one row uses it: the
+        //!< `on <stimulus>` header of an internal transition, which states two independent facts --
+        //!< that an internal transition lives here (the band mark) and what kind of stimulus fires
+        //!< it (this one). An operation row never carries two, which is the #543 rule.
+        SMKindGlyph::eGlyph         kindIcon { SMKindGlyph::eGlyph::None };
+
+        //!< The transition this row IS (an `on <stimulus>` header), or 0. A row that carries one
+        //!< opens that transition for editing instead of navigating to its stimulus declaration.
+        uint32_t                    transitionId { 0u };
     };
 
 private:
@@ -132,6 +142,14 @@ public:
     //!< The behavior rows of the body, in display order, exactly as painted. Read-only: the
     //!< canvas tests assert the rows the user reads, not the pixels they are drawn as.
     inline const QList<BodyRow>& getBodyRows() const;
+
+    /**
+     * \brief   The actionable body row drawn at \p pos (item coordinates), or \c nullptr. A row is
+     *          actionable when it references a declaration or when it is an internal transition's
+     *          header. The canvas context menu asks this so its entries name what is under the
+     *          pointer, the same rows the Ctrl+Shift link gesture acts on.
+     **/
+    const BodyRow* bodyRowAtPos(const QPointF& pos) const;
 
     /**
      * \brief   Opens the in-place name editor over the header. Commit pushes an undoable
@@ -408,6 +426,12 @@ private:
     QGraphicsProxyWidget*       mRenameProxy;   //!< The open in-place name editor, or nullptr.
     bool                        mClosingRename; //!< Guards re-entrant editor teardown.
     int                         mHoverRow;      //!< Body row underlined as a link under Ctrl+Shift hover, or -1.
+
+    //!< True between the press and the release of a Ctrl+Shift link click. The press is consumed
+    //!< without calling the base, so the base never records the press -- and Qt then treats the
+    //!< release as a click on nothing and CLEARS the scene selection, which put the Properties
+    //!< panel back to "No selection" right after the link had filled it. The release is consumed too.
+    bool                        mLinkClick;
     SMNoteEditor                mNoteEditor;    //!< The open in-place note editor (if any).
 };
 

@@ -48,12 +48,17 @@
 #include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
+#include "lusan/view/sm/SMAccordion.hpp"
+#include "lusan/view/sm/SMInternalDialog.hpp"
+#include "lusan/view/sm/SMInternalEditor.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QAction>
+#include <QAbstractButton>
 #include <QApplication>
 #include <QComboBox>
 #include <QClipboard>
@@ -1691,6 +1696,7 @@ int main(int argc, char* argv[])
         CHECK(groups.size() == 8);
         CHECK(groups.at(0).title == QStringLiteral("Design"));
         const QList<QAction*> designOrder{ page.actionAddState(), page.actionAddTransition()
+                                         , page.actionAddInternal()
                                          , page.actionAddNote(), page.actionAddFinalState() };
         CHECK(groups.at(0).actions == designOrder);
         CHECK(groups.at(1).title == QStringLiteral("Declare"));
@@ -3719,11 +3725,15 @@ int main(int argc, char* argv[])
         CHECK(stateTabs != nullptr);
         if ((lpanel != nullptr) && (stateTabs != nullptr) && (start != nullptr) && (plain != nullptr))
         {
-            // An ordinary state offers all four tabs: General, Enter, Do, Exit.
+            // An ordinary state offers all five tabs: General, Enter, Do, Exit, Internal. The four
+            // after General are the four things a state does without leaving itself, and Internal
+            // used to be missing from that set -- reachable only by double-clicking a row in a
+            // collapsible list on the General tab.
             lmodel.getSelectionModel().setSelection(QList<uint32_t>{ plain->getId() });
             QApplication::processEvents();
-            CHECK(stateTabs->count() == 4);
+            CHECK(stateTabs->count() == 5);
             CHECK(stateTabs->isTabVisible(1) && stateTabs->isTabVisible(2) && stateTabs->isTabVisible(3));
+            CHECK(stateTabs->isTabVisible(4));
 
             // The Start offers only General: a pseudo-state performs nothing, so the editor must
             // not present a place to put operations, and there is no behaviour to describe.
@@ -3732,6 +3742,7 @@ int main(int argc, char* argv[])
             CHECK(stateTabs->isTabVisible(1) == false);
             CHECK(stateTabs->isTabVisible(2) == false);
             CHECK(stateTabs->isTabVisible(3) == false);
+            CHECK(stateTabs->isTabVisible(4) == false);     // everything a Start owns is initial
             CHECK(stateTabs->currentIndex() == 0);
             QPlainTextEdit* desc = lpanel->findChild<QPlainTextEdit*>(QStringLiteral("smStateDescription"));
             CHECK(desc != nullptr);
@@ -3848,6 +3859,203 @@ int main(int argc, char* argv[])
         }
 
         grab(kdesign, "l2-transition-kind");
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // L4: one glyph per concept, and the internal transition is editable where
+    //     the author is looking
+    //////////////////////////////////////////////////////////////////////////
+    {
+        std::printf("[L4] cause and effect wear different marks, and the Internal tab edits in place\n");
+
+        StateMachineModel imodel;
+        CHECK(imodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign idesign(imodel);
+        idesign.resize(1400, 900);
+        idesign.show();
+        QApplication::processEvents();
+
+        StateMachineData& idata = imodel.getData();
+        QDockWidget* idock = idesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* ipanel = (idock != nullptr ? qobject_cast<SMPropertiesPanel*>(idock->widget()) : nullptr);
+        CHECK(ipanel != nullptr);
+
+        // No two constructs share a mark. This is the whole of defects 1, 2 and 4: `Internal` used
+        // to stand for BOTH the do band and an internal transition, and `Trigger` drew nothing at
+        // all, so `on <timer>` and `<action>()` were one and the same row to a reader.
+        const QList<SMKindGlyph::eGlyph> vocabulary
+        {
+              SMKindGlyph::eGlyph::Entry,   SMKindGlyph::eGlyph::Exit
+            , SMKindGlyph::eGlyph::Do,      SMKindGlyph::eGlyph::Internal
+            , SMKindGlyph::eGlyph::Action,  SMKindGlyph::eGlyph::Trigger
+            , SMKindGlyph::eGlyph::Event,   SMKindGlyph::eGlyph::TimerStart
+            , SMKindGlyph::eGlyph::TimerStop
+        };
+        for (SMKindGlyph::eGlyph glyph : vocabulary)
+        {
+            CHECK(SMKindGlyph::isDrawn(glyph));     // every one of them is actually drawn
+        }
+
+        CHECK(SMKindGlyph::eGlyph::Do != SMKindGlyph::eGlyph::Internal);
+        CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Trigger, QColor(Qt::black)).isNull() == false);
+        CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Action, QColor(Qt::black)).isNull() == false);
+
+        // Find (or make) a state carrying an internal transition on a TIMER with one action, the
+        // TRAFFIC_LIGHT_RED shape: `on <timer>` over `<action>()`.
+        SMStateEntry* host = nullptr;
+        for (SMStateEntry* s : idata.getStates().getElements())
+        {
+            if ((host == nullptr) && (s != nullptr) && (s->getKind() == SMStateEntry::eStateKind::Normal))
+            {
+                host = s;
+            }
+        }
+
+        CHECK(host != nullptr);
+        if ((host != nullptr) && (ipanel != nullptr))
+        {
+            CHECK(idata.getTimers().createTimer(QStringLiteral("L4Timer")) != nullptr);
+            imodel.getSelectionModel().setSelection(QList<uint32_t>{ host->getId() });
+            QApplication::processEvents();
+
+            SMInternalEditor* ieditor = ipanel->internalEditor();
+            CHECK(ieditor != nullptr);
+            const int before = (ieditor != nullptr ? ieditor->count() : -1);
+
+            // Add one from the tab itself, then give it a timer stimulus and one action.
+            QToolButton* addButton = ipanel->findChild<QToolButton*>(QStringLiteral("smBtnAddInternal"));
+            CHECK(addButton != nullptr);
+            if ((addButton != nullptr) && (ieditor != nullptr))
+            {
+                addButton->click();
+                QApplication::processEvents();
+                CHECK(ieditor->count() == (before + 1));
+                CHECK(ipanel->internalEditor()->currentTransition() != 0u);
+
+                const uint32_t internalId = ipanel->internalEditor()->currentTransition();
+                SMTransitionEntry* added = idata.findTransitionById(internalId);
+                CHECK(added != nullptr);
+                CHECK((added != nullptr) && added->isInternal());
+
+                // The stimulus, picked in place -- no trip to the transition page.
+                QComboBox* picker = ipanel->internalEditor()->stimulusCombo();
+                CHECK(picker != nullptr);
+                int timerRow = -1;
+                for (int row = 1; (picker != nullptr) && (row < picker->count()); ++row)
+                {
+                    if (picker->itemData(row, Qt::UserRole + 1).toString() == QStringLiteral("L4Timer"))
+                    {
+                        timerRow = row;
+                    }
+                }
+
+                CHECK(timerRow > 0);
+                if ((timerRow > 0) && (picker != nullptr))
+                {
+                    picker->setCurrentIndex(timerRow);
+                    QMetaObject::invokeMethod(ipanel->internalEditor(), "onStimulusCommit");
+                    QApplication::processEvents();
+                    CHECK(idata.findTransitionById(internalId)->getStimulus() == QStringLiteral("L4Timer"));
+                    CHECK(idata.findTransitionById(internalId)->getStimulusKind() == SMTransitionEntry::eStimulusKind::Timer);
+                }
+
+                added = idata.findTransitionById(internalId);
+                if (added != nullptr)
+                {
+                    added->getOperations().addOperation(new SMActionCall(0, QStringLiteral("doWork")));
+                }
+
+                // The box now draws the pair, and the two rows do NOT read the same. The header
+                // carries the band mark (internal) AND the stimulus kind (a clock); the operation
+                // below carries the gear.
+                SMStateItem* box = dynamic_cast<SMStateItem*>(idesign.getScene().findCanvasItem(host->getId()));
+                CHECK(box != nullptr);
+                if (box != nullptr)
+                {
+                    box->updateFromModel();
+                    const QList<SMStateItem::BodyRow> rows = box->getBodyRows();
+                    int headerRow = -1;
+                    for (int i = 0; i < rows.size(); ++i)
+                    {
+                        if (rows.at(i).transitionId == internalId)
+                        {
+                            headerRow = i;
+                        }
+                    }
+
+                    CHECK(headerRow >= 0);
+                    if ((headerRow >= 0) && ((headerRow + 1) < rows.size()))
+                    {
+                        CHECK(rows.at(headerRow).icon == SMKindGlyph::eGlyph::Internal);
+                        CHECK(rows.at(headerRow).kindIcon == SMKindGlyph::eGlyph::TimerStart);
+                        CHECK(rows.at(headerRow).text.startsWith(QStringLiteral("on ")));
+                        // The effect wears a different mark from the cause -- the defect in one line.
+                        CHECK(rows.at(headerRow + 1).icon == SMKindGlyph::eGlyph::Action);
+                        CHECK(rows.at(headerRow + 1).icon != rows.at(headerRow).icon);
+                        CHECK(rows.at(headerRow + 1).icon != rows.at(headerRow).kindIcon);
+                    }
+                }
+
+                // The canvas row routes to the Internal tab, not to the stimulus declaration.
+                QTabWidget* itabs = ipanel->findChild<QTabWidget*>(QStringLiteral("smStateTabs"));
+                CHECK(itabs != nullptr);
+                if (itabs != nullptr)
+                {
+                    itabs->setCurrentIndex(0);
+                    idesign.getScene().requestInternalEdit(internalId);
+                    QApplication::processEvents();
+                    CHECK(ipanel->currentPage() == SMPropertiesPanel::PageState);
+                    CHECK(ipanel->currentElementId() == host->getId());
+                    CHECK(ipanel->internalEditor()->currentTransition() == internalId);
+                    CHECK(itabs->currentIndex() == (itabs->count() - 1));    // the Internal tab
+                }
+
+                // The sections read in the order the author reads a transition: what fires it,
+                // what it does, then when it is allowed to.
+                QTabWidget* iinner = ipanel->internalEditor()->tabs();
+                CHECK(iinner != nullptr);
+                if (iinner != nullptr)
+                {
+                    CHECK(iinner->count() == 2);
+                    CHECK(iinner->tabText(0) == QStringLiteral("Actions"));
+                    CHECK(iinner->tabText(1) == QStringLiteral("Conditions"));
+                }
+
+                // The context-menu path opens the SAME editor in a dialog, exactly as Enter/Exit
+                // Actions do -- and it is offered for a state that has none, because that is where
+                // the author goes to make the first one.
+                {
+                    SMInternalDialog dialog(imodel, QStringLiteral("Internal"), host->getId(), internalId);
+                    CHECK(dialog.editor() != nullptr);
+                    CHECK((dialog.editor() != nullptr) && (dialog.editor()->stateId() == host->getId()));
+                    CHECK((dialog.editor() != nullptr) && (dialog.editor()->currentTransition() == internalId));
+                    // Its guard bar must NOT answer to the name the TRANSITION page owns: the
+                    // hosted bar is re-prefixed in every instance of this editor.
+                    CHECK(dialog.findChild<QWidget*>(QStringLiteral("smGuardField")) == nullptr);
+                    CHECK(dialog.findChild<QWidget*>(QStringLiteral("smInternalSmGuardField")) != nullptr);
+                }
+
+                // And it can be taken away again from the same place.
+                QToolButton* removeButton = ipanel->findChild<QToolButton*>(QStringLiteral("smBtnRemoveInternal"));
+                CHECK(removeButton != nullptr);
+                if ((removeButton != nullptr) && (ieditor != nullptr))
+                {
+                    removeButton->click();
+                    QApplication::processEvents();
+                    CHECK(idata.findTransitionById(internalId) == nullptr);
+                    CHECK(ieditor->count() == before);
+
+                    // A state with none still offers the editor: an empty list plus the Add button
+                    // is the answer to "how do I make one?".
+                    SMInternalDialog empty(imodel, QStringLiteral("Internal"), host->getId());
+                    CHECK(empty.editor() != nullptr);
+                    CHECK((empty.editor() != nullptr) && (empty.editor()->currentTransition() == 0u));
+                    CHECK(empty.findChild<QToolButton*>(QStringLiteral("smBtnAddInternal")) != nullptr);
+                }
+            }
+        }
+
+        grab(idesign, "l4-internal-and-glyphs");
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
