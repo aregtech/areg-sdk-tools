@@ -99,6 +99,14 @@ namespace
         return target * static_cast<double>(base);
     }
 
+    //!< Two points that differ by less than a thousandth of a scene unit are the same point.
+    //!< Anchors are re-derived from a box origin every rebuild, so bit-exact comparison would
+    //!< report a move where the arithmetic merely rounded differently.
+    inline bool samePoint(const QPointF& a, const QPointF& b)
+    {
+        return (std::abs(a.x() - b.x()) < 1e-3) && (std::abs(a.y() - b.y()) < 1e-3);
+    }
+
     //!< The distance from a point to a segment, and the closest point on it.
     double segmentDistance(const QPointF& p, const QPointF& a, const QPointF& b, QPointF& closest)
     {
@@ -138,6 +146,12 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mHasAnchors   (false)
     , mAnchorBegin  ( )
     , mAnchorEnd    ( )
+    , mAnchorsMeasured(false)
+    , mAnchorBeginRel( )
+    , mAnchorEndRel ( )
+    , mHasOrigins   (false)
+    , mSrcOrigin    ( )
+    , mTgtOrigin    ( )
     , mBegin        ( )
     , mEnd          ( )
     , mPath         ( )
@@ -170,7 +184,7 @@ SMScene* SMEdgeItem::getCanvas() const
     return qobject_cast<SMScene*>(scene());
 }
 
-QRectF SMEdgeItem::stateRect(uint32_t stateId) const
+QRectF SMEdgeItem::stateBoxRect(uint32_t stateId) const
 {
     SMScene* canvas = getCanvas();
     if ((canvas == nullptr) || (stateId == 0))
@@ -193,6 +207,104 @@ QRectF SMEdgeItem::stateRect(uint32_t stateId) const
     }
 
     return QRectF();
+}
+
+QRectF SMEdgeItem::stateRect(uint32_t stateId) const
+{
+    SMScene* canvas = getCanvas();
+    if ((canvas == nullptr) || (stateId == 0))
+    {
+        return QRectF();
+    }
+
+    SMStateItem* item = canvas->stateItem(stateId);
+    if (item != nullptr)
+    {
+        return item->getVisibleGeometry();
+    }
+
+    // No live item (a box of another level): the collapsed flag has to be read from the layout.
+    // Start / Final markers have no body to collapse and are never cut down (see SMStateItem).
+    QRectF rect = stateBoxRect(stateId);
+    const SMLayoutNode* node = canvas->getModel().getData().getLayout().findNode(stateId);
+    const SMStateEntry* state = canvas->getModel().getData().findStateById(stateId);
+    const bool marker = (state != nullptr) && (state->getKind() != SMStateEntry::eStateKind::Normal);
+    if ((rect.isEmpty() == false) && (marker == false)
+        && (node != nullptr) && node->hasExpanded && (node->expanded == false))
+    {
+        rect.setHeight(NESMDesign::StateHeaderHeight);
+    }
+
+    return rect;
+}
+
+QPointF SMEdgeItem::borderAnchorPoint(uint32_t stateId, const QRectF& drawn, const QPointF& anchor) const
+{
+    if ((drawn.width() <= 0.0) || (drawn.height() <= 0.0))
+    {
+        return anchor;
+    }
+
+    const double radius = stateRadius(stateId, drawn);
+    const QRectF stored = stateBoxRect(stateId);
+    if ((stored.width() <= 0.0) || (stored.height() <= 0.0) || (std::abs(stored.height() - drawn.height()) < 1e-6))
+    {
+        return NESMDesign::nearestBorderPoint(drawn, radius, anchor);
+    }
+
+    // Only the height differs, so the drawn box keeps the same four sides -- one of them shorter.
+    // Take the side of the stored box the anchor belongs to and stay on it.
+    const QPointF onStored = NESMDesign::nearestBorderPoint(stored, stateRadius(stateId, stored), anchor);
+    const QPointF normal   = NESMDesign::borderOutwardNormal(stored, onStored);
+    const double  rad      = std::clamp(radius, 0.0, std::min(drawn.width(), drawn.height()) / 2.0);
+    if (normal.y() < 0.0)
+    {
+        return QPointF(std::clamp(onStored.x(), drawn.left() + rad, drawn.right() - rad), drawn.top());
+    }
+    else if (normal.y() > 0.0)
+    {
+        return QPointF(std::clamp(onStored.x(), drawn.left() + rad, drawn.right() - rad), drawn.bottom());
+    }
+    else if (normal.x() < 0.0)
+    {
+        return QPointF(drawn.left(), std::clamp(onStored.y(), drawn.top() + rad, drawn.bottom() - rad));
+    }
+
+    return QPointF(drawn.right(), std::clamp(onStored.y(), drawn.top() + rad, drawn.bottom() - rad));
+}
+
+QPointF SMEdgeItem::anchorFrame(uint32_t stateId) const
+{
+    // An unresolved box gives a null origin, which leaves the anchor where it was persisted:
+    // there is no box to measure it against, so there is nothing for it to follow either.
+    return stateBoxRect(stateId).topLeft();
+}
+
+void SMEdgeItem::setAnchorPoint(bool begin, const QPointF& point)
+{
+    if (mHasAnchors == false)
+    {
+        // First manual endpoint move: seed BOTH anchors from the drawn path, so the endpoint
+        // that was not touched keeps the place it was drawn at instead of falling back to the
+        // center-facing default.
+        mAnchorBegin = mBegin;
+        mAnchorEnd   = mEnd;
+        mHasAnchors  = true;
+    }
+
+    if (begin)
+    {
+        mAnchorBegin = point;
+    }
+    else
+    {
+        mAnchorEnd = point;
+    }
+
+    // Re-measure both against their boxes: the seeding above may have written the other one too.
+    mAnchorBeginRel  = mAnchorBegin - anchorFrame(mSourceId);
+    mAnchorEndRel    = mAnchorEnd   - anchorFrame(mSelfLoop ? mSourceId : mTargetId);
+    mAnchorsMeasured = true;
 }
 
 double SMEdgeItem::stateRadius(uint32_t stateId, const QRectF& rect) const
@@ -396,9 +508,14 @@ void SMEdgeItem::updateFromModel()
         }
     }
 
-    // The persisted first/last points are the user-placed border anchors; the drawn
-    // begin/end are these projected onto the live border, so a state move keeps them glued.
-    mHasAnchors = (edge != nullptr) && (edge->points.size() >= 2);
+    // The persisted first/last points are the user-placed border anchors; the drawn begin/end are
+    // these projected onto the live border. They are re-measured against their boxes on the next
+    // rebuild (mAnchorsMeasured), from where on they follow those boxes rather than the stored
+    // scene coordinates -- otherwise moving a box far enough would let the projection pick the
+    // opposite side and the transition would jump around the box (issue #550 bug 3).
+    mHasAnchors      = (edge != nullptr) && (edge->points.size() >= 2);
+    mAnchorsMeasured = false;
+    mHasOrigins      = false;   // the waypoints just read belong to the boxes as they stand now
     if (mHasAnchors)
     {
         mAnchorBegin = edge->points.first();
@@ -417,17 +534,26 @@ void SMEdgeItem::updateFromModel()
     update();
 }
 
-void SMEdgeItem::refreshAnchors()
+void SMEdgeItem::refreshAnchors(bool fromModel /*= false*/)
 {
     if (mValid)
     {
+        if (fromModel)
+        {
+            // The document moved the box, so its stored anchors belong to where it stands now.
+            // One undo step may carry a box and its transitions as separate children, which reach
+            // the canvas one after the other; re-measuring on each of them leaves the last -- and
+            // therefore consistent -- pair as the one that counts.
+            mAnchorsMeasured = false;
+        }
+
         prepareGeometryChange();
-        rebuildPath();
+        rebuildPath(fromModel == false);
         update();
     }
 }
 
-void SMEdgeItem::rebuildPath()
+void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
 {
     mPath.clear();
     if (mValid == false)
@@ -450,6 +576,74 @@ void SMEdgeItem::rebuildPath()
     }
 
     const QPointF tc = tgt.center();
+
+    // The anchors live in their boxes, not in the scene: measure them once against the stored box
+    // (the collapsed body must not move them), then re-derive them from wherever the box stands
+    // now. Moving a box therefore only changes the length and the angle of the line.
+    const QPointF srcFrame = anchorFrame(mSourceId);
+    const QPointF tgtFrame = anchorFrame(mSelfLoop ? mSourceId : mTargetId);
+    if (mHasAnchors)
+    {
+        if (mAnchorsMeasured == false)
+        {
+            // Measure the point the DOCUMENT holds against the box as it now stands. The member
+            // anchors are not used here: one undo step reaches the canvas as several changes, and
+            // in between them an anchor may already have been re-derived from a box that has not
+            // caught up yet -- measuring that would freeze the mismatch instead of ending it.
+            const SMScene* owner = getCanvas();
+            const SMLayoutEdge* stored = (owner != nullptr)
+                    ? owner->getModel().getData().getLayout().findEdge(getElementId()) : nullptr;
+            if ((stored != nullptr) && (stored->points.size() >= 2))
+            {
+                mAnchorBegin = stored->points.first();
+                mAnchorEnd   = stored->points.last();
+            }
+
+            mAnchorBeginRel  = mAnchorBegin - srcFrame;
+            mAnchorEndRel    = mAnchorEnd   - tgtFrame;
+            mAnchorsMeasured = true;
+        }
+        else
+        {
+            mAnchorBegin = srcFrame + mAnchorBeginRel;
+            mAnchorEnd   = tgtFrame + mAnchorEndRel;
+        }
+    }
+
+    // Both boxes travelled by the same step: the whole transition was carried along by a group
+    // move, so its interior waypoints and its label travel with it and the drawn line keeps its
+    // shape. One box moving alone leaves them where they are and reshapes the line instead.
+    if (followBoxes && mHasOrigins)
+    {
+        const QPointF delta = srcFrame - mSrcOrigin;
+        const QPointF drift = delta - (tgtFrame - mTgtOrigin);
+        const bool    same  = (std::abs(drift.x()) < 1e-6) && (std::abs(drift.y()) < 1e-6);
+        const bool    moved = (std::abs(delta.x()) > 1e-6) || (std::abs(delta.y()) > 1e-6);
+        if (same && moved)
+        {
+            for (QPointF& point : mWaypoints)
+            {
+                point += delta;
+            }
+
+            if (mHasLabel)
+            {
+                mLabelPos += delta;
+            }
+
+            mSrcOrigin = srcFrame;
+            mTgtOrigin = tgtFrame;
+        }
+
+        // The two boxes disagree: keep the origins until the second one catches up. A group move
+        // reaches the items one by one, so the steps only match after the last of them arrived.
+    }
+    else
+    {
+        mSrcOrigin  = srcFrame;
+        mTgtOrigin  = tgtFrame;
+        mHasOrigins = true;
+    }
 
     // A self-loop with no stored waypoints gets a default loop above the box. An ARC self-loop gets
     // none: its two border anchors and the bulge already describe the whole loop, and a seeded
@@ -488,11 +682,11 @@ void SMEdgeItem::rebuildPath()
         }
 
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
-               : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+               : mHasAnchors ? borderAnchorPoint(mSourceId, src, mAnchorBegin)
                : mSelfLoop   ? loopBegin
                              : defaultBorder(src, srcRad, tc);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
-               : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+               : mHasAnchors ? borderAnchorPoint((mSelfLoop ? mSourceId : mTargetId), tgt, mAnchorEnd)
                : mSelfLoop   ? loopEnd
                              : defaultBorder(tgt, tgtRad, sc);
         mPath  = NESMDesign::arcPolyline(mBegin, mEnd, mBulge, NESMDesign::EdgeArcSamples);
@@ -506,11 +700,11 @@ void SMEdgeItem::rebuildPath()
         const QPointF beginRef = poly ? mWaypoints.first() : tc;
         const QPointF endRef   = poly ? mWaypoints.last()  : sc;
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
-               : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+               : mHasAnchors ? borderAnchorPoint(mSourceId, src, mAnchorBegin)
                : poly        ? NESMDesign::polylineBorderPoint(src, srcRad, beginRef)
                              : defaultBorder(src, srcRad, beginRef);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
-               : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+               : mHasAnchors ? borderAnchorPoint((mSelfLoop ? mSourceId : mTargetId), tgt, mAnchorEnd)
                : poly        ? NESMDesign::polylineBorderPoint(tgt, tgtRad, endRef)
                              : defaultBorder(tgt, tgtRad, endRef);
 
@@ -1191,9 +1385,8 @@ void SMEdgeItem::adoptSelfLoopEnds()
 
     // Pin them: without anchors the arc branch would re-derive the endpoints and lose the side of
     // the box the user had the loop leaving from.
-    mAnchorBegin = mBegin;
-    mAnchorEnd   = mEnd;
-    mHasAnchors  = true;
+    setAnchorPoint(true , mBegin);
+    setAnchorPoint(false, mEnd);
 }
 
 double SMEdgeItem::selfLoopBulge() const
@@ -1281,9 +1474,12 @@ SMLayoutEdge SMEdgeItem::buildGeometry() const
     edge.shape = mShape;
     edge.bulge = mBulge;
     edge.color = mColorName;
-    edge.points.append(mBegin);
+    // The ANCHORS are persisted, not the drawn endpoints: the two differ only while a box is
+    // collapsed, and then it is the anchor that has to survive -- expanding the box must give the
+    // endpoint its old place back rather than the header edge it was clamped to (issue #550 bug 4).
+    edge.points.append(mHasAnchors ? mAnchorBegin : mBegin);
     edge.points.append(mWaypoints);
-    edge.points.append(mEnd);
+    edge.points.append(mHasAnchors ? mAnchorEnd : mEnd);
     edge.hasLabel = mHasLabel;
     edge.label    = mLabelPos;
     return edge;
@@ -1300,6 +1496,105 @@ void SMEdgeItem::commitGeometry(const QString& text)
     StateMachineModel& model = canvas->getModel();
     model.getUndoStack().push(new SMSetEdgeGeometryCommand(  model.getData(), model.getNotifier()
                                                           , getElementId(), mGesture, buildGeometry(), text));
+}
+
+bool SMEdgeItem::hasGeometryDrift() const
+{
+    SMScene* canvas = getCanvas();
+    if ((mValid == false) || (canvas == nullptr))
+    {
+        return false;
+    }
+
+    const SMLayoutEdge* stored = canvas->getModel().getData().getLayout().findEdge(getElementId());
+    if ((stored == nullptr) || (stored->points.size() < 2))
+    {
+        // Nothing persisted yet: the endpoints are derived from the live boxes and follow them by
+        // themselves, so there is nothing to write back -- unless a gesture just pinned anchors.
+        return mHasAnchors;
+    }
+
+    if (mHasAnchors && ((samePoint(stored->points.first(), mAnchorBegin) == false)
+                        || (samePoint(stored->points.last(), mAnchorEnd) == false)))
+    {
+        return true;
+    }
+
+    // Only persisted waypoints count: the corners a self-loop seeds for itself are re-derived
+    // from the box on every re-read, so they must not turn a plain click into an undo step.
+    if (stored->points.size() > 2)
+    {
+        if (stored->points.size() != (mWaypoints.size() + 2))
+        {
+            return true;
+        }
+
+        for (int i = 0; i < mWaypoints.size(); ++i)
+        {
+            if (samePoint(stored->points.at(i + 1), mWaypoints.at(i)) == false)
+            {
+                return true;
+            }
+        }
+    }
+
+    return (stored->hasLabel && mHasLabel && (samePoint(stored->label, mLabelPos) == false));
+}
+
+bool SMEdgeItem::nudgeGeometry(const QPointF& delta)
+{
+    if ((mValid == false) || ((delta.x() == 0.0) && (delta.y() == 0.0)))
+    {
+        return false;
+    }
+
+    const QRectF srcBox = stateRect(mSourceId);
+    const QRectF tgtBox = (mSelfLoop ? srcBox : stateRect(mTargetId));
+    if ((srcBox.width() <= 0.0) || (srcBox.height() <= 0.0))
+    {
+        return false;
+    }
+
+    // An endpoint may only travel along the border it is stuck to, and only within that border's
+    // straight span: the step that runs across the border is dropped, so the transition never
+    // leaves the state it connects. Everything else -- the interior waypoints and the label --
+    // takes the whole step, so the run between the two ends moves as one.
+    const auto slide = [this, &delta](uint32_t stateId, const QRectF& box, const QPointF& anchor) -> QPointF
+    {
+        if ((box.width() <= 0.0) || (box.height() <= 0.0))
+        {
+            return anchor;
+        }
+
+        const double  radius = stateRadius(stateId, box);
+        const QPointF border = NESMDesign::nearestBorderPoint(box, radius, anchor);
+        return NESMDesign::slideBorderPoint(box, radius, border, border + delta, 0, false);
+    };
+
+    const QPointF begin = slide(mSourceId, srcBox, mHasAnchors ? mAnchorBegin : mBegin);
+    const QPointF end   = slide((mSelfLoop ? mSourceId : mTargetId), tgtBox, mHasAnchors ? mAnchorEnd : mEnd);
+
+    prepareGeometryChange();
+    for (QPointF& point : mWaypoints)
+    {
+        point += delta;
+    }
+
+    if (mHasLabel)
+    {
+        mLabelPos += delta;
+    }
+
+    setAnchorPoint(true , begin);
+    setAnchorPoint(false, end);
+    rebuildPath();
+    if (mHasLabel)
+    {
+        mLabelPos = clampLabelPos(mLabelPos);   // the line moved too; keep the label tethered to it
+    }
+
+    update();
+    return true;
 }
 
 bool SMEdgeItem::nudgeSelectedPoint(int dx, int dy, bool coarse, bool pixelWise)
@@ -1451,15 +1746,12 @@ bool SMEdgeItem::nudgeActiveEnd(int dx, int dy, bool coarse, bool pixelWise)
         return true;
     }
 
+    QPointF anchor = (begin ? mAnchorBegin : mAnchorEnd);
     if (mHasAnchors == false)
     {
-        // First manual endpoint move: seed both anchors from the drawn path.
-        mAnchorBegin = mBegin;
-        mAnchorEnd   = mEnd;
-        mHasAnchors  = true;
+        anchor = (begin ? mBegin : mEnd);    // first manual endpoint move: start from the drawn path
     }
 
-    QPointF anchor = (begin ? mAnchorBegin : mAnchorEnd);
     const int base = (coarse ? 10 : 5);
     anchor.setX(nudgeAxis(anchor.x(), dx, base, pixelWise));
     anchor.setY(nudgeAxis(anchor.y(), dy, base, pixelWise));
@@ -1468,14 +1760,13 @@ bool SMEdgeItem::nudgeActiveEnd(int dx, int dy, bool coarse, bool pixelWise)
     const int grid  = (canvas != nullptr) ? canvas->getGridSize() : NESMDesign::GridSizeDefault;
     const QPointF glued = NESMDesign::gridAlignedBorderPoint(box, stateRadius(stateId, box), anchor, grid);
 
-    QPointF& target = (begin ? mAnchorBegin : mAnchorEnd);
-    if (glued == target)
+    if (mHasAnchors && (glued == (begin ? mAnchorBegin : mAnchorEnd)))
     {
         return true;
     }
 
     prepareGeometryChange();
-    target = glued;
+    setAnchorPoint(begin, glued);
     rebuildPath();
     update();
 
@@ -1705,8 +1996,8 @@ void SMEdgeItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
         {
             const int grid = (canvas != nullptr) ? canvas->getGridSize() : NESMDesign::GridSizeDefault;
             point = canvas->isSnapToGrid()
-                    ? NESMDesign::gridAlignedBorderPoint(over->getBoxGeometry(), over->boxCornerRadius(), point, grid)
-                    : NESMDesign::nearestBorderPoint(over->getBoxGeometry(), over->boxCornerRadius(), point);
+                    ? NESMDesign::gridAlignedBorderPoint(over->getVisibleGeometry(), over->boxCornerRadius(), point, grid)
+                    : NESMDesign::nearestBorderPoint(over->getVisibleGeometry(), over->boxCornerRadius(), point);
         }
 
         mDragPoint = point;
@@ -1800,32 +2091,26 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
                 // new line, and hand the finished geometry to the deferred reconnection. The drag
                 // feedback is NOT reverted here: keeping the dropped path drawn until the command
                 // redraws the identical geometry removes the one-frame flash back to the old anchor.
-                const QRectF  overBox = over->getBoxGeometry();
+                const QRectF  overBox = over->getVisibleGeometry();
                 const double  overRad = over->boxCornerRadius();
                 const int     grid    = canvas->getGridSize();
                 const QPointF glued   = canvas->isSnapToGrid()
                         ? NESMDesign::gridAlignedBorderPoint(overBox, overRad, event->scenePos(), grid)
                         : NESMDesign::nearestBorderPoint(overBox, overRad, canvas->snappedPosition(event->scenePos()));
 
-                if (mHasAnchors == false)
-                {
-                    // Seed both anchors from the drawn path so the non-dragged endpoint survives.
-                    mAnchorBegin = mBegin;
-                    mAnchorEnd   = mEnd;
-                    mHasAnchors  = true;
-                }
-
                 mHasLabel = false;      // re-derive the label at the new line's midpoint
                 if (drag == eDrag::End)
                 {
-                    mEnd       = glued;
-                    mAnchorEnd = glued;
+                    mEnd = glued;
                 }
                 else
                 {
-                    mBegin       = glued;
-                    mAnchorBegin = glued;
+                    mBegin = glued;
                 }
+
+                // Seeds both anchors from the drawn path when there were none, so the endpoint
+                // that was not dragged survives the reconnection.
+                setAnchorPoint(drag != eDrag::End, glued);
 
                 const SMLayoutEdge geometry = buildGeometry();
                 if (drag == eDrag::End)
@@ -1846,23 +2131,7 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
                         ? NESMDesign::gridAlignedBorderPoint(ownBox, stateRadius(ownId, ownBox), event->scenePos(), grid)
                         : NESMDesign::nearestBorderPoint(ownBox, stateRadius(ownId, ownBox), canvas->snappedPosition(event->scenePos()));
                 prepareGeometryChange();
-                if (mHasAnchors == false)
-                {
-                    // First manual endpoint move: seed both anchors from the drawn path.
-                    mAnchorBegin = mBegin;
-                    mAnchorEnd   = mEnd;
-                }
-
-                mHasAnchors = true;
-                if (drag == eDrag::End)
-                {
-                    mAnchorEnd = glued;
-                }
-                else
-                {
-                    mAnchorBegin = glued;
-                }
-
+                setAnchorPoint(drag != eDrag::End, glued);
                 rebuildPath();
                 update();
                 commitGeometry(translate("Move endpoint"));

@@ -31,6 +31,7 @@
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
+#include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 
 #include <QCoreApplication>
@@ -266,6 +267,11 @@ SMStateItem::~SMStateItem()
 QRectF SMStateItem::getBoxGeometry() const
 {
     return QRectF(pos(), mSize);
+}
+
+QRectF SMStateItem::getVisibleGeometry() const
+{
+    return QRectF(pos(), QSizeF(mSize.width(), visibleHeight()));
 }
 
 bool SMStateItem::isBorderDragZone(const QPointF& scenePos) const
@@ -1556,10 +1562,25 @@ void SMStateItem::commitResize()
     }
 
     StateMachineModel& model = canvas->getModel();
-    model.getUndoStack().push(new SMMoveNodeCommand(  model.getData(), model.getNotifier()
-                                                    , getElementId(), SMMoveNodeCommand::takeNextGesture()
-                                                    , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                                    , translate("Resize state")));
+    const QString text = translate("Resize state");
+    // A resized border carries the anchors of the transitions that end on it; they are written
+    // back in the same undo step (see SMScene::commitSelectionMove).
+    const QList<SMEdgeItem*> movedEdges{ canvas->driftedEdgeItems() };
+    const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
+    QUndoCommand*  parent  = movedEdges.isEmpty()
+                             ? nullptr : new SMCompositeCommand(model.getData(), model.getNotifier(), text);
+
+    QUndoCommand* resize = new SMMoveNodeCommand(  model.getData(), model.getNotifier()
+                                                 , getElementId(), gesture
+                                                 , geometry.x(), geometry.y(), geometry.width(), geometry.height()
+                                                 , text, parent);
+    for (SMEdgeItem* edge : movedEdges)
+    {
+        new SMSetEdgeGeometryCommand(  model.getData(), model.getNotifier()
+                                     , edge->getElementId(), gesture, edge->buildGeometry(), text, parent);
+    }
+
+    model.getUndoStack().push(parent != nullptr ? parent : resize);
 }
 
 void SMStateItem::toggleExpanded()

@@ -391,7 +391,9 @@ QRectF SMTransitionTool::sourceRect() const
     SMStateItem* item = getScene().stateItem(mSourceId);
     if (item != nullptr)
     {
-        return item->getBoxGeometry();
+        // The DRAWN box: a transition started on a collapsed state leaves the header the user
+        // sees, never the border of the body that is folded away.
+        return item->getVisibleGeometry();
     }
 
     const SMLayoutNode* node = getScene().getModel().getData().getLayout().findNode(mSourceId);
@@ -645,7 +647,7 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
     {
         SMStateItem* targetItem = canvas.stateItem(targetId);
         const SMLayoutNode* node = data.getLayout().findNode(targetId);
-        tgtRect = (targetItem != nullptr) ? targetItem->getBoxGeometry()
+        tgtRect = (targetItem != nullptr) ? targetItem->getVisibleGeometry()
                 : (node != nullptr) ? QRectF(node->x, node->y, node->width, node->height) : QRectF();
     }
 

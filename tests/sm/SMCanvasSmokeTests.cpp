@@ -4058,6 +4058,201 @@ int main(int argc, char* argv[])
         grab(idesign, "l4-internal-and-glyphs");
     }
 
+    std::printf("sect: issue-550 parallel move, edge nudge, sticky anchors, collapse\n");
+    // --- The four move/anchor rules, on a pair of boxes joined by one straight transition:
+    //  1. every selected element travels the identical step, boxes and transitions alike;
+    //  2. selected transitions answer the arrow keys on their own;
+    //  3. an anchor stays on the border it was placed on, however far its box travels;
+    //  4. collapsing a box pulls the endpoint onto the header, expanding gives it back. ---
+    {
+        StateMachineModel gmodel;
+        CHECK(gmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign gdesign(gmodel);
+        gdesign.resize(1200, 800);
+        gdesign.show();
+        QApplication::processEvents();
+
+        SMScene&          gscene = gdesign.getScene();
+        SMGraphicsView&   gview  = gdesign.getView();
+        StateMachineData& gdata  = gmodel.getData();
+        SMStateData*      groot  = gdata.findLevel(gscene.getLevelId());
+        CHECK(groot != nullptr);
+
+        // Two boxes well clear of the loaded diagram, joined left-border to right-border.
+        const QRectF srcBox{ 3008.0, 3008.0, 208.0, 128.0 };
+        const QRectF tgtBox{ 3408.0, 3008.0, 208.0, 128.0 };
+        SMCreateStateCommand* mkSrc = new SMCreateStateCommand(  gdata, gmodel.getNotifier(), *groot
+                                                               , QStringLiteral("MOVE_SRC"), SMStateEntry::eStateKind::Normal
+                                                               , srcBox, QStringLiteral("src"));
+        gmodel.getUndoStack().push(mkSrc);
+        SMCreateStateCommand* mkTgt = new SMCreateStateCommand(  gdata, gmodel.getNotifier(), *groot
+                                                               , QStringLiteral("MOVE_TGT"), SMStateEntry::eStateKind::Normal
+                                                               , tgtBox, QStringLiteral("tgt"));
+        gmodel.getUndoStack().push(mkTgt);
+        const uint32_t srcId = mkSrc->getStateId();
+        const uint32_t tgtId = mkTgt->getStateId();
+        QApplication::processEvents();
+
+        SMStateEntry* srcState = gdata.findStateById(srcId);
+        CHECK(srcState != nullptr);
+        const QPointF anchorBegin{ srcBox.right(), srcBox.center().y() };
+        const QPointF anchorEnd  { tgtBox.left() , tgtBox.center().y() };
+        SMCreateTransitionCommand* mkTx = new SMCreateTransitionCommand(  gdata, gmodel.getNotifier(), *srcState
+                                                                        , SMTransitionEntry::eStimulusKind::Trigger
+                                                                        , QStringLiteral("go"), tgtId
+                                                                        , QList<QPointF>{ anchorBegin, anchorEnd }
+                                                                        , QStringLiteral("tx"));
+        gmodel.getUndoStack().push(mkTx);
+        const uint32_t txId = mkTx->getTransitionId();
+        QApplication::processEvents();
+
+        SMStateItem* srcItem = gscene.stateItem(srcId);
+        SMStateItem* tgtItem = gscene.stateItem(tgtId);
+        SMEdgeItem*  txItem  = dynamic_cast<SMEdgeItem*>(gscene.findCanvasItem(txId));
+        CHECK((srcItem != nullptr) && (tgtItem != nullptr) && (txItem != nullptr));
+
+        gview.resetTransform();
+        gview.centerOn((srcBox.center() + tgtBox.center()) / 2.0);
+        QApplication::processEvents();
+
+        if ((srcItem != nullptr) && (tgtItem != nullptr) && (txItem != nullptr))
+        {
+            CHECK(txItem->getPath().size() == 2);
+            const double midRow = tgtBox.center().y();
+
+            // --- Bug 3: the box travels UP past its own height; the endpoint must stay on the
+            // LEFT border at the same point of it, never flip to the border that came nearest ---
+            gscene.clearSelection();
+            tgtItem->setSelected(true);
+            QApplication::processEvents();
+            for (int i = 0; i < 12; ++i)                            // 12 * 16 = 192 > box height
+            {
+                keyClickScene(gscene, Qt::Key_Up);
+            }
+
+            const QRectF liftedBox = tgtItem->getBoxGeometry();
+            CHECK(std::abs(liftedBox.top() - (tgtBox.top() - 192.0)) < 1e-6);   // 12 identical steps
+            CHECK(std::abs(txItem->getPath().last().x() - liftedBox.left()) < 1e-6);            // still LEFT
+            CHECK(std::abs(txItem->getPath().last().y() - liftedBox.center().y()) < 1e-6);      // same point of it
+            CHECK(std::abs(txItem->getPath().first().x() - srcBox.right()) < 1e-6);             // source untouched
+            CHECK(std::abs(txItem->getPath().first().y() - srcBox.center().y()) < 1e-6);
+            // The stored anchor moved with the box, so a reload cannot put it back on a stale point.
+            const SMLayoutEdge* liftedEdge = gdata.getLayout().findEdge(txId);
+            CHECK((liftedEdge != nullptr) && (std::abs(liftedEdge->points.last().y() - liftedBox.center().y()) < 1e-6));
+
+            for (int i = 0; i < 12; ++i)
+            {
+                keyClickScene(gscene, Qt::Key_Down);
+            }
+
+            CHECK(std::abs(tgtItem->getBoxGeometry().top() - tgtBox.top()) < 1e-6);
+            CHECK(std::abs(txItem->getPath().last().y() - midRow) < 1e-6);
+
+            // --- Bug 1 (keyboard): select everything; boxes AND transition travel one step,
+            // in the same direction, and the line keeps its length ---
+            gscene.clearSelection();
+            srcItem->setSelected(true);
+            tgtItem->setSelected(true);
+            txItem->setSelected(true);
+            QApplication::processEvents();
+            const QPointF beginBefore = txItem->getPath().first();
+            const QPointF endBefore   = txItem->getPath().last();
+            keyClickScene(gscene, Qt::Key_Left);
+            const QPointF step{ -static_cast<double>(gscene.getGridSize()), 0.0 };
+            CHECK(srcItem->getBoxGeometry().topLeft() == (srcBox.topLeft() + step));
+            CHECK(tgtItem->getBoxGeometry().topLeft() == (tgtBox.topLeft() + step));
+            CHECK(txItem->getPath().first() == (beginBefore + step));   // the transition kept pace
+            CHECK(txItem->getPath().last()  == (endBefore   + step));
+            keyClickScene(gscene, Qt::Key_Right);
+            CHECK(srcItem->getBoxGeometry().topLeft() == srcBox.topLeft());
+            CHECK(txItem->getPath().last() == endBefore);
+
+            // --- Bug 2: the transition alone answers the arrow keys. Both anchors sit on
+            // vertical borders, so a vertical step slides them and a horizontal one cannot ---
+            gscene.clearSelection();
+            txItem->setSelected(true);
+            QApplication::processEvents();
+            keyClickScene(gscene, Qt::Key_Down);
+            CHECK(std::abs(txItem->getPath().first().y() - (beginBefore.y() + gscene.getGridSize())) < 1e-6);
+            CHECK(std::abs(txItem->getPath().last().y()  - (endBefore.y()   + gscene.getGridSize())) < 1e-6);
+            CHECK(std::abs(txItem->getPath().first().x() - beginBefore.x()) < 1e-6);     // stayed on its border
+            CHECK(srcItem->getBoxGeometry().topLeft() == srcBox.topLeft());              // the boxes stood still
+            const SMLayoutEdge* slidEdge = gdata.getLayout().findEdge(txId);
+            CHECK((slidEdge != nullptr)
+                  && (std::abs(slidEdge->points.last().y() - (endBefore.y() + gscene.getGridSize())) < 1e-6));
+            gmodel.getUndoStack().undo();                                                // one undo step
+            QApplication::processEvents();
+            CHECK(std::abs(txItem->getPath().last().y() - endBefore.y()) < 1e-6);
+
+            // --- Bug 1 (mouse): a two-box drag moves both by the identical step, however the
+            // grid would round each of them on its own ---
+            gscene.clearSelection();
+            srcItem->setSelected(true);
+            tgtItem->setSelected(true);
+            QApplication::processEvents();
+            const QPointF srcAt = srcItem->getBoxGeometry().topLeft();
+            const QPointF tgtAt = tgtItem->getBoxGeometry().topLeft();
+            const QPointF grab  = srcItem->getBoxGeometry().center();
+            dragScene(gview, grab, grab + QPointF(96.0, 64.0));
+            const QPointF srcStep = srcItem->getBoxGeometry().topLeft() - srcAt;
+            const QPointF tgtStep = tgtItem->getBoxGeometry().topLeft() - tgtAt;
+            CHECK((srcStep.x() != 0.0) || (srcStep.y() != 0.0));
+            CHECK(srcStep == tgtStep);                                  // parallel, to the unit
+            gmodel.getUndoStack().undo();
+            QApplication::processEvents();
+            CHECK(srcItem->getBoxGeometry().topLeft() == srcAt);
+            CHECK(tgtItem->getBoxGeometry().topLeft() == tgtAt);
+
+            // --- Bug 4: collapsing the target pulls the endpoint onto the header it can still
+            // see; expanding gives the endpoint its old place back ---
+            gscene.clearSelection();
+            const int undoBeforeCollapse = gmodel.getUndoStack().index();
+            tgtItem->toggleExpanded();
+            QApplication::processEvents();
+            CHECK(tgtItem->isExpanded() == false);
+            CHECK(gmodel.getUndoStack().index() == (undoBeforeCollapse + 1));    // no extra move step
+            const QRectF header = tgtItem->getVisibleGeometry();
+            CHECK(std::abs(header.height() - NESMDesign::StateHeaderHeight) < 1e-6);
+            const QPointF collapsedEnd = txItem->getPath().last();
+            CHECK(std::abs(collapsedEnd.x() - header.left()) < 1e-6);            // still the left border
+            CHECK(collapsedEnd.y() <= (header.bottom() + 1e-6));                 // and on the drawn part of it
+            CHECK(collapsedEnd.y() >= (header.top() - 1e-6));
+            CHECK(collapsedEnd != endBefore);                                    // it did move onto the header
+
+            tgtItem->toggleExpanded();
+            QApplication::processEvents();
+            CHECK(tgtItem->isExpanded());
+            CHECK(txItem->getPath().last() == endBefore);                        // restored exactly
+
+            // --- Bug 1, self-loop: the corners a loop draws for itself are scene points too,
+            // and both of its ends sit on the one box -- so they travel with it ---
+            SMCreateTransitionCommand* mkLoop = new SMCreateTransitionCommand(  gdata, gmodel.getNotifier(), *srcState
+                                                                              , SMTransitionEntry::eStimulusKind::Trigger
+                                                                              , QStringLiteral("again"), srcId
+                                                                              , QList<QPointF>(), QStringLiteral("loop"));
+            gmodel.getUndoStack().push(mkLoop);
+            QApplication::processEvents();
+            SMEdgeItem* loopItem = dynamic_cast<SMEdgeItem*>(gscene.findCanvasItem(mkLoop->getTransitionId()));
+            CHECK(loopItem != nullptr);
+            if (loopItem != nullptr)
+            {
+                const QList<QPointF> loopBefore = loopItem->getPath();
+                CHECK(loopBefore.size() == 4);                                  // begin, two corners, end
+                gscene.clearSelection();
+                srcItem->setSelected(true);
+                QApplication::processEvents();
+                keyClickScene(gscene, Qt::Key_Left);
+                const QPointF loopStep{ -static_cast<double>(gscene.getGridSize()), 0.0 };
+                const QList<QPointF> loopAfter = loopItem->getPath();
+                CHECK(loopAfter.size() == loopBefore.size());
+                for (int i = 0; (i < loopAfter.size()) && (i < loopBefore.size()); ++i)
+                {
+                    CHECK(loopAfter.at(i) == (loopBefore.at(i) + loopStep));    // the whole loop travelled
+                }
+            }
+        }
+    }
+
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);
 }

@@ -95,6 +95,13 @@ public:
 protected:
     virtual QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
 
+    /**
+     * \brief   Registers the item as the reference of the move gesture that starts here: the
+     *          whole selection follows the step this item's snapping produces, so a multiple
+     *          selection travels in parallel instead of each box rounding to its own cell.
+     **/
+    virtual void mousePressEvent(QGraphicsSceneMouseEvent* event) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

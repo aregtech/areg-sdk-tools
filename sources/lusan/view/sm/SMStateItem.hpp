@@ -199,9 +199,19 @@ public:
     inline SMStateEntry::eHistory getHistoryBadge() const;
 
     /**
-     * \brief   The box geometry (position and size) in scene coordinates.
+     * \brief   The box geometry (position and size) in scene coordinates. This is the STORED
+     *          geometry -- the one the Node layout entry keeps -- so it holds the full body
+     *          height even while the body is collapsed away.
      **/
     QRectF getBoxGeometry() const;
+
+    /**
+     * \brief   The geometry the box is actually DRAWN with: \ref getBoxGeometry cut down to the
+     *          header height while the body is collapsed. Transition endpoints anchor to this
+     *          rectangle, so collapsing a box pulls its arrows onto the header instead of
+     *          leaving them beside the hidden body.
+     **/
+    QRectF getVisibleGeometry() const;
 
     /**
      * \brief   True when a scene position lies in the border band of the box (and not on a

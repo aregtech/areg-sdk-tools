@@ -68,6 +68,9 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mGridDotSize  (NESMDesign::GridDotSizeDefault)
     , mSnapToGrid   (true)
     , mMouseDrag    (false)
+    , mDragLeader   (nullptr)
+    , mDragLeaderPos( )
+    , mDragOrigins  ( )
     , mSyncSelection(false)
     , mPeek         (nullptr)
 {
@@ -171,6 +174,36 @@ QPointF SMScene::snappedPosition(const QPointF& position) const
     return (mSnapToGrid ? NESMDesign::snapPoint(position, mGridSize) : position);
 }
 
+void SMScene::setDragLeader(const QGraphicsItem& item)
+{
+    mDragLeader    = &item;
+    mDragLeaderPos = item.pos();
+}
+
+QPointF SMScene::snapDragPosition(const QGraphicsItem& item, const QPointF& position)
+{
+    if (isInteractiveSnap() == false)
+    {
+        return position;
+    }
+
+    // The first position change of the gesture reaches an item before the drag has moved it, so
+    // its own position is where it started from.
+    auto origin = mDragOrigins.find(&item);
+    if (origin == mDragOrigins.end())
+    {
+        origin = mDragOrigins.insert(&item, item.pos());
+    }
+
+    // The step is the same for every item of the selection; snap it once, against the item the
+    // drag started on. That item -- or a lone dragged item, which is its own reference -- still
+    // lands on the grid, and the rest of the selection travels the identical distance instead of
+    // each one rounding to its own nearest cell (issue #550 bug 1).
+    const QPointF reference = ((mDragLeader != nullptr) ? mDragLeaderPos : *origin);
+    const QPointF step      = position - *origin;
+    return (*origin + (NESMDesign::snapPoint(reference + step, mGridSize) - reference));
+}
+
 void SMScene::setActiveTool(NESMDesign::eCanvasTool tool, bool sticky /*= false*/)
 {
     if ((mTool != nullptr) && (mTool->getKind() == tool))
@@ -259,6 +292,14 @@ void SMScene::unregisterCanvasItem(SMCanvasItem& item)
     {
         mItems.remove(item.getElementId());
     }
+
+    // An item that leaves the scene mid-gesture takes its drag bookkeeping with it, so a later
+    // allocation at the same address cannot inherit a start position that was never its own.
+    mDragOrigins.remove(&item);
+    if (mDragLeader == &item)
+    {
+        mDragLeader = nullptr;
+    }
 }
 
 void SMScene::drawBackground(QPainter* painter, const QRectF& rect)
@@ -329,6 +370,9 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
     if (event->button() == Qt::LeftButton)
     {
         mMouseDrag = true;
+        // A new gesture: the previous one's reference item and start positions are stale.
+        mDragLeader = nullptr;
+        mDragOrigins.clear();
 
         // Select-tool border drag: a press in a state's border band starts a transition --
         // unless a selected edge's grab handle lies under the cursor: endpoint and
@@ -386,7 +430,9 @@ void SMScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
     if (event->button() == Qt::LeftButton)
     {
-        mMouseDrag = false;
+        mMouseDrag  = false;
+        mDragLeader = nullptr;
+        mDragOrigins.clear();
     }
 }
 
@@ -740,10 +786,11 @@ void SMScene::onLayoutChanged(const QList<uint32_t>& ownerIds)
             foreign = true;
         }
 
-        // A state box move/resize re-anchors its connected edges.
+        // A state box move/resize re-anchors its connected edges. The geometry came from the
+        // document, so the anchors are re-measured against the box it now describes.
         if (stateItem(id) != nullptr)
         {
-            updateEdgesForState(id);
+            updateEdgesForState(id, true);
         }
     }
 
@@ -1159,14 +1206,14 @@ SMStateItem* SMScene::stateNear(const QPointF& scenePos, double margin) const
     return best;
 }
 
-void SMScene::updateEdgesForState(uint32_t stateId)
+void SMScene::updateEdgesForState(uint32_t stateId, bool fromModel /*= false*/)
 {
     for (SMCanvasItem* item : std::as_const(mItems))
     {
         SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
         if ((edge != nullptr) && ((edge->getSourceId() == stateId) || (edge->getTargetId() == stateId)))
         {
-            edge->refreshAnchors();
+            edge->refreshAnchors(fromModel);
         }
     }
 }
@@ -1330,11 +1377,25 @@ bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
 
     const qreal step = pixelWise ? 1.0 : static_cast<qreal>(mGridSize);
     const QPointF delta{ step * dx, step * dy };
+    if ((delta.x() == 0.0) && (delta.y() == 0.0))
+    {
+        return false;
+    }
 
-    QList<SMStateItem*> states;
-    QList<SMNoteItem*>  notes;
+    // Every box travels the identical step, and the transitions between them are carried along by
+    // their own boxes; a transition is nudged in its own right only when neither of the states it
+    // connects is moving, otherwise it would take the step twice (issue #550 bugs 1 and 2).
+    QSet<uint32_t>     movingStates;
+    QList<SMEdgeItem*> edges;
+    QList<QGraphicsItem*> boxes;
     for (QGraphicsItem* item : selection)
     {
+        if (SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item))
+        {
+            edges.append(edge);
+            continue;
+        }
+
         if (item->flags().testFlag(QGraphicsItem::ItemIsMovable) == false)
         {
             continue;
@@ -1359,62 +1420,30 @@ bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
             continue;
         }
 
-        SMStateItem* stateItem = dynamic_cast<SMStateItem*>(item);
-        SMNoteItem*  notePick  = dynamic_cast<SMNoteItem*>(item);
-        if ((stateItem != nullptr) && (mModel.getData().getLayout().findNode(stateItem->getElementId()) != nullptr))
+        boxes.append(item);
+        if (const SMStateItem* stateItem = dynamic_cast<const SMStateItem*>(item))
         {
-            states.append(stateItem);
-        }
-        else if ((notePick != nullptr) && (mModel.getData().getLayout().findNote(notePick->getElementId()) != nullptr))
-        {
-            notes.append(notePick);
-        }
-        else
-        {
-            item->moveBy(delta.x(), delta.y());
+            movingStates.insert(stateItem->getElementId());
         }
     }
 
-    if ((states.isEmpty() == false) || (notes.isEmpty() == false))
+    for (QGraphicsItem* item : std::as_const(boxes))
     {
-        // One undo step per key press; a fresh gesture ID keeps presses separate.
-        const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
-        const QString  text    = QCoreApplication::translate("SMScene", "Move selection");
-        const bool     single  = ((states.size() + notes.size()) == 1);
-        QUndoCommand*  parent  = single ? nullptr : new SMCompositeCommand(mModel.getData(), mModel.getNotifier(), text);
+        item->moveBy(delta.x(), delta.y());
+    }
 
-        for (SMStateItem* stateItem : states)
+    for (SMEdgeItem* edge : std::as_const(edges))
+    {
+        if ((movingStates.contains(edge->getSourceId()) == false)
+            && (movingStates.contains(edge->getTargetId()) == false))
         {
-            const QRectF geometry = stateItem->getBoxGeometry().translated(delta);
-            QUndoCommand* command = new SMMoveNodeCommand(  mModel.getData(), mModel.getNotifier()
-                                                          , stateItem->getElementId(), gesture
-                                                          , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                                          , text, parent);
-            if (single)
-            {
-                mModel.getUndoStack().push(command);
-            }
-        }
-
-        for (SMNoteItem* noteItem : notes)
-        {
-            const QRectF geometry = noteItem->getBoxGeometry().translated(delta);
-            QUndoCommand* command = new SMMoveNoteCommand(  mModel.getData(), mModel.getNotifier()
-                                                          , noteItem->getElementId(), gesture
-                                                          , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                                          , text, parent);
-            if (single)
-            {
-                mModel.getUndoStack().push(command);
-            }
-        }
-
-        if (single == false)
-        {
-            mModel.getUndoStack().push(parent);
+            edge->nudgeGeometry(delta);
         }
     }
 
+    // One undo step per key press: the shared commit writes back the moved boxes together with
+    // every transition whose geometry the step changed.
+    commitSelectionMove(QCoreApplication::translate("SMScene", "Move selection"));
     return true;
 }
 
@@ -1443,13 +1472,19 @@ void SMScene::commitSelectionMove(const QString& text)
         }
     }
 
-    if (movedStates.isEmpty() && movedNotes.isEmpty())
+    // A box that moved took the anchors of its transitions with it, and a group move took their
+    // waypoints too; those points are stored in scene coordinates, so they are written back in the
+    // very same undo step -- otherwise the file would keep anchors of boxes that are no longer
+    // there, and re-reading it would snap the transitions to whichever border came nearest.
+    const QList<SMEdgeItem*> movedEdges{ driftedEdgeItems() };
+
+    if (movedStates.isEmpty() && movedNotes.isEmpty() && movedEdges.isEmpty())
     {
         return;
     }
 
     const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
-    const bool     single  = ((movedStates.size() + movedNotes.size()) == 1);
+    const bool     single  = ((movedStates.size() + movedNotes.size() + movedEdges.size()) == 1);
     QUndoCommand*  parent  = single ? nullptr : new SMCompositeCommand(mModel.getData(), mModel.getNotifier(), text);
 
     for (SMStateItem* item : movedStates)
@@ -1478,8 +1513,34 @@ void SMScene::commitSelectionMove(const QString& text)
         }
     }
 
+    for (SMEdgeItem* item : movedEdges)
+    {
+        QUndoCommand* command = new SMSetEdgeGeometryCommand(  mModel.getData(), mModel.getNotifier()
+                                                             , item->getElementId(), gesture
+                                                             , item->buildGeometry(), text, parent);
+        if (single)
+        {
+            mModel.getUndoStack().push(command);
+        }
+    }
+
     if (single == false)
     {
         mModel.getUndoStack().push(parent);
     }
+}
+
+QList<SMEdgeItem*> SMScene::driftedEdgeItems() const
+{
+    QList<SMEdgeItem*> result;
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
+        if ((edge != nullptr) && edge->hasGeometryDrift())
+        {
+            result.append(edge);
+        }
+    }
+
+    return result;
 }
