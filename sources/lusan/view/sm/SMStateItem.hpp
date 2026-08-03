@@ -84,7 +84,7 @@ public:
         //!< A SECOND mark, drawn after \ref icon, or \c None. Exactly one row uses it: the
         //!< `on <stimulus>` header of an internal transition, which states two independent facts --
         //!< that an internal transition lives here (the band mark) and what kind of stimulus fires
-        //!< it (this one). An operation row never carries two, which is the #543 rule.
+        //!< it (this one). An operation row never carries two
         SMKindGlyph::eGlyph         kindIcon { SMKindGlyph::eGlyph::None };
 
         //!< The transition this row IS (an `on <stimulus>` header), or 0. A row that carries one

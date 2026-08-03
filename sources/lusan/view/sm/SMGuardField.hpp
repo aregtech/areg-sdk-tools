@@ -165,10 +165,7 @@ public:
     void setHeightLines(int minLines, int maxLines);
 
     /**
-     * \brief   Turns the grow-with-content height rule off (the default is on). With it off the
-     *          field keeps only its 
-ef setHeightLines minimum and otherwise fills the space its
-     *          layout gives it -- what the large pop-out editor wants.
+     * \brief   Turns the grow-with-content height rule off (the default is on)
      **/
     void setAutoHeight(bool autoHeight);
 
@@ -180,13 +177,13 @@ ef setHeightLines minimum and otherwise fills the space its
 
     /**
      * \brief   Enables / disables the implicit commit on focus-out (default enabled). The pop-out
-     *          editor disables it so its Cancel button -- which blurs the field before
-     *          its clicked() slot runs -- cannot silently commit the discarded text; the pop-out
+     *          editor disables it so its Cancel button, which blurs the field before
+     *          its clicked() slot runs, cannot silently commit the discarded text; the pop-out
      *          commits explicitly on OK instead. The base bar leaves it enabled.
      **/
     void setAutoCommit(bool enable);
 
-    //!< The committable (expanded, slot-stripped) text -- the grid's live-refresh input.
+    //!< The committable (expanded, slot-stripped) text, the grid's live-refresh input.
     QString committableText() const;
 
     //!< The callee method name of the call whose parentheses the caret is inside (empty when the

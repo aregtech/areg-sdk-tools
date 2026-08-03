@@ -494,8 +494,7 @@ SMRemoveCompositeCommand::SMRemoveCompositeCommand(  StateMachineData& data, Doc
     // elements it describes are back.
     new SMRemoveLayoutCommand(data, notifier, owners, text, this);
     appendIncomingRemovals(notifier, incoming, text, this);
-    // History and OnFinal describe a composition that is about to stop existing; leaving them
-    // behind raises a rule-18 finding the user never caused.
+    // History and OnFinal describe a composition that is about to stop existing; leaving them behind raises.
     if (state->getHistory() != SMStateEntry::eHistory::None)
     {
         new SMSetHistoryCommand(data, notifier, stateId, SMStateEntry::eHistory::None, text, this);

@@ -116,7 +116,7 @@ bool SMTypeCompat::widensTo(const QString& fromType, const QString& toType)
     if ((ff != 0) && (ft != 0))
         return (ff <= ft);
 
-    // Any integer of at most 32 bits widens to double (rule 4).
+    // Any integer of at most 32 bits widens to double.
     if (isIntUpTo32(fromType) && (toType == "double"))
         return true;
 

@@ -21,6 +21,8 @@
 
 #include <QWidget>
 
+#include <QDateTime>
+
 class MdiMainWindow;
 class QMdiSubWindow;
 class QTabWidget;
@@ -191,6 +193,13 @@ public:
     inline bool isModified() const;
     virtual void setModified(bool modified);
 
+    /**
+     * \brief   True once the window has accepted its close and is only waiting to be deleted.
+     *          The widget is still reachable from the MDI area during that window, so anything
+     *          that enumerates the open documents must leave it out.
+     **/
+    inline bool isClosing() const;
+
     void clear();
     void selectAll();
     
@@ -201,6 +210,13 @@ public:
      * \brief   Returns the document name.
      **/
     inline const QString& getDocumentName() const;
+
+    /**
+     * \brief   Compares the document's file with what it looked like when it was last read or
+     *          written and, when another program has changed it, offers to reload or to keep the
+     *          editor as it is. Called by the main window when the watched file reports a change.
+     **/
+    void checkFileChangedOnDisk();
 
     /**
      * \brief   Returns the MDI subwindow.
@@ -353,6 +369,13 @@ protected:
      **/
     QString strippedName(const QString& fullFileName);
 
+    /**
+     * \brief   Records the timestamp and size the document's file has right now. Everything the
+     *          editor itself reads or writes goes through here, so a later change of either value
+     *          is a change somebody else made.
+     **/
+    void rememberFileState();
+
 private slots:
     /**
      * \brief   Slot called when the document is modified.
@@ -368,6 +391,10 @@ protected:
     QString             mDocName;       //!< The document name.
     bool                mIsUntitled;    //!< Indicates whether the file is untitled.
     bool                mIsModified;    //!< Indicates the document modification flag.
+    bool                mIsClosing;     //!< The close was accepted; the window is on its way out.
+    QDateTime           mFileTime;      //!< File timestamp as of the last read or write by the editor.
+    qint64              mFileSize;      //!< File size as of the last read or write by the editor.
+    bool                mReloadAsked;   //!< A reload prompt for this document is on screen.
     QMdiSubWindow*      mMdiSubWindow;  //!< The MDI subwindow.
     MdiMainWindow*      mMainWindow;    //!< The MDI main window
 };
@@ -414,6 +441,11 @@ inline const QString & MdiChild::currentFile() const
 inline bool MdiChild::isModified() const
 {
     return mIsModified;
+}
+
+inline bool MdiChild::isClosing() const
+{
+    return mIsClosing;
 }
 
 inline const QString& MdiChild::getDocumentName() const

@@ -70,10 +70,9 @@ public:
     /**
      * \brief   The smallest legal `DoList@Interval`. A `Do` activity is a timer loop and
      *          nothing else, so it must say how often it ticks: `Interval="0"` -- which used to
-     *          mean "run on every handled trigger" -- and an absent `Interval` are both refused
-     *          (\ref SMValidator rule 29). Reacting to one named stimulus without leaving the
-     *          state is what an INTERNAL TRANSITION is for, and it names which stimulus, which
-     *          a `Do` never could.
+     *          mean "run on every handled trigger" -- and an absent `Interval` are both refused.
+     *          Reacting to one named stimulus without leaving the state is what an internal transition
+     *          is for, and it names which stimulus, which a `Do` never could.
      **/
     static constexpr uint32_t           MIN_DO_INTERVAL     { 1u };
 

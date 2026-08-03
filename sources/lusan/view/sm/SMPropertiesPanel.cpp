@@ -287,12 +287,6 @@ SMPropertiesPanel::~SMPropertiesPanel()
 
 QSize SMPropertiesPanel::minimumSizeHint() const
 {
-    // The width of this panel belongs to the user, not to what happens to be selected. A dock can
-    // never be dragged narrower than the widget it hosts asks for, so the panel promises the dock
-    // a fixed, small minimum (NESMDesign::PanelMinWidth) instead of the sum of its pages: the
-    // separator then keeps its full travel, and no selection, tab or diagnostic can move the edge.
-    // Squeezed below what a row genuinely needs, the row is clipped on the right -- the user's own
-    // drag, undone by dragging back -- which is the lesser evil next to a panel that resizes itself.
     const QSize base = QWidget::minimumSizeHint();
     return QSize(qMin(base.width(), NESMDesign::PanelMinWidth), base.height());
 }
@@ -301,8 +295,6 @@ void SMPropertiesPanel::buildStatePage()
 {
     mStateName = new QLineEdit(this);
     mStateName->setMaxLength(StateMachineData::MAX_IDENTIFIER_LENGTH);
-    // State names must be enum-friendly identifiers: reject spaces and other invalid symbols
-    // as the user types, the same rule the canvas in-place editor enforces.
     mStateName->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mStateName));
     mStateKind = new QLabel(this);
     mStateHistory = new QComboBox(this);
@@ -897,8 +889,7 @@ void SMPropertiesPanel::showState(uint32_t stateId)
         slot.editor->bind(stateId, eDocElementKind::State, 0u, mutableState, list);
     }
     // A document that names no interval reads back as 0, which the spin box cannot show and must
-    // not silently "correct" into a value the file does not contain. It shows the minimum, and the
-    // 0 stays in the model until the user commits -- so the rule 29 error stands until it is fixed.
+    // not silently "correct" into a value the file does not contain
     mDoInterval->setValue(static_cast<int>(qMax(state->getDoInterval(), SMStateEntry::MIN_DO_INTERVAL)));
     mDoUntil->setTarget(SMGuardRef::doActivity(stateId));
     refreshActionSummaries();
@@ -933,9 +924,7 @@ void SMPropertiesPanel::refreshActionSummaries()
             break;
         case eOpList::Do:
             list = &state->getDoList();
-            // A Do is a timer loop, so its label is its period. An activity with no period is not
-            // a second mode -- it is the rule 29 fault, and the tooltip says so rather than
-            // inventing a name for a behaviour that no longer exists.
+            // A Do is a timer loop, its label is its period
             title = list->isEmpty() ? tr("Do")
                   : (state->getDoInterval() >= SMStateEntry::MIN_DO_INTERVAL
                         ? tr("Do (every %1 ms)").arg(state->getDoInterval())
@@ -1056,22 +1045,12 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     mStimulusSig->setText(kindWord.isEmpty() ? signature : (kindWord + QLatin1Char(' ') + signature));
 
     // Populate the target and source pickers from the sibling states of the transition's level.
-    // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID --
-    // robust even when several states share a display name (Start/Final).
-    //
-    // Spec rule (mirrors the canvas endpoint-drag guard): a Start state has no incoming transition,
-    // so it is never offered as a Target; a Final state has no outgoing transition, so it is never
-    // offered as a Source. Omitting them from the lists is the primary enforcement; the commit slots
-    // add a backstop in case a stale selection slips through.
+    // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID.
+    // Robust even when several states share a display name (Start/Final).
     mTarget->clear();
     const SMStateEntry* owner = data.findTransitionOwner(transitionId);
     const uint32_t sourceId = (owner != nullptr ? owner->getId() : 0u);
 
-    // A transition owned by a Start is the level's INITIAL transition. It is taken as the machine
-    // enters the level, so nothing triggers it: the stimulus picker is not merely empty, it has
-    // nothing to offer, and it must have a target because its whole job is to say where the level
-    // begins. Its condition is the only thing that may decide between it and its siblings, and the
-    // Conditions tab already edits that.
     const bool initial = transition->isInitial() || ((owner != nullptr) && owner->isPseudoStart());
 
     // `To` means the target and nothing else now, so the row that used to double as "make this

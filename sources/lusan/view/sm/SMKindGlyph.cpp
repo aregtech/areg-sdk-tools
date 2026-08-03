@@ -152,10 +152,7 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Action:
     {
-        // A gear: the operation a state or transition RUNS. The owner's vocabulary already spells an
-        // action this way in the Declare menu (SMToolIcons::eIcon::NewAction); here it must survive
-        // at about 8 px, where a stroked outline smears, so the cog is a FILLED body with the hub
-        // punched out by the odd-even fill rule rather than eight drawn teeth.
+        // A gear: the operation a state or transition runs
         const QPointF centre = mark.center();
         // A cog carries far less ink than a bolt or a clock face of the same width, so it is drawn
         // to a larger fraction of the mark square to weigh the same beside them on a row.
@@ -184,11 +181,7 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Trigger:
     {
-        // A push button in profile: a solid cap on an open housing. A trigger is a METHOD, so its
-        // mark belongs with the gear and the diamond rather than with the event bolt -- the two were
-        // literally the same path once, and that is what made a cause unreadable next to an effect.
-        // Geometry is the Declare-menu button (SMToolIcons::eIcon::NewTrigger) as fractions of the
-        // mark square, so one shape serves both sizes.
+        // A push button in profile, a solid cap on an open housing
         const double x = mark.left();
         const double y = mark.top();
         const double w = mark.width();
@@ -231,9 +224,7 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Event:
     {
-        // A filled lightning bolt -- the same mark as the Events page and the toolbar so "event"
-        // reads the same way on every surface. Normalized coordinates (0..1 in the mark rect)
-        // trace the bolt, then map onto the rect.
+        // A filled lightning bolt
         const double x = mark.left();
         const double y = mark.top();
         const double w = mark.width();

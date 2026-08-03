@@ -1457,6 +1457,30 @@ namespace
             work->getTransitions().createTransition(eStim::Trigger, "back", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 2) == 0);
         }
+        {   // W2 negative: a substate with no transition of its own is not trapped, because the
+            // composite around it reacts to a stimulus and takes the whole subtree with it.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            SMStateEntry* outer = addReachedState(doc, s, "Outer", "go");
+            SMStateData* inner = outer->getOrCreateNestedStates();
+            SMStateEntry* innerStart = inner->createState("InnerStart", eKind::Start);
+            SMStateEntry* leaf = inner->createState("Leaf", eKind::Normal);
+            innerStart->getTransitions().createTransition(eStim::Trigger, QString(), leaf->getId(), eTrans::Initial);
+            CHECK(hasWarn(SMValidator::validate(doc), 2));      // nothing anywhere above the leaf leaves yet
+
+            doc.getMethods().createMethod("back", eMethod::Trigger);
+            outer->getTransitions().createTransition(eStim::Trigger, "back", stateId(doc, "Idle"));
+            CHECK(countWarn(SMValidator::validate(doc), 2) == 0);
+        }
+        {   // W2: an internal transition reacts and stays, so a state that owns nothing else is
+            // still a state the machine cannot leave.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            SMStateEntry* work = addReachedState(doc, s, "Work", "go");
+            doc.getMethods().createMethod("tick", eMethod::Trigger);
+            work->getTransitions().createTransition(eStim::Trigger, "tick", 0, eTrans::Internal);
+            CHECK(hasWarn(SMValidator::validate(doc), 2));
+        }
         {   // W3: a transition shadowed by an earlier unconditional one on the same stimulus.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
@@ -1657,6 +1681,23 @@ namespace
             SMStateEntry* s2 = addStart(doc2);
             s2->getEntryList().addOperation(new SMInlineCode(0, "doThing();"));
             CHECK(countWarn(SMValidator::validate(doc2), 11) == 0);
+        }
+        {   // W14: a declaration the generator has no comment for. Information and never a
+            // warning: an undescribed element is legal, it just generates uncommented code.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setName("Machine");
+            doc.getTimers().createTimer("Tick");
+            SMMethodEntry* action = doc.getMethods().createMethod("run", eMethod::Action);
+            action->addElement(MethodParameter(doc.getNextId(), "count", "int32"), true);
+            CHECK(countWarn(SMValidator::validate(doc), 14) == 4);   // machine, timer, method, parameter
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 14, SMIssue::eSeverity::Info));
+
+            doc.getOverview().setDescription("What the machine does");
+            doc.getTimers().getElements()[0].setDescription("How often it ticks");
+            action->setDescription("What it runs");
+            action->getElements()[0].setDescription("How many");
+            CHECK(countWarn(SMValidator::validate(doc), 14) == 0);
         }
     }
 }
@@ -1945,6 +1986,14 @@ namespace
             CHECK(errs == want);
             if (errs != want)
                 std::printf("      [EXPECTED] %s\n", one.why);
+
+            // The golden machine's leaves live inside composites that react to power_off and to
+            // the phase timers, so nothing in it is a dead end -- reporting one was the whole of
+            // the reported fault.
+            if (QString::fromLatin1(name) == QStringLiteral("TrafficLight.fsml"))
+            {
+                CHECK(countWarn(issues, 2) == 0);
+            }
         }
     }
 

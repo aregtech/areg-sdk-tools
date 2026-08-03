@@ -221,14 +221,6 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
 
     // Two labelled rows over the tabs: which transition, and what fires it. Both stay visible
     // whichever tab is open -- they are the identity of what is being edited, not a section of it.
-    //
-    // The priority controls travel with the picker (they order the same list, and both vanish for a
-    // lone transition), while add/remove sit on the stimulus row, where they are always available:
-    // adding the FIRST internal transition is exactly the case where there is no picker to hang
-    // them on.
-    // The toolbar sits above the list and stays put whether or not the list is shown: with no
-    // internal transitions at all, `add` is the only thing on this tab that does anything, and it
-    // must be findable. Only its buttons change state.
     QFrame* rule = new QFrame(this);
     rule->setFrameShape(QFrame::VLine);
     rule->setMaximumSize(24, 24);
@@ -687,7 +679,7 @@ void SMInternalEditor::moveBy(int delta)
         return;
     }
 
-    // Priority is a position in the state's WHOLE transition list, external transitions included --
+    // Priority is a position in the state's whole transition list, external transitions included --
     // that is the list the shadowing rule reads. So the move is expressed in that list's indices:
     // the row takes the place of the internal neighbour it is swapping priority with.
     const int from = state->getTransitions().findIndex(list.at(here)->getId());

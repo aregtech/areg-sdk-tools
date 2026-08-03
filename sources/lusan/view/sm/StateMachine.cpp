@@ -549,6 +549,7 @@ void StateMachine::onNavigateToPage(eDocElementKind kind)
     int pageIndex = static_cast<int>(PageDesign);
     switch (kind)
     {
+    case eDocElementKind::Overview:     pageIndex = static_cast<int>(PageOverview);     break;
     case eDocElementKind::DataType:     pageIndex = static_cast<int>(PageDataTypes);    break;
     case eDocElementKind::Attribute:    pageIndex = static_cast<int>(PageAttributes);   break;
     case eDocElementKind::Event:

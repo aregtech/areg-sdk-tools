@@ -55,6 +55,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPointer>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStatusBar>
@@ -67,6 +68,9 @@
 
 namespace
 {
+    //!< How long a watched document file must sit still before it is read as changed.
+    constexpr int DocumentChangeSettleMs{ 250 };
+
     inline QString recentFilesKey() { return QStringLiteral("recentFileList"); }
     inline QString fileKey() { return QStringLiteral("file"); }
 
@@ -825,7 +829,15 @@ void MdiMainWindow::syncDesignWidgets()
         return;     // the navigation hosts are not created yet (very early startup)
     }
 
+    // A window that has accepted its close is still the active one until it is deleted, and its
+    // pages are on their way out: binding the navigation hosts to them would leave them holding
+    // widgets that are about to disappear.
     StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
+    if ((stateMachine != nullptr) && stateMachine->isClosing())
+    {
+        stateMachine = nullptr;
+    }
+
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     const bool designCurrent = (stateMachine != nullptr) && (design != nullptr) && stateMachine->isDesignPageCurrent();
 
@@ -835,7 +847,7 @@ void MdiMainWindow::syncDesignWidgets()
     for (QMdiSubWindow* sub : mMdiArea.subWindowList())
     {
         StateMachine* doc = (sub != nullptr) ? qobject_cast<StateMachine*>(sub->widget()) : nullptr;
-        if (doc != nullptr)
+        if ((doc != nullptr) && (doc->isClosing() == false))
         {
             stateMachines.append(doc);
         }
@@ -1106,7 +1118,104 @@ void MdiMainWindow::onMdiChildClosed(MdiChild* mdiChild)
         mLiveLogWnd = nullptr;
     }
 
+    // The window is still in the MDI area until it is deleted, and it is already marked closing,
+    // so re-syncing here is what drops it from the panels that list the open documents.
+    syncDesignWidgets();
+    refreshDocumentWatch();
     emit signalMdiWindowClosed(mdiChild);
+}
+
+void MdiMainWindow::onDocumentFileChanged(const QString& filePath)
+{
+    // An editor that saves by replacing the file takes the watched path with it; re-arm on the
+    // new file. The settle also keeps a half-written file from being read back as the document.
+    QTimer::singleShot(DocumentChangeSettleMs, this, [this, filePath]()
+    {
+        refreshDocumentWatch();
+
+        // The prompt runs a nested event loop, and a window can be deleted while it is up, so the
+        // documents to ask are collected first and each is re-checked before it is used.
+        QList<QPointer<MdiChild> > affected;
+        const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
+        for (QMdiSubWindow* window : subWindows)
+        {
+            MdiChild* child = (window != nullptr) ? qobject_cast<MdiChild*>(window->widget()) : nullptr;
+            if ((child != nullptr) && (child->isClosing() == false) && (child->currentFile() == filePath))
+            {
+                affected.append(QPointer<MdiChild>(child));
+            }
+        }
+
+        for (const QPointer<MdiChild>& child : affected)
+        {
+            if (child.isNull() == false)
+            {
+                child->checkFileChangedOnDisk();
+            }
+        }
+    });
+}
+
+void MdiMainWindow::refreshDocumentWatch()
+{
+    QStringList wanted;
+    const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
+    for (QMdiSubWindow* window : subWindows)
+    {
+        MdiChild* child = (window != nullptr) ? qobject_cast<MdiChild*>(window->widget()) : nullptr;
+        if ((child == nullptr) || child->isClosing() || child->currentFile().isEmpty())
+        {
+            continue;
+        }
+
+        if ((wanted.contains(child->currentFile()) == false) && QFileInfo::exists(child->currentFile()))
+        {
+            wanted.append(child->currentFile());
+        }
+    }
+
+    const QStringList watched = mDocWatcher.files();
+    for (const QString& path : watched)
+    {
+        if (wanted.contains(path) == false)
+        {
+            mDocWatcher.removePath(path);
+        }
+    }
+
+    for (const QString& path : wanted)
+    {
+        if (watched.contains(path) == false)
+        {
+            mDocWatcher.addPath(path);
+        }
+    }
+}
+
+bool MdiMainWindow::reopenDocument(MdiChild& child)
+{
+    const QString path = child.currentFile();
+    if (path.isEmpty())
+    {
+        return false;
+    }
+
+    // The reload deliberately drops what the editor holds, so the close must not ask about it.
+    child.setModified(false);
+    QMdiSubWindow* window = child.getMdiSubwindow();
+    if (window != nullptr)
+    {
+        window->close();
+    }
+    else
+    {
+        child.close();
+    }
+
+    // The closed window is still alive until its deferred deletion runs, and openFile() would
+    // simply activate it again; open the file once the event loop has let it go.
+    QTimer::singleShot(0, this, [this, path]() { openFile(path); });
+    return true;
 }
 
 void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
@@ -1791,6 +1900,19 @@ void MdiMainWindow::_createMdiArea()
     mCentralArea = mDockManager->setCentralWidget(mCentralDock);
 
     connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::onSubWindowActivated);
+
+    // Every document window announces itself while it is being built; that is where its close is
+    // subscribed to, so nothing that lists the open documents has to wait for the deletion to
+    // notice one has gone.
+    connect(this, &MdiMainWindow::signalMdiWindowCreated, this, [this](MdiChild* child)
+    {
+        if (child != nullptr)
+        {
+            connect(child, &MdiChild::signalMdiChildClosed, this, &MdiMainWindow::onMdiChildClosed);
+        }
+    });
+
+    connect(&mDocWatcher, &QFileSystemWatcher::fileChanged, this, &MdiMainWindow::onDocumentFileChanged);
 }
 
 void MdiMainWindow::showDock(ads::CDockWidget* dock)
@@ -1838,8 +1960,8 @@ QMdiSubWindow* MdiMainWindow::findMdiChild(const QString& fileName) const
     const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
     for (QMdiSubWindow* window : subWindows)
     {
-        MdiChild* mdiChild = qobject_cast<MdiChild*>(window->widget());
-        if (mdiChild->currentFile() == canonicalFilePath)
+        MdiChild* mdiChild = (window != nullptr) ? qobject_cast<MdiChild*>(window->widget()) : nullptr;
+        if ((mdiChild != nullptr) && (mdiChild->isClosing() == false) && (mdiChild->currentFile() == canonicalFilePath))
         {
             result = window;
             break;

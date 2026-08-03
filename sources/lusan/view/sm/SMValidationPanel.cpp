@@ -24,11 +24,14 @@
 #include "lusan/model/sm/SMValidationController.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 
+#include <QAction>
 #include <QApplication>
+#include <QClipboard>
 #include <QLabel>
 #include <QFontMetrics>
 #include <QHeaderView>
 #include <QTreeWidget>
+#include <QStringList>
 #include <QStyle>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -81,15 +84,10 @@ namespace
     };
 
     /**
-     * The message names the symbol; this names the RULE, so a row explains itself without a
-     * trip to the spec. Keyed by SMIssue::rule: 10.1 error numbers plain, 10.2 advisories (both
-     * warning and info) offset by SMValidator::WARNING_RULE_BASE.
+     * The message names the symbol
      **/
     QString ruleDetail(int rule, SMIssue::eSeverity severity)
     {
-        // These numbers are the 10.2 rule numbers as the engine files them. They were off by one
-        // against the engine, so the one advisory a clean document actually produces fell through
-        // to the generic default and explained nothing.
         if (rule > SMValidator::WARNING_RULE_BASE)
         {
             switch (rule - SMValidator::WARNING_RULE_BASE)
@@ -256,8 +254,41 @@ void SMValidationPanel::buildUi()
     connect(mList, &QTreeWidget::itemActivated, this, &SMValidationPanel::onItemActivated);
     connect(mList, &QTreeWidget::itemDoubleClicked, this, &SMValidationPanel::onItemActivated);
 
+    // Findings are quoted into reports and issue trackers, so a selected row copies whole.
+    mList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    mList->setContextMenuPolicy(Qt::ActionsContextMenu);
+    QAction* copy = new QAction(tr("Copy"), mList);
+    copy->setShortcut(QKeySequence::Copy);
+    copy->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(copy, &QAction::triggered, this, &SMValidationPanel::copySelection);
+    mList->addAction(copy);
+
     // A tree of documents: the roots carry the document names, so only the leaves indent.
     mList->setRootIsDecorated(true);
+}
+
+void SMValidationPanel::copySelection() const
+{
+    QStringList lines;
+    for (const QTreeWidgetItem* item : mList->selectedItems())
+    {
+        QStringList columns;
+        for (int column = ColumnSeverity; column <= ColumnDetail; ++column)
+        {
+            const QString text = item->text(column);
+            if (text.isEmpty() == false)
+            {
+                columns.append(text);
+            }
+        }
+
+        lines.append(columns.join(QStringLiteral(" | ")));
+    }
+
+    if (lines.isEmpty() == false)
+    {
+        QApplication::clipboard()->setText(lines.join(QLatin1Char('\n')));
+    }
 }
 
 int SMValidationPanel::indexOf(const StateMachineModel* model) const
@@ -309,6 +340,10 @@ void SMValidationPanel::addDocument(StateMachineModel& model, const QString& nam
     source.bindings.append(connect(&notifier, &DocModelNotifier::elementRemoved, this, onChanged));
     source.bindings.append(connect(&notifier, &DocModelNotifier::documentReloaded, this, onChanged));
 
+    // The host normally unbinds a document it closes, but a window can also be destroyed without
+    // anyone saying so. The findings of a document that no longer exists must not survive it.
+    source.bindings.append(connect(&model, &QObject::destroyed, this, [this]() { purgeClosedDocuments(); }));
+
     controller.validateNow();
     source.issues = controller.issues();
     mSources.append(source);
@@ -332,6 +367,31 @@ void SMValidationPanel::removeDocument(StateMachineModel& model)
     rebuild();
 }
 
+void SMValidationPanel::purgeClosedDocuments()
+{
+    bool dropped = false;
+    for (int i = mSources.size() - 1; i >= 0; --i)
+    {
+        if (mSources.at(i).model.isNull() == false)
+        {
+            continue;
+        }
+
+        for (const QMetaObject::Connection& binding : mSources.at(i).bindings)
+        {
+            disconnect(binding);
+        }
+
+        mSources.removeAt(i);
+        dropped = true;
+    }
+
+    if (dropped)
+    {
+        rebuild();
+    }
+}
+
 int SMValidationPanel::documentCount() const
 {
     return static_cast<int>(mSources.size());
@@ -348,6 +408,7 @@ int SMValidationPanel::pendingCount() const
 
 void SMValidationPanel::refreshNow()
 {
+    purgeClosedDocuments();
     for (Source& source : mSources)
     {
         source.issues = source.model->getValidationController().issues();
@@ -416,6 +477,23 @@ void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
     const eDocElementKind kind = static_cast<eDocElementKind>(item->data(ColumnSeverity, RoleKind).toInt());
     QObject* owner = item->data(ColumnSeverity, RoleOwner).value<QObject*>();
 
+    // The row remembers which window owns it as a plain pointer. Match it against the documents
+    // still listed before handing it out: a window closed since the last rebuild leaves rows whose
+    // owner no longer exists, and navigating to one of those would follow a dangling pointer.
+    if (owner != nullptr)
+    {
+        bool alive = false;
+        for (const Source& source : mSources)
+        {
+            alive = alive || (source.owner.isNull() == false && source.owner.data() == owner);
+        }
+
+        if (alive == false)
+        {
+            return;
+        }
+    }
+
     emit navigateRequestedIn(owner, elementId, kind);
     emit navigateRequested(elementId, kind);
 }
@@ -445,10 +523,21 @@ void SMValidationPanel::rebuild()
     mList->clear();
 
     int errors = 0, warnings = 0, infos = 0;
-    const bool single = (mSources.size() == 1);
+    int live = 0;
+    for (const Source& source : mSources)
+    {
+        live += (source.model.isNull() ? 0 : 1);
+    }
+
+    const bool single = (live == 1);
 
     for (const Source& source : mSources)
     {
+        if (source.model.isNull())
+        {
+            continue;   // the window went away; the source is dropped on the next purge
+        }
+
         // One list from one engine. The guard and mapping checks are part of that run now, so
         // this view no longer knows which checker produced a row, or what a rule number means.
         const StateMachineData& data = source.model->getData();
@@ -510,7 +599,7 @@ void SMValidationPanel::rebuild()
             item->setText(ColumnDetail, row.detail);
             item->setData(ColumnSeverity, RoleElementId, row.elementId);
             item->setData(ColumnSeverity, RoleKind, static_cast<int>(row.kind));
-            item->setData(ColumnSeverity, RoleOwner, QVariant::fromValue(source.owner));
+            item->setData(ColumnSeverity, RoleOwner, QVariant::fromValue(source.owner.data()));
 
             // The columns elide; the tooltip carries the finding whole, wherever the pointer is.
             const QString whole = QStringLiteral("%1  %2\n%3").arg(row.where, row.text, row.detail);

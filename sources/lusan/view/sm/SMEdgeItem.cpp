@@ -746,6 +746,38 @@ QPointF SMEdgeItem::labelAnchor() const
     return anchor;
 }
 
+bool SMEdgeItem::labelOnVerticalRun() const
+{
+    if (mPath.size() < 2)
+    {
+        return false;
+    }
+
+    // The segment the midpoint falls on, found the way labelAnchor() finds the point itself.
+    double total = 0.0;
+    for (int i = 1; i < mPath.size(); ++i)
+    {
+        total += distance(mPath.at(i - 1), mPath.at(i));
+    }
+
+    double half = total / 2.0;
+    int index = 1;
+    for (int i = 1; i < mPath.size(); ++i)
+    {
+        index = i;
+        const double seg = distance(mPath.at(i - 1), mPath.at(i));
+        if (seg >= half)
+        {
+            break;
+        }
+
+        half -= seg;
+    }
+
+    const QPointF delta = mPath.at(index) - mPath.at(index - 1);
+    return (qAbs(delta.y()) > qAbs(delta.x()));
+}
+
 QString SMEdgeItem::labelText() const
 {
     const QString text = mStimulusText + mGuardText;
@@ -774,7 +806,19 @@ QRectF SMEdgeItem::labelRect() const
     // Default edges lift the stimulus above the line so a horizontal edge does not strike
     // through it; a user-dragged label centers on its point (the user placed it deliberately).
     constexpr double GAP = 3.0;
-    const double top = mHasLabel ? (anchor.y() - size.height() / 2.0) : (anchor.y() - size.height() - GAP);
+    double top = anchor.y() - size.height() - GAP;
+    if (mHasLabel)
+    {
+        top = anchor.y() - size.height() / 2.0;
+    }
+    else if (labelOnVerticalRun())
+    {
+        // The line runs alongside the text instead of between the two rows, so nothing has to be
+        // kept clear: stimulus and action read as one block, centred on the anchor.
+        const double action = mActionText.isEmpty() ? 0.0 : (metrics.size(0, mActionText).height() + 1.0);
+        top = anchor.y() - (size.height() + action) / 2.0;
+    }
+
     return QRectF(anchor.x() - size.width() / 2.0, top, size.width(), size.height());
 }
 
@@ -789,10 +833,20 @@ QRectF SMEdgeItem::actionRect() const
     const QFontMetricsF metrics{ labelFont() };
     const QSizeF size = metrics.size(0, mActionText) + QSizeF(4.0, 1.0);
 
-    // The action reads below the line; when the user dragged the stimulus label, it tucks
-    // directly beneath that label instead.
+    // The action reads below the line; when the user dragged the stimulus label, or when the line
+    // runs vertically past both rows, it tucks directly beneath the stimulus instead.
     constexpr double GAP = 3.0;
-    const double top = mHasLabel ? (labelRect().bottom() + 1.0) : (anchor.y() + GAP);
+    double top = anchor.y() + GAP;
+    if (mHasLabel)
+    {
+        top = labelRect().bottom() + 1.0;
+    }
+    else if (labelOnVerticalRun())
+    {
+        const QRectF label = labelRect();
+        top = label.isNull() ? (anchor.y() - size.height() / 2.0) : label.bottom();
+    }
+
     return QRectF(anchor.x() - size.width() / 2.0, top, size.width(), size.height());
 }
 
@@ -2058,8 +2112,7 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
             const QRectF   ownBox = stateRect(ownId);
             if ((overId != 0) && (overId != ownId))
             {
-                // Spec rule (mirrors the new-transition tool's guard): a Start state is a source
-                // only -- no transition may END on it -- and a Final state is a target only -- no
+                // a Start state is a source only, no transition may END on it, and a Final state is a target only -- no
                 // transition may BEGIN on it. Reject such a drop: restore the edge to its stored
                 // geometry (undo the drag feedback) and warn briefly at the cursor.
                 const SMStateEntry* overState = canvas->getModel().getData().findStateById(overId);

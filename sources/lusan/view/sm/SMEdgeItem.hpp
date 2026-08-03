@@ -365,6 +365,13 @@ private:
     QPointF labelAnchor() const;
 
     /**
+     * \brief   True when the line runs up or down where the labels hang from it. A horizontal
+     *          line passes between the stimulus and the action and has to be kept clear of both;
+     *          a vertical one does not, so there the two lines of text read as one block.
+     **/
+    bool labelOnVerticalRun() const;
+
+    /**
      * \brief   The stimulus label rectangle in item (scene) coordinates. For a default
      *          (un-dragged) edge the label sits just above the line so a horizontal edge does
      *          not strike through the text; once the user drags it, it centers on that point.
