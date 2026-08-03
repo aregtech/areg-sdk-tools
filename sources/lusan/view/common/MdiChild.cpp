@@ -193,6 +193,7 @@ QString MdiChild::suggestedSaveName() const
 bool MdiChild::saveFile(const QString& fileName)
 {
     bool saved { false };
+    commitPendingEdits();
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     if (writeToFile(fileName) )
     {
@@ -209,6 +210,10 @@ bool MdiChild::saveFile(const QString& fileName)
 bool MdiChild::writeToFile(const QString& filePath)
 {
     return true;
+}
+
+void MdiChild::commitPendingEdits(void)
+{
 }
 
 QString MdiChild::userFriendlyCurrentFile()

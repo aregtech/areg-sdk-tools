@@ -40,10 +40,18 @@
 
 namespace
 {
-    //!< The item roles carrying a finding's navigation target (element ID + kind).
+    //!< The item roles carrying a finding's navigation target (element ID + kind + check).
     constexpr int RoleElementId{ Qt::UserRole + 1 };
     constexpr int RoleKind     { Qt::UserRole + 2 };
     constexpr int RoleOwner    { Qt::UserRole + 3 };
+    constexpr int RoleRule     { Qt::UserRole + 4 };
+
+    /**
+     * Marks the rows that are findings. Depth cannot answer that: with a single document open
+     * the tree is flattened and the findings are the top-level rows themselves, so a check for
+     * "has a parent" would call every one of them a document heading.
+     **/
+    constexpr int RoleIsFinding{ Qt::UserRole + 5 };
 
     //!< Table columns: what it is, where it is, what is wrong, and why that is wrong.
     constexpr int ColumnSeverity{ 0 };
@@ -81,6 +89,7 @@ namespace
         QString         detail;     //!< Why it is a finding, and what resolves it.
         uint32_t        elementId;
         eDocElementKind kind;
+        int             rule;       //!< The check that produced it, for the field-level landing.
     };
 
     /**
@@ -435,7 +444,7 @@ void SMValidationPanel::step(int delta)
     for (int i = 0; i < mList->topLevelItemCount(); ++i)
     {
         QTreeWidgetItem* top = mList->topLevelItem(i);
-        if (top->childCount() == 0)
+        if (top->data(ColumnSeverity, RoleIsFinding).toBool())
         {
             leaves.append(top);     // flattened single-document tree
             continue;
@@ -467,14 +476,16 @@ void SMValidationPanel::step(int delta)
 
 void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
 {
-    // A document root carries no element; expanding it is the only sensible response.
-    if ((item == nullptr) || (item->parent() == nullptr))
+    // A document heading carries no element, and only the rows tagged as findings do. Depth is
+    // not the test: a single open document is listed flat, and its findings have no parent.
+    if ((item == nullptr) || (item->data(ColumnSeverity, RoleIsFinding).toBool() == false))
     {
         return;
     }
 
     const uint32_t elementId = item->data(ColumnSeverity, RoleElementId).toUInt();
     const eDocElementKind kind = static_cast<eDocElementKind>(item->data(ColumnSeverity, RoleKind).toInt());
+    const int rule = item->data(ColumnSeverity, RoleRule).toInt();
     QObject* owner = item->data(ColumnSeverity, RoleOwner).value<QObject*>();
 
     // The row remembers which window owns it as a plain pointer. Match it against the documents
@@ -494,8 +505,8 @@ void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
         }
     }
 
-    emit navigateRequestedIn(owner, elementId, kind);
-    emit navigateRequested(elementId, kind);
+    emit navigateRequestedIn(owner, elementId, kind, rule);
+    emit navigateRequested(elementId, kind, rule);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -551,6 +562,7 @@ void SMValidationPanel::rebuild()
             row.detail    = issue.detail.isEmpty() ? ruleDetail(issue.rule, issue.severity) : issue.detail;
             row.elementId = issue.elementId;
             row.kind      = issue.kind;
+            row.rule      = issue.rule;
             rows.append(row);
         }
 
@@ -600,6 +612,8 @@ void SMValidationPanel::rebuild()
             item->setData(ColumnSeverity, RoleElementId, row.elementId);
             item->setData(ColumnSeverity, RoleKind, static_cast<int>(row.kind));
             item->setData(ColumnSeverity, RoleOwner, QVariant::fromValue(source.owner.data()));
+            item->setData(ColumnSeverity, RoleRule, row.rule);
+            item->setData(ColumnSeverity, RoleIsFinding, true);
 
             // The columns elide; the tooltip carries the finding whole, wherever the pointer is.
             const QString whole = QStringLiteral("%1  %2\n%3").arg(row.where, row.text, row.detail);

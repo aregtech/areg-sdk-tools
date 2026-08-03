@@ -39,8 +39,12 @@
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMGuardValidation.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
+#include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
+#include "lusan/view/common/MethodDetailsView.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
+#include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
@@ -64,6 +68,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QKeyEvent>
+#include <QPlainTextEdit>
 #include <QRegularExpression>
 #include <QTabWidget>
 #include <QTextCursor>
@@ -284,6 +289,119 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     pump(100);
     check(panel.objectName() == QStringLiteral("smValidation"), "S15: smValidation");
     check(panel.findChild<QWidget*>(QStringLiteral("smValidationList")) != nullptr, "S15: smValidationList");
+
+    // S15 activation: double-clicking a finding must ask for a jump. One open document is listed
+    // flat, so the findings are the top-level rows -- the case that made every double-click a
+    // no-op while activation was decided by whether a row had a parent.
+    {
+        QTreeWidget* findings = panel.list();
+        QTreeWidgetItem* row = (findings->topLevelItemCount() > 0) ? findings->topLevelItem(0) : nullptr;
+        check(row != nullptr, "S15: the panel lists at least one finding");
+
+        int jumps = 0;
+        uint32_t jumpedTo = 0;
+        QObject::connect(&panel, &SMValidationPanel::navigateRequested
+                        , [&jumps, &jumpedTo](uint32_t elementId, eDocElementKind, int)
+        {
+            ++jumps;
+            jumpedTo = elementId;
+        });
+
+        if (row != nullptr)
+        {
+            check(row->parent() == nullptr, "S15: a single document is listed flat");
+            emit findings->itemDoubleClicked(row, 0);
+            pump(50);
+            check(jumps == 1, "S15: a double-clicked finding asks for a jump");
+            check(jumpedTo != 0, "S15: the jump names the offending element");
+        }
+
+        // An advisory finding is filed under a shifted id. Reading one as a plain number lands on
+        // a different check entirely -- plain 14 is the operand-type rule, not the description
+        // one -- and the landing would quietly lose the field it is supposed to accent.
+        check(SMValidator::fieldOfRule(SMValidator::WARNING_RULE_BASE + SMValidator::RULE_MISSING_DESCRIPTION)
+                    == eIssueField::Description
+             , "S15: a missing-description finding points at the Description field");
+        check(SMValidator::fieldOfRule(SMValidator::RULE_MISSING_DESCRIPTION) == eIssueField::None
+             , "S15: the same number unshifted is a different check and names no field");
+        check(SMValidator::fieldOfRule(SMValidator::RULE_DUPLICATE_NAME) == eIssueField::Name
+             , "S15: a duplicate-name finding points at the Name field");
+
+        // Whatever this document happens to carry must agree with that mapping.
+        for (const SMIssue& issue : SMValidator::validate(model.getData()))
+        {
+            if (issue.message.contains(QStringLiteral("has no description")))
+            {
+                check(SMValidator::fieldOfRule(issue.rule) == eIssueField::Description
+                     , "S15: a real missing-description finding resolves to the Description field");
+            }
+        }
+    }
+
+    // S15 hand-over: a description box gives its text to the document when it loses the focus, and
+    // a save from the keyboard moves no focus. Without the hand-over the file is written without
+    // the text just typed, and the findings list keeps reporting a description already written.
+    {
+        const QList<SMMethodEntry*>& methods = model.getData().getMethods().getElements();
+        SMMethodEntry* method = methods.isEmpty() ? nullptr : methods.at(0);
+        check(method != nullptr, "S15: the sweep document declares at least one method");
+        if (method != nullptr)
+        {
+            const uint32_t methodId = method->getId();
+            const QString reported = QStringLiteral("Method '%1' has no description").arg(method->getName());
+            auto rowsReporting = [&panel](const QString& needle) -> int
+            {
+                int count = 0;
+                QTreeWidget* list = panel.list();
+                for (int i = 0; i < list->topLevelItemCount(); ++i)
+                {
+                    count += (list->topLevelItem(i)->text(2).contains(needle) ? 1 : 0);
+                }
+
+                return count;
+            };
+
+            model.getMethodModel().setDescription(methodId, QString());
+            pump(600);
+            check(rowsReporting(reported) == 1, "S15: an undescribed method is reported once");
+
+            SMMethod page(model.getMethodModel());
+            page.resize(760, 520);
+            page.show();
+            pump(50);
+            page.revealElement(methodId, eIssueField::Description);
+            pump(50);
+
+            MethodDetailsView* details = page.findChild<MethodDetailsView*>();
+            check(details != nullptr, "S15: the Methods page shows the method detail form");
+            if (details != nullptr)
+            {
+                const QString typed = QStringLiteral("Answers whether the machine may go on.");
+                details->ctrlDescription()->setPlainText(typed);
+                pump(50);
+                check(method->getDescription().isEmpty()
+                     , "S15: the box keeps the text until the page is asked for it");
+
+                // The document reaches its pages through the shared contract, exactly as the save
+                // path does; a page it cannot reach that way would be skipped without a word.
+                IEditCommit* asEditor = dynamic_cast<IEditCommit*>(static_cast<QWidget*>(&page));
+                check(asEditor != nullptr, "S15: the document reaches the page through the shared contract");
+                if (asEditor != nullptr)
+                {
+                    asEditor->commitPendingEdits();
+                }
+
+                checkEq(method->getDescription(), typed, "S15: a save asks the page and gets the typed text");
+
+                pump(600);
+                check(rowsReporting(reported) == 0
+                     , "S15: the finding clears itself once the description is in the document");
+            }
+
+            page.hide();
+        }
+    }
+
     panel.hide();
 
     // S1 tabs: the properties panel hosts [General|Conditions|Actions] as smTransTabs (the

@@ -140,6 +140,13 @@ public:
     virtual bool saveFile(const QString& fileName);
 
     /**
+     * \brief   Hands the document the text that its open editors are still holding. Fields that
+     *          apply on focus loss keep it while the caret is inside them, and a save started
+     *          from the keyboard moves no focus. The base document has no such fields.
+     **/
+    virtual void commitPendingEdits(void);
+
+    /**
      * \brief   Gets a user-friendly version of the current file name.
      * \return  The user-friendly file name.
      **/

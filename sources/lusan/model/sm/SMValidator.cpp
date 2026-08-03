@@ -1506,7 +1506,7 @@ namespace
         {
             if (description.trimmed().isEmpty())
             {
-                add(id, kind, eSeverity::Info, 14, message, detail);
+                add(id, kind, eSeverity::Info, SMValidator::RULE_MISSING_DESCRIPTION, message, detail);
             }
         };
 
@@ -1910,4 +1910,27 @@ QList<SMIssue> SMValidator::validate(const StateMachineData& data)
 {
     Ctx ctx(data);
     return ctx.run();
+}
+
+eIssueField SMValidator::fieldOfRule(int rule)
+{
+    // Errors keep the plain number; everything advisory is stored shifted, so the two classes
+    // have to be told apart before the number means anything.
+    const bool advisory = (rule > SMValidator::WARNING_RULE_BASE);
+    const int plain = advisory ? (rule - SMValidator::WARNING_RULE_BASE) : rule;
+
+    if (advisory)
+    {
+        return (plain == SMValidator::RULE_MISSING_DESCRIPTION) ? eIssueField::Description : eIssueField::None;
+    }
+
+    switch (plain)
+    {
+    case SMValidator::RULE_DUPLICATE_NAME:
+    case SMValidator::RULE_INVALID_IDENTIFIER:
+        return eIssueField::Name;
+
+    default:
+        return eIssueField::None;
+    }
 }

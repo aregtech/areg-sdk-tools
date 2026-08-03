@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMOverview.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,6 +22,9 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
+
 #include <QScrollArea>
 #include <QIntValidator>
 
@@ -41,6 +44,7 @@ class QRadioButton;
  *          SMOverviewModel; the page mutates no model state directly.
  **/
 class SMOverview : public QScrollArea
+                 , public IEditCommit
 {
     Q_OBJECT
 
@@ -50,6 +54,22 @@ class SMOverview : public QScrollArea
 public:
     explicit SMOverview(SMOverviewModel& model, QWidget* parent = nullptr);
     virtual ~SMOverview() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Puts the accent on the field a finding blames. The machine is the page, so there
+     *          is no element to select first; \a eIssueField::None leaves the page as it is.
+     **/
+    void revealField(eIssueField field);
+
+    /**
+     * \brief   Hands over the description text the page is still holding. The box applies its
+     *          text when it loses the focus, which a save from the keyboard never causes.
+     **/
+    void commitPendingEdits(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Signals

@@ -41,6 +41,22 @@ class StateMachineData;
 using SMIssue = DocIssue;
 
 /**
+ * \enum    eIssueField
+ * \brief   Which editable field of an element a finding blames, when the check knows that much.
+ *          A results view navigates to the element by id; this says what to put the caret on
+ *          once it is there, so the author lands on the thing they have to change instead of
+ *          hunting for it across the form. \a None means the element itself is the whole answer.
+ **/
+enum class eIssueField
+{
+      None          //!< Nothing finer than the element; selecting it is the reveal.
+    , Name          //!< The name field.
+    , Type          //!< The data type field.
+    , Value         //!< The literal value field.
+    , Description   //!< The description field.
+};
+
+/**
  * \class   SMValidator
  * \brief   Checks a document's structure and its cross-references: start-state placement,
  *          duplicate identifiers and names, identifier syntax, resolution of every
@@ -69,6 +85,26 @@ public:
      * \brief   The argument-to-parameter mapping faults.
      **/
     static constexpr int RULE_ARGUMENT_MAPPING { 10 };
+
+    /**
+     * \brief   A name that is already taken: two entries of the same kind in one registry, a
+     *          repeated parameter name, or a stimulus name claimed by a trigger, an event and
+     *          a timer at once. Reported on every entry after the first, so the finding names
+     *          the copy the author has to rename.
+     **/
+    static constexpr int RULE_DUPLICATE_NAME { 4 };
+
+    /**
+     * \brief   A name the generated code could not carry: it must start with a letter or an
+     *          underscore and continue with letters, digits or underscores.
+     **/
+    static constexpr int RULE_INVALID_IDENTIFIER { 5 };
+
+    /**
+     * \brief   An element with no description. Advisory: the document still generates, but the
+     *          generated element carries no comment.
+     **/
+    static constexpr int RULE_MISSING_DESCRIPTION { 14 };
 
     /**
      * \brief   The rule guard findings are filed under. The guard checker owns the grammar and
@@ -121,6 +157,14 @@ public:
      *          order (states and levels first, then the registries).
      **/
     static QList<SMIssue> validate(const StateMachineData& data);
+
+    /**
+     * \brief   The field a finding blames, for the checks that know it. Takes the rule id as
+     *          stored on the finding (\ref DocIssue::rule), advisory offset included, so a
+     *          caller hands over `issue.rule` untouched.
+     * \return  \a eIssueField::None when the check names no single field.
+     **/
+    static eIssueField fieldOfRule(int rule);
 };
 
 #endif  // LUSAN_MODEL_SM_SMVALIDATOR_HPP

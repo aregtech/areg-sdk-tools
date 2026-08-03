@@ -105,15 +105,19 @@ public:
     inline QTreeWidget* list() const;
 
 signals:
-    //!< A finding row was activated: navigate to the offending element on the owning page.
-    void navigateRequested(uint32_t elementId, eDocElementKind kind);
+    /**
+     * \brief   A finding row was activated: navigate to the offending element on the owning
+     *          page. \p rule is the finding's own check id, carried through because the check
+     *          often knows which field is at fault while the element id alone does not.
+     **/
+    void navigateRequested(uint32_t elementId, eDocElementKind kind, int rule);
 
     /**
      * \brief   As \ref navigateRequested, naming the document that owns the finding (the
      *          `owner` passed to \ref addDocument), so a multi-document host reveals it in the
      *          right window.
      **/
-    void navigateRequestedIn(QObject* owner, uint32_t elementId, eDocElementKind kind);
+    void navigateRequestedIn(QObject* owner, uint32_t elementId, eDocElementKind kind, int rule);
 
     //!< Emitted whenever \ref pendingCount changes, so a tab can show `Validation (5)`.
     void pendingCountChanged(int count);

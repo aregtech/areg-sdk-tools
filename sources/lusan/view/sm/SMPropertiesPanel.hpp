@@ -25,6 +25,7 @@
 #include <QWidget>
 
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
 
 #include <cstdint>
 
@@ -63,6 +64,7 @@ enum class eDocElementKind;
  *          canvas and outline; every edit commits as an undoable command.
  **/
 class SMPropertiesPanel : public QWidget
+                        , public IEditCommit
 {
     Q_OBJECT
 
@@ -95,6 +97,13 @@ public:
 public:
     inline ePage currentPage() const;
     inline uint32_t currentElementId() const;
+
+    /**
+     * \brief   Hands over the description text the panel is still holding, for the state or the
+     *          transition it is showing. The box applies its text when it loses the focus, which a
+     *          save from the keyboard never causes.
+     **/
+    void commitPendingEdits(void) override;
 
     /**
      * \brief   Selects the transition and focuses the Conditions tab's guard field

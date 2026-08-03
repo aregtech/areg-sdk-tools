@@ -21,6 +21,8 @@
 
 #include <QScrollArea>
 #include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
 
 class DataTypeCustom;
 class DataTypeEnum;
@@ -44,6 +46,7 @@ class SMDataTypeModel;
  *          external/undo alike) rather than patching individual tree nodes.
  **/
 class SMDataType : public QScrollArea
+                 , public IEditCommit
 {
     Q_OBJECT
 
@@ -63,6 +66,21 @@ public:
      *          e.g. from the Design page's Declare dropdown).
      **/
     DataTypeListView* getList() const;
+
+    /**
+     * \brief   Selects and reveals a data type, or one of its structure fields / enumeration
+     *          entries, by document ID (a validation finding about a field names the field, not
+     *          the type that holds it). Does nothing if nothing has that ID.
+     * \param   field   The field the caller wants accented once the row is selected.
+     **/
+    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
+
+    /**
+     * \brief   Hands over the description text the page is still holding, for the type or for the
+     *          field that is selected. The box applies its text when it loses the focus, which a
+     *          save from the keyboard never causes.
+     **/
+    void commitPendingEdits(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

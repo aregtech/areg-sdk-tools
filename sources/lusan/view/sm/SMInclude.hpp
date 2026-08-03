@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include <QScrollArea>
+#include "lusan/view/common/IEditCommit.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
 #include "lusan/data/common/IncludeEntry.hpp"
@@ -54,6 +55,7 @@ class SMIncludeModel;
  *          signal, self-triggered or from undo/redo alike.
  **/
 class SMInclude : public    QScrollArea
+                , public    IEditCommit
                 , protected IETableHelper
 {
     Q_OBJECT
@@ -70,6 +72,13 @@ public:
      *          (go-to-declaration landing).
      **/
     bool revealElement(uint32_t id);
+
+    /**
+     * \brief   Hands over the description text the page is still holding, from whichever of the
+     *          two detail forms the selected row uses. The box applies its text when it loses the
+     *          focus, which a save from the keyboard never causes.
+     **/
+    void commitPendingEdits(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Shared entry points

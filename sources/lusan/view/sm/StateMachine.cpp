@@ -25,6 +25,8 @@
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
@@ -65,6 +67,7 @@ const QString& StateMachine::fileExtension()
 StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= QString()*/, const QString& sourcePath /*= QString()*/, QWidget* parent /*= nullptr*/)
     : MdiChild           (MdiChild::eMdiWindow::MdiStateMachine, wndMain, parent)
     , mModel             (this)
+    , mPendingEdits      (mModel.getNotifier(), this)
     , mTabWidget         (this)
     , mOverview          (nullptr)
     , mPages             (pageCount(), nullptr)
@@ -113,7 +116,12 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
     layout->addWidget(&mTabWidget);
     setLayout(layout);
 
-    connect(&mModel, &StateMachineModel::signalDirtyChanged, this, &MdiChild::setModified);
+    // The title mark follows two things: how far the history stands from the point the document was
+    // last saved at, and whether the field the caret sits in still holds text of its own.
+    connect(&mModel, &StateMachineModel::signalDirtyChanged, this, &StateMachine::refreshModified);
+    connect(&mPendingEdits, &PendingEditWatcher::signalPendingEditChanged, this, &StateMachine::refreshModified);
+    // A reload replaces what the pages show, so whatever a field holds afterwards came from the file.
+    connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, [this]() { mPendingEdits.acceptPendingEdit(); });
     connect(&mModel.getUndoStack(), &QUndoStack::canUndoChanged, this, &MdiChild::signalCanUndoChanged);
     connect(&mModel.getUndoStack(), &QUndoStack::canRedoChanged, this, &MdiChild::signalCanRedoChanged);
 
@@ -415,8 +423,15 @@ void StateMachine::onOpenImport(uint32_t stateId, const QString& alias)
     }
 }
 
-void StateMachine::navigateToIssue(uint32_t elementId, eDocElementKind kind)
+void StateMachine::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule /*= 0*/)
 {
+    // A registry finding is answered by its own page. Sending it through the canvas first would
+    // build the design view for nothing and flick the author past a page they never asked for.
+    if (revealIssueOnPage(kind, elementId, rule))
+    {
+        return;
+    }
+
     const int pageIndex = static_cast<int>(PageDesign);
     ensureTabInitialized(pageIndex);
     mTabWidget.setCurrentIndex(pageIndex);
@@ -424,7 +439,7 @@ void StateMachine::navigateToIssue(uint32_t elementId, eDocElementKind kind)
     SMDesign* design = designPageIfBuilt();
     if (design != nullptr)
     {
-        design->navigateToIssue(elementId, kind);
+        design->navigateToIssue(elementId, kind, rule);
     }
 }
 
@@ -544,7 +559,12 @@ void StateMachine::onDeclareRequested(SMDesign::eDeclareKind kind)
     }
 }
 
-void StateMachine::onNavigateToPage(eDocElementKind kind)
+void StateMachine::onNavigateToPage(eDocElementKind kind, uint32_t elementId, int rule)
+{
+    revealIssueOnPage(kind, elementId, rule);
+}
+
+bool StateMachine::revealIssueOnPage(eDocElementKind kind, uint32_t elementId, int rule)
 {
     int pageIndex = static_cast<int>(PageDesign);
     switch (kind)
@@ -558,11 +578,30 @@ void StateMachine::onNavigateToPage(eDocElementKind kind)
     case eDocElementKind::Constant:     pageIndex = static_cast<int>(PageConstants);     break;
     case eDocElementKind::Import:
     case eDocElementKind::Include:      pageIndex = static_cast<int>(PageIncludes);      break;
-    default:                            return;     // canvas-owned kinds are handled by the Design page.
+    default:                            return false;   // canvas-owned; the Design page answers it.
     }
 
     ensureTabInitialized(pageIndex);
     mTabWidget.setCurrentIndex(pageIndex);
+
+    // The element alone says which entry to fix; the check often also says which of its fields.
+    const eIssueField field = SMValidator::fieldOfRule(rule);
+    QWidget* page = mPages.at(pageIndex);
+    switch (kind)
+    {
+    case eDocElementKind::Overview:     static_cast<SMOverview*>(page)->revealField(field);                  break;
+    case eDocElementKind::DataType:     static_cast<SMDataType*>(page)->revealElement(elementId, field);     break;
+    case eDocElementKind::Attribute:    static_cast<SMAttribute*>(page)->revealElement(elementId, field);    break;
+    case eDocElementKind::Event:        static_cast<SMEvent*>(page)->revealEvent(elementId, field);          break;
+    case eDocElementKind::Timer:        static_cast<SMEvent*>(page)->revealTimer(elementId, field);          break;
+    case eDocElementKind::Method:       static_cast<SMMethod*>(page)->revealElement(elementId, field);       break;
+    case eDocElementKind::Constant:     static_cast<SMConstant*>(page)->revealElement(elementId, field);     break;
+    case eDocElementKind::Import:
+    case eDocElementKind::Include:      static_cast<SMInclude*>(page)->revealElement(elementId);             break;
+    default:                                                                                                break;
+    }
+
+    return true;
 }
 
 QString StateMachine::newDocumentName()
@@ -642,6 +681,30 @@ bool StateMachine::writeToFile(const QString& filePath)
     }
 
     return mModel.saveToFile(filePath);
+}
+
+void StateMachine::commitPendingEdits(void)
+{
+    // A description box gives its text to the document when it loses the focus, and Ctrl+S leaves
+    // the caret where it is. Collect from every page that has something to give, so the file gets
+    // the text and the findings list stops reporting what the author has already written.
+    const QList<QWidget*> widgets = findChildren<QWidget*>();
+    for (QWidget* widget : widgets)
+    {
+        IEditCommit* editor = dynamic_cast<IEditCommit*>(widget);
+        if (editor != nullptr)
+        {
+            editor->commitPendingEdits();
+        }
+    }
+
+    // What the caret still sits in has just been handed over with the rest.
+    mPendingEdits.acceptPendingEdit();
+}
+
+void StateMachine::refreshModified(void)
+{
+    setModified(mModel.isDirty() || mPendingEdits.hasPendingEdit());
 }
 
 void StateMachine::openReadOnly(const QString& origin)

@@ -34,10 +34,12 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/OptionPageWorkspace.cpp
     ${LUSAN}/view/common/OutputDock.cpp
     ${LUSAN}/view/common/OutputWindow.cpp
+    ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/common/ProjectSettings.cpp
     ${LUSAN}/view/common/SearchLineEdit.cpp
     ${LUSAN}/view/common/SourceViewer.cpp
     ${LUSAN}/view/common/TableCell.cpp
+    ${LUSAN}/view/common/WidgetHighlight.cpp
     ${LUSAN}/view/common/Workspace.cpp
     ${LUSAN}/view/common/WorkspaceFileDialog.cpp
     ${LUSAN}/view/common/WorkspaceSetupDialog.cpp
@@ -54,6 +56,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/DataTypeListView.hpp
     ${LUSAN}/view/common/DirSelectionDialog.hpp
     ${LUSAN}/view/common/EditCancelFilter.hpp
+    ${LUSAN}/view/common/IEditCommit.hpp
     ${LUSAN}/view/common/IEDataTypeConsumer.hpp
     ${LUSAN}/view/common/IncludeDetailsView.hpp
     ${LUSAN}/view/common/IncludeListView.hpp
@@ -77,10 +80,12 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/OptionPageWorkspace.hpp
     ${LUSAN}/view/common/OutputDock.hpp
     ${LUSAN}/view/common/OutputWindow.hpp
+    ${LUSAN}/view/common/PendingEditWatcher.hpp
     ${LUSAN}/view/common/ProjectSettings.hpp
     ${LUSAN}/view/common/SearchLineEdit.hpp
     ${LUSAN}/view/common/SourceViewer.hpp
     ${LUSAN}/view/common/TableCell.hpp
+    ${LUSAN}/view/common/WidgetHighlight.hpp
     ${LUSAN}/view/common/Workspace.hpp
     ${LUSAN}/view/common/WorkspaceFileDialog.hpp
     ${LUSAN}/view/common/WorkspaceSetupDialog.hpp

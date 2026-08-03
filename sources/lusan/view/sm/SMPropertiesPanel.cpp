@@ -36,6 +36,7 @@
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMAccordion.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
@@ -248,6 +249,13 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     connect(&mModel.getSelectionModel(), &SMSelectionModel::signalSelectionChanged, this, &SMPropertiesPanel::onModelSelectionChanged);
 
     DocModelNotifier& notifier = mModel.getNotifier();
+
+    // The name and the two description boxes carry document text. Typing in them marks the document
+    // changed at once, even though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mStateName, notifier);
+    PendingEditWatcher::watchField(mStateDesc, notifier);
+    PendingEditWatcher::watchField(mTransDesc, notifier);
+
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMPropertiesPanel::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMPropertiesPanel::onElementRemoved);
     // A newly added trigger method / event / timer expands the stimulus vocabulary; if a
@@ -650,19 +658,22 @@ bool SMPropertiesPanel::isEditing() const
     return (focus != nullptr) && isAncestorOf(focus);
 }
 
+void SMPropertiesPanel::commitPendingEdits(void)
+{
+    // Each handler checks the page it belongs to, so only the one on show can do anything.
+    onStateDescriptionCommit();
+    onTransitionDescriptionCommit();
+}
+
 bool SMPropertiesPanel::eventFilter(QObject* watched, QEvent* event)
 {
     // QPlainTextEdit has no editing-finished signal; commit its edit when it loses focus,
     // matching the single-line fields' commit-on-editing-finished contract.
     if (event->type() == QEvent::FocusOut)
     {
-        if (watched == mStateDesc)
+        if ((watched == mStateDesc) || (watched == mTransDesc))
         {
-            onStateDescriptionCommit();
-        }
-        else if (watched == mTransDesc)
-        {
-            onTransitionDescriptionCommit();
+            commitPendingEdits();
         }
     }
 

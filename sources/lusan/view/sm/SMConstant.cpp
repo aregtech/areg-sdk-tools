@@ -34,6 +34,8 @@
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/ConstantDetailsView.hpp"
 #include "lusan/view/common/ConstantListView.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
 #include <QCheckBox>
@@ -142,6 +144,10 @@ void SMConstant::setupSignals()
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMConstant::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
+    // The form carries document text. Typing in it marks the document changed at once, even
+    // though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mDetails, mModel.getNotifier());
+
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMConstant::onNotifierChanged);
     connect(&mModel.getNotifier(), &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Constant) onNotifierChanged(); });
     connect(&mModel.getNotifier(), &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Constant) onNotifierChanged(); });
@@ -154,15 +160,20 @@ void SMConstant::setupSignals()
     connect(&mModel.getNotifier(), &DocModelNotifier::listReordered, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
 }
 
+void SMConstant::commitPendingEdits(void)
+{
+    const uint32_t id = currentConstantId();
+    if (id != 0)
+    {
+        mModel.setDescription(id, mDetails->ctrlDescription()->toPlainText());
+    }
+}
+
 bool SMConstant::eventFilter(QObject* watched, QEvent* event)
 {
     if ((watched == mDetails->ctrlDescription()) && (event->type() == QEvent::FocusOut))
     {
-        const uint32_t id = currentConstantId();
-        if (id != 0)
-        {
-            mModel.setDescription(id, mDetails->ctrlDescription()->toPlainText());
-        }
+        commitPendingEdits();
     }
 
     return QScrollArea::eventFilter(watched, event);
@@ -392,9 +403,21 @@ bool SMConstant::currentReference(SMReferences::eTarget& target, uint32_t& id, Q
     return true;
 }
 
-void SMConstant::revealElement(uint32_t id)
+void SMConstant::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
-    selectConstant(id);
+    if (selectConstant(id) == false)
+    {
+        return;
+    }
+
+    switch (field)
+    {
+    case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+    case eIssueField::Type:         WidgetHighlight::reveal(mDetails->ctrlTypes());       break;
+    case eIssueField::Value:        WidgetHighlight::reveal(mDetails->ctrlValue());       break;
+    case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+    default:                                                                              break;
+    }
 }
 
 uint32_t SMConstant::currentConstantId() const

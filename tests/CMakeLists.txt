@@ -467,6 +467,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
+    ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
     ${LUSAN}/view/sm/SMAutoPlacer.cpp
     ${LUSAN}/view/sm/SMCanvasItem.cpp
@@ -550,6 +551,29 @@ target_link_libraries(lusan_sm_canvas_tests PRIVATE
     aregsqlite3
 )
 set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# The modified mark: it must follow the first keystroke, not the commit that comes
+# when the field loses the focus, and after a save it must follow the distance to
+# the point the file was written from. Offscreen, real document, real panel:
+#   lusan_sm_dirty_mark <TrafficLight.fsml> [output directory]
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_dirty_mark
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SMDirtyMarkTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_dirty_mark PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_dirty_mark PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_dirty_mark PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_dirty_mark PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
 # L4 acceptance: edits the internal transition of TRAFFIC_LIGHT_RED through both
@@ -669,7 +693,9 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/common/MethodDetailsView.cpp
     ${LUSAN}/view/common/MethodListView.cpp
     ${LUSAN}/view/common/MethodParamDetailsView.cpp
+    ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/common/TableCell.cpp
+    ${LUSAN}/view/common/WidgetHighlight.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMSectionChrome.cpp
@@ -845,9 +871,14 @@ add_test(NAME sm_canvas_tests COMMAND lusan_sm_canvas_tests
 add_test(NAME sm_l8_proof COMMAND lusan_sm_l8_proof
          ${LUSAN_ROOT}/.claude/FullFeature.fsml ${CMAKE_CURRENT_BINARY_DIR}/l8-shots)
 
+# The title must say "changed" from the first keystroke on, and say it again exactly when the
+# document stands away from the point it was last written from.
+add_test(NAME sm_dirty_mark COMMAND lusan_sm_dirty_mark
+         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/dirty-mark)
+
 # The responsiveness gate. Its budgets are generous enough for a debug build on a loaded
 # machine, so a failure means a real algorithmic regression, not timing noise.
 add_test(NAME sm_perf COMMAND lusan_sm_perf ${CMAKE_CURRENT_BINARY_DIR}/perf)
 
-set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_perf PROPERTIES
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_dirty_mark sm_perf PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

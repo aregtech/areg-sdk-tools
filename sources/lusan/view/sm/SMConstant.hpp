@@ -20,6 +20,8 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
 
 #include <QScrollArea>
 #include <cstdint>
@@ -39,6 +41,7 @@ class SMConstantModel;
  *          rather than patching individual rows.
  **/
 class SMConstant : public QScrollArea
+                 , public IEditCommit
 {
     Q_OBJECT
 
@@ -73,9 +76,17 @@ public:
 
     /**
      * \brief   Selects and reveals the constant with the given document ID (go-to-declaration
-     *          target from the canvas). Does nothing if no constant has that ID.
+     *          target from the canvas, or a validation finding). Does nothing if no constant
+     *          has that ID.
+     * \param   field   The field the caller wants accented once the row is selected.
      **/
-    void revealElement(uint32_t id);
+    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
+
+    /**
+     * \brief   Hands over the description text the page is still holding. The box applies its
+     *          text when it loses the focus, which a save from the keyboard never causes.
+     **/
+    void commitPendingEdits(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

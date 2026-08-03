@@ -39,6 +39,8 @@
 #include "lusan/view/common/MethodDetailsView.hpp"
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/common/MethodParamDetailsView.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include "lusan/view/common/TableCell.hpp"
 #include "lusan/view/sm/SMCodeEditor.hpp"
 
@@ -223,6 +225,12 @@ void SMMethod::setupSignals()
     mParamDetails->ctrlDescription()->installEventFilter(this);
 
     DocModelNotifier& notifier = mModel.getNotifier();
+
+    // Both forms carry document text, the method body included. Typing in them marks the document
+    // changed at once, even though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mDetails, notifier);
+    PendingEditWatcher::watchField(mParamDetails, notifier);
+
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMMethod::onNotifierChanged);
     connect(&notifier, &DocModelNotifier::elementAdded  , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Method) onNotifierChanged(); });
     connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Method) onNotifierChanged(); });
@@ -259,34 +267,36 @@ void SMMethod::setupSignals()
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SMMethod::onEditorDataChanged);
 }
 
+void SMMethod::commitPendingEdits(void)
+{
+    // Both forms hold the text of what is selected right now, so the selection decides which of
+    // them has something to give. Handing over an unchanged text does nothing.
+    SMMethodEntry* method = currentMethod();
+    if (method == nullptr)
+        return;
+
+    if (currentKind() == eRowKind::Method)
+    {
+        mModel.setDescription(method->getId(), mDetails->ctrlDescription()->toPlainText());
+        mModel.setBody(method->getId(), mDetails->ctrlBody()->ctrlBody()->toPlainText());
+    }
+
+    const uint32_t paramId = currentParamId();
+    if (paramId != 0)
+    {
+        mModel.setParamDescription(method, paramId, mParamDetails->ctrlDescription()->toPlainText());
+    }
+}
+
 bool SMMethod::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::FocusOut)
     {
-        if (watched == mDetails->ctrlDescription())
+        if ((watched == mDetails->ctrlDescription())
+            || (watched == mDetails->ctrlBody()->ctrlBody())
+            || (watched == mParamDetails->ctrlDescription()))
         {
-            SMMethodEntry* method = currentMethod();
-            if ((method != nullptr) && (currentKind() == eRowKind::Method))
-            {
-                mModel.setDescription(method->getId(), mDetails->ctrlDescription()->toPlainText());
-            }
-        }
-        else if (watched == mDetails->ctrlBody()->ctrlBody())
-        {
-            SMMethodEntry* method = currentMethod();
-            if ((method != nullptr) && (currentKind() == eRowKind::Method))
-            {
-                mModel.setBody(method->getId(), mDetails->ctrlBody()->ctrlBody()->toPlainText());
-            }
-        }
-        else if (watched == mParamDetails->ctrlDescription())
-        {
-            SMMethodEntry* method = currentMethod();
-            const uint32_t paramId = currentParamId();
-            if ((method != nullptr) && (paramId != 0))
-            {
-                mModel.setParamDescription(method, paramId, mParamDetails->ctrlDescription()->toPlainText());
-            }
+            commitPendingEdits();
         }
     }
 
@@ -805,9 +815,51 @@ bool SMMethod::currentReference(SMReferences::eTarget& target, uint32_t& id, QSt
     return true;
 }
 
-void SMMethod::revealElement(uint32_t id)
+void SMMethod::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
-    selectMethod(id);
+    // A finding about a parameter carries the parameter's own id, so a method lookup that only
+    // tries the top-level rows would come back empty and reveal nothing.
+    uint32_t methodId = id;
+    uint32_t paramId = 0;
+    if (mModel.getData().getMethods().findMethod(id) == nullptr)
+    {
+        for (SMMethodEntry* method : mModel.getMethods())
+        {
+            if ((method != nullptr) && (mModel.findParam(method, id) != nullptr))
+            {
+                methodId = method->getId();
+                paramId = id;
+                break;
+            }
+        }
+    }
+
+    if (selectMethod(methodId, paramId) == false)
+    {
+        return;
+    }
+
+    if (paramId != 0)
+    {
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mParamDetails->ctrlName());        break;
+        case eIssueField::Type:         WidgetHighlight::reveal(mParamDetails->ctrlTypes());       break;
+        case eIssueField::Value:        WidgetHighlight::reveal(mParamDetails->ctrlValue());       break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mParamDetails->ctrlDescription()); break;
+        default:                                                                                   break;
+        }
+    }
+    else
+    {
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+        case eIssueField::Type:         WidgetHighlight::reveal(mDetails->ctrlReturn());      break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+        default:                                                                              break;
+        }
+    }
 }
 
 void SMMethod::showMethodWhereUsed(uint32_t methodId)

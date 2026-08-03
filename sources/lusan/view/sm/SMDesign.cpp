@@ -2915,7 +2915,7 @@ void SMDesign::revealOnCanvas(uint32_t levelId, uint32_t canvasElementId)
     }
 }
 
-void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind)
+void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule /*= 0*/)
 {
     const SMStateData& root = mModel.getData().getStates();
     const uint32_t rootLevel = mSceneManager->getRootLevel();
@@ -2962,7 +2962,7 @@ void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind)
 
     default:
         // A registry entry: its editor is another page, owned by the window.
-        emit signalNavigateToPage(kind);
+        emit signalNavigateToPage(kind, elementId, rule);
         break;
     }
 }
