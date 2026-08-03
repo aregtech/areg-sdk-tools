@@ -401,6 +401,39 @@ target_link_libraries(lusan_sm_guard_eval_tests PRIVATE
 set_target_properties(lusan_sm_guard_eval_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
+# L3: the Do activity is a timer loop, and its Until is a guard tree. Headless:
+# the data layer + the guard model (parser/render/symbols, to run the load shim
+# and to render the renamed tree) + the validators that report the two faults.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_l3_proof
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN}/model/sm/SMConditionText.cpp
+    ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
+    ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
+    ${LUSAN}/model/sm/SMDocumentIndex.cpp
+    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN_ROOT}/tests/sm/SML3ProofTests.cpp
+    # Rule 15 literal checks load the predefined type catalog from the resources.
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_l3_proof PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_l3_proof PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_l3_proof PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_l3_proof PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
 # SM-13: design-canvas smoke test. Drives the real SMDesign/SMScene/SMStateItem
 # stack with synthetic mouse/key events on the Qt offscreen platform, so the
 # canvas interactions are verifiable without a display or input injection.
@@ -434,6 +467,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
+    ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
     ${LUSAN}/view/sm/SMAutoPlacer.cpp
     ${LUSAN}/view/sm/SMCanvasItem.cpp
@@ -496,6 +530,9 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
+    ${LUSAN}/view/sm/SMInternalDialog.cpp
+    ${LUSAN}/view/sm/SMInternalEditor.cpp
+    ${LUSAN}/view/sm/SMStimulusPicker.cpp
     ${LUSAN}/view/sm/SMOperationsDialog.cpp
 )
 
@@ -514,6 +551,76 @@ target_link_libraries(lusan_sm_canvas_tests PRIVATE
     aregsqlite3
 )
 set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# The modified mark: it must follow the first keystroke, not the commit that comes
+# when the field loses the focus, and after a save it must follow the distance to
+# the point the file was written from. Offscreen, real document, real panel:
+#   lusan_sm_dirty_mark <TrafficLight.fsml> [output directory]
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_dirty_mark
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SMDirtyMarkTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_dirty_mark PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_dirty_mark PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_dirty_mark PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_dirty_mark PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# L4 acceptance: edits the internal transition of TRAFFIC_LIGHT_RED through both
+# routes the task names, saves, reloads, and grabs the pictures. Deliberately NOT
+# registered with ctest and deliberately NOT offscreen -- it is run by hand against
+# a real document so its PNGs carry real text:
+#   lusan_sm_l4_proof <TrafficLight.fsml> <output directory>
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_l4_proof
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SML4ProofTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_l4_proof PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_l4_proof PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_l4_proof PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_l4_proof PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# L8 acceptance: the canvas draws the document's TransitionList and nothing else,
+# and no gesture can draw a transition into a Start. Registered as the ctest entry
+# sm_l8_proof (offscreen QPA); can also be run by hand for the pictures:
+#   lusan_sm_l8_proof <FullFeature.fsml> <output directory>
+# ---------------------------------------------------------------------------
+
+qt_add_executable(lusan_sm_l8_proof
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/sm/SML8ProofTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_l8_proof PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_l8_proof PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_l8_proof PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_l8_proof PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
 # SM-27: the responsiveness gate. Generates a large synthetic document and times the
@@ -586,7 +693,9 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/common/MethodDetailsView.cpp
     ${LUSAN}/view/common/MethodListView.cpp
     ${LUSAN}/view/common/MethodParamDetailsView.cpp
+    ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/common/TableCell.cpp
+    ${LUSAN}/view/common/WidgetHighlight.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMSectionChrome.cpp
@@ -645,6 +754,9 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
     ${LUSAN}/view/sm/SMKindGlyph.cpp
+    ${LUSAN}/view/sm/SMInternalDialog.cpp
+    ${LUSAN}/view/sm/SMInternalEditor.cpp
+    ${LUSAN}/view/sm/SMStimulusPicker.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
@@ -753,9 +865,20 @@ add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
 add_test(NAME sm_canvas_tests COMMAND lusan_sm_canvas_tests
          ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/canvas-shots)
 
+# The drawn graph must be the document's graph. FullFeature.fsml is the acceptance document
+# because eight of its eleven transitions carry no persisted route, so the audit lands on the
+# auto-routed case.
+add_test(NAME sm_l8_proof COMMAND lusan_sm_l8_proof
+         ${LUSAN_ROOT}/.claude/FullFeature.fsml ${CMAKE_CURRENT_BINARY_DIR}/l8-shots)
+
+# The title must say "changed" from the first keystroke on, and say it again exactly when the
+# document stands away from the point it was last written from.
+add_test(NAME sm_dirty_mark COMMAND lusan_sm_dirty_mark
+         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/dirty-mark)
+
 # The responsiveness gate. Its budgets are generous enough for a debug build on a loaded
 # machine, so a failure means a real algorithmic regression, not timing noise.
 add_test(NAME sm_perf COMMAND lusan_sm_perf ${CMAKE_CURRENT_BINARY_DIR}/perf)
 
-set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_perf PROPERTIES
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_dirty_mark sm_perf PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

@@ -138,8 +138,10 @@ public:
      *          state, transition, condition or operation navigates the canvas to its level,
      *          selects it, and (for transition-owned findings) focuses the Conditions tab.
      *          Called by the output window's Validation tab, which owns the findings list.
+     * \param   rule    The check that produced the finding, carried through to the page that
+     *                  answers it; 0 when the caller has none to give.
      **/
-    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule = 0);
 
     /**
      * \brief   Records where each of the three design widgets (toolbar, Properties, Outline)
@@ -411,10 +413,11 @@ signals:
 
     /**
      * \brief   Emitted when a validation finding on a registry entry is activated; the owning
-     *          window switches to that entry's editor page (states/transitions are handled on
-     *          the canvas, so those never reach this signal).
+     *          window brings that entry's editor page forward and selects \p elementId on it
+     *          (states/transitions are handled on the canvas, so those never reach this
+     *          signal). \p rule lets the landing accent the field the check blames.
      **/
-    void signalNavigateToPage(eDocElementKind kind);
+    void signalNavigateToPage(eDocElementKind kind, uint32_t elementId, int rule);
 
     /**
      * \brief   Emitted by Go to Declaration (F12 or the canvas context menu) to navigate from a
@@ -585,6 +588,15 @@ private:
      *          context-menu access path; the Properties panel embeds the same editor).
      **/
     void openStateOperationsDialog(uint32_t stateId, bool entry);
+
+    /**
+     * \brief   Opens the internal transitions editor dialog for a state (the context-menu access
+     *          path, beside Enter/Exit Actions; the Properties panel's `Internal` tab embeds the
+     *          same editor).
+     * \param   stateId         The state whose internal transitions are edited.
+     * \param   transitionId    The one to preselect, or 0 for the first.
+     **/
+    void openInternalDialog(uint32_t stateId, uint32_t transitionId = 0u);
 
     /**
      * \brief   Opens the operations editor dialog for a transition's operation list.

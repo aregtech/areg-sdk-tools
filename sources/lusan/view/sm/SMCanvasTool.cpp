@@ -391,7 +391,9 @@ QRectF SMTransitionTool::sourceRect() const
     SMStateItem* item = getScene().stateItem(mSourceId);
     if (item != nullptr)
     {
-        return item->getBoxGeometry();
+        // The DRAWN box: a transition started on a collapsed state leaves the header the user
+        // sees, never the border of the body that is folded away.
+        return item->getVisibleGeometry();
     }
 
     const SMLayoutNode* node = getScene().getModel().getData().getLayout().findNode(mSourceId);
@@ -645,7 +647,7 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
     {
         SMStateItem* targetItem = canvas.stateItem(targetId);
         const SMLayoutNode* node = data.getLayout().findNode(targetId);
-        tgtRect = (targetItem != nullptr) ? targetItem->getBoxGeometry()
+        tgtRect = (targetItem != nullptr) ? targetItem->getVisibleGeometry()
                 : (node != nullptr) ? QRectF(node->x, node->y, node->width, node->height) : QRectF();
     }
 
@@ -695,10 +697,16 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         points.append(end);
     }
 
+    // An edge drawn OUT of a Start is the level's initial transition, not an external one: it is
+    // taken on entering the level and there is no stimulus to pick for it. Saying so at creation
+    // is what keeps the author from being offered a stimulus they then have to remove.
     const QString text = QCoreApplication::translate("SMTransitionTool", "Add transition");
+    const SMTransitionEntry::eTransitionKind transKind = source->isPseudoStart()
+                                                         ? SMTransitionEntry::eTransitionKind::Initial
+                                                         : SMTransitionEntry::eTransitionKind::External;
     SMCreateTransitionCommand* command = new SMCreateTransitionCommand(  data, model.getNotifier(), *source
                                                                        , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                                       , target->getId(), points, text);
+                                                                       , target->getId(), points, text, nullptr, transKind);
     model.getUndoStack().push(command);
     const uint32_t transitionId = command->getTransitionId();
 
@@ -714,13 +722,22 @@ void SMTransitionTool::completeInternal()
     StateMachineModel& model = canvas.getModel();
     StateMachineData&  data  = model.getData();
 
+    // A Start is a pseudo-state: its transitions are the level's initial ones and each must say
+    // where the level begins, so an internal one -- which initialises nothing -- is not a thing it
+    // can own. The Design menu's action is already disabled for a Start; this covers the gesture.
     SMStateEntry* source = data.findStateById(mSourceId);
+    if ((source != nullptr) && source->isPseudoStart())
+    {
+        source = nullptr;
+    }
+
     if (source != nullptr)
     {
         const QString text = QCoreApplication::translate("SMTransitionTool", "Add internal transition");
         model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *source
                                                                 , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                                , 0u, QList<QPointF>(), text));
+                                                                , 0u, QList<QPointF>(), text, nullptr
+                                                                , SMTransitionEntry::eTransitionKind::Internal));
     }
 
     clearPreview();

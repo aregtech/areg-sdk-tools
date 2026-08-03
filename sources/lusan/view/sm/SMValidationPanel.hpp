@@ -27,6 +27,7 @@
 #include "lusan/model/sm/SMValidator.hpp"
 
 #include <QList>
+#include <QPointer>
 #include <cstdint>
 
 /************************************************************************
@@ -104,15 +105,19 @@ public:
     inline QTreeWidget* list() const;
 
 signals:
-    //!< A finding row was activated: navigate to the offending element on the owning page.
-    void navigateRequested(uint32_t elementId, eDocElementKind kind);
+    /**
+     * \brief   A finding row was activated: navigate to the offending element on the owning
+     *          page. \p rule is the finding's own check id, carried through because the check
+     *          often knows which field is at fault while the element id alone does not.
+     **/
+    void navigateRequested(uint32_t elementId, eDocElementKind kind, int rule);
 
     /**
      * \brief   As \ref navigateRequested, naming the document that owns the finding (the
      *          `owner` passed to \ref addDocument), so a multi-document host reveals it in the
      *          right window.
      **/
-    void navigateRequestedIn(QObject* owner, uint32_t elementId, eDocElementKind kind);
+    void navigateRequestedIn(QObject* owner, uint32_t elementId, eDocElementKind kind, int rule);
 
     //!< Emitted whenever \ref pendingCount changes, so a tab can show `Validation (5)`.
     void pendingCountChanged(int count);
@@ -129,13 +134,28 @@ private:
     void rebuild();
     void step(int delta);
 
-    //!< One shown document: its facade, display name, live findings, and signal bindings.
+    /**
+     * \brief   Puts the selected findings on the clipboard as whole rows, the columns separated
+     *          by `|`, so a finding can be pasted into a report or an issue tracker as it reads
+     *          in the panel.
+     **/
+    void copySelection() const;
+
+    //!< Drops the documents whose model is gone, so a closed window leaves no findings behind.
+    void purgeClosedDocuments();
+
+    /**
+     * \brief   One shown document: its facade, display name, live findings, and signal bindings.
+     *          The facade and the owning window are held weakly -- a document window can be closed
+     *          and destroyed while its findings are still listed, and a raw pointer would then be
+     *          dereferenced by the next rebuild or by activating one of its rows.
+     **/
     struct Source
     {
-        StateMachineModel*  model;
-        QObject*            owner;
-        QString             name;
-        QList<SMIssue>      issues;
+        QPointer<StateMachineModel> model;
+        QPointer<QObject>           owner;
+        QString                     name;
+        QList<SMIssue>              issues;
         QList<QMetaObject::Connection> bindings;
     };
 

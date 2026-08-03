@@ -34,6 +34,7 @@
 #include <QRectF>
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -61,8 +62,8 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
     painter.setBrush(Qt::NoBrush);
 
     const double midY = rect.center().y();
-    // The two stimulus marks are drawn inside a centered square scaled by StimulusGlyphScale, so the
-    // one constant resizes both. Square, not the caller's rect: a body row is taller than it is wide,
+    // The kind marks are drawn inside a centered square scaled by StimulusGlyphScale, so the one
+    // constant resizes them all. Square, not the caller's rect: a body row is taller than it is wide,
     // and a bolt stretched to the row height would tower over the name it belongs to.
     const double  markSide = std::min(rect.width(), rect.height()) * StimulusGlyphScale;
     const QRectF  mark{ rect.center().x() - (markSide / 2.0), midY - (markSide / 2.0), markSide, markSide };
@@ -110,6 +111,89 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
         break;
     }
 
+    case eGlyph::Do:
+    {
+        // A circular repeat arrow -- the same mark the `Do` tab header already wears
+        // (SMToolIcons::eIcon::SectionDo), so the tab and the band rows it edits agree. Deliberately
+        // WITHOUT the state bar that Entry / Exit / Internal share: a Do activity never crosses the
+        // state's boundary, it just runs while inside, and that is the whole distinction from the
+        // internal transition this glyph used to be shared with.
+        const double radius = 3.6;
+        const QRectF loop{ rect.center().x() - radius, midY - radius, 2.0 * radius, 2.0 * radius };
+        painter.drawArc(loop, 300 * 16, 300 * 16);
+        // The head sits at the open end of the arc (300 degrees = lower right), pointing the way
+        // the arc travels, so the ring reads as a repetition rather than as a broken circle.
+        const QPointF tip{ loop.center().x() + (radius * 0.5), loop.center().y() + (radius * 0.87) };
+        painter.drawLine(tip, tip + QPointF(-3.0, 0.6));
+        painter.drawLine(tip, tip + QPointF(-0.6, -3.0));
+        break;
+    }
+
+    case eGlyph::Internal:
+    {
+        // An internal transition: the SAME bar Entry and Exit use, with a hook that leaves it and
+        // turns straight back into it. The three then read as one family -- `->|` arrives, `<-|`
+        // departs, and this one goes out and comes back without ever leaving the state. It is drawn
+        // square rather than as a circle so it cannot be mistaken for the Do repeat ring.
+        // The hook is kept SMALLER than the bar on purpose: the bar is what ties the mark to the
+        // entry and exit pair, and a hook as tall as the bar closes into a plain rectangle.
+        const double barX = rect.right() - 1.0;
+        const double left = barX - 6.5;
+        const double up   = midY - 2.5;
+        const double down = midY + 2.5;
+        painter.drawLine(QPointF(barX, midY - 4.5), QPointF(barX, midY + 4.5));
+        painter.drawLine(QPointF(barX - 1.0, up), QPointF(left, up));
+        painter.drawLine(QPointF(left, up), QPointF(left, down));
+        painter.drawLine(QPointF(left, down), QPointF(barX - 2.0, down));
+        painter.drawLine(QPointF(barX - 2.0, down), QPointF(barX - 4.5, down - 2.0));
+        painter.drawLine(QPointF(barX - 2.0, down), QPointF(barX - 4.5, down + 2.0));
+        break;
+    }
+
+    case eGlyph::Action:
+    {
+        // A gear: the operation a state or transition runs
+        const QPointF centre = mark.center();
+        // A cog carries far less ink than a bolt or a clock face of the same width, so it is drawn
+        // to a larger fraction of the mark square to weigh the same beside them on a row.
+        const double  outer  = mark.width() * 0.56;
+        const double  inner  = outer * 0.68;
+        constexpr double pi { 3.14159265358979323846 };
+        constexpr int teeth  { 6 };
+        QPolygonF cog;
+        for (int i = 0; i < (teeth * 2); ++i)
+        {
+            const double angle  = (i * pi) / teeth;
+            const double radius = ((i % 2) == 0) ? outer : inner;
+            cog.append(centre + QPointF(std::cos(angle) * radius, std::sin(angle) * radius));
+        }
+
+        QPainterPath gear;
+        gear.addPolygon(cog);
+        gear.closeSubpath();
+        gear.addEllipse(centre, outer * 0.30, outer * 0.30);     // odd-even: the hub is a hole
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawPath(gear);
+        painter.setBrush(Qt::NoBrush);
+        break;
+    }
+
+    case eGlyph::Trigger:
+    {
+        // A push button in profile, a solid cap on an open housing
+        const double x = mark.left();
+        const double y = mark.top();
+        const double w = mark.width();
+        const double h = mark.height();
+        const double round = w * 0.09;
+        painter.drawRoundedRect(QRectF(x + (0.19 * w), y + (0.50 * h), 0.63 * w, 0.31 * h), round, round);
+        painter.setBrush(color);
+        painter.drawRoundedRect(QRectF(x + (0.33 * w), y + (0.28 * h), 0.34 * w, 0.22 * h), round, round);
+        painter.setBrush(Qt::NoBrush);
+        break;
+    }
+
     case eGlyph::TimerStart:
     {
         // Clock face with a play triangle (start). Every measure is a fraction of the face radius,
@@ -140,9 +224,7 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Event:
     {
-        // A filled lightning bolt -- the same mark as the Events page and the toolbar so "event"
-        // reads the same way on every surface. Normalized coordinates (0..1 in the mark rect)
-        // trace the bolt, then map onto the rect.
+        // A filled lightning bolt
         const double x = mark.left();
         const double y = mark.top();
         const double w = mark.width();
@@ -161,17 +243,8 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
         break;
     }
 
-    case eGlyph::Internal:
     default:
-    {
-        // Self-loop: an open circle with an arrowhead at the gap.
-        const QRectF loop{ rect.center().x() - 4.0, midY - 4.0, 8.0, 8.0 };
-        painter.drawArc(loop, 30 * 16, 300 * 16);
-        const QPointF tip{ loop.right(), midY + 2.0 };
-        painter.drawLine(tip, tip + QPointF(-3.5, 1.0));
-        painter.drawLine(tip, tip + QPointF(-0.5, -3.5));
-        break;
-    }
+        break;      // eGlyph::None never reaches here -- isDrawn() turned it away above.
     }
 
     painter.restore();
@@ -233,20 +306,20 @@ bool SMKindGlyph::isDrawn(eGlyph glyph)
         return false;
     }
 
-    // A band mark (enter / exit / do) is always drawn: it is the row's position marker, not a
-    // spelling of its kind, so the Word style does not replace it.
+    // A band mark (enter / do / exit / internal) is always drawn: it is the row's position marker,
+    // not a spelling of its kind, so the Word style does not replace it.
     switch (glyph)
     {
     case eGlyph::Trigger:
-        // A trigger carries NO mark, in either style. An event and a timer are marked because they
-        // name where the stimulus COMES FROM, and the two must be told apart; a trigger is the plain
-        // case, with nothing to distinguish it from. The `( )` arcs it used to draw read as an empty
-        // argument list in front of a signature that already ends in one -- `( )on()`.
-        return false;
-
     case eGlyph::Event:
     case eGlyph::TimerStart:
     case eGlyph::TimerStop:
+    case eGlyph::Action:
+        // A trigger IS marked now. It used to carry nothing on the grounds that it is the plain
+        // case with nothing to be told apart from -- but the row `on someTrigger` then drew an empty
+        // gutter next to `someAction()`, and the reader could not tell the cause from the effect
+        // without reading both. What it must not draw is the `( )` arc pair it once did, which read
+        // as an empty argument list in front of a signature that already ends in one: `( )on()`.
         return (Style == eStyle::Glyph);
     default:
         return true;
@@ -255,12 +328,12 @@ bool SMKindGlyph::isDrawn(eGlyph glyph)
 
 SMKindGlyph::eGlyph SMKindGlyph::stimulusGlyph(const SMTransitionEntry& transition)
 {
-    if (transition.getStimulus().isEmpty())
-    {
-        return eGlyph::None;
-    }
+    return transition.getStimulus().isEmpty() ? eGlyph::None : stimulusGlyph(transition.getStimulusKind());
+}
 
-    switch (transition.getStimulusKind())
+SMKindGlyph::eGlyph SMKindGlyph::stimulusGlyph(SMTransitionEntry::eStimulusKind kind)
+{
+    switch (kind)
     {
     case SMTransitionEntry::eStimulusKind::Event:
         return eGlyph::Event;
@@ -283,7 +356,11 @@ SMKindGlyph::eGlyph SMKindGlyph::operationGlyph(const SMOperationBase& op)
     case SMOperationBase::eOperation::TimerStop:
         return eGlyph::TimerStop;
     default:
-        return eGlyph::None;
+        // An action call and an attribute assignment are what the owner's vocabulary calls an
+        // action, and an action wears the gear. They used to fall back to their band's mark, which
+        // is why the operations of an internal transition drew the very same self-loop as the
+        // `on <stimulus>` row that fires them.
+        return eGlyph::Action;
     }
 }
 

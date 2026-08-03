@@ -40,13 +40,8 @@ class StateMachineData;
  *          point every where-used UI (context menu, dialog, delete confirmation) calls.
  *
  *          It unions two reference mechanisms that deliberately live in two layers:
- *          - SMReferences (data layer): name-based fields plus the ID-based transition
- *            target -- rewritten on rename.
- *          - SMGuardWhereUsed (model layer): the ID-bound guard trees for method /
- *            attribute / constant symbols -- auto-reflect a rename, never rewritten.
- *          The join lives here, in the model layer, so the headless data walker stays free
- *          of any guard/model dependency (sm-arch-overview.md layering rule 1) while the UI
- *          still sees every reference in one list.
+ *          - SMReferences (data layer): name-based fields plus the ID-based transition target;
+ *          - SMGuardWhereUsed (model layer): the ID-bound guard trees for method / attribute / constant symbols.
  **/
 namespace SMWhereUsed
 {

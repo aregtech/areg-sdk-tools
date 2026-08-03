@@ -39,8 +39,12 @@
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMGuardValidation.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
+#include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
+#include "lusan/view/common/MethodDetailsView.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
+#include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
@@ -64,6 +68,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QKeyEvent>
+#include <QPlainTextEdit>
 #include <QRegularExpression>
 #include <QTabWidget>
 #include <QTextCursor>
@@ -147,9 +152,14 @@ namespace
     {
         for (const SMStateEntry* state : data.getStates().getElements())
         {
-            if ((state != nullptr) && (state->getTransitions().getElementCount() > 0))
+            if (state == nullptr)
+                continue;
+            for (const SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                return state->getTransitions().getElements().at(0)->getId();
+                if ((transition != nullptr) && (transition->isInitial() == false))
+                {
+                    return transition->getId();
+                }
             }
         }
 
@@ -220,7 +230,7 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     bar.resize(680, 620);
     bar.show();
     bar.setTransition(transId);
-    setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+    setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
     pump(400);
 
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardClear")) != nullptr, "S1: smGuardClear");
@@ -279,6 +289,119 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     pump(100);
     check(panel.objectName() == QStringLiteral("smValidation"), "S15: smValidation");
     check(panel.findChild<QWidget*>(QStringLiteral("smValidationList")) != nullptr, "S15: smValidationList");
+
+    // S15 activation: double-clicking a finding must ask for a jump. One open document is listed
+    // flat, so the findings are the top-level rows -- the case that made every double-click a
+    // no-op while activation was decided by whether a row had a parent.
+    {
+        QTreeWidget* findings = panel.list();
+        QTreeWidgetItem* row = (findings->topLevelItemCount() > 0) ? findings->topLevelItem(0) : nullptr;
+        check(row != nullptr, "S15: the panel lists at least one finding");
+
+        int jumps = 0;
+        uint32_t jumpedTo = 0;
+        QObject::connect(&panel, &SMValidationPanel::navigateRequested
+                        , [&jumps, &jumpedTo](uint32_t elementId, eDocElementKind, int)
+        {
+            ++jumps;
+            jumpedTo = elementId;
+        });
+
+        if (row != nullptr)
+        {
+            check(row->parent() == nullptr, "S15: a single document is listed flat");
+            emit findings->itemDoubleClicked(row, 0);
+            pump(50);
+            check(jumps == 1, "S15: a double-clicked finding asks for a jump");
+            check(jumpedTo != 0, "S15: the jump names the offending element");
+        }
+
+        // An advisory finding is filed under a shifted id. Reading one as a plain number lands on
+        // a different check entirely -- plain 14 is the operand-type rule, not the description
+        // one -- and the landing would quietly lose the field it is supposed to accent.
+        check(SMValidator::fieldOfRule(SMValidator::WARNING_RULE_BASE + SMValidator::RULE_MISSING_DESCRIPTION)
+                    == eIssueField::Description
+             , "S15: a missing-description finding points at the Description field");
+        check(SMValidator::fieldOfRule(SMValidator::RULE_MISSING_DESCRIPTION) == eIssueField::None
+             , "S15: the same number unshifted is a different check and names no field");
+        check(SMValidator::fieldOfRule(SMValidator::RULE_DUPLICATE_NAME) == eIssueField::Name
+             , "S15: a duplicate-name finding points at the Name field");
+
+        // Whatever this document happens to carry must agree with that mapping.
+        for (const SMIssue& issue : SMValidator::validate(model.getData()))
+        {
+            if (issue.message.contains(QStringLiteral("has no description")))
+            {
+                check(SMValidator::fieldOfRule(issue.rule) == eIssueField::Description
+                     , "S15: a real missing-description finding resolves to the Description field");
+            }
+        }
+    }
+
+    // S15 hand-over: a description box gives its text to the document when it loses the focus, and
+    // a save from the keyboard moves no focus. Without the hand-over the file is written without
+    // the text just typed, and the findings list keeps reporting a description already written.
+    {
+        const QList<SMMethodEntry*>& methods = model.getData().getMethods().getElements();
+        SMMethodEntry* method = methods.isEmpty() ? nullptr : methods.at(0);
+        check(method != nullptr, "S15: the sweep document declares at least one method");
+        if (method != nullptr)
+        {
+            const uint32_t methodId = method->getId();
+            const QString reported = QStringLiteral("Method '%1' has no description").arg(method->getName());
+            auto rowsReporting = [&panel](const QString& needle) -> int
+            {
+                int count = 0;
+                QTreeWidget* list = panel.list();
+                for (int i = 0; i < list->topLevelItemCount(); ++i)
+                {
+                    count += (list->topLevelItem(i)->text(2).contains(needle) ? 1 : 0);
+                }
+
+                return count;
+            };
+
+            model.getMethodModel().setDescription(methodId, QString());
+            pump(600);
+            check(rowsReporting(reported) == 1, "S15: an undescribed method is reported once");
+
+            SMMethod page(model.getMethodModel());
+            page.resize(760, 520);
+            page.show();
+            pump(50);
+            page.revealElement(methodId, eIssueField::Description);
+            pump(50);
+
+            MethodDetailsView* details = page.findChild<MethodDetailsView*>();
+            check(details != nullptr, "S15: the Methods page shows the method detail form");
+            if (details != nullptr)
+            {
+                const QString typed = QStringLiteral("Answers whether the machine may go on.");
+                details->ctrlDescription()->setPlainText(typed);
+                pump(50);
+                check(method->getDescription().isEmpty()
+                     , "S15: the box keeps the text until the page is asked for it");
+
+                // The document reaches its pages through the shared contract, exactly as the save
+                // path does; a page it cannot reach that way would be skipped without a word.
+                IEditCommit* asEditor = dynamic_cast<IEditCommit*>(static_cast<QWidget*>(&page));
+                check(asEditor != nullptr, "S15: the document reaches the page through the shared contract");
+                if (asEditor != nullptr)
+                {
+                    asEditor->commitPendingEdits();
+                }
+
+                checkEq(method->getDescription(), typed, "S15: a save asks the page and gets the typed text");
+
+                pump(600);
+                check(rowsReporting(reported) == 0
+                     , "S15: the finding clears itself once the description is in the document");
+            }
+
+            page.hide();
+        }
+    }
+
     panel.hide();
 
     // S1 tabs: the properties panel hosts [General|Conditions|Actions] as smTransTabs (the
@@ -357,7 +480,7 @@ static void sweepItem16(const QString& docPath, const QString& tmpDir)
     StateMachineModel model;
     check(model.loadFromFile(docPath), "document loads");
     const uint32_t transId = firstTransition(model.getData());
-    setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+    setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
 
     const QString fileA = tmpDir + QStringLiteral("/u4-item16-a.fsml");
     check(model.getData().writeToFile(fileA), "document saves");
@@ -368,7 +491,7 @@ static void sweepItem16(const QString& docPath, const QString& tmpDir)
     const QString expr = exprBlock(bytesA);
     check(expr.isEmpty() == false, "storage has the <Expr> tree");
     check(expr.contains(QStringLiteral("id=")), "the tree references symbols by id");
-    check(expr.contains(QStringLiteral("HasWaiting")) == false, "no name-based binding inside the tree (16)");
+    check(expr.contains(QStringLiteral("has_waiting")) == false, "no name-based binding inside the tree (16)");
     check(expr.contains(QStringLiteral("WalkRequested")) == false, "no attribute name inside the tree (16)");
 
     const QString displayA = guardText(model, transId);
@@ -399,18 +522,18 @@ static void sweepItem17(const QString& docPath, const QString& tmpDir)
     check(model.loadFromFile(docPath), "document loads");
     StateMachineData& data = model.getData();
     const uint32_t transId = firstTransition(data);
-    setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+    setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
 
     const QString fileA = tmpDir + QStringLiteral("/u4-item17-a.fsml");
     model.getData().writeToFile(fileA);
     const QString exprBefore = exprBlock(readBytes(fileA));
 
     // Three declaration edits, zero guard edits.
-    SMMethodEntry* handler = data.getMethods().findMethod(QStringLiteral("HasWaiting"));
+    SMMethodEntry* handler = data.getMethods().findMethod(QStringLiteral("has_waiting"));
     handler->setName(QStringLiteral("CanPass"));
     model.getNotifier().notifyElementChanged(handler->getId(), eDocElementKind::Method);
 
-    SMMethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("RequestWalk"));
+    SMMethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("request_walk"));
     for (MethodParameter& param : trigger->getElements())
     {
         if (param.getName() == QStringLiteral("count"))
@@ -439,7 +562,7 @@ static void sweepItem17(const QString& docPath, const QString& tmpDir)
     const uint32_t walkId = SMGuardSymbols::attributeId(data, QStringLiteral("WalkRequested"));
     const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(data, walkId);
     check(uses.size() == 1, "the referenced attribute reports one guard use (17)");
-    check((uses.size() == 1) && uses.at(0).location.contains(QStringLiteral("Idle : RequestWalk")), "the where-used entry names the transition (17)");
+    check((uses.size() == 1) && uses.at(0).location.contains(QStringLiteral("Idle : request_walk")), "the where-used entry names the transition (17)");
 }
 
 // ---------------------------------------------------------------------------
@@ -457,7 +580,7 @@ static void sweepItem18(const QString& docPath)
     SMMethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("param"), SMMethodEntry::eMethodType::Condition);
     lambda->setImplement(SMMethodEntry::eImplement::Embedded);
     lambda->setBody(QStringLiteral("return true;"));
-    data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("param"))->setType(QStringLiteral("uint16"));
+    data.getMethods().findMethod(QStringLiteral("request_walk"))->addParam(QStringLiteral("param"))->setType(QStringLiteral("uint16"));
     model.getNotifier().notifyElementChanged(lambda->getId(), eDocElementKind::Method);
 
     setGuard(model, transId, QStringLiteral("param() && param > 0"));
@@ -485,7 +608,7 @@ static void sweepItem20(const QString& docPath, const QString& tmpDir)
     StateMachineModel model;
     check(model.loadFromFile(docPath), "document loads");
     const uint32_t transId = firstTransition(model.getData());
-    setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+    setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
 
     // The same document renders/generates identically on repeated runs.
     checkEq(preview(model, transId), preview(model, transId), "the preview is identical across runs (20)");
@@ -588,7 +711,7 @@ static void sweepItem21(const QString& docPath, const QString& tmpDir, const QSt
     // The validation panel shows a draft ERR and the raw INFO audit side by side: keep the
     // raw guard on the first transition, give a second transition a draft.
     SMStateEntry* idle = model.getData().findState(QStringLiteral("Idle"));
-    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
+    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("request_walk"), idle->getId());
     second->getGuard().setDraft(QStringLiteral("WalkRequsted &&"));
     model.getNotifier().notifyElementAdded(second->getId(), eDocElementKind::Transition);
 
@@ -614,7 +737,7 @@ static void sweepTryIt(const QString& docPath, const QString& grabDir)
     check(model.loadFromFile(docPath), "document loads");
     StateMachineData& data = model.getData();
     const uint32_t transId = firstTransition(data);
-    setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+    setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
 
     SMGuardBar bar(model);
     bar.resize(680, 640);
@@ -635,7 +758,7 @@ static void sweepTryIt(const QString& docPath, const QString& grabDir)
     QLineEdit* count = bar.findChild<QLineEdit*>(QStringLiteral("smTryValue_%1").arg(SMGuardSymbols::paramId(data, transId, QStringLiteral("count"))));
     check(count != nullptr, "the count value field exists");
     QComboBox* stub = bar.findChild<QComboBox*>(QStringLiteral("smTryStub_1_0"));
-    check(stub != nullptr, "the HasWaiting stub combo exists");
+    check(stub != nullptr, "the has_waiting stub combo exists");
 
     if ((walk == nullptr) || (count == nullptr) || (stub == nullptr) || (result == nullptr))
     {
@@ -666,7 +789,7 @@ static void sweepTryIt(const QString& docPath, const QString& grabDir)
 
     // Sibling winner: a second transition on the same stimulus, lower priority, empty guard.
     SMStateEntry* idle = data.findState(QStringLiteral("Idle"));
-    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
+    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("request_walk"), idle->getId());
     model.getNotifier().notifyElementAdded(second->getId(), eDocElementKind::Transition);
     pump(300);
 
@@ -746,7 +869,7 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         grab(&bar, grabDir, name);
 
         // E1: resolved example B.
-        setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+        setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
         pump(350);
         std::snprintf(name, sizeof(name), "u4-%s-e1-resolved.png", theme.tag);
         grab(&bar, grabDir, name);
@@ -770,13 +893,13 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         grab(&bar, grabDir, name);
 
         // E5: mapping slots after accepting a call completion. The completer is `@`-mention
-        // driven (SM-21-03): typing `@HasWait` filters to the HasWaiting condition; Enter accepts
-        // the canonical `#cond:HasWaiting()`. A folded chip means the name lives in the committable
+        // driven (SM-21-03): typing `@has_wait` filters to the has_waiting condition; Enter accepts
+        // the canonical `#cond:has_waiting()`. A folded chip means the name lives in the committable
         // text, not the plain text, so assert on committableText().
         setGuard(model, transId, QString());
         pump(300);
         bar.field()->setFocus();
-        for (const QChar c : QStringLiteral("#HasWait"))
+        for (const QChar c : QStringLiteral("#has_wait"))
         {
             QKeyEvent key(QEvent::KeyPress, c.unicode(), Qt::NoModifier, QString(c));
             QApplication::sendEvent(bar.field(), &key);
@@ -785,7 +908,7 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
         QApplication::sendEvent(bar.field(), &enter);
         pump(250);
-        check(bar.field()->committableText().contains(QStringLiteral("HasWaiting")), "completion accepted the call (E5)");
+        check(bar.field()->committableText().contains(QStringLiteral("has_waiting")), "completion accepted the call (E5)");
         std::snprintf(name, sizeof(name), "u4-%s-e5-slots.png", theme.tag);
         grab(&bar, grabDir, name);
         QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
@@ -793,7 +916,7 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         pump(100);
 
         // E6: shadowing (a stimulus parameter hides an attribute).
-        SMMethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("RequestWalk"));
+        SMMethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("request_walk"));
         if (trigger->findElement(QStringLiteral("Backlog")) == nullptr)
         {
             trigger->addParam(QStringLiteral("Backlog"))->setType(QStringLiteral("uint32"));

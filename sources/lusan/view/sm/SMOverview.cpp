@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMOverview.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -21,6 +21,8 @@
 
 #include "lusan/model/sm/SMOverviewModel.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
 
 #include <QCheckBox>
@@ -59,6 +61,16 @@ SMOverview::SMOverview(SMOverviewModel& model, QWidget* parent /*= nullptr*/)
     updateData();
 }
 
+void SMOverview::revealField(eIssueField field)
+{
+    switch (field)
+    {
+    case eIssueField::Name:         WidgetHighlight::reveal(mName);         break;
+    case eIssueField::Description:  WidgetHighlight::reveal(mDescription);  break;
+    default:                                                                break;
+    }
+}
+
 void SMOverview::buildUi()
 {
     QWidget* content = new QWidget(this);
@@ -77,6 +89,9 @@ void SMOverview::buildUi()
     // Left column: "Details :" group with label-beside-control rows, mirroring SI.
     QGroupBox* details = new QGroupBox(tr("Details :"), content);
     details->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    // Everything in this group is document text: typing in it marks the document changed at once,
+    // even though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(details, mModel.getNotifier());
     QFormLayout* form = new QFormLayout(details);
     form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
     form->setRowWrapPolicy(QFormLayout::DontWrapRows);
@@ -331,6 +346,11 @@ void SMOverview::commitDescription()
     mCommitting = true;
     mModel.setDescription(mDescription->toPlainText());
     mCommitting = false;
+}
+
+void SMOverview::commitPendingEdits(void)
+{
+    commitDescription();
 }
 
 bool SMOverview::eventFilter(QObject* watched, QEvent* event)

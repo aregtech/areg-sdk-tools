@@ -21,6 +21,7 @@
 
 #include <QMainWindow>
 #include <QAction>
+#include <QFileSystemWatcher>
 #include <QHash>
 #include <QSize>
 
@@ -226,6 +227,19 @@ public:
      *          Called on document / inner-tab activation and after a placement change.
      **/
     void syncDesignWidgets();
+
+    /**
+     * \brief   Points the document watcher at exactly the files the open documents were read
+     *          from, so a change made outside Lusan reaches the window that shows it.
+     **/
+    void refreshDocumentWatch();
+
+    /**
+     * \brief   Re-reads a document from its file by closing its window and opening the file
+     *          again. Whatever the editor held is dropped -- reloading is the caller's answer to
+     *          the file having changed underneath it.
+     **/
+    bool reopenDocument(MdiChild& child);
 
     /**
      * \brief   The active document's Design page, or nullptr unless a State Machine window is
@@ -489,6 +503,14 @@ private slots:
     void onMdiChildClosed(MdiChild *mdiChild);
 
     /**
+     * \brief   Slot for a watched document file that changed on disk. Hands the change to every
+     *          open window that shows that file, after a short settle so a save seen half-written
+     *          is not read back.
+     * \param   filePath    The file that changed.
+     **/
+    void onDocumentFileChanged(const QString& filePath);
+
+    /**
      * \brief   Slot for handling the MDI sub-window when it is activated.
      * \param   mdiSubWindow    The MDI sub-window that is activated.
      **/
@@ -686,6 +708,8 @@ private:
     MdiArea         mMdiArea;       //!< The MDI area for managing sub-windows.
     NavigationDock  mNaviDock;      //!< The navigation content (hosted in an ADS dock, issue #516).
     OutputDock      mOutputDock;    //!< The output content (hosted in an ADS dock, issue #516).
+
+    QFileSystemWatcher mDocWatcher;     //!< Watches the files the open documents were read from.
 
     ads::CDockManager* mDockManager;    //!< The single ADS dock manager; hosts every dock (issue #516).
     ads::CDockWidget*  mCentralDock;    //!< Wraps the MDI area as the non-closable central dock.

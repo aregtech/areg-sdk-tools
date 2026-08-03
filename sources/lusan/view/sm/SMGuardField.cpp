@@ -226,7 +226,7 @@ namespace
 SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     : QTextEdit         (parent)
     , mModel            (model)
-    , mTransitionId     (0u)
+    , mTarget           ( )
     , mAllowRaw         (false)
     , mRebuildPending   (false)
     , mMinLines         (3)
@@ -329,9 +329,9 @@ SMGuardField::~SMGuardField()
 // Public
 //////////////////////////////////////////////////////////////////////////
 
-void SMGuardField::setTransition(uint32_t transitionId)
+void SMGuardField::setTarget(const SMGuardRef& target)
 {
-    mTransitionId = transitionId;
+    mTarget = target;
     buildCatalog();
     rebuildFromModel();
 }
@@ -371,7 +371,7 @@ QString SMGuardField::symbolTipAt(const QPoint& viewportPos) const
     {
         if (sym.name == name)
         {
-            return SMHoverCard::symbolTip(mModel, mTransitionId, sym);
+            return SMHoverCard::symbolTip(mModel, mTarget.getScopeId(), sym);
         }
     }
 
@@ -380,7 +380,7 @@ QString SMGuardField::symbolTipAt(const QPoint& viewportPos) const
 
 void SMGuardField::buildCatalog()
 {
-    mCatalog = SMGuardCatalog::build(mModel.getData(), mTransitionId);
+    mCatalog = SMGuardCatalog::build(mModel.getData(), mTarget.getScopeId());
     mOwnerByName.clear();
     for (const SMGuardSymbol& sym : mCatalog)
     {
@@ -666,13 +666,13 @@ void SMGuardField::reprojectChips()
     // have moved. So re-render the committed tree and rewrite each folded chip token's format in
     // place. Text length never changes, so offsets, the caret, and any uncommitted text are all
     // preserved; only the chips respell.
-    SMTransitionEntry* transition = (mTransitionId != 0u) ? mModel.getData().findTransitionById(mTransitionId) : nullptr;
-    if (transition == nullptr)
+    const SMGuard* bound = mModel.getData().findGuard(mTarget);
+    if (bound == nullptr)
     {
         return;
     }
 
-    const SMGuard& guard = transition->getGuard();
+    const SMGuard& guard = *bound;
     if ((guard.isOk() == false) || (guard.getTree() == nullptr))
     {
         return;     // a draft carries no folded chips.
@@ -684,7 +684,7 @@ void SMGuardField::reprojectChips()
         return;
     }
 
-    const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree(), true);
+    const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTarget.getScopeId(), *guard.getTree(), true);
     if (rendered.chips.size() != positions.size())
     {
         // A de-rendered chip (double-click edit) desyncs the count; leave the respell to the next
@@ -799,7 +799,7 @@ bool SMGuardField::revealChipAt(int docPos, const QPoint& viewportPos)
             if (sym.name == name)
             {
                 const QPoint pos = mapToGlobal(QPoint(0, height() + 2));
-                mHover->showSymbol(mModel, mTransitionId, sym, pos);
+                mHover->showSymbol(mModel, mTarget.getScopeId(), sym, pos);
                 return true;
             }
         }
@@ -927,7 +927,7 @@ void SMGuardField::onElementAdded(uint32_t /*id*/, eDocElementKind /*kind*/)
 void SMGuardField::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
 {
     buildCatalog();
-    if (id == mTransitionId)
+    if (id == mTarget.getId())
     {
         scheduleRebuild();
     }
@@ -942,9 +942,9 @@ void SMGuardField::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
 
 void SMGuardField::onElementRemoved(uint32_t id, eDocElementKind /*kind*/)
 {
-    if (id == mTransitionId)
+    if (id == mTarget.getId())
     {
-        mTransitionId = 0u;
+        mTarget = SMGuardRef();
         scheduleRebuild();
     }
     else
@@ -960,7 +960,7 @@ void SMGuardField::onElementRemoved(uint32_t id, eDocElementKind /*kind*/)
 
 void SMGuardField::onDocumentReloaded()
 {
-    mTransitionId = 0u;
+    mTarget = SMGuardRef();
     scheduleRebuild();
 }
 
@@ -1015,25 +1015,25 @@ void SMGuardField::rebuildFromModel()
 {
     clearSlotMode();
 
-    SMTransitionEntry* transition = (mTransitionId != 0u) ? mModel.getData().findTransitionById(mTransitionId) : nullptr;
+    const SMGuard* bound = mModel.getData().findGuard(mTarget);
 
     QString text;
     QList<SMGuardRender::Chip> chips;
     mAllowRaw = false;
-    if (transition != nullptr)
+    if (bound != nullptr)
     {
-        const SMGuard& guard = transition->getGuard();
+        const SMGuard& guard = *bound;
         if (guard.isOk() && (guard.getTree() != nullptr))
         {
             // A committed tree reflows to its canonical text AND its chips: every
             // bound reference folds to a compact pill. A draft keeps the user's raw text as-is.
-            const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree(), true);
+            const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTarget.getScopeId(), *guard.getTree(), true);
             text  = rendered.text;
             chips = rendered.chips;
         }
         else
         {
-            text = SMGuardRender::guardText(mModel.getData(), mTransitionId, guard, true);
+            text = SMGuardRender::guardText(mModel.getData(), mTarget.getScopeId(), guard, true);
         }
         mAllowRaw = (guard.isDraft() && (countRawNodes(guard.getTree()) > 0))
                      || (guard.isOk() && (countRawNodes(guard.getTree()) > 0));
@@ -1055,7 +1055,7 @@ void SMGuardField::rebuildFromModel()
     mSuppressAnalyze = false;
 
     mCommittedText = text;
-    setEnabled(transition != nullptr);
+    setEnabled(bound != nullptr);
     updateHeight();
     analyze();
 }
@@ -1082,7 +1082,7 @@ void SMGuardField::analyze()
         mSuppressAnalyze = prevSuppress;
     };
 
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         applyDecorations({}, {});
         emit statusUpdated(static_cast<int>(NEGuardStyle::eSeverity::Ok), QString(), QString(), {});
@@ -1105,7 +1105,7 @@ void SMGuardField::analyze()
 
     // The parser sees the masked, expanded text (islands as `{...}`); its diagnostic offsets are
     // remapped back to document positions for the underlines.
-    SMGuardParser::Result result = SMGuardParser::parse(data, mTransitionId, parseText, mAllowRaw);
+    SMGuardParser::Result result = SMGuardParser::parse(data, mTarget.getScopeId(), parseText, mAllowRaw);
 
     // ---- decorations ------------------------------------------------------
     QList<SMGuardHighlighter::OwnerSpan> owners;
@@ -1237,7 +1237,7 @@ void SMGuardField::analyze()
 
     if (guard.isOk())
     {
-        const QString preview = SMGuardCodegenPreview::ifStatement(data, mTransitionId, guard);
+        const QString preview = SMGuardCodegenPreview::ifStatement(data, mTarget.getScopeId(), guard);
         QStringList chips;
         collectHandlerChips(data, guard.getTree(), chips);
 
@@ -1316,7 +1316,7 @@ void SMGuardField::analyze()
         QList<SMFixBar::Fix> fixes;
         if (token.isEmpty() == false)
         {
-            const QString suggestion = SMGuardCatalog::nearestName(SMGuardCatalog::completionWords(data, mTransitionId), token);
+            const QString suggestion = SMGuardCatalog::nearestName(SMGuardCatalog::completionWords(data, mTarget.getScopeId()), token);
             if (suggestion.isEmpty() == false)
             {
                 fixes.append({ QStringLiteral("use"), tr("Use %1").arg(suggestion), suggestion, true, QString() });
@@ -1393,23 +1393,23 @@ QString SMGuardField::committableText() const
 
 void SMGuardField::commit()
 {
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         return;
     }
 
     const QString text = committableText();
     StateMachineData& data = mModel.getData();
-    SMGuard guard = SMGuardParser::parseToGuard(data, mTransitionId, text, mAllowRaw);
+    SMGuard guard = SMGuardParser::parseToGuard(data, mTarget.getScopeId(), text, mAllowRaw);
 
     // No change -> no undo step.
-    const QString canonical = SMGuardRender::guardText(data, mTransitionId, guard, true);
+    const QString canonical = SMGuardRender::guardText(data, mTarget.getScopeId(), guard, true);
     if (canonical == mCommittedText)
     {
         return;
     }
 
-    SMSetGuardCommand* command = SMGuardCommands::setGuard(data, mModel.getNotifier(), mTransitionId, guard, tr("Edit guard"));
+    SMSetGuardCommand* command = SMGuardCommands::setGuard(data, mModel.getNotifier(), mTarget, guard, tr("Edit guard"));
     if (command != nullptr)
     {
         mModel.getUndoStack().push(command);
@@ -1544,7 +1544,7 @@ void SMGuardField::contextMenuEvent(QContextMenuEvent* event)
 
 void SMGuardField::applyRawBind(const QList<int>& rawPath, const SMGuardSymbol& symbol)
 {
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         return;
     }
@@ -1574,7 +1574,7 @@ void SMGuardField::applyRawBind(const QList<int>& rawPath, const SMGuardSymbol& 
     // committed tree (the raw text becomes a bound chip). Never a text edit -- the exact node at
     // rawPath is swapped, so a same-name raw fragment elsewhere is untouched.
     StateMachineData& data = mModel.getData();
-    SMSetGuardCommand* command = SMGuardCommands::replaceSubtree(data, mModel.getNotifier(), mTransitionId, rawPath, node, tr("Bind '%1'").arg(symbol.name));
+    SMSetGuardCommand* command = SMGuardCommands::replaceSubtree(data, mModel.getNotifier(), mTarget, rawPath, node, tr("Bind '%1'").arg(symbol.name));
     if (command != nullptr)
     {
         mModel.getUndoStack().push(command);
@@ -1583,24 +1583,24 @@ void SMGuardField::applyRawBind(const QList<int>& rawPath, const SMGuardSymbol& 
 
 bool SMGuardField::rawNodeSpan(const QList<int>& rawPath, int& start, int& length) const
 {
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         return false;
     }
 
-    const SMTransitionEntry* transition = mModel.getData().findTransitionById(mTransitionId);
-    if ((transition == nullptr) || (transition->getGuard().isOk() == false))
+    const SMGuard* bound = mModel.getData().findGuard(mTarget);
+    if ((bound == nullptr) || (bound->isOk() == false))
     {
         return false;
     }
 
-    const SMGuardNode* root = transition->getGuard().getTree();
+    const SMGuardNode* root = bound->getTree();
     if (root == nullptr)
     {
         return false;
     }
 
-    const QList<SMGuardRender::NodeSpan> spans = SMGuardRender::nodeSpans(mModel.getData(), mTransitionId, *root, true);
+    const QList<SMGuardRender::NodeSpan> spans = SMGuardRender::nodeSpans(mModel.getData(), mTarget.getScopeId(), *root, true);
     for (const SMGuardRender::NodeSpan& span : spans)
     {
         if (span.path == rawPath)
@@ -1616,7 +1616,7 @@ bool SMGuardField::rawNodeSpan(const QList<int>& rawPath, int& start, int& lengt
 
 void SMGuardField::bindRaw(const QList<int>& rawPath, const QString& name)
 {
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         return;
     }
@@ -1691,7 +1691,7 @@ namespace
 
 void SMGuardField::openCompletion()
 {
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         return;
     }
@@ -1706,7 +1706,7 @@ void SMGuardField::openCompletion()
 
 void SMGuardField::insertReference(const SMGuardSymbol& symbol)
 {
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         return;
     }
@@ -1783,7 +1783,7 @@ void SMGuardField::updateCompleter()
     // ordinary completion into a raw bind.
     mRawBindMode = false;
 
-    if (mTransitionId == 0u)
+    if (mTarget.isValid() == false)
     {
         mCompleter->hide();
         return;

@@ -256,7 +256,7 @@ namespace
         row->setLhsKind(SMConditionEntry::eOperandKind::Condition);
         row->setLhs("IsReady");
 
-        SMTransitionEntry* internal = func->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "VehicleWait");
+        SMTransitionEntry* internal = func->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "VehicleWait", 0u, SMTransitionEntry::eTransitionKind::Internal);
         SMActionCall* act = new SMActionCall();
         act->setAction("SetVehicleGreen");
         internal->getOperations().addOperation(act);
@@ -373,7 +373,7 @@ namespace
         CHECK(trans.at(0)->getStimulus() == QString("PowerOff"));   // external, added first
         CHECK(trans.at(1)->getStimulus() == QString("VehicleWait")); // internal, added second
         CHECK(trans.at(0)->isExternal());
-        CHECK(trans.at(1)->isExternal() == false);
+        CHECK(trans.at(1)->isInternal());
     }
 
     void testIdInvariants()

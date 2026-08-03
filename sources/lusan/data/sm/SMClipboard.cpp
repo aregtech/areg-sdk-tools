@@ -772,10 +772,13 @@ void SMClipboard::remapTransitionTargets(SMStateEntry& state, const QHash<uint32
 {
     for (SMTransitionEntry* transition : state.getTransitions().getElements())
     {
-        if (transition->isExternal())
+        if (transition->hasTarget())
         {
-            const uint32_t newTarget = oldToNew.value(transition->getToId(), 0);
-            transition->setToId(newTarget);     // 0 when the target lies outside the pasted set -> internal
+            // 0 when the target lay outside the pasted set. The transition keeps the kind it was
+            // copied with: an external transition that lost its target is an edge waiting to be
+            // reconnected, and saying so is the point of the Kind attribute -- turning it into an
+            // internal transition would silently invent behaviour the author never wrote.
+            transition->setToId(oldToNew.value(transition->getToId(), 0));
         }
     }
 

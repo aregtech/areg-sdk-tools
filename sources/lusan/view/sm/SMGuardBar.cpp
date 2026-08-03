@@ -508,7 +508,7 @@ void SMGuardBar::setTransition(uint32_t transitionId)
     mBoundCallPath.clear();
     mIsland->hide();
     mHover->hide();
-    mField->setTransition(transitionId);
+    mField->setTarget(transitionId);
     mTry->setTransition(transitionId);       // collapses the hidden strip.
 
     // The Arguments table clears until the caret sits in a call (or a call exists in the guard).
@@ -773,10 +773,12 @@ void SMGuardBar::showWhereUsed(uint32_t symbolId)
     for (const SMGuardWhereUsed::Use& use : uses)
     {
         QAction* action = menu.addAction(use.location);
-        const uint32_t transitionId = use.transitionId;
-        connect(action, &QAction::triggered, this, [this, transitionId]()
+        // Selecting by the OWNING element's id: a Do stop condition lives on its state page,
+        // and selecting a transition id that is really a state id would land nowhere.
+        const uint32_t ownerId = use.target.getId();
+        connect(action, &QAction::triggered, this, [this, ownerId]()
         {
-            mModel.getSelectionModel().setSelection({ transitionId });
+            mModel.getSelectionModel().setSelection({ ownerId });
         });
     }
 

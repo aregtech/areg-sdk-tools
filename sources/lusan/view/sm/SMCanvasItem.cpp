@@ -21,6 +21,8 @@
 
 #include "lusan/view/sm/SMScene.hpp"
 
+#include <QGraphicsSceneMouseEvent>
+
 SMCanvasItem::SMCanvasItem(uint32_t elementId, QGraphicsItem* parent /*= nullptr*/)
     : QGraphicsItem (parent)
     , mElementId    (elementId)
@@ -55,16 +57,27 @@ SMCanvasItem::~SMCanvasItem()
     }
 }
 
+void SMCanvasItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
+{
+    SMScene* canvas = qobject_cast<SMScene*>(scene());
+    if ((canvas != nullptr) && (event->button() == Qt::LeftButton) && flags().testFlag(QGraphicsItem::ItemIsMovable))
+    {
+        canvas->setDragLeader(*this);
+    }
+
+    QGraphicsItem::mousePressEvent(event);
+}
+
 QVariant SMCanvasItem::itemChange(GraphicsItemChange change, const QVariant& value)
 {
     switch (change)
     {
     case QGraphicsItem::ItemPositionChange:
     {
-        const SMScene* canvas = qobject_cast<const SMScene*>(scene());
+        SMScene* canvas = qobject_cast<SMScene*>(scene());
         if ((canvas != nullptr) && canvas->isInteractiveSnap())
         {
-            return NESMDesign::snapPoint(value.toPointF(), canvas->getGridSize());
+            return canvas->snapDragPosition(*this, value.toPointF());
         }
 
         break;

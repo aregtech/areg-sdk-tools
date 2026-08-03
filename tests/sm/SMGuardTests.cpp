@@ -104,8 +104,13 @@ namespace
         lambda->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
         lambda->setBody(QStringLiteral("return count < MIN_WAITING;"));
 
-        SMStateEntry* root = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
-        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u);
+        // `Root` reacts to a stimulus, so it is an ordinary state: a Kind="Start" is a pseudo-state
+        // whose own transitions are the level's initial ones and name no stimulus, and the read
+        // shim rewrites a merged-form one on the next load.
+        SMStateEntry* begin = data.getStates().createState(QStringLiteral("Begin"), SMStateEntry::eStateKind::Start);
+        SMStateEntry* root  = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Normal);
+        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u, SMTransitionEntry::eTransitionKind::Internal);
         return trans->getId();
     }
 

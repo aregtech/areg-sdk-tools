@@ -29,19 +29,24 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMCommand.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
+#include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMAccordion.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMOperationsEditor.hpp"
+#include "lusan/view/sm/SMInternalEditor.hpp"
 #include "lusan/view/sm/SMSectionChrome.hpp"
+#include "lusan/view/sm/SMStimulusPicker.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QAbstractButton>
@@ -58,6 +63,7 @@
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QRegularExpression>
+#include <QStandardItemModel>
 #include <QRegularExpressionValidator>
 #include <QSignalBlocker>
 #include <QSpinBox>
@@ -74,36 +80,30 @@ namespace
     //!< The transition ID carried by each row of the state page's transition list.
     constexpr int RoleTransitionId { Qt::UserRole + 1 };
 
-    //!< The stimulus kind (int of eStimulusKind) carried by each stimulus-picker row.
-    constexpr int RoleStimulusKind { Qt::UserRole };
-    //!< The real registry name carried by each stimulus-picker row (the label may be prefixed).
-    constexpr int RoleStimulusName { Qt::UserRole + 1 };
-
-    //!< The mark of a stimulus kind, shown on its picker row and beside the chosen stimulus.
-    SMKindGlyph::eGlyph stimulusGlyph(SMTransitionEntry::eStimulusKind kind)
+    //!< Greys one row of a closed picker out instead of removing it, so the vocabulary a transition
+    //!< kind has stays visible and only what THIS owner can hold is selectable.
+    void setComboRowEnabled(QComboBox& combo, int row, bool enabled)
     {
-        switch (kind)
+        QStandardItemModel* model = qobject_cast<QStandardItemModel*>(combo.model());
+        QStandardItem* item = (model != nullptr ? model->item(row) : nullptr);
+        if (item != nullptr)
         {
-        case SMTransitionEntry::eStimulusKind::Event: return SMKindGlyph::eGlyph::Event;
-        case SMTransitionEntry::eStimulusKind::Timer: return SMKindGlyph::eGlyph::TimerStart;
-        default:                                      return SMKindGlyph::eGlyph::Trigger;
+            item->setEnabled(enabled);
         }
     }
 
-    //!< The display label for a stimulus: the REGISTRY name, exactly as declared. What kind it is
-    //!< comes from the row's mark, never from a synthesized handler name -- `on_event_<name>` and
-    //!< `on_timer_<name>` invented a method signature that is the code generator's to choose, not
-    //!< Lusan's, and it did not match what the transition then showed on the canvas (issue #543).
-    //!< A row is therefore identified by its (kind, name) data, not by its text.
-    QString stimulusDisplayLabel(SMTransitionEntry::eStimulusKind kind, const QString& name)
-    {
-        return SMKindGlyph::prefix(stimulusGlyph(kind)) + name;
-    }
-
-    //!< The label shown for a transition with no target (an internal transition).
+    //!< The label shown for an internal transition, which has no target by design.
     QString internalLabel()
     {
         return QObject::tr("(internal)");
+    }
+
+    //!< The label shown for a transition that SHOULD have a target and does not: an edge the
+    //!< author started drawing. Distinct from `(internal)` on purpose -- the two used to be the
+    //!< same document and read the same everywhere, which is the ambiguity `Kind` removes.
+    QString unconnectedLabel()
+    {
+        return QObject::tr("(not connected)");
     }
 
     //!< A one-line summary of an operation list for a State-Actions section header: the operation
@@ -197,6 +197,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mUpdating     (false)
     , mStateTabs    (nullptr)
     , mStateGeneral (nullptr)
+    , mStateForm    (nullptr)
     , mBtnEnterSubmachine(nullptr)
     , mBtnGoToParent(nullptr)
     , mBtnAddSubmachine(nullptr)
@@ -212,10 +213,15 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mDoOps        (nullptr)
     , mDoInterval   (nullptr)
     , mDoUntil      (nullptr)
+    , mDoUntilStatus(nullptr)
     , mTransitions  (nullptr)
+    , mInternal     (nullptr)
+    , mInternalTab  (-1)
     , mTransGeneral (nullptr)
     , mStimulusSig  (nullptr)
     , mStimulusName (nullptr)
+    , mTransForm    (nullptr)
+    , mTransKind    (nullptr)
     , mTarget       (nullptr)
     , mSource       (nullptr)
     , mTransDesc    (nullptr)
@@ -243,6 +249,13 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     connect(&mModel.getSelectionModel(), &SMSelectionModel::signalSelectionChanged, this, &SMPropertiesPanel::onModelSelectionChanged);
 
     DocModelNotifier& notifier = mModel.getNotifier();
+
+    // The name and the two description boxes carry document text. Typing in them marks the document
+    // changed at once, even though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mStateName, notifier);
+    PendingEditWatcher::watchField(mStateDesc, notifier);
+    PendingEditWatcher::watchField(mTransDesc, notifier);
+
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMPropertiesPanel::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMPropertiesPanel::onElementRemoved);
     // A newly added trigger method / event / timer expands the stimulus vocabulary; if a
@@ -282,12 +295,6 @@ SMPropertiesPanel::~SMPropertiesPanel()
 
 QSize SMPropertiesPanel::minimumSizeHint() const
 {
-    // The width of this panel belongs to the user, not to what happens to be selected. A dock can
-    // never be dragged narrower than the widget it hosts asks for, so the panel promises the dock
-    // a fixed, small minimum (NESMDesign::PanelMinWidth) instead of the sum of its pages: the
-    // separator then keeps its full travel, and no selection, tab or diagnostic can move the edge.
-    // Squeezed below what a row genuinely needs, the row is clipped on the right -- the user's own
-    // drag, undone by dragging back -- which is the lesser evil next to a panel that resizes itself.
     const QSize base = QWidget::minimumSizeHint();
     return QSize(qMin(base.width(), NESMDesign::PanelMinWidth), base.height());
 }
@@ -296,8 +303,6 @@ void SMPropertiesPanel::buildStatePage()
 {
     mStateName = new QLineEdit(this);
     mStateName->setMaxLength(StateMachineData::MAX_IDENTIFIER_LENGTH);
-    // State names must be enum-friendly identifiers: reject spaces and other invalid symbols
-    // as the user types, the same rule the canvas in-place editor enforces.
     mStateName->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mStateName));
     mStateKind = new QLabel(this);
     mStateHistory = new QComboBox(this);
@@ -316,6 +321,7 @@ void SMPropertiesPanel::buildStatePage()
 
     // The transitions list stays compact; the multi-line description takes the room below it.
     mTransitions->setMaximumHeight(120);
+    mStateDesc->setObjectName(QStringLiteral("smStateDescription"));
     mStateDesc->setPlaceholderText(tr("Description"));
     mStateDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
@@ -324,6 +330,7 @@ void SMPropertiesPanel::buildStatePage()
     // Compact defaults UNCHECKED here (few sections): the details and the transitions read together.
     QWidget* details = new QWidget(this);
     QFormLayout* form = new QFormLayout(details);
+    mStateForm = form;
     form->setContentsMargins(6, 6, 6, 6);
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
@@ -408,27 +415,67 @@ void SMPropertiesPanel::buildStatePage()
     mExitOps  = new SMOperationsEditor(mModel, this);
 
     // The Do repeat policy is its own collapsible `Repeat` section appended to the Do editor's
-    // accordion, under the same expand/collapse toolbar, so the interval and stop-condition sit
+    // accordion, under the same expand/collapse toolbar, so the interval and stop condition sit
     // beside the Action/Event/Timers sections instead of floating in a form above them. The circular
     // repeat glyph (SectionDo) marks it.
     mDoInterval = new QSpinBox(this);
-    mDoInterval->setRange(0, 3600000);
+    // The minimum is 1, not 0: a Do activity is a timer loop, and there is no such thing as a loop
+    // with no period. The value that used to mean "run on every trigger" is simply not offered --
+    // reacting to ONE named stimulus without leaving the state is an internal transition, which the
+    // state page has its own tab for.
+    mDoInterval->setRange(static_cast<int>(SMStateEntry::MIN_DO_INTERVAL), 3600000);
     mDoInterval->setSingleStep(50);
     mDoInterval->setSuffix(tr(" ms"));
-    mDoInterval->setToolTip(tr("Repeat interval; 0 runs the Do actions on each trigger while in the state"));
-    mDoUntil = new QLineEdit(this);
+    mDoInterval->setToolTip(tr("How often the Do operations run while the state is active. "
+                               "The first tick is one interval after entry, never at entry -- "
+                               "work that must happen on arrival belongs in Enter."));
+
+    // The stop condition is the SAME editing surface a transition guard uses, pointed at this
+    // state's activity instead of at a transition. Reusing it is the point of the change: one
+    // grammar, one completer, one set of diagnostics, and -- because the surface commits an
+    // ID-bound tree -- a rename of an attribute it names re-renders it instead of breaking it.
+    mDoUntil = new SMGuardField(mModel, this);
+    // The panel now hosts TWO guard surfaces -- this one and the Conditions tab's -- and both
+    // would otherwise answer to the object name the field gives itself. Naming this pair for what
+    // it edits keeps every by-name lookup (tests, stylesheets, accessibility) unambiguous.
+    mDoUntil->setObjectName(QStringLiteral("smDoUntilField"));
+    mDoUntil->setHeightLines(1, 4);
     mDoUntil->setPlaceholderText(tr("Stop condition (optional)"));
-    mDoUntil->setToolTip(tr("When this expression holds the repetition stops without leaving the state"));
+    mDoUntil->setToolTip(tr("Tested BEFORE each tick. Once it holds, the activity stops for the rest "
+                            "of the visit -- only a fresh entry to the state starts it again."));
+    mDoUntilStatus = new SMGuardStatusLine(this);
+    mDoUntilStatus->setObjectName(QStringLiteral("smDoUntilStatusLine"));
+    // The verdict LABEL inside it carries the name the lookups actually reach for, so it is the
+    // one that has to differ; the line itself is renamed above only so the pair reads as a pair.
+    if (QLabel* verdict = mDoUntilStatus->findChild<QLabel*>(QStringLiteral("smGuardStatus")))
+    {
+        verdict->setObjectName(QStringLiteral("smDoUntilStatus"));
+    }
 
     QWidget* repeatBody = new QWidget(this);
     QFormLayout* repeatForm = new QFormLayout(repeatBody);
     repeatForm->setContentsMargins(6, 6, 6, 6);
     repeatForm->addRow(tr("Repeat every:"), mDoInterval);
     repeatForm->addRow(tr("Until:"), mDoUntil);
+    repeatForm->addRow(QString(), mDoUntilStatus);
     mDoOps->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionDo), tr("Repeat"), repeatBody);
 
     connect(mDoInterval, &QSpinBox::editingFinished, this, &SMPropertiesPanel::onDoIntervalCommit);
-    connect(mDoUntil, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onDoUntilCommit);
+    // The field commits itself (Enter / focus-out) through SMGuardCommands, so there is no
+    // commit slot here -- only the verdict to relay, exactly as the Conditions tab does.
+    connect(mDoUntil, &SMGuardField::statusUpdated, this
+           , [this](int severity, const QString& verdict, const QString& preview, const QStringList& chips)
+    {
+        if (verdict.isEmpty())
+        {
+            mDoUntilStatus->clearStatus();
+        }
+        else
+        {
+            mDoUntilStatus->setStatus(static_cast<NEGuardStyle::eSeverity>(severity), verdict, preview, chips);
+        }
+    });
+    connect(mDoUntil, &SMGuardField::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
 
     mStateTabs = new QTabWidget(this);
     mStateTabs->setObjectName(QStringLiteral("smStateTabs"));
@@ -441,7 +488,32 @@ void SMPropertiesPanel::buildStatePage()
     mActionSlots.append({ eOpList::Do,    mDoOps,    doTab });
     mActionSlots.append({ eOpList::Exit,  mExitOps,  exitTab });
 
+    buildInternalTab();
+
     mStack->insertWidget(PageState, mStateTabs);
+}
+
+void SMPropertiesPanel::buildInternalTab()
+{
+    // The tab hosts the SHARED editor, not a copy of it: the canvas context menu opens the very
+    // same widget in SMInternalDialog, exactly as Enter/Exit Actions open SMOperationsEditor in
+    // SMOperationsDialog. One implementation, one undo path, and the two access paths cannot drift.
+    mInternal = new SMInternalEditor(mModel, this);
+    connect(mInternal, &SMInternalEditor::countChanged, this, &SMPropertiesPanel::onInternalCountChanged);
+    connect(mInternal, &SMInternalEditor::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
+
+    mInternalTab = mStateTabs->addTab(mInternal, tr("Internal"));
+    mStateTabs->setTabToolTip(mInternalTab, tr("The transitions this state takes without leaving itself"));
+}
+
+void SMPropertiesPanel::onInternalCountChanged(int count)
+{
+    // The tab itself carries the count. A tab reading `Internal (2)` is the discoverability the
+    // construct never had: the only route used to be a double-click on a row of a collapsible list.
+    if (mInternalTab >= 0)
+    {
+        mStateTabs->setTabText(mInternalTab, (count > 0) ? tr("Internal (%1)").arg(count) : tr("Internal"));
+    }
 }
 
 void SMPropertiesPanel::bindSubmachineActions(QAction* enterOrAdd, QAction* goToParent, QAction* addSubmachine, QAction* removeSubmachine)
@@ -470,6 +542,18 @@ void SMPropertiesPanel::buildTransitionPage()
     mStimulusName = new QComboBox(trigger);
     mStimulusName->setEditable(false);
 
+    // What the transition IS, said outright instead of read off which attributes are missing. It
+    // sits ABOVE the endpoints because it decides what they may say: Internal has no target at all,
+    // and Initial has no stimulus.
+    mTransKind = new QComboBox(trigger);
+    mTransKind->setEditable(false);
+    mTransKind->addItem(tr("External (leaves the state)"), static_cast<int>(SMTransitionEntry::eTransitionKind::External));
+    mTransKind->setItemData(0, tr("Moves the machine to the target state on its stimulus."), Qt::ToolTipRole);
+    mTransKind->addItem(tr("Internal (stays in the state)"), static_cast<int>(SMTransitionEntry::eTransitionKind::Internal));
+    mTransKind->setItemData(1, tr("Runs its operations on its stimulus without leaving the state, so no entry or exit action runs."), Qt::ToolTipRole);
+    mTransKind->addItem(tr("Initial (entering the level)"), static_cast<int>(SMTransitionEntry::eTransitionKind::Initial));
+    mTransKind->setItemData(2, tr("Taken as the machine enters this level. Nothing fires it; only a Start state has one."), Qt::ToolTipRole);
+
     mTarget = new QComboBox(trigger);
     mTarget->setEditable(false);
 
@@ -484,10 +568,12 @@ void SMPropertiesPanel::buildTransitionPage()
     mTransDesc->setPlaceholderText(tr("Description"));
     mTransDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
+    form->addRow(tr("Kind:"), mTransKind);
     form->addRow(tr("Stimulus:"), mStimulusName);
     form->addRow(tr("Signature:"), mStimulusSig);
     form->addRow(tr("Source:"), mSource);
     form->addRow(tr("Target:"), mTarget);
+    mTransForm = form;
 
     mTransGeneral = new SMSectionChrome(this);
     mTransGeneral->setTitle(tr("Transition"));
@@ -500,6 +586,7 @@ void SMPropertiesPanel::buildTransitionPage()
     mTransGeneral->addFooterStretch();
 
     connect(mStimulusName, &QComboBox::activated, this, &SMPropertiesPanel::onStimulusCommit);
+    connect(mTransKind, &QComboBox::activated, this, &SMPropertiesPanel::onTransKindCommit);
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
     connect(mSource, &QComboBox::activated, this, &SMPropertiesPanel::onSourceCommit);
 
@@ -571,19 +658,22 @@ bool SMPropertiesPanel::isEditing() const
     return (focus != nullptr) && isAncestorOf(focus);
 }
 
+void SMPropertiesPanel::commitPendingEdits(void)
+{
+    // Each handler checks the page it belongs to, so only the one on show can do anything.
+    onStateDescriptionCommit();
+    onTransitionDescriptionCommit();
+}
+
 bool SMPropertiesPanel::eventFilter(QObject* watched, QEvent* event)
 {
     // QPlainTextEdit has no editing-finished signal; commit its edit when it loses focus,
     // matching the single-line fields' commit-on-editing-finished contract.
     if (event->type() == QEvent::FocusOut)
     {
-        if (watched == mStateDesc)
+        if ((watched == mStateDesc) || (watched == mTransDesc))
         {
-            onStateDescriptionCommit();
-        }
-        else if (watched == mTransDesc)
-        {
-            onTransitionDescriptionCommit();
+            commitPendingEdits();
         }
     }
 
@@ -611,6 +701,30 @@ void SMPropertiesPanel::focusConditions(uint32_t transitionId)
         {
             mConditions->field()->setFocus();
         }
+    }
+}
+
+void SMPropertiesPanel::focusInternal(uint32_t transitionId)
+{
+    StateMachineData& data = mModel.getData();
+    const SMTransitionEntry* transition = data.findTransitionById(transitionId);
+    const SMStateEntry* owner = data.findTransitionOwner(transitionId);
+    if ((transition == nullptr) || (owner == nullptr) || (transition->isInternal() == false))
+    {
+        return;
+    }
+
+    // Selecting the state (not the transition) is the point -- the author clicked a row inside that
+    // state's box and must land on the state, on the tab that owns the construct.
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ owner->getId() });
+    if ((mPage == PageState) && (mCurrentId == owner->getId()) && (mInternalTab >= 0))
+    {
+        // Select the row unconditionally: when that state was ALREADY the selection, the selection
+        // model has nothing to announce and showState() never runs, so nothing would move to the
+        // row the author clicked.
+        mInternal->setCurrentTransition(transitionId);
+        mStateTabs->setCurrentIndex(mInternalTab);
+        mInternal->list()->setFocus();
     }
 }
 
@@ -648,6 +762,21 @@ void SMPropertiesPanel::showEmpty()
         mConditions->setTransition(0u);
     }
 
+    // The Do tab's stop-condition surface is bound to the shown state for the same reason the
+    // Conditions tab is bound to the shown transition, so it is released for the same reason:
+    // its rebuild is deferred, and a deferred rebuild must not outlive the element it reads.
+    if (mDoUntil != nullptr)
+    {
+        mDoUntil->setTarget(SMGuardRef());
+    }
+
+    // The Internal tab's editors hold a live pointer into the shown state's transition; drop it with
+    // the page, or a deferred rebuild can outlive the document that owns it.
+    if (mInternal != nullptr)
+    {
+        mInternal->bind(0u);
+    }
+
     mStack->setCurrentIndex(PageEmpty);
 }
 
@@ -665,8 +794,40 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mCurrentId = stateId;
 
     mStateName->setText(state->getName());
-    mStateName->setReadOnly(state->getKind() == SMStateEntry::eStateKind::Start);
+    mStateName->setReadOnly(state->isPseudoStart());
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
+
+    // A Kind="Start" is a pseudo-state: a marker saying where the level begins. It never becomes a
+    // state in the generated code and the machine never occupies it, so it cannot act -- no entry,
+    // exit or Do operations, and nothing to describe. The editor must not OFFER what the document
+    // may not carry, so the three activity tabs and the rows that only a real state can use go
+    // away entirely rather than sit there disabled: a greyed field still reads as "not yet", and
+    // this one is "never". What stays is the name, the kind, and the initial transitions, which is
+    // everything a Start has.
+    const bool pseudoStart = state->isPseudoStart();
+    for (const ActionSlot& slot : mActionSlots)
+    {
+        mStateTabs->setTabVisible(slot.tabIndex, pseudoStart == false);
+    }
+
+    // Everything a Start owns is an initial transition, so it has no internal one to edit either.
+    if (mInternalTab >= 0)
+    {
+        mStateTabs->setTabVisible(mInternalTab, pseudoStart == false);
+    }
+
+    if (mStateForm != nullptr)
+    {
+        mStateForm->setRowVisible(mStateSubmachine, pseudoStart == false);
+        mStateForm->setRowVisible(mStateOnFinal, pseudoStart == false);
+        mStateForm->setRowVisible(mStateHistory, pseudoStart == false);
+        mStateForm->setRowVisible(mStateDesc, pseudoStart == false);
+    }
+
+    if (pseudoStart)
+    {
+        mStateTabs->setCurrentIndex(0);
+    }
     // Only a composite has substates to remember, so a plain state gets a disabled field that
     // says why instead of a silently missing one -- the same field then comes alive the moment
     // the state grows a submachine.
@@ -738,10 +899,13 @@ void SMPropertiesPanel::showState(uint32_t stateId)
         }
         slot.editor->bind(stateId, eDocElementKind::State, 0u, mutableState, list);
     }
-    mDoInterval->setValue(static_cast<int>(state->getDoInterval()));
-    mDoUntil->setText(state->getDoUntil());
+    // A document that names no interval reads back as 0, which the spin box cannot show and must
+    // not silently "correct" into a value the file does not contain
+    mDoInterval->setValue(static_cast<int>(qMax(state->getDoInterval(), SMStateEntry::MIN_DO_INTERVAL)));
+    mDoUntil->setTarget(SMGuardRef::doActivity(stateId));
     refreshActionSummaries();
     populateTransitionList(stateId);
+    mInternal->bind(stateId);
 
     mStack->setCurrentIndex(PageState);
     mUpdating = false;
@@ -771,9 +935,11 @@ void SMPropertiesPanel::refreshActionSummaries()
             break;
         case eOpList::Do:
             list = &state->getDoList();
+            // A Do is a timer loop, its label is its period
             title = list->isEmpty() ? tr("Do")
-                  : (state->getDoInterval() > 0u ? tr("Do (every %1 ms)").arg(state->getDoInterval())
-                                                 : tr("Do (on trigger)"));
+                  : (state->getDoInterval() >= SMStateEntry::MIN_DO_INTERVAL
+                        ? tr("Do (every %1 ms)").arg(state->getDoInterval())
+                        : tr("Do (no interval set)"));
             break;
         case eOpList::Exit:
             list = &state->getExitList();
@@ -794,6 +960,20 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
         return;
     }
 
+    // A Start's transitions are the level's INITIAL transitions: nothing triggers them, so there
+    // is no stimulus to show and a `<stimulus>` placeholder would invite the author to fill one in.
+    // What decides between them is the condition, so that is what the row carries instead.
+    const bool pseudoStart = state->isPseudoStart();
+    int internalCount = 0;
+    for (const SMTransitionEntry* transition : state->getTransitions().getElements())
+    {
+        if ((transition != nullptr) && transition->isInternal())
+        {
+            ++internalCount;
+        }
+    }
+
+    int internalIndex = 0;
     for (SMTransitionEntry* transition : state->getTransitions().getElements())
     {
         if (transition == nullptr)
@@ -801,10 +981,47 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
             continue;
         }
 
-        const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
-        const QString label = transition->isExternal()
-                ? (stimulus + QStringLiteral(" -> ") + transition->getTargetName())
-                : (stimulus + QStringLiteral(" ") + internalLabel());
+        QString label;
+        if (pseudoStart || transition->isInitial())
+        {
+            label = transition->hasTarget()
+                    ? tr("initial -> %1").arg(transition->getTargetName())
+                    : (tr("initial") + QStringLiteral(" ") + unconnectedLabel());
+            if (transition->hasCondition())
+            {
+                label += QStringLiteral(" ") + tr("[when]");
+            }
+        }
+        else
+        {
+            const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
+            if (transition->hasTarget())
+            {
+                label = stimulus + QStringLiteral(" -> ") + transition->getTargetName();
+            }
+            else if (transition->isInternal())
+            {
+                // The same shorthand the Internal tab and the state box use: the priority number
+                // when there is a priority to speak of, and the guard that tells two transitions on
+                // one stimulus apart.
+                ++internalIndex;
+                label = (internalCount > 1)
+                        ? (QStringLiteral("#") + QString::number(internalIndex) + QLatin1Char(' ') + stimulus)
+                        : stimulus;
+                label += QStringLiteral(" ") + internalLabel();
+                const QString chip = SMGuardRender::chipText(mModel.getData(), transition->getId()
+                                                            , transition->getGuard(), SMGuardRender::ChipPicker);
+                if (chip.isEmpty() == false)
+                {
+                    label += QStringLiteral(" [") + chip + QLatin1Char(']');
+                }
+            }
+            else
+            {
+                label = stimulus + QStringLiteral(" ") + unconnectedLabel();
+            }
+        }
+
         QListWidgetItem* item = new QListWidgetItem(label, mTransitions);
         item->setData(RoleTransitionId, transition->getId());
     }
@@ -826,28 +1043,33 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
 
     // Fill the picker with every trigger/event/timer and select the transition's current one by
     // its (kind, name) display label.
-    mStimulusName->setCurrentIndex(populateStimulusPicker(static_cast<int>(transition->getStimulusKind())
+    mStimulusName->setCurrentIndex(SMStimulusPicker::fill(*mStimulusName, data
+                                                         , static_cast<int>(transition->getStimulusKind())
                                                          , transition->getStimulus()));
 
     // The read-only signature spells the kind out (`event NewEvent`): a QLabel carries no mark, and
     // this line is the one place that has room for the word.
     const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
-    const QString kindWord  = signature.isEmpty() ? QString() : SMKindGlyph::word(stimulusGlyph(transition->getStimulusKind()));
+    const QString kindWord  = signature.isEmpty()
+                              ? QString()
+                              : SMKindGlyph::word(SMKindGlyph::stimulusGlyph(transition->getStimulusKind()));
     mStimulusSig->setText(kindWord.isEmpty() ? signature : (kindWord + QLatin1Char(' ') + signature));
 
     // Populate the target and source pickers from the sibling states of the transition's level.
-    // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID --
-    // robust even when several states share a display name (Start/Final).
-    //
-    // Spec rule (mirrors the canvas endpoint-drag guard): a Start state has no incoming transition,
-    // so it is never offered as a Target; a Final state has no outgoing transition, so it is never
-    // offered as a Source. Omitting them from the lists is the primary enforcement; the commit slots
-    // add a backstop in case a stale selection slips through.
+    // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID.
+    // Robust even when several states share a display name (Start/Final).
     mTarget->clear();
-    mTarget->addItem(internalLabel(), 0u);
-    mSource->clear();
     const SMStateEntry* owner = data.findTransitionOwner(transitionId);
     const uint32_t sourceId = (owner != nullptr ? owner->getId() : 0u);
+
+    const bool initial = transition->isInitial() || ((owner != nullptr) && owner->isPseudoStart());
+
+    // `To` means the target and nothing else now, so the row that used to double as "make this
+    // internal" is gone: the empty row says only that no target is named yet, and the Kind combo
+    // is where an internal transition is asked for.
+    mTarget->addItem(unconnectedLabel(), 0u);
+
+    mSource->clear();
     const SMStateData* level = data.findLevel(mModel.getSelectionModel().getActiveLevel());
     if (level != nullptr)
     {
@@ -858,16 +1080,56 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
                 continue;
             }
 
-            if (sibling->getKind() != SMStateEntry::eStateKind::Start)
+            if (sibling->isPseudoStart() == false)
             {
                 mTarget->addItem(sibling->getName(), sibling->getId());
             }
 
-            if (sibling->getKind() != SMStateEntry::eStateKind::Final)
+            // A Start is offered as a source only when it already owns this transition: moving an
+            // ordinary transition onto one would hand a pseudo-state a stimulus to react to.
+            const bool selectableSource = sibling->isPseudoStart()
+                                        ? (initial && (sibling->getId() == sourceId))
+                                        : (sibling->getKind() != SMStateEntry::eStateKind::Final);
+            if (selectableSource)
             {
                 mSource->addItem(sibling->getName(), sibling->getId());
             }
         }
+    }
+
+    // A Start owns nothing but initial transitions and a real state owns no initial one, so the
+    // combo offers only what the owner can actually hold -- the kind is editable, but not into a
+    // document that would immediately fail validation.
+    const bool internal = transition->isInternal();
+    setComboRowEnabled(*mTransKind, 0, initial == false);   // External: on a real state only
+    setComboRowEnabled(*mTransKind, 1, initial == false);   // Internal: on a real state only
+    setComboRowEnabled(*mTransKind, 2, initial);            // Initial: on a Start only
+    const int kindRow = mTransKind->findData(static_cast<int>(transition->getKind()));
+    mTransKind->setCurrentIndex(kindRow >= 0 ? kindRow : 0);
+    mTransKind->setEnabled(initial == false);
+    mTransKind->setToolTip(initial
+                           ? tr("Everything a Start state owns is an initial transition")
+                           : QString());
+
+    mStimulusName->setEnabled(initial == false);
+    mSource->setEnabled(initial == false);
+    if (initial)
+    {
+        mStimulusName->setToolTip(tr("An initial transition is taken on entering the level, so nothing triggers it"));
+        mStimulusSig->setText(tr("initial transition (no stimulus)"));
+    }
+    else
+    {
+        mStimulusName->setToolTip(QString());
+    }
+
+    // An internal transition has no target at all -- the row is hidden rather than disabled,
+    // because a greyed picker reads as "not yet" and this one is "never".
+    if (mTransForm != nullptr)
+    {
+        mTransForm->setRowVisible(mTarget, internal == false);
+        mTransForm->setRowVisible(mStimulusName, initial == false);
+        mTransForm->setRowVisible(mStimulusSig, initial == false);
     }
 
     const int targetRow = mTarget->findData(transition->getToId());
@@ -1053,7 +1315,7 @@ void SMPropertiesPanel::onDoIntervalCommit()
 
     StateMachineData& data = mModel.getData();
     const SMStateEntry* state = data.findStateById(mCurrentId);
-    const uint32_t value = static_cast<uint32_t>(mDoInterval->value());
+    const uint32_t value = qMax(static_cast<uint32_t>(mDoInterval->value()), SMStateEntry::MIN_DO_INTERVAL);
     if ((state == nullptr) || (value == state->getDoInterval()))
     {
         return;
@@ -1064,27 +1326,6 @@ void SMPropertiesPanel::onDoIntervalCommit()
     auto getter = [doc, id]() -> uint32_t { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoInterval() : 0u); };
     auto setter = [doc, id](const uint32_t& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoInterval(v); };
     mModel.getUndoStack().push(new TDocSetPropertyCommand<uint32_t>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, value, tr("Set Do interval")));
-}
-
-void SMPropertiesPanel::onDoUntilCommit()
-{
-    if (mUpdating || (mPage != PageState))
-    {
-        return;
-    }
-
-    StateMachineData& data = mModel.getData();
-    const SMStateEntry* state = data.findStateById(mCurrentId);
-    if ((state == nullptr) || (mDoUntil->text() == state->getDoUntil()))
-    {
-        return;
-    }
-
-    const uint32_t id = mCurrentId;
-    StateMachineData* doc = &data;
-    auto getter = [doc, id]() -> QString { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoUntil() : QString()); };
-    auto setter = [doc, id](const QString& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoUntil(v); };
-    mModel.getUndoStack().push(new TDocSetPropertyCommand<QString>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, mDoUntil->text(), tr("Set Do stop condition")));
 }
 
 void SMPropertiesPanel::onTransitionDescriptionCommit()
@@ -1115,62 +1356,24 @@ void SMPropertiesPanel::onStimulusCommit()
         return;
     }
 
-    applyStimulus();
+    // Backstop for the pseudo-state rule: an initial transition names no stimulus. The picker is
+    // disabled for one, so this only fires if a stale or programmatic change slips through.
+    const SMStateEntry* owner = mModel.getData().findTransitionOwner(mCurrentId);
+    if ((owner != nullptr) && owner->isPseudoStart())
+    {
+        return;
+    }
+
+    SMStimulusPicker::apply(mModel, *mStimulusName, mCurrentId);
 }
 
-int SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString& currentName)
+void SMPropertiesPanel::onTransKindCommit()
 {
-    StateMachineData& data = mModel.getData();
-    mStimulusName->clear();
-
-    // Row 0 detaches the stimulus (an internal/initial transition may have none).
-    mStimulusName->addItem(tr("(none)"));
-    mStimulusName->setItemData(0, static_cast<int>(SMTransitionEntry::eStimulusKind::Trigger), RoleStimulusKind);
-    mStimulusName->setItemData(0, QString(), RoleStimulusName);
-
-    const auto addRow = [this](SMTransitionEntry::eStimulusKind kind, const QString& name)
+    if (mUpdating || (mPage != PageTransition))
     {
-        if (name.isEmpty())
-        {
-            return;
-        }
-
-        const int row = mStimulusName->count();
-        mStimulusName->addItem(SMKindGlyph::icon(stimulusGlyph(kind), mStimulusName->palette().color(QPalette::Text))
-                              , stimulusDisplayLabel(kind, name));
-        mStimulusName->setItemData(row, static_cast<int>(kind), RoleStimulusKind);
-        mStimulusName->setItemData(row, name, RoleStimulusName);
-        // The kind is a mark, not a word, so the tooltip is what a screen reader and a hovering
-        // user get: `event NewEvent`.
-        mStimulusName->setItemData(row, SMKindGlyph::word(stimulusGlyph(kind)) + QLatin1Char(' ') + name, Qt::ToolTipRole);
-    };
-
-    for (const SMDocumentIndex::Stimulus& stimulus : SMDocumentIndex(data).stimuli())
-    {
-        addRow(stimulus.kind, stimulus.name);
+        return;
     }
 
-    if (currentName.isEmpty())
-    {
-        return 0;   // row 0 is "(none)"
-    }
-
-    // By DATA, never by text: two registries may legally hold the same name until validation
-    // objects, and the rows no longer carry a kind prefix to tell them apart.
-    for (int row = 1; row < mStimulusName->count(); ++row)
-    {
-        if ((mStimulusName->itemData(row, RoleStimulusKind).toInt() == currentKind)
-            && (mStimulusName->itemData(row, RoleStimulusName).toString() == currentName))
-        {
-            return row;
-        }
-    }
-
-    return 0;
-}
-
-void SMPropertiesPanel::applyStimulus()
-{
     StateMachineData& data = mModel.getData();
     const SMTransitionEntry* transition = data.findTransitionById(mCurrentId);
     if (transition == nullptr)
@@ -1178,35 +1381,30 @@ void SMPropertiesPanel::applyStimulus()
         return;
     }
 
-    // The picker is a closed list (row 0 = "(none)"); read the selected row's real kind + name.
-    const int row = mStimulusName->currentIndex();
+    const int row = mTransKind->currentIndex();
     if (row < 0)
     {
         return;
     }
 
-    const SMTransitionEntry::eStimulusKind kind =
-            static_cast<SMTransitionEntry::eStimulusKind>(mStimulusName->itemData(row, RoleStimulusKind).toInt());
-    const QString name = mStimulusName->itemData(row, RoleStimulusName).toString();
-
-    // "(none)" (empty name) detaches the stimulus; the picker never renames or creates a registry
-    // entry.
-    if (name.isEmpty())
-    {
-        if (transition->getStimulus().isEmpty() == false)
-        {
-            mModel.getUndoStack().push(new SMSetStimulusCommand(data, mModel.getNotifier(), mCurrentId, transition->getStimulusKind(), QString(), tr("Clear stimulus")));
-        }
-
-        return;
-    }
-
-    if ((kind == transition->getStimulusKind()) && (name == transition->getStimulus()))
+    const SMTransitionEntry::eTransitionKind kind =
+            static_cast<SMTransitionEntry::eTransitionKind>(mTransKind->itemData(row).toInt());
+    if (kind == transition->getKind())
     {
         return;
     }
 
-    mModel.getUndoStack().push(new SMSetStimulusCommand(data, mModel.getNotifier(), mCurrentId, kind, name, tr("Set stimulus")));
+    // Backstop for what the greyed rows already prevent: a Start owns nothing but initial
+    // transitions, and no real state owns one.
+    const SMStateEntry* owner = data.findTransitionOwner(mCurrentId);
+    const bool startOwned = (owner != nullptr) && owner->isPseudoStart();
+    if (startOwned != (kind == SMTransitionEntry::eTransitionKind::Initial))
+    {
+        showTransition(mCurrentId);     // put the picker back on what the document says
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetTransitionKindCommand(data, mModel.getNotifier(), mCurrentId, kind, tr("Set transition kind")));
 }
 
 void SMPropertiesPanel::onTargetCommit()
@@ -1223,13 +1421,15 @@ void SMPropertiesPanel::onTargetCommit()
         return;
     }
 
-    // The picker is a closed list; each row carries its state's element ID (0 = internal).
+    // The picker is a closed list; each row carries its state's element ID (0 = not connected).
     const uint32_t targetId = mTarget->currentData().toUInt();
     if (targetId == 0)
     {
-        if (transition->isExternal())
+        // Disconnecting no longer changes what the transition IS. It says the edge has no target
+        // yet -- which validation reports -- and the Kind combo is where "internal" is asked for.
+        if (transition->hasTarget())
         {
-            mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, 0u, tr("Make internal")));
+            mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, 0u, tr("Disconnect target")));
         }
 
         return;
@@ -1276,6 +1476,15 @@ void SMPropertiesPanel::onSourceCommit()
     // Backstop for the spec rule: a Final state has no outgoing transition. The picker already omits
     // Final rows, so this only fires if a stale/programmatic selection slips through.
     if (newSource->getKind() == SMStateEntry::eStateKind::Final)
+    {
+        return;
+    }
+
+    // Same for the pseudo-state rule, in both directions: a Start's transitions are the level's
+    // initial ones, so an ordinary transition may not be moved ONTO a Start (it would hand a
+    // marker a stimulus to react to) and an initial one may not be moved OFF it (it would leave an
+    // ordinary state with a transition nothing can trigger).
+    if (newSource->isPseudoStart() || oldSource->isPseudoStart())
     {
         return;
     }
@@ -1396,6 +1605,7 @@ void SMPropertiesPanel::onListReordered(uint32_t ownerId, eDocElementKind kind)
     if ((mPage == PageState) && (ownerId == mCurrentId) && (kind == eDocElementKind::Transition))
     {
         populateTransitionList(mCurrentId);
+        mInternal->refresh();
     }
     else if ((mPage == PageTransition) && (isEditing() == false) && (kind == eDocElementKind::Method))
     {

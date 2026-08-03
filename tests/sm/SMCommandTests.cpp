@@ -41,6 +41,8 @@
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
+#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
@@ -238,7 +240,7 @@ namespace
         SMStateEntry* parent = doc.getStates().createState("Parent", SMStateEntry::eStateKind::Normal);
         SMStateData*  nested = parent->getOrCreateNestedStates();
         nested->createState("Child", SMStateEntry::eStateKind::Start);
-        parent->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", 0u);
+        parent->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", 0u, SMTransitionEntry::eTransitionKind::Internal);
         const uint32_t parentId = parent->getId();
         doc.getLayout().addNode(parentId).x = 3.0;
 
@@ -274,7 +276,7 @@ namespace
         CHECK((start != nullptr) && (worker != nullptr) && (other != nullptr));
 
         // Start -> Worker, and a self-referencing loop Worker -> Worker; Other -> itself stays put.
-        SMTransitionEntry* toWorker = start->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", worker->getId());
+        SMTransitionEntry* toWorker = start->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, QString(), worker->getId(), SMTransitionEntry::eTransitionKind::Initial);
         SMTransitionEntry* loop     = worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "L", worker->getId());
         SMTransitionEntry* toOther  = other->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "O", other->getId());
         CHECK((toWorker != nullptr) && (loop != nullptr) && (toOther != nullptr));
@@ -764,7 +766,7 @@ namespace
         SMStateEntry* inner  = nested->createState("Inner", SMStateEntry::eStateKind::Normal);
 
         worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evGo", idle->getId());
-        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "tmPoll", inner->getId());
+        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, QString(), inner->getId(), SMTransitionEntry::eTransitionKind::Initial);
         worker->getEntryList().addOperation(new SMActionCall(0u, "doWork"));
         worker->getEntryList().addOperation(new SMEventSend(0u, "evGo"));
         worker->getExitList().addOperation(new SMTimerStart(0u, "tmPoll"));
@@ -821,14 +823,16 @@ namespace
         CHECK(ownedIdSet(*worker).intersects(ownedIdSet(*copy)) == false);
 
         // A target inside the copied set is remapped to the copy's new ID; a target leaving the
-        // copied set (Idle) is dropped to internal, while the stimulus (evGo) is kept.
+        // copied set (Idle) is dropped, while the stimulus (evGo) and the KIND are kept -- an
+        // external transition that lost its target is an edge to reconnect, not an internal one.
         SMStateEntry* wstartCopy = copy->getNestedStates()->getStartState();
         CHECK((wstartCopy != nullptr) && (wstartCopy->getName() != QStringLiteral("WStart")));
         SMStateEntry* innerCopy = copy->getNestedStates()->getElements().last();
         CHECK(innerCopy->getName() != QStringLiteral("Inner"));
         CHECK(wstartCopy->getTransitions().getElements().first()->getToId() == innerCopy->getId());
         SMTransitionEntry* outTx = copy->getTransitions().getElements().first();
-        CHECK(outTx->isExternal() == false);        // target Idle lay outside the pasted set
+        CHECK(outTx->isExternal());                 // still external: only its target was lost
+        CHECK(outTx->hasTarget() == false);         // target Idle lay outside the pasted set
         CHECK(outTx->getStimulus() == QStringLiteral("evGo"));
 
         // Registries merged in place: nothing duplicated within the same document.
@@ -1190,6 +1194,67 @@ namespace
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+// L3: loading a pre-L3 document resolves its free-text `Until` into a tree
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    /**
+     * \brief   The L3 load shim, driven through the REAL model. The rule itself is proved in
+     *          SML3ProofTests; what is proved here is that `loadFromFile` actually applies it --
+     *          the shim runs once, on load, and nothing downstream has to remember to.
+     **/
+    void testLegacyDoUntilShim()
+    {
+        std::printf("[L3] loadFromFile resolves a legacy DoList@Until into a guard tree\n");
+
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = QDir(dir.path()).absoluteFilePath(QStringLiteral("legacy_until.fsml"));
+
+        QFile file(path);
+        CHECK(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        file.write(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
+            "<StateMachine FormatVersion=\"1.1.0\">\n"
+            "  <Overview ID=\"1\" Name=\"LegacyUntil\" Version=\"1.0.0\"/>\n"
+            "  <AttributeList>\n"
+            "    <Attribute ID=\"10\" Name=\"Maintenance\" DataType=\"bool\" Value=\"false\"/>\n"
+            "  </AttributeList>\n"
+            "  <StateList>\n"
+            "    <State ID=\"2\" Name=\"Begin\" Kind=\"Start\">\n"
+            "      <TransitionList><Transition ID=\"3\" Kind=\"Initial\" To=\"4\"/></TransitionList>\n"
+            "    </State>\n"
+            "    <State ID=\"4\" Name=\"Running\" Kind=\"Normal\">\n"
+            "      <DoList Interval=\"2000\" Until=\"Maintenance\">\n"
+            "        <InlineCode ID=\"5\"><Body><![CDATA[poll();]]></Body></InlineCode>\n"
+            "      </DoList>\n"
+            "    </State>\n"
+            "  </StateList>\n"
+            "</StateMachine>\n");
+        file.close();
+
+        SMDocumentCache::getInstance().clear();
+        StateMachineModel model;
+        CHECK(model.loadFromFile(path));
+
+        const SMStateEntry* running = model.getData().findState(QStringLiteral("Running"));
+        CHECK(running != nullptr);
+        if (running != nullptr)
+        {
+            // The string is consumed, not merely carried: the shim is one-shot by design.
+            CHECK(running->getDoUntilLegacy().isEmpty());
+            CHECK(running->getDoUntil().isOk());
+            const SMGuardNode* tree = running->getDoUntil().getTree();
+            CHECK(tree != nullptr);
+            CHECK((tree != nullptr) && (tree->getKind() == SMGuardNode::eKind::Attr));
+            CHECK((tree != nullptr) && (tree->getSymbolId() == 10u));
+            CHECK(running->getDoInterval() == 2000u);
+        }
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("SM-04 command framework tests\n");
@@ -1207,6 +1272,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testSubmachineHosting();
     testImportPreChecks();
     testRemoveComposite();
+    testLegacyDoUntilShim();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

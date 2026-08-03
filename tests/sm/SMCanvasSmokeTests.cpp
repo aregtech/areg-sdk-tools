@@ -48,12 +48,17 @@
 #include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
+#include "lusan/view/sm/SMAccordion.hpp"
+#include "lusan/view/sm/SMInternalDialog.hpp"
+#include "lusan/view/sm/SMInternalEditor.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QAction>
+#include <QAbstractButton>
 #include <QApplication>
 #include <QComboBox>
 #include <QClipboard>
@@ -339,9 +344,14 @@ int main(int argc, char* argv[])
         const SMLayoutEdge geom = *zdata.getLayout().findEdge(27);
 
         // Retargeting a transition onto the Start state is rejected (no incoming into Start).
+        // The Start is the level's pseudo-state, NOT the first ordinary state: this used to name
+        // `LightOff`, which carried Kind="Start" before the pseudo-state form.
+        const SMStateData* zlevel = zdata.findLevel(zscene.getLevelId());
+        const SMStateEntry* zstart = (zlevel != nullptr ? zlevel->getStartState() : nullptr);
+        CHECK(zstart != nullptr);
         const uint32_t to27Before = zdata.findTransitionById(27)->getToId();
         const int      undoA = zmodel.getUndoStack().count();
-        zscene.reconnectTransitionTarget(27, zoff->getId(), geom);
+        zscene.reconnectTransitionTarget(27, (zstart != nullptr ? zstart->getId() : 0u), geom);
         CHECK(zdata.findTransitionById(27)->getToId() == to27Before);    // unchanged
         CHECK(zmodel.getUndoStack().count() == undoA);                   // nothing pushed
 
@@ -637,9 +647,10 @@ int main(int argc, char* argv[])
     // Internal transition (no target): the path the tool takes on Enter / empty drop.
     model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *onState
                                                            , SMTransitionEntry::eStimulusKind::Trigger, QString(), 0u
-                                                           , QList<QPointF>(), QStringLiteral("internal")));
+                                                           , QList<QPointF>(), QStringLiteral("internal"), nullptr
+                                                           , SMTransitionEntry::eTransitionKind::Internal));
     const uint32_t internalTx = onState->getTransitions().getElements().last()->getId();
-    CHECK(data.findTransitionById(internalTx)->isExternal() == false);
+    CHECK(data.findTransitionById(internalTx)->isInternal());
     CHECK(scene.findCanvasItem(internalTx) == nullptr);                      // no edge for an internal
     model.getUndoStack().undo();
 
@@ -934,9 +945,9 @@ int main(int argc, char* argv[])
     // --- Stimulus assignment over the shared registry ---
     const uint32_t createdTx = lightOff->getTransitions().getElements().last()->getId();
     model.getUndoStack().push(new SMSetStimulusCommand(  data, model.getNotifier(), createdTx
-                                                       , SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("PowerOn")
+                                                       , SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("power_on")
                                                        , QStringLiteral("set stimulus")));
-    CHECK(data.findTransitionById(createdTx)->getStimulus() == QStringLiteral("PowerOn"));
+    CHECK(data.findTransitionById(createdTx)->getStimulus() == QStringLiteral("power_on"));
 
     std::printf("sect: SM-14 arc geometry\n");
     // --- Arc renders from two points + bulge (apex bows off the chord) ---
@@ -1055,9 +1066,17 @@ int main(int argc, char* argv[])
     std::printf("sect: SM-15 add substate (painted)\n");
     // --- Convert a plain state: nested list + auto Start + Node layout, one undo step ---
     // Start and Final states can never become composite.
+    // The Start is the level's pseudo-state, not the first ordinary state: this used to name
+    // `LightOff`, which carried Kind="Start" before the pseudo-state form.
+    const SMStateData* addLevel = data.findLevel(design.getScene().getLevelId());
+    const SMStateEntry* addStart = (addLevel != nullptr ? addLevel->getStartState() : nullptr);
+    CHECK(addStart != nullptr);
     design.getScene().clearSelection();
-    design.getScene().stateItem(lightOff->getId())->setSelected(true);      // the Start state
-    CHECK(design.actionAddSubstate()->isEnabled() == false);
+    if (addStart != nullptr)
+    {
+        design.getScene().stateItem(addStart->getId())->setSelected(true);
+        CHECK(design.actionAddSubstate()->isEnabled() == false);
+    }
 
     standby = data.findState("Standby");
     CHECK((standby != nullptr) && (standby->hasNestedStates() == false));
@@ -1677,6 +1696,7 @@ int main(int argc, char* argv[])
         CHECK(groups.size() == 8);
         CHECK(groups.at(0).title == QStringLiteral("Design"));
         const QList<QAction*> designOrder{ page.actionAddState(), page.actionAddTransition()
+                                         , page.actionAddInternal()
                                          , page.actionAddNote(), page.actionAddFinalState() };
         CHECK(groups.at(0).actions == designOrder);
         CHECK(groups.at(1).title == QStringLiteral("Declare"));
@@ -1981,7 +2001,9 @@ int main(int argc, char* argv[])
                 normal = s;
             }
 
-            if ((firstTxId == 0) && (s->getTransitions().getElementCount() >= 1))
+            // Skip the Start: its transitions are the level's INITIAL ones, which name no
+            // stimulus and whose picker is disabled, so they cannot exercise the stimulus path.
+            if ((firstTxId == 0) && (s->isPseudoStart() == false) && (s->getTransitions().getElementCount() >= 1))
             {
                 firstTxId = s->getTransitions().getElements().first()->getId();
                 ownerWithTxId = s->getId();
@@ -2599,13 +2621,13 @@ int main(int argc, char* argv[])
             CHECK((secondHit != 0u) && (secondHit != firstHit));    // cycled to the next match
 
             // A transition stimulus matches its transition.
-            box->setText(QStringLiteral("PowerOn"));
+            box->setText(QStringLiteral("power_on"));
             QApplication::processEvents();
             SMStateEntry* offOwner = d.findState("LightOff");
             uint32_t powerOnId = 0;
             for (const SMTransitionEntry* t : offOwner->getTransitions().getElements())
             {
-                if (t->getStimulus() == QStringLiteral("PowerOn")) { powerOnId = t->getId(); break; }
+                if (t->getStimulus() == QStringLiteral("power_on")) { powerOnId = t->getId(); break; }
             }
             CHECK(powerOnId != 0);
             CHECK(doc.getSelectionModel().getSelection().contains(powerOnId));
@@ -3673,6 +3695,561 @@ int main(int argc, char* argv[])
             wmodel.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
             QApplication::processEvents();
             CHECK(dock->width() == dragged);
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // L1: the Start pseudo-state offers nothing to act with
+    //////////////////////////////////////////////////////////////////////////
+    {
+        std::printf("[L1] the Start pseudo-state offers no operations, and its transition no stimulus\n");
+
+        StateMachineModel lmodel;
+        CHECK(lmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign ldesign(lmodel);
+        ldesign.resize(1400, 900);
+        ldesign.show();
+        QApplication::processEvents();
+
+        QDockWidget* ldock = ldesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* lpanel = (ldock != nullptr ? qobject_cast<SMPropertiesPanel*>(ldock->widget()) : nullptr);
+        StateMachineData& ldata = lmodel.getData();
+        const SMStateData* lroot = ldata.findLevel(ldesign.getScene().getLevelId());
+        const SMStateEntry* start = (lroot != nullptr ? lroot->getStartState() : nullptr);
+        const SMStateEntry* plain = ldata.findState(QStringLiteral("LightOff"));
+        CHECK(lpanel != nullptr);
+        CHECK(start != nullptr);
+        CHECK(plain != nullptr);
+
+        QTabWidget* stateTabs = (lpanel != nullptr ? lpanel->findChild<QTabWidget*>(QStringLiteral("smStateTabs")) : nullptr);
+        CHECK(stateTabs != nullptr);
+        if ((lpanel != nullptr) && (stateTabs != nullptr) && (start != nullptr) && (plain != nullptr))
+        {
+            // An ordinary state offers all five tabs: General, Enter, Do, Exit, Internal. The four
+            // after General are the four things a state does without leaving itself, and Internal
+            // used to be missing from that set -- reachable only by double-clicking a row in a
+            // collapsible list on the General tab.
+            lmodel.getSelectionModel().setSelection(QList<uint32_t>{ plain->getId() });
+            QApplication::processEvents();
+            CHECK(stateTabs->count() == 5);
+            CHECK(stateTabs->isTabVisible(1) && stateTabs->isTabVisible(2) && stateTabs->isTabVisible(3));
+            CHECK(stateTabs->isTabVisible(4));
+
+            // The Start offers only General: a pseudo-state performs nothing, so the editor must
+            // not present a place to put operations, and there is no behaviour to describe.
+            lmodel.getSelectionModel().setSelection(QList<uint32_t>{ start->getId() });
+            QApplication::processEvents();
+            CHECK(stateTabs->isTabVisible(1) == false);
+            CHECK(stateTabs->isTabVisible(2) == false);
+            CHECK(stateTabs->isTabVisible(3) == false);
+            CHECK(stateTabs->isTabVisible(4) == false);     // everything a Start owns is initial
+            CHECK(stateTabs->currentIndex() == 0);
+            QPlainTextEdit* desc = lpanel->findChild<QPlainTextEdit*>(QStringLiteral("smStateDescription"));
+            CHECK(desc != nullptr);
+            CHECK((desc != nullptr) && (desc->isVisibleTo(lpanel) == false));
+
+            // Its outgoing transition is the level's initial one: the stimulus picker has nothing
+            // to offer and the source may not be moved off the Start.
+            CHECK(start->getTransitions().getElementCount() >= 1);
+            if (start->getTransitions().getElementCount() >= 1)
+            {
+                const uint32_t initialId = start->getTransitions().getElements().first()->getId();
+                lmodel.getSelectionModel().setSelection(QList<uint32_t>{ initialId });
+                QApplication::processEvents();
+                CHECK(lpanel->currentElementId() == initialId);
+                CHECK(lpanel->stimulusNameCombo() != nullptr);
+                CHECK((lpanel->stimulusNameCombo() != nullptr) && (lpanel->stimulusNameCombo()->isEnabled() == false));
+                CHECK((lpanel->sourceCombo() != nullptr) && (lpanel->sourceCombo()->isEnabled() == false));
+
+                // And the document keeps saying so: committing a stimulus onto it is refused.
+                const QString before = ldata.findTransitionById(initialId)->getStimulus();
+                if ((lpanel->stimulusNameCombo() != nullptr) && (lpanel->stimulusNameCombo()->count() > 1))
+                {
+                    lpanel->stimulusNameCombo()->setCurrentIndex(1);
+                    QMetaObject::invokeMethod(lpanel, "onStimulusCommit");
+                    QApplication::processEvents();
+                }
+
+                CHECK(ldata.findTransitionById(initialId)->getStimulus() == before);
+            }
+        }
+
+        grab(ldesign, "l1-pseudo-start");
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // L2: a transition's kind is a visible, editable property
+    //////////////////////////////////////////////////////////////////////////
+    {
+        std::printf("[L2] the transition Kind is shown and editable, and the canvas follows it\n");
+
+        StateMachineModel kmodel;
+        CHECK(kmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign kdesign(kmodel);
+        kdesign.resize(1400, 900);
+        kdesign.show();
+        QApplication::processEvents();
+
+        QDockWidget* kdock = kdesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* kpanel = (kdock != nullptr ? qobject_cast<SMPropertiesPanel*>(kdock->widget()) : nullptr);
+        StateMachineData& kdata = kmodel.getData();
+        SMScene& kscene = kdesign.getScene();
+        const SMStateData* kroot = kdata.findLevel(kscene.getLevelId());
+        const SMStateEntry* kstart = (kroot != nullptr ? kroot->getStartState() : nullptr);
+        CHECK(kpanel != nullptr);
+        CHECK(kstart != nullptr);
+
+        if ((kpanel != nullptr) && (kstart != nullptr) && (kroot != nullptr))
+        {
+            QComboBox* kindCombo = kpanel->transitionKindCombo();
+            CHECK(kindCombo != nullptr);
+
+            // An ordinary external transition: the kind is shown, and it is editable.
+            uint32_t externalId = 0;
+            for (const SMStateEntry* st : kroot->getElements())
+            {
+                if ((st == nullptr) || st->isPseudoStart())
+                    continue;
+                for (const SMTransitionEntry* tr : st->getTransitions().getElements())
+                {
+                    if ((externalId == 0) && (tr != nullptr) && tr->isExternal())
+                        externalId = tr->getId();
+                }
+            }
+
+            CHECK(externalId != 0);
+            if ((externalId != 0) && (kindCombo != nullptr))
+            {
+                kmodel.getSelectionModel().setSelection(QList<uint32_t>{ externalId });
+                QApplication::processEvents();
+                CHECK(kpanel->currentElementId() == externalId);
+                CHECK(kindCombo->isEnabled());
+                CHECK(kindCombo->currentData().toInt() == static_cast<int>(SMTransitionEntry::eTransitionKind::External));
+
+                // An external transition has an edge on the canvas; making it internal takes the
+                // edge away, and undo brings both the kind and the target back.
+                const uint32_t oldTarget = kdata.findTransitionById(externalId)->getToId();
+                CHECK(kscene.findCanvasItem(externalId) != nullptr);
+                kindCombo->setCurrentIndex(1);
+                QMetaObject::invokeMethod(kpanel, "onTransKindCommit");
+                QApplication::processEvents();
+                CHECK(kdata.findTransitionById(externalId)->isInternal());
+                CHECK(kdata.findTransitionById(externalId)->hasTarget() == false);
+                CHECK(kscene.findCanvasItem(externalId) == nullptr);
+
+                kmodel.getUndoStack().undo();
+                QApplication::processEvents();
+                CHECK(kdata.findTransitionById(externalId)->isExternal());
+                CHECK(kdata.findTransitionById(externalId)->getToId() == oldTarget);
+                CHECK(kscene.findCanvasItem(externalId) != nullptr);
+            }
+
+            // The level's initial transition: the kind is Initial, and it is not editable -- a
+            // Start owns nothing else, so there is no other kind to offer.
+            CHECK(kstart->getTransitions().getElementCount() >= 1);
+            if ((kstart->getTransitions().getElementCount() >= 1) && (kindCombo != nullptr))
+            {
+                const uint32_t initialId = kstart->getTransitions().getElements().first()->getId();
+                CHECK(kdata.findTransitionById(initialId)->isInitial());
+                kmodel.getSelectionModel().setSelection(QList<uint32_t>{ initialId });
+                QApplication::processEvents();
+                CHECK(kindCombo->currentData().toInt() == static_cast<int>(SMTransitionEntry::eTransitionKind::Initial));
+                CHECK(kindCombo->isEnabled() == false);
+            }
+        }
+
+        grab(kdesign, "l2-transition-kind");
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // L4: one glyph per concept, and the internal transition is editable where
+    //     the author is looking
+    //////////////////////////////////////////////////////////////////////////
+    {
+        std::printf("[L4] cause and effect wear different marks, and the Internal tab edits in place\n");
+
+        StateMachineModel imodel;
+        CHECK(imodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign idesign(imodel);
+        idesign.resize(1400, 900);
+        idesign.show();
+        QApplication::processEvents();
+
+        StateMachineData& idata = imodel.getData();
+        QDockWidget* idock = idesign.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        SMPropertiesPanel* ipanel = (idock != nullptr ? qobject_cast<SMPropertiesPanel*>(idock->widget()) : nullptr);
+        CHECK(ipanel != nullptr);
+
+        // No two constructs share a mark. This is the whole of defects 1, 2 and 4: `Internal` used
+        // to stand for BOTH the do band and an internal transition, and `Trigger` drew nothing at
+        // all, so `on <timer>` and `<action>()` were one and the same row to a reader.
+        const QList<SMKindGlyph::eGlyph> vocabulary
+        {
+              SMKindGlyph::eGlyph::Entry,   SMKindGlyph::eGlyph::Exit
+            , SMKindGlyph::eGlyph::Do,      SMKindGlyph::eGlyph::Internal
+            , SMKindGlyph::eGlyph::Action,  SMKindGlyph::eGlyph::Trigger
+            , SMKindGlyph::eGlyph::Event,   SMKindGlyph::eGlyph::TimerStart
+            , SMKindGlyph::eGlyph::TimerStop
+        };
+        for (SMKindGlyph::eGlyph glyph : vocabulary)
+        {
+            CHECK(SMKindGlyph::isDrawn(glyph));     // every one of them is actually drawn
+        }
+
+        CHECK(SMKindGlyph::eGlyph::Do != SMKindGlyph::eGlyph::Internal);
+        CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Trigger, QColor(Qt::black)).isNull() == false);
+        CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Action, QColor(Qt::black)).isNull() == false);
+
+        // Find (or make) a state carrying an internal transition on a TIMER with one action, the
+        // TRAFFIC_LIGHT_RED shape: `on <timer>` over `<action>()`.
+        SMStateEntry* host = nullptr;
+        for (SMStateEntry* s : idata.getStates().getElements())
+        {
+            if ((host == nullptr) && (s != nullptr) && (s->getKind() == SMStateEntry::eStateKind::Normal))
+            {
+                host = s;
+            }
+        }
+
+        CHECK(host != nullptr);
+        if ((host != nullptr) && (ipanel != nullptr))
+        {
+            CHECK(idata.getTimers().createTimer(QStringLiteral("L4Timer")) != nullptr);
+            imodel.getSelectionModel().setSelection(QList<uint32_t>{ host->getId() });
+            QApplication::processEvents();
+
+            SMInternalEditor* ieditor = ipanel->internalEditor();
+            CHECK(ieditor != nullptr);
+            const int before = (ieditor != nullptr ? ieditor->count() : -1);
+
+            // Add one from the tab itself, then give it a timer stimulus and one action.
+            QToolButton* addButton = ipanel->findChild<QToolButton*>(QStringLiteral("smBtnAddInternal"));
+            CHECK(addButton != nullptr);
+            if ((addButton != nullptr) && (ieditor != nullptr))
+            {
+                addButton->click();
+                QApplication::processEvents();
+                CHECK(ieditor->count() == (before + 1));
+                CHECK(ipanel->internalEditor()->currentTransition() != 0u);
+
+                const uint32_t internalId = ipanel->internalEditor()->currentTransition();
+                SMTransitionEntry* added = idata.findTransitionById(internalId);
+                CHECK(added != nullptr);
+                CHECK((added != nullptr) && added->isInternal());
+
+                // The stimulus, picked in place -- no trip to the transition page.
+                QComboBox* picker = ipanel->internalEditor()->stimulusCombo();
+                CHECK(picker != nullptr);
+                int timerRow = -1;
+                for (int row = 1; (picker != nullptr) && (row < picker->count()); ++row)
+                {
+                    if (picker->itemData(row, Qt::UserRole + 1).toString() == QStringLiteral("L4Timer"))
+                    {
+                        timerRow = row;
+                    }
+                }
+
+                CHECK(timerRow > 0);
+                if ((timerRow > 0) && (picker != nullptr))
+                {
+                    picker->setCurrentIndex(timerRow);
+                    QMetaObject::invokeMethod(ipanel->internalEditor(), "onStimulusCommit");
+                    QApplication::processEvents();
+                    CHECK(idata.findTransitionById(internalId)->getStimulus() == QStringLiteral("L4Timer"));
+                    CHECK(idata.findTransitionById(internalId)->getStimulusKind() == SMTransitionEntry::eStimulusKind::Timer);
+                }
+
+                added = idata.findTransitionById(internalId);
+                if (added != nullptr)
+                {
+                    added->getOperations().addOperation(new SMActionCall(0, QStringLiteral("doWork")));
+                }
+
+                // The box now draws the pair, and the two rows do NOT read the same. The header
+                // carries the band mark (internal) AND the stimulus kind (a clock); the operation
+                // below carries the gear.
+                SMStateItem* box = dynamic_cast<SMStateItem*>(idesign.getScene().findCanvasItem(host->getId()));
+                CHECK(box != nullptr);
+                if (box != nullptr)
+                {
+                    box->updateFromModel();
+                    const QList<SMStateItem::BodyRow> rows = box->getBodyRows();
+                    int headerRow = -1;
+                    for (int i = 0; i < rows.size(); ++i)
+                    {
+                        if (rows.at(i).transitionId == internalId)
+                        {
+                            headerRow = i;
+                        }
+                    }
+
+                    CHECK(headerRow >= 0);
+                    if ((headerRow >= 0) && ((headerRow + 1) < rows.size()))
+                    {
+                        CHECK(rows.at(headerRow).icon == SMKindGlyph::eGlyph::Internal);
+                        CHECK(rows.at(headerRow).kindIcon == SMKindGlyph::eGlyph::TimerStart);
+                        CHECK(rows.at(headerRow).text.startsWith(QStringLiteral("on ")));
+                        // The effect wears a different mark from the cause -- the defect in one line.
+                        CHECK(rows.at(headerRow + 1).icon == SMKindGlyph::eGlyph::Action);
+                        CHECK(rows.at(headerRow + 1).icon != rows.at(headerRow).icon);
+                        CHECK(rows.at(headerRow + 1).icon != rows.at(headerRow).kindIcon);
+                    }
+                }
+
+                // The canvas row routes to the Internal tab, not to the stimulus declaration.
+                QTabWidget* itabs = ipanel->findChild<QTabWidget*>(QStringLiteral("smStateTabs"));
+                CHECK(itabs != nullptr);
+                if (itabs != nullptr)
+                {
+                    itabs->setCurrentIndex(0);
+                    idesign.getScene().requestInternalEdit(internalId);
+                    QApplication::processEvents();
+                    CHECK(ipanel->currentPage() == SMPropertiesPanel::PageState);
+                    CHECK(ipanel->currentElementId() == host->getId());
+                    CHECK(ipanel->internalEditor()->currentTransition() == internalId);
+                    CHECK(itabs->currentIndex() == (itabs->count() - 1));    // the Internal tab
+                }
+
+                // The sections read in the order the author reads a transition: what fires it,
+                // what it does, then when it is allowed to.
+                QTabWidget* iinner = ipanel->internalEditor()->tabs();
+                CHECK(iinner != nullptr);
+                if (iinner != nullptr)
+                {
+                    CHECK(iinner->count() == 2);
+                    CHECK(iinner->tabText(0) == QStringLiteral("Actions"));
+                    CHECK(iinner->tabText(1) == QStringLiteral("Conditions"));
+                }
+
+                // The context-menu path opens the SAME editor in a dialog, exactly as Enter/Exit
+                // Actions do -- and it is offered for a state that has none, because that is where
+                // the author goes to make the first one.
+                {
+                    SMInternalDialog dialog(imodel, QStringLiteral("Internal"), host->getId(), internalId);
+                    CHECK(dialog.editor() != nullptr);
+                    CHECK((dialog.editor() != nullptr) && (dialog.editor()->stateId() == host->getId()));
+                    CHECK((dialog.editor() != nullptr) && (dialog.editor()->currentTransition() == internalId));
+                    // Its guard bar must NOT answer to the name the TRANSITION page owns: the
+                    // hosted bar is re-prefixed in every instance of this editor.
+                    CHECK(dialog.findChild<QWidget*>(QStringLiteral("smGuardField")) == nullptr);
+                    CHECK(dialog.findChild<QWidget*>(QStringLiteral("smInternalSmGuardField")) != nullptr);
+                }
+
+                // And it can be taken away again from the same place.
+                QToolButton* removeButton = ipanel->findChild<QToolButton*>(QStringLiteral("smBtnRemoveInternal"));
+                CHECK(removeButton != nullptr);
+                if ((removeButton != nullptr) && (ieditor != nullptr))
+                {
+                    removeButton->click();
+                    QApplication::processEvents();
+                    CHECK(idata.findTransitionById(internalId) == nullptr);
+                    CHECK(ieditor->count() == before);
+
+                    // A state with none still offers the editor: an empty list plus the Add button
+                    // is the answer to "how do I make one?".
+                    SMInternalDialog empty(imodel, QStringLiteral("Internal"), host->getId());
+                    CHECK(empty.editor() != nullptr);
+                    CHECK((empty.editor() != nullptr) && (empty.editor()->currentTransition() == 0u));
+                    CHECK(empty.findChild<QToolButton*>(QStringLiteral("smBtnAddInternal")) != nullptr);
+                }
+            }
+        }
+
+        grab(idesign, "l4-internal-and-glyphs");
+    }
+
+    std::printf("sect: issue-550 parallel move, edge nudge, sticky anchors, collapse\n");
+    // --- The four move/anchor rules, on a pair of boxes joined by one straight transition:
+    //  1. every selected element travels the identical step, boxes and transitions alike;
+    //  2. selected transitions answer the arrow keys on their own;
+    //  3. an anchor stays on the border it was placed on, however far its box travels;
+    //  4. collapsing a box pulls the endpoint onto the header, expanding gives it back. ---
+    {
+        StateMachineModel gmodel;
+        CHECK(gmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign gdesign(gmodel);
+        gdesign.resize(1200, 800);
+        gdesign.show();
+        QApplication::processEvents();
+
+        SMScene&          gscene = gdesign.getScene();
+        SMGraphicsView&   gview  = gdesign.getView();
+        StateMachineData& gdata  = gmodel.getData();
+        SMStateData*      groot  = gdata.findLevel(gscene.getLevelId());
+        CHECK(groot != nullptr);
+
+        // Two boxes well clear of the loaded diagram, joined left-border to right-border.
+        const QRectF srcBox{ 3008.0, 3008.0, 208.0, 128.0 };
+        const QRectF tgtBox{ 3408.0, 3008.0, 208.0, 128.0 };
+        SMCreateStateCommand* mkSrc = new SMCreateStateCommand(  gdata, gmodel.getNotifier(), *groot
+                                                               , QStringLiteral("MOVE_SRC"), SMStateEntry::eStateKind::Normal
+                                                               , srcBox, QStringLiteral("src"));
+        gmodel.getUndoStack().push(mkSrc);
+        SMCreateStateCommand* mkTgt = new SMCreateStateCommand(  gdata, gmodel.getNotifier(), *groot
+                                                               , QStringLiteral("MOVE_TGT"), SMStateEntry::eStateKind::Normal
+                                                               , tgtBox, QStringLiteral("tgt"));
+        gmodel.getUndoStack().push(mkTgt);
+        const uint32_t srcId = mkSrc->getStateId();
+        const uint32_t tgtId = mkTgt->getStateId();
+        QApplication::processEvents();
+
+        SMStateEntry* srcState = gdata.findStateById(srcId);
+        CHECK(srcState != nullptr);
+        const QPointF anchorBegin{ srcBox.right(), srcBox.center().y() };
+        const QPointF anchorEnd  { tgtBox.left() , tgtBox.center().y() };
+        SMCreateTransitionCommand* mkTx = new SMCreateTransitionCommand(  gdata, gmodel.getNotifier(), *srcState
+                                                                        , SMTransitionEntry::eStimulusKind::Trigger
+                                                                        , QStringLiteral("go"), tgtId
+                                                                        , QList<QPointF>{ anchorBegin, anchorEnd }
+                                                                        , QStringLiteral("tx"));
+        gmodel.getUndoStack().push(mkTx);
+        const uint32_t txId = mkTx->getTransitionId();
+        QApplication::processEvents();
+
+        SMStateItem* srcItem = gscene.stateItem(srcId);
+        SMStateItem* tgtItem = gscene.stateItem(tgtId);
+        SMEdgeItem*  txItem  = dynamic_cast<SMEdgeItem*>(gscene.findCanvasItem(txId));
+        CHECK((srcItem != nullptr) && (tgtItem != nullptr) && (txItem != nullptr));
+
+        gview.resetTransform();
+        gview.centerOn((srcBox.center() + tgtBox.center()) / 2.0);
+        QApplication::processEvents();
+
+        if ((srcItem != nullptr) && (tgtItem != nullptr) && (txItem != nullptr))
+        {
+            CHECK(txItem->getPath().size() == 2);
+            const double midRow = tgtBox.center().y();
+
+            // --- Bug 3: the box travels UP past its own height; the endpoint must stay on the
+            // LEFT border at the same point of it, never flip to the border that came nearest ---
+            gscene.clearSelection();
+            tgtItem->setSelected(true);
+            QApplication::processEvents();
+            for (int i = 0; i < 12; ++i)                            // 12 * 16 = 192 > box height
+            {
+                keyClickScene(gscene, Qt::Key_Up);
+            }
+
+            const QRectF liftedBox = tgtItem->getBoxGeometry();
+            CHECK(std::abs(liftedBox.top() - (tgtBox.top() - 192.0)) < 1e-6);   // 12 identical steps
+            CHECK(std::abs(txItem->getPath().last().x() - liftedBox.left()) < 1e-6);            // still LEFT
+            CHECK(std::abs(txItem->getPath().last().y() - liftedBox.center().y()) < 1e-6);      // same point of it
+            CHECK(std::abs(txItem->getPath().first().x() - srcBox.right()) < 1e-6);             // source untouched
+            CHECK(std::abs(txItem->getPath().first().y() - srcBox.center().y()) < 1e-6);
+            // The stored anchor moved with the box, so a reload cannot put it back on a stale point.
+            const SMLayoutEdge* liftedEdge = gdata.getLayout().findEdge(txId);
+            CHECK((liftedEdge != nullptr) && (std::abs(liftedEdge->points.last().y() - liftedBox.center().y()) < 1e-6));
+
+            for (int i = 0; i < 12; ++i)
+            {
+                keyClickScene(gscene, Qt::Key_Down);
+            }
+
+            CHECK(std::abs(tgtItem->getBoxGeometry().top() - tgtBox.top()) < 1e-6);
+            CHECK(std::abs(txItem->getPath().last().y() - midRow) < 1e-6);
+
+            // --- Bug 1 (keyboard): select everything; boxes AND transition travel one step,
+            // in the same direction, and the line keeps its length ---
+            gscene.clearSelection();
+            srcItem->setSelected(true);
+            tgtItem->setSelected(true);
+            txItem->setSelected(true);
+            QApplication::processEvents();
+            const QPointF beginBefore = txItem->getPath().first();
+            const QPointF endBefore   = txItem->getPath().last();
+            keyClickScene(gscene, Qt::Key_Left);
+            const QPointF step{ -static_cast<double>(gscene.getGridSize()), 0.0 };
+            CHECK(srcItem->getBoxGeometry().topLeft() == (srcBox.topLeft() + step));
+            CHECK(tgtItem->getBoxGeometry().topLeft() == (tgtBox.topLeft() + step));
+            CHECK(txItem->getPath().first() == (beginBefore + step));   // the transition kept pace
+            CHECK(txItem->getPath().last()  == (endBefore   + step));
+            keyClickScene(gscene, Qt::Key_Right);
+            CHECK(srcItem->getBoxGeometry().topLeft() == srcBox.topLeft());
+            CHECK(txItem->getPath().last() == endBefore);
+
+            // --- Bug 2: the transition alone answers the arrow keys. Both anchors sit on
+            // vertical borders, so a vertical step slides them and a horizontal one cannot ---
+            gscene.clearSelection();
+            txItem->setSelected(true);
+            QApplication::processEvents();
+            keyClickScene(gscene, Qt::Key_Down);
+            CHECK(std::abs(txItem->getPath().first().y() - (beginBefore.y() + gscene.getGridSize())) < 1e-6);
+            CHECK(std::abs(txItem->getPath().last().y()  - (endBefore.y()   + gscene.getGridSize())) < 1e-6);
+            CHECK(std::abs(txItem->getPath().first().x() - beginBefore.x()) < 1e-6);     // stayed on its border
+            CHECK(srcItem->getBoxGeometry().topLeft() == srcBox.topLeft());              // the boxes stood still
+            const SMLayoutEdge* slidEdge = gdata.getLayout().findEdge(txId);
+            CHECK((slidEdge != nullptr)
+                  && (std::abs(slidEdge->points.last().y() - (endBefore.y() + gscene.getGridSize())) < 1e-6));
+            gmodel.getUndoStack().undo();                                                // one undo step
+            QApplication::processEvents();
+            CHECK(std::abs(txItem->getPath().last().y() - endBefore.y()) < 1e-6);
+
+            // --- Bug 1 (mouse): a two-box drag moves both by the identical step, however the
+            // grid would round each of them on its own ---
+            gscene.clearSelection();
+            srcItem->setSelected(true);
+            tgtItem->setSelected(true);
+            QApplication::processEvents();
+            const QPointF srcAt = srcItem->getBoxGeometry().topLeft();
+            const QPointF tgtAt = tgtItem->getBoxGeometry().topLeft();
+            const QPointF grab  = srcItem->getBoxGeometry().center();
+            dragScene(gview, grab, grab + QPointF(96.0, 64.0));
+            const QPointF srcStep = srcItem->getBoxGeometry().topLeft() - srcAt;
+            const QPointF tgtStep = tgtItem->getBoxGeometry().topLeft() - tgtAt;
+            CHECK((srcStep.x() != 0.0) || (srcStep.y() != 0.0));
+            CHECK(srcStep == tgtStep);                                  // parallel, to the unit
+            gmodel.getUndoStack().undo();
+            QApplication::processEvents();
+            CHECK(srcItem->getBoxGeometry().topLeft() == srcAt);
+            CHECK(tgtItem->getBoxGeometry().topLeft() == tgtAt);
+
+            // --- Bug 4: collapsing the target pulls the endpoint onto the header it can still
+            // see; expanding gives the endpoint its old place back ---
+            gscene.clearSelection();
+            const int undoBeforeCollapse = gmodel.getUndoStack().index();
+            tgtItem->toggleExpanded();
+            QApplication::processEvents();
+            CHECK(tgtItem->isExpanded() == false);
+            CHECK(gmodel.getUndoStack().index() == (undoBeforeCollapse + 1));    // no extra move step
+            const QRectF header = tgtItem->getVisibleGeometry();
+            CHECK(std::abs(header.height() - NESMDesign::StateHeaderHeight) < 1e-6);
+            const QPointF collapsedEnd = txItem->getPath().last();
+            CHECK(std::abs(collapsedEnd.x() - header.left()) < 1e-6);            // still the left border
+            CHECK(collapsedEnd.y() <= (header.bottom() + 1e-6));                 // and on the drawn part of it
+            CHECK(collapsedEnd.y() >= (header.top() - 1e-6));
+            CHECK(collapsedEnd != endBefore);                                    // it did move onto the header
+
+            tgtItem->toggleExpanded();
+            QApplication::processEvents();
+            CHECK(tgtItem->isExpanded());
+            CHECK(txItem->getPath().last() == endBefore);                        // restored exactly
+
+            // --- Bug 1, self-loop: the corners a loop draws for itself are scene points too,
+            // and both of its ends sit on the one box -- so they travel with it ---
+            SMCreateTransitionCommand* mkLoop = new SMCreateTransitionCommand(  gdata, gmodel.getNotifier(), *srcState
+                                                                              , SMTransitionEntry::eStimulusKind::Trigger
+                                                                              , QStringLiteral("again"), srcId
+                                                                              , QList<QPointF>(), QStringLiteral("loop"));
+            gmodel.getUndoStack().push(mkLoop);
+            QApplication::processEvents();
+            SMEdgeItem* loopItem = dynamic_cast<SMEdgeItem*>(gscene.findCanvasItem(mkLoop->getTransitionId()));
+            CHECK(loopItem != nullptr);
+            if (loopItem != nullptr)
+            {
+                const QList<QPointF> loopBefore = loopItem->getPath();
+                CHECK(loopBefore.size() == 4);                                  // begin, two corners, end
+                gscene.clearSelection();
+                srcItem->setSelected(true);
+                QApplication::processEvents();
+                keyClickScene(gscene, Qt::Key_Left);
+                const QPointF loopStep{ -static_cast<double>(gscene.getGridSize()), 0.0 };
+                const QList<QPointF> loopAfter = loopItem->getPath();
+                CHECK(loopAfter.size() == loopBefore.size());
+                for (int i = 0; (i < loopAfter.size()) && (i < loopBefore.size()); ++i)
+                {
+                    CHECK(loopAfter.at(i) == (loopBefore.at(i) + loopStep));    // the whole loop travelled
+                }
+            }
         }
     }
 

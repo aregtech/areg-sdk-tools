@@ -30,6 +30,7 @@
 #include <QKeySequence>
 #include <QMdiSubWindow>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSaveFile>
 #include <QScrollBar>
 #include <QShortcut>
@@ -45,6 +46,10 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     , mDocName      ( )
     , mIsUntitled   ( true )
     , mIsModified   ( false )
+    , mIsClosing    ( false )
+    , mFileTime     ( )
+    , mFileSize     ( -1 )
+    , mReloadAsked  ( false )
     , mMdiSubWindow ( nullptr )
     , mMainWindow   (wndMain)
 {
@@ -188,6 +193,7 @@ QString MdiChild::suggestedSaveName() const
 bool MdiChild::saveFile(const QString& fileName)
 {
     bool saved { false };
+    commitPendingEdits();
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     if (writeToFile(fileName) )
     {
@@ -206,6 +212,10 @@ bool MdiChild::writeToFile(const QString& filePath)
     return true;
 }
 
+void MdiChild::commitPendingEdits(void)
+{
+}
+
 QString MdiChild::userFriendlyCurrentFile()
 {
     return strippedName(mCurFile);
@@ -215,6 +225,7 @@ void MdiChild::closeEvent(QCloseEvent* event)
 {
     if (maybeSave())
     {
+        mIsClosing = true;
         onWindowClosing(isActiveWindow());
         emit signalMdiChildClosed(this);
         event->accept();
@@ -222,6 +233,58 @@ void MdiChild::closeEvent(QCloseEvent* event)
     else
     {
         event->ignore();
+    }
+}
+
+void MdiChild::rememberFileState()
+{
+    const QFileInfo info(mCurFile);
+    mFileTime = (mCurFile.isEmpty() == false) && info.exists() ? info.lastModified() : QDateTime();
+    mFileSize = (mCurFile.isEmpty() == false) && info.exists() ? info.size() : -1;
+}
+
+void MdiChild::checkFileChangedOnDisk()
+{
+    if (mIsClosing || mReloadAsked || mCurFile.isEmpty() || (mMainWindow == nullptr))
+    {
+        return;
+    }
+
+    // An absent file is not a change to reload: a text editor that saves by replacing the file
+    // makes it disappear for a moment, and the notification for the replacement follows.
+    const QFileInfo info(mCurFile);
+    if (info.exists() == false)
+    {
+        return;
+    }
+
+    if ((info.lastModified() == mFileTime) && (info.size() == mFileSize))
+    {
+        return;     // this is the editor's own save coming back
+    }
+
+    rememberFileState();
+
+    QMessageBox box(this);
+    box.setWindowTitle(tr("File Changed on Disk"));
+    box.setIcon(QMessageBox::Warning);
+    box.setText(tr("The file '%1' has been changed by another program.").arg(userFriendlyCurrentFile()));
+    box.setInformativeText(isModified()
+                            ? tr("Reload it from disk and lose the changes you made here, or ignore the change and keep the document as it is?")
+                            : tr("Reload it from disk, or ignore the change and keep the document as it is?"));
+    QPushButton* reload = box.addButton(tr("Reload"), QMessageBox::AcceptRole);
+    QPushButton* ignore = box.addButton(tr("Ignore"), QMessageBox::RejectRole);
+    box.setDefaultButton(isModified() ? ignore : reload);
+    // Size it before showing it; see the recovery prompt in MdiMainWindow for the same call.
+    box.adjustSize();
+
+    mReloadAsked = true;
+    box.exec();
+    mReloadAsked = false;
+
+    if (box.clickedButton() == reload)
+    {
+        mMainWindow->reopenDocument(*this);
     }
 }
 
@@ -283,6 +346,11 @@ void MdiChild::setCurrentFile(const QString& fileName)
 {
     mCurFile = fileName.isEmpty() ? QString() : QFileInfo(fileName).canonicalFilePath();
     mIsUntitled = false;
+    rememberFileState();
+    if (mMainWindow != nullptr)
+    {
+        mMainWindow->refreshDocumentWatch();
+    }
 
     if (mMdiSubWindow != nullptr)
     {

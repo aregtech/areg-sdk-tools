@@ -22,6 +22,7 @@
 #include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 
 #include <QList>
@@ -125,6 +126,12 @@ protected:
     QString suggestedSaveName() const override;
     bool writeToFile(const QString& filePath) override;
     bool maybeSave() override;
+
+    /**
+     * \brief   Lets every built page hand over the text it is still holding, so that a save with
+     *          the caret inside a description box writes what the author typed.
+     **/
+    void commitPendingEdits(void) override;
     void onWindowClosing(bool isActive) override;
 
     /**
@@ -140,11 +147,11 @@ private slots:
     void onDeclareRequested(SMDesign::eDeclareKind kind);
 
     /**
-     * \brief   Switches to the editor page that owns the given element kind, so a validation
-     *          finding on a registry entry brings its page forward (the canvas handles state
-     *          and transition findings itself).
+     * \brief   Brings the editor page that owns the given element kind forward and selects the
+     *          element on it, so a validation finding on a registry entry lands on the entry
+     *          itself (the canvas handles state and transition findings).
      **/
-    void onNavigateToPage(eDocElementKind kind);
+    void onNavigateToPage(eDocElementKind kind, uint32_t elementId, int rule);
 
     /**
      * \brief   Opens the machine a state imports, in its own read-only window. An import is
@@ -163,6 +170,13 @@ private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());
 
     /**
+     * \brief   Sets the modification mark from what the document holds right now: the history is
+     *          away from the point it was last saved at, or a field the caret sits in holds text
+     *          the document has not received yet.
+     **/
+    void refreshModified(void);
+
+    /**
      * \brief   Resolves the entry selected on the current page into a search seed (its kind,
      *          id, and name), so Ctrl+F searches that specific entry's usages. False when the
      *          page has no selected referenceable entry.
@@ -176,13 +190,22 @@ private:
      **/
     void navigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
+    /**
+     * \brief   Brings the page that owns \p kind forward, selects \p elementId on it, and, when
+     *          \p rule names a field, puts the accent on that field. Registry kinds only.
+     * \return  False when \p kind belongs to the canvas, so the caller routes it there instead.
+     **/
+    bool revealIssueOnPage(eDocElementKind kind, uint32_t elementId, int rule);
+
 public slots:
     /**
      * \brief   Reveals a validation finding of this document. Called from the output window's
      *          Validation tab, which hosts the findings for whichever document is active, so
      *          the Design page is built on demand here rather than assumed.
+     * \param   rule    The check that produced the finding, carried so the landing can put the
+     *                  accent on the field at fault rather than only on the element.
      **/
-    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule = 0);
 
 public:
     /**
@@ -209,6 +232,7 @@ public:
 
 private:
     StateMachineModel   mModel;
+    PendingEditWatcher  mPendingEdits;      //!< Text typed into a field but not handed over yet.
     QTabWidget          mTabWidget;
     SMOverview*         mOverview;
     QVector<QWidget*>   mPages;             //!< Built page widget per tab index (nullptr until built).

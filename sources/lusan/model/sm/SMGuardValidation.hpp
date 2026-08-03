@@ -22,6 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/model/common/DocIssue.hpp"
 
 #include <QList>
@@ -43,6 +44,11 @@ class SMGuardNode;
  *          a stale stimulus parameter that matches the new stimulus by name and type is
  *          the re-bind case, reported as INFO). Validation covers `.fsml` content
  *          only -- raw C++ bodies are never parsed. View-free and headless-testable.
+ *
+ *          Every predicate in the format is checked here, which since L3 means a state
+ *          `DoList`'s `<Until>` stop condition as well as a transition's `<Guard>`: they are
+ *          the same value, so a stale reference in one is the same fault as in the other, and
+ *          one checker is what keeps them from being reported differently.
  **/
 class SMGuardValidation
 {
@@ -70,14 +76,15 @@ public:
 
     /**
      * \struct  Finding
-     * \brief   One guard validation entry; navigates to its transition.
+     * \brief   One guard validation entry; navigates to the element that owns the predicate --
+     *          the transition, or the state whose `DoList` carries the stop condition.
      **/
     struct Finding
     {
         eSeverity   severity;       //!< The severity.
         eKind       kind;           //!< The finding kind.
-        uint32_t    transitionId;   //!< The owning transition (navigation target).
-        QString     location;       //!< `State : stimulus -> target` (as where-used).
+        SMGuardRef  target;         //!< The checked guard, and so the navigation target.
+        QString     location;       //!< `State : stimulus -> target`, or `State : do/` (as where-used).
         QString     message;        //!< The human-readable finding text.
         /**
          * \brief   The declaration the finding is about, or 0 when it is about the guard as a whole
@@ -95,11 +102,14 @@ public:
     //!< Why a finding of this kind is a finding, and what resolves it (the results list detail).
     static QString describe(eKind kind);
 
-    //!< Every guard finding of the document, in state/transition order.
+    //!< Every guard finding of the document, in state/transition order (Do stop conditions included).
     static QList<Finding> validate(const StateMachineData& data);
 
     //!< The findings of one transition's guard.
     static QList<Finding> validateTransition(const StateMachineData& data, uint32_t transitionId);
+
+    //!< The findings of one state's `DoList` stop condition.
+    static QList<Finding> validateDoActivity(const StateMachineData& data, uint32_t stateId);
 
     /**
      * \brief   The worst severity of one transition's findings; false when the guard is

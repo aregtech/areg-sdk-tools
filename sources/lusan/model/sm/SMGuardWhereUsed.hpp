@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/data/sm/SMGuardTree.hpp"
+
 #include <QList>
 #include <QString>
 #include <cstdint>
@@ -46,8 +48,8 @@ namespace SMGuardWhereUsed
      **/
     struct Use
     {
-        uint32_t    transitionId;   //!< The owning transition's document ID.
-        QString     location;       //!< Human-readable place: `State : stimulus -> target`.
+        SMGuardRef  target;         //!< The referencing guard (transition guard / Do stop condition).
+        QString     location;       //!< Human-readable place: `State : stimulus -> target`, or `State : do/`.
     };
 
     //!< Every guard (ok tree or draft last-good tree) referencing the symbol \p symbolId.

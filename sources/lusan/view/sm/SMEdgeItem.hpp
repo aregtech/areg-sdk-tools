@@ -111,8 +111,47 @@ public:
     /**
      * \brief   Recomputes the begin/end anchors from the current source/target box
      *          geometry and repaints. Called when a connected state moves or resizes.
+     *          An anchor is kept at the SAME point of its box border, so a box move only
+     *          changes the length and angle of the line, never the side it leaves from;
+     *          when both boxes travelled by one and the same step -- a group move -- the
+     *          interior waypoints and the label travel with them, so the whole transition
+     *          moves in parallel with the diagram.
+     * \param   fromModel   True when the box geometry came from the document (a layout change,
+     *                      an undo, a reload) rather than from a drag in progress: the anchors
+     *                      are then re-measured against the box, because the document holds the
+     *                      matching pair of box and anchor. A drag must NOT re-measure -- that
+     *                      is exactly what would let the anchor slide to another border.
      **/
-    void refreshAnchors();
+    void refreshAnchors(bool fromModel = false);
+
+    /**
+     * \brief   Moves the transition itself by one keyboard step: the interior waypoints and the
+     *          label travel the whole step, while the begin/end anchors may only slide along the
+     *          box border they are stuck to (and never past its straight span). A horizontal step
+     *          therefore leaves an anchor on a left/right border where it is, exactly as a
+     *          vertical step leaves one on a top/bottom border -- the transition stays connected.
+     *          The move is NOT committed here: the caller commits the whole nudged selection as
+     *          one undo step (see SMScene::commitSelectionMove).
+     * \param   delta   The step in scene units.
+     * \return  True when the transition owns geometry that could move (the key is consumed).
+     **/
+    bool nudgeGeometry(const QPointF& delta);
+
+    /**
+     * \brief   True when the drawn geometry no longer matches the persisted Edge entry -- an
+     *          anchor that followed its box, waypoints that travelled with a group move, or a
+     *          nudged transition. The scene asks this after a move gesture to persist the
+     *          drifted edges in the same undo step, so the stored points never fall behind the
+     *          boxes they belong to. False for a transition that owns no persisted geometry at
+     *          all: its endpoints are derived from the live boxes and cannot drift.
+     **/
+    bool hasGeometryDrift() const;
+
+    /**
+     * \brief   The current geometry as a layout entry (begin anchor, waypoints, end anchor, shape,
+     *          bulge, color, label) for persistence into a command.
+     **/
+    SMLayoutEdge buildGeometry() const;
 
     /**
      * \brief   The drawn polyline in scene coordinates (begin, waypoints, end).
@@ -258,10 +297,44 @@ private:
     SMScene* getCanvas() const;
 
     /**
-     * \brief   Returns the box geometry of a state (live item geometry when present,
-     *          otherwise its Node layout entry); an empty rect when unresolved.
+     * \brief   Returns the DRAWN box geometry of a state (live item geometry when present,
+     *          otherwise its Node layout entry); an empty rect when unresolved. A collapsed
+     *          box measures only its header here, because that is the border the user sees
+     *          and the only one an arrow may end on.
      **/
     QRectF stateRect(uint32_t stateId) const;
+
+    /**
+     * \brief   Returns the STORED box geometry of a state -- the full body height even while
+     *          the body is collapsed away; an empty rect when unresolved. This is the frame of
+     *          reference a persisted anchor is kept in, so collapsing a box only clamps the
+     *          drawn endpoint onto the header and expanding it again restores the exact point
+     *          the endpoint came from.
+     **/
+    QRectF stateBoxRect(uint32_t stateId) const;
+
+    /**
+     * \brief   The origin (top-left of \ref stateBoxRect) a state's anchor is measured from.
+     **/
+    QPointF anchorFrame(uint32_t stateId) const;
+
+    /**
+     * \brief   The point of a state's DRAWN border an anchor ends on. With the whole box drawn
+     *          this is the anchor itself (it already sits on the border). With the body collapsed
+     *          away the anchor keeps the SIDE of the stored box it was placed on and slides no
+     *          further along it than the header still reaches -- the arrow ends on the piece of
+     *          border the user can see, rather than on whichever corner came nearest.
+     * \param   stateId The state the anchor belongs to.
+     * \param   drawn   That state's drawn box (\ref stateRect).
+     * \param   anchor  The anchor in scene coordinates.
+     **/
+    QPointF borderAnchorPoint(uint32_t stateId, const QRectF& drawn, const QPointF& anchor) const;
+
+    /**
+     * \brief   Sets a begin/end anchor to an absolute scene point and re-measures it against its
+     *          box, so the anchor keeps following that box from now on. Marks the edge anchored.
+     **/
+    void setAnchorPoint(bool begin, const QPointF& point);
 
     /**
      * \brief   Returns the drawn corner radius of a state's box: the pill radius for
@@ -272,14 +345,13 @@ private:
     /**
      * \brief   Rebuilds the drawn path and anchors from the cached model state, optionally
      *          forcing the dragged endpoint to a free point for live feedback.
+     * \param   followBoxes True when the rebuild answers a box geometry change: the interior
+     *                      waypoints and the label then travel with the boxes, but only when
+     *                      BOTH ends travelled by one and the same step -- a group move of the
+     *                      whole transition. One box moving alone reshapes the line instead,
+     *                      which is what dragging a single state has to do.
      **/
-    void rebuildPath();
-
-    /**
-     * \brief   The current geometry as a layout entry (begin, waypoints, end, shape, bulge,
-     *          color, label) for persistence into a command.
-     **/
-    SMLayoutEdge buildGeometry() const;
+    void rebuildPath(bool followBoxes = false);
 
     /**
      * \brief   Pushes the current geometry as one coalesced layout command.
@@ -291,6 +363,13 @@ private:
      *          label position when the user placed one, otherwise the polyline midpoint.
      **/
     QPointF labelAnchor() const;
+
+    /**
+     * \brief   True when the line runs up or down where the labels hang from it. A horizontal
+     *          line passes between the stimulus and the action and has to be kept clear of both;
+     *          a vertical one does not, so there the two lines of text read as one block.
+     **/
+    bool labelOnVerticalRun() const;
 
     /**
      * \brief   The stimulus label rectangle in item (scene) coordinates. For a default
@@ -451,12 +530,25 @@ private:
     int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
     int                     mActionSeverity;//!< The operation mapping's NEGuardStyle severity for the action tint, or -1 (clean).
     bool                    mSourceIsStart; //!< The source is the Start pseudo-state (no stimulus placeholder).
+    bool                    mIsInitial;     //!< The transition is the level's INITIAL one: nothing fires it,
+                                            //!< so it carries no label and is drawn with the entry ball
+                                            //!< rather than an ordinary begin dot.
     bool                    mHasNote;       //!< A note is bound to this transition (badge shown).
     SMNoteEditor            mNoteEditor;    //!< The open in-place note editor (if any).
     QList<QPointF>          mWaypoints;     //!< The interior waypoints, in order.
     bool                    mHasAnchors;    //!< Persisted begin/end anchor points exist.
-    QPointF                 mAnchorBegin;   //!< The persisted begin anchor (projected onto the live border).
-    QPointF                 mAnchorEnd;     //!< The persisted end anchor (projected onto the live border).
+    QPointF                 mAnchorBegin;   //!< The begin anchor in scene coordinates (projected onto the live border).
+    QPointF                 mAnchorEnd;     //!< The end anchor in scene coordinates (projected onto the live border).
+    bool                    mAnchorsMeasured;//!< The two anchors below hold the measured offsets.
+    QPointF                 mAnchorBeginRel;//!< The begin anchor measured from the source box's stored
+                                            //!< top-left. The anchor is kept HERE, not in scene
+                                            //!< coordinates, so a box move carries it along instead of
+                                            //!< leaving it behind for the border projection to snap to
+                                            //!< whichever side happens to be nearest afterwards.
+    QPointF                 mAnchorEndRel;  //!< The end anchor measured from the target box's stored top-left.
+    bool                    mHasOrigins;    //!< The two origins below were taken at least once.
+    QPointF                 mSrcOrigin;     //!< The source box origin the current waypoints belong to.
+    QPointF                 mTgtOrigin;     //!< The target box origin the current waypoints belong to.
     QPointF                 mBegin;         //!< The begin anchor on the source border.
     QPointF                 mEnd;           //!< The end anchor on the target border.
     QList<QPointF>          mPath;          //!< The full drawn polyline (begin, waypoints, end).

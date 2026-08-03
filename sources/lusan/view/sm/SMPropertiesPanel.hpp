@@ -25,6 +25,7 @@
 #include <QWidget>
 
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
 
 #include <cstdint>
 
@@ -34,6 +35,7 @@
 class QAction;
 class QComboBox;
 class QEvent;
+class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -42,6 +44,9 @@ class QSpinBox;
 class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
+class SMGuardField;
+class SMGuardStatusLine;
+class SMInternalEditor;
 class SMOperationsEditor;
 class QToolButton;
 class SMSectionChrome;
@@ -59,6 +64,7 @@ enum class eDocElementKind;
  *          canvas and outline; every edit commits as an undoable command.
  **/
 class SMPropertiesPanel : public QWidget
+                        , public IEditCommit
 {
     Q_OBJECT
 
@@ -93,10 +99,27 @@ public:
     inline uint32_t currentElementId() const;
 
     /**
+     * \brief   Hands over the description text the panel is still holding, for the state or the
+     *          transition it is showing. The box applies its text when it loses the focus, which a
+     *          save from the keyboard never causes.
+     **/
+    void commitPendingEdits(void) override;
+
+    /**
      * \brief   Selects the transition and focuses the Conditions tab's guard field
      *          (edge-label double-click; validation-entry navigation).
      **/
     void focusConditions(uint32_t transitionId);
+
+    /**
+     * \brief   Selects the transition's OWNING STATE and opens its Internal tab on that transition
+     *          (a click on the `on <stimulus>` row inside a state box). It deliberately does not
+     *          select the transition itself: an internal transition is something the state does,
+     *          the author got here from the state's own box, and the Internal tab is where all four
+     *          of a state's in-place activities now live.
+     * \param   transitionId    The internal transition to edit. No-op for anything else.
+     **/
+    void focusInternal(uint32_t transitionId);
 
     /**
      * \brief   Binds the four submachine buttons on the State/General header to the Design page's
@@ -112,7 +135,9 @@ public:
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
+    inline QComboBox* transitionKindCombo() const;
     inline QComboBox* sourceCombo() const;
+    inline SMInternalEditor* internalEditor() const;
 
 signals:
     //!< A Ctrl+Shift click on a referenced symbol in the Conditions guard field asks the host to
@@ -157,15 +182,28 @@ private slots:
     void onStateOnFinalCommit();
     void onStateDescriptionCommit();
     void onDoIntervalCommit();
-    void onDoUntilCommit();
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
+    void onTransKindCommit();
     void onTargetCommit();
     void onSourceCommit();
     void onTransitionActivated();
 
+    //!< The Internal tab's editor gained or lost a transition; the tab label carries the count.
+    void onInternalCountChanged(int count);
+
 private:
     void buildStatePage();
+
+    /**
+     * rief   Adds the state page's `Internal` tab, which hosts the shared 
+ef SMInternalEditor.
+     *          Enter, Do, Exit and Internal are the four things a state does without leaving
+     *          itself, and until now only three of them had a tab -- the fourth was reachable only
+     *          by double-clicking a row in a collapsible list on the General tab. The canvas
+     *          context menu opens the SAME editor in an SMInternalDialog.
+     **/
+    void buildInternalTab();
     void buildTransitionPage();
     void buildRegistryPage();
 
@@ -178,24 +216,6 @@ private:
     void showTransition(uint32_t transitionId);
     void showRegistry(uint32_t elementId);
     void populateTransitionList(uint32_t stateId);
-
-    /**
-     * \brief   Applies the stimulus picked from the fixed list (a trigger, event, or timer) to
-     *          the current transition, as one undo step. The picker carries the real registry
-     *          name and its kind per row; a value that does not match a listed entry is rejected
-     *          (reverted) - the panel never creates or renames a registry entry.
-     **/
-    void applyStimulus();
-
-    /**
-     * \brief   Fills the stimulus picker with every trigger, event and timer under its DECLARED
-     *          name, marked by kind (a call, a lightning bolt, a clock) rather than by a
-     *          synthesized handler name -- how a handler is spelled is the code generator's
-     *          choice, not the editor's. Each row carries its kind and name as data, so the same
-     *          name in two registries stays unambiguous.
-     * \return  The row to select for the given (kind, name), 0 ("(none)") when there is none.
-     **/
-    int populateStimulusPicker(int currentKind, const QString& currentName);
 
     /**
      * \brief   Reorders the current state's transition at \p from to \p to as one undo step
@@ -261,20 +281,32 @@ private:
     QComboBox*          mStateSubmachine;   //!< The hosted import alias; empty means no import.
     QComboBox*          mStateOnFinal;      //!< The event sent when the submachine finishes.
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
+    QFormLayout*        mStateForm;     //!< The Details form, so the rows a Start has no use for
+                                        //!< (submachine, completion, history, description) can be
+                                        //!< hidden rather than shown disabled.
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
     SMOperationsEditor* mDoOps;         //!< The Do-activity operations editor (Actions tab).
-    QSpinBox*           mDoInterval;    //!< The Do repeat interval in ms (0 = trigger-driven).
-    QLineEdit*          mDoUntil;       //!< The optional Do stop-condition expression.
+    QSpinBox*           mDoInterval;    //!< The Do tick period in ms (never below MIN_DO_INTERVAL).
+    SMGuardField*       mDoUntil;       //!< The Do stop condition: the SHARED guard editing surface.
+    SMGuardStatusLine*  mDoUntilStatus; //!< That surface's verdict line (the one place it reports).
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
     QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
+
+    // State page, `Internal` tab -- the fourth thing a state does without leaving itself. The
+    // editor is SHARED with the canvas context menu, which opens it in SMInternalDialog.
+    SMInternalEditor*   mInternal;          //!< The state's internal transitions, edited in place.
+    int                 mInternalTab;       //!< The Internal tab's index in mStateTabs.
 
     // Transition page.
     SMSectionChrome*    mTransGeneral;  //!< The General tab chrome (Trigger / Description sections).
     QLabel*             mStimulusSig;   //!< Read-only stimulus signature (`walk(count)`).
     QComboBox*          mStimulusName;  //!< The stimulus picker (fixed list of triggers/events/
                                         //!< timers; editing is search-only, no free rename).
-    QComboBox*          mTarget;        //!< The target sibling state (or internal). Start states
+    QFormLayout*        mTransForm;     //!< The transition Trigger form, so rows can be hidden by kind.
+    QComboBox*          mTransKind;     //!< What the transition IS: External / Internal / Initial.
+                                        //!< Locked to Initial on a Start, which owns nothing else.
+    QComboBox*          mTarget;        //!< The target sibling state (or not connected). Start states
                                         //!< are omitted: a Start has no incoming transition.
     QComboBox*          mSource;        //!< The source sibling state (the transition's owner). Final
                                         //!< states are omitted: a Final has no outgoing transition.
@@ -336,9 +368,19 @@ inline QComboBox* SMPropertiesPanel::targetCombo() const
     return mTarget;
 }
 
+inline QComboBox* SMPropertiesPanel::transitionKindCombo() const
+{
+    return mTransKind;
+}
+
 inline QComboBox* SMPropertiesPanel::sourceCombo() const
 {
     return mSource;
+}
+
+inline SMInternalEditor* SMPropertiesPanel::internalEditor() const
+{
+    return mInternal;
 }
 
 #endif  // LUSAN_VIEW_SM_SMPROPERTIESPANEL_HPP

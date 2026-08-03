@@ -292,7 +292,7 @@ static void testGuardTruthAndSiblings()
     SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
     // And one on a different stimulus that must NOT count as a sibling.
     data.getMethods().createMethod(QStringLiteral("RequestRest"), SMMethodEntry::eMethodType::Trigger);
-    idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), 0u);
+    idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), 0u, SMTransitionEntry::eTransitionKind::Internal);
 
     const QList<uint32_t> siblings = SMGuardEval::siblingTransitions(data, tid);
     check(siblings.size() == 2, "two transitions share the stimulus");
@@ -335,7 +335,7 @@ static void testValidationFindings()
           "the draft finding is an ERR of kind Draft");
     check((findings.size() == 1) && findings.at(0).message.contains(QStringLiteral("generation refuses")),
           "the draft finding says generation refuses");
-    check((findings.size() == 1) && (findings.at(0).transitionId == tid), "the finding navigates to the transition");
+    check((findings.size() == 1) && (findings.at(0).target == SMGuardRef(tid)), "the finding navigates to the transition");
 
     // Raw fragments -> INFO audit, the complete list (two fragments = two entries).
     SMGuardParser::Result raw = SMGuardParser::parse(data, tid, QStringLiteral("(count & 0x3) == 0 && (count | 1) != 0"), true);

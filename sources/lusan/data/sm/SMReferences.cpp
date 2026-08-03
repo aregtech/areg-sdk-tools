@@ -50,7 +50,9 @@ namespace
     QString describeTransition(const SMStateEntry& owner, const SMTransitionEntry& tr)
     {
         const QString kind{ SMTransitionEntry::toString(tr.getStimulusKind()) };
-        const QString target{ tr.isExternal() ? tr.getTargetName() : QStringLiteral("(internal)") };
+        const QString target{ tr.hasTarget()
+                              ? tr.getTargetName()
+                              : (tr.isInternal() ? QStringLiteral("(internal)") : QStringLiteral("(not connected)")) };
         return QStringLiteral("%1 : %2 %3 -> %4").arg(owner.getName(), kind, tr.getStimulus(), target);
     }
 
@@ -194,8 +196,8 @@ namespace
                 out.append({ stimTarget, false, tr->getStimulus(), 0, use
                            , [tr](const QString& v) { tr->setStimulus(v); } });
 
-                // The external target: referenced by ID, so it is reported but never rewritten.
-                if (tr->isExternal())
+                // The target: referenced by ID, so it is reported but never rewritten.
+                if (tr->hasTarget())
                     out.append({ eTarget::State, true, QString(), tr->getToId(), use, nullptr });
 
                 // Transition operations.

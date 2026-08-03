@@ -36,6 +36,8 @@
 #include "lusan/view/common/DataTypeDetailsView.hpp"
 #include "lusan/view/common/DataTypeFieldDetailsView.hpp"
 #include "lusan/view/common/DataTypeListView.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
 
 #include <QAction>
@@ -191,6 +193,11 @@ void SMDataType::setupSignals()
     connect(mFields->ctrlDeprecateHint()    , &QLineEdit::editingFinished      , this, &SMDataType::onFieldDeprecateHintCommitted);
     mFields->ctrlDescription()->installEventFilter(this);
 
+    // Both forms carry document text. Typing in them marks the document changed at once, even
+    // though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mDetails, mModel.getNotifier());
+    PendingEditWatcher::watchField(mFields, mModel.getNotifier());
+
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMDataType::onNotifierChanged);
     connect(&mModel.getNotifier(), &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
     connect(&mModel.getNotifier(), &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
@@ -198,26 +205,28 @@ void SMDataType::setupSignals()
     connect(&mModel.getNotifier(), &DocModelNotifier::listReordered, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
 }
 
+void SMDataType::commitPendingEdits(void)
+{
+    DataTypeCustom* dataType = currentDataType();
+    if (dataType == nullptr)
+        return;
+
+    // The selection decides which of the two boxes is the live one: a field row is edited in the
+    // field form, the type itself in the type form.
+    const uint32_t fieldId = currentFieldId();
+    if (fieldId == 0)
+        mModel.setDescription(dataType, mDetails->ctrlDescription()->toPlainText());
+    else
+        mModel.setFieldDescription(dataType, fieldId, mFields->ctrlDescription()->toPlainText());
+}
+
 bool SMDataType::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::FocusOut)
     {
-        if (watched == mDetails->ctrlDescription())
+        if ((watched == mDetails->ctrlDescription()) || (watched == mFields->ctrlDescription()))
         {
-            if (DataTypeCustom* dataType = currentDataType())
-            {
-                if (currentFieldId() == 0)
-                    mModel.setDescription(dataType, mDetails->ctrlDescription()->toPlainText());
-            }
-        }
-        else if (watched == mFields->ctrlDescription())
-        {
-            if (DataTypeCustom* dataType = currentDataType())
-            {
-                const uint32_t fieldId = currentFieldId();
-                if (fieldId != 0)
-                    mModel.setFieldDescription(dataType, fieldId, mFields->ctrlDescription()->toPlainText());
-            }
+            commitPendingEdits();
         }
     }
 
@@ -637,6 +646,52 @@ bool SMDataType::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
     }
 
     return false;
+}
+
+void SMDataType::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
+{
+    // A finding about a structure field or an enumeration entry carries the field's own id, so
+    // a type lookup that only tries the top-level rows would come back empty and reveal nothing.
+    uint32_t typeId = id;
+    uint32_t fieldId = 0;
+    if (mModel.findDataType(id) == nullptr)
+    {
+        for (DataTypeCustom* type : mModel.getCustomDataTypes())
+        {
+            if ((type != nullptr) && (mModel.findChild(type, id) != nullptr))
+            {
+                typeId = type->getId();
+                fieldId = id;
+                break;
+            }
+        }
+    }
+
+    if (selectDataType(typeId, fieldId) == false)
+    {
+        return;
+    }
+
+    if (fieldId != 0)
+    {
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mFields->ctrlName());        break;
+        case eIssueField::Type:         WidgetHighlight::reveal(mFields->ctrlTypes());       break;
+        case eIssueField::Value:        WidgetHighlight::reveal(mFields->ctrlValue());       break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mFields->ctrlDescription()); break;
+        default:                                                                             break;
+        }
+    }
+    else
+    {
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+        default:                                                                              break;
+        }
+    }
 }
 
 void SMDataType::populateTypeCombo(QComboBox* combo, const DataTypeCustom* exclude) const

@@ -121,6 +121,25 @@ public:
     inline bool isInteractiveSnap() const;
 
     /**
+     * \brief   Snaps the position a dragged item is about to take. A drag hands every selected
+     *          item one and the same step, so snapping each item's own position would land them
+     *          on different offsets and tear the selection apart. The step is snapped ONCE --
+     *          against the item the drag started on -- and every item of the selection then moves
+     *          by that same snapped step, which keeps them parallel; a drag of a single item is
+     *          its own reference and still lands on the grid exactly as before.
+     * \param   item        The item whose position is changing.
+     * \param   position    The position proposed by the drag.
+     * \return  The position to take.
+     **/
+    QPointF snapDragPosition(const QGraphicsItem& item, const QPointF& position);
+
+    /**
+     * \brief   Remembers the item a move drag started on: its snapped step is the one the whole
+     *          selection follows. Called by the item that accepts the press.
+     **/
+    void setDragLeader(const QGraphicsItem& item);
+
+    /**
      * \brief   Snaps a point to the grid when snapping is enabled; identity otherwise.
      **/
     QPointF snappedPosition(const QPointF& position) const;
@@ -194,9 +213,17 @@ public:
      * \brief   Pushes one undo step moving/resizing every selected state box and note whose
      *          item position/size differs from its layout entry - the finished drag gesture
      *          of a (possibly mixed) multi-selection. Called by SMStateItem/SMNoteItem on a
-     *          plain (non-resize) drag release.
+     *          plain (non-resize) drag release. Every transition edge whose drawn geometry no
+     *          longer matches its stored one joins the same step, so the persisted anchors and
+     *          waypoints never fall behind the boxes they belong to.
      **/
     void commitSelectionMove(const QString& text);
+
+    /**
+     * \brief   Returns the transition edges whose drawn geometry no longer matches the stored
+     *          one - the edges a finished move gesture has to write back.
+     **/
+    QList<SMEdgeItem*> driftedEdgeItems() const;
 
     /**
      * \brief   Returns the state box item of an element, or nullptr.
@@ -219,7 +246,7 @@ public:
     /**
      * \brief   Re-anchors every edge connected to a state after its box moved or resized.
      **/
-    void updateEdgesForState(uint32_t stateId);
+    void updateEdgesForState(uint32_t stateId, bool fromModel = false);
 
     /**
      * \brief   Applies a target-endpoint reconnection: retargets the transition to the state
@@ -316,6 +343,15 @@ public:
     void requestGotoRefs(const QList<SMReferences::Ref>& refs);
 
     /**
+     * \brief   Requests that an internal transition be opened for editing (a Ctrl+Shift click on the
+     *          `on <stimulus>` row an internal transition draws inside its state box). An internal
+     *          transition has no edge item -- the row is its only representation on the canvas --
+     *          so this is the canvas's one route to it.
+     * \param   transitionId    The internal transition the clicked row stands for.
+     **/
+    void requestInternalEdit(uint32_t transitionId);
+
+    /**
      * \brief   Shows the submachine quick view over the composite state \p stateId (the Ctrl+Alt
      *          hover on its corner hint). The scene builds it, not the item: reading the nested
      *          level is a model read, and a canvas item holds no model data. Nothing is shown for
@@ -383,6 +419,12 @@ signals:
      *          owning page resolves the row's references and navigates.
      **/
     void signalGotoRefsRequested(const QList<SMReferences::Ref>& refs);
+
+    /**
+     * \brief   Emitted when the `on <stimulus>` row of an internal transition is clicked; the owning
+     *          page surfaces the Properties panel on that transition's Internal editor.
+     **/
+    void signalInternalEditRequested(uint32_t transitionId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -517,6 +559,11 @@ private:
     int                             mGridDotSize;   //!< The dotted-grid dot diameter (device pixels).
     bool                            mSnapToGrid;    //!< Snap interactive moves to the grid.
     bool                            mMouseDrag;     //!< A mouse drag is in progress.
+    const QGraphicsItem*            mDragLeader;    //!< The item the running move drag started on.
+    QPointF                         mDragLeaderPos; //!< Its position when the drag started.
+    QHash<const QGraphicsItem*, QPointF>
+                                    mDragOrigins;   //!< Where each dragged item stood when the drag
+                                                    //!< started, taken at its first position change.
     bool                            mSyncSelection; //!< Guards the two-way selection sync.
     SMSubmachinePeek*               mPeek;          //!< The submachine quick view, built on first use.
 };

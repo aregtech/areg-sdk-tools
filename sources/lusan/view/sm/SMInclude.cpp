@@ -27,6 +27,7 @@
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/view/common/IncludeDetailsView.hpp"
 #include "lusan/view/common/IncludeListView.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
 
 #include <QAction>
@@ -333,6 +334,12 @@ void SMInclude::setupSignals()
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SMInclude::onInlineLocationEdited);
 
     DocModelNotifier& notifier = mModel.getNotifier();
+
+    // Both forms carry document text. Typing in them marks the document changed at once, even
+    // though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mDetails, notifier);
+    PendingEditWatcher::watchField(mMachinePage, notifier);
+
     auto onKind = [this](uint32_t, eDocElementKind kind) {
         if ((kind == eDocElementKind::Include) || (kind == eDocElementKind::Import))
         {
@@ -346,21 +353,27 @@ void SMInclude::setupSignals()
     connect(&notifier, &DocModelNotifier::listReordered , this, onKind);
 }
 
+void SMInclude::commitPendingEdits(void)
+{
+    const uint32_t id = currentIncludeId();
+    if (id == 0)
+        return;
+
+    // The selected row decides which of the two forms is on top, and only that one holds the text
+    // of the current entry.
+    QPlainTextEdit* description = (mDetailsStack->currentIndex() == PageMachine)
+                                        ? mMachineDescription
+                                        : mDetails->ctrlDescription();
+    mModel.setDescription(id, description->toPlainText());
+}
+
 bool SMInclude::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::FocusOut)
     {
-        const uint32_t id = currentIncludeId();
-        if (id != 0)
+        if ((watched == mDetails->ctrlDescription()) || (watched == mMachineDescription))
         {
-            if (watched == mDetails->ctrlDescription())
-            {
-                mModel.setDescription(id, mDetails->ctrlDescription()->toPlainText());
-            }
-            else if (watched == mMachineDescription)
-            {
-                mModel.setDescription(id, mMachineDescription->toPlainText());
-            }
+            commitPendingEdits();
         }
     }
 

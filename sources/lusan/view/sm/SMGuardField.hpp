@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QTextEdit>
 
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
@@ -82,9 +83,17 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< Points the field at a transition (0 clears it); rebuilds the catalog and the text.
-    void setTransition(uint32_t transitionId);
+    /**
+     * rief   Points the field at the guard it edits -- a transition's `<Guard>` or a state
+     *          `DoList`'s `<Until>` stop condition -- and rebuilds the catalog and the text. An
+     *          invalid ref clears it. A bare transition id converts, so the transition callers
+     *          read exactly as they did.
+     **/
+    void setTarget(const SMGuardRef& target);
 
+    inline const SMGuardRef& target() const;
+
+    //!< The edited transition, or 0 when the field is on something that is not one.
     inline uint32_t transitionId() const;
 
     //!< Opens the completion catalog at the caret (Ctrl+Space).
@@ -156,10 +165,7 @@ public:
     void setHeightLines(int minLines, int maxLines);
 
     /**
-     * \brief   Turns the grow-with-content height rule off (the default is on). With it off the
-     *          field keeps only its 
-ef setHeightLines minimum and otherwise fills the space its
-     *          layout gives it -- what the large pop-out editor wants.
+     * \brief   Turns the grow-with-content height rule off (the default is on)
      **/
     void setAutoHeight(bool autoHeight);
 
@@ -171,13 +177,13 @@ ef setHeightLines minimum and otherwise fills the space its
 
     /**
      * \brief   Enables / disables the implicit commit on focus-out (default enabled). The pop-out
-     *          editor disables it so its Cancel button -- which blurs the field before
-     *          its clicked() slot runs -- cannot silently commit the discarded text; the pop-out
+     *          editor disables it so its Cancel button, which blurs the field before
+     *          its clicked() slot runs, cannot silently commit the discarded text; the pop-out
      *          commits explicitly on OK instead. The base bar leaves it enabled.
      **/
     void setAutoCommit(bool enable);
 
-    //!< The committable (expanded, slot-stripped) text -- the grid's live-refresh input.
+    //!< The committable (expanded, slot-stripped) text, the grid's live-refresh input.
     QString committableText() const;
 
     //!< The callee method name of the call whose parentheses the caret is inside (empty when the
@@ -383,7 +389,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     StateMachineModel&      mModel;         //!< The document facade.
-    uint32_t                mTransitionId;  //!< The edited transition (0 = none).
+    SMGuardRef              mTarget;        //!< The edited guard (transition guard / Do stop condition).
     QString                 mCommittedText; //!< The last committed text (Esc target).
     bool                    mAllowRaw;      //!< Unresolved fragments become raw nodes.
     bool                    mRebuildPending;//!< Coalesces deferred rebuilds.
@@ -426,9 +432,14 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
+inline const SMGuardRef& SMGuardField::target() const
+{
+    return mTarget;
+}
+
 inline uint32_t SMGuardField::transitionId() const
 {
-    return mTransitionId;
+    return mTarget.getScopeId();
 }
 
 inline bool SMGuardField::hintsEnabled() const

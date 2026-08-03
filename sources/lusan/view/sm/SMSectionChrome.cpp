@@ -56,8 +56,8 @@ SMSectionChrome::SMSectionChrome(QWidget* parent /*= nullptr*/)
     mOuter->setContentsMargins(8, 8, 8, 8);
     mOuter->setSpacing(6);
 
-    // Header row: the title label, one jump button per accordion section, the compact toggle, a
-    // rule, a stretch, then whatever action buttons the host appends. Every glyph is drawn by
+    // Header row: the title label, one jump button per accordion section, the compact toggle,
+    // a rule, a stretch, then whatever action buttons the host appends. Every glyph is drawn by
     // SMToolIcons -- the same thin-stroke vector language as the canvas toolbar -- and icon-only
     // keeps the narrow Properties dock usable; each button carries a tooltip.
     mHeader = new QHBoxLayout();

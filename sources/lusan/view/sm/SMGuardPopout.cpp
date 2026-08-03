@@ -181,7 +181,7 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
     // Seed from the base field's committable text: the bar commits the base before opening, so a
     // reflow from the model shows exactly what the base showed -- chips and islands folded the same
     // way (identical to a fresh commit render).
-    mField->setTransition(mTransId);
+    mField->setTarget(mTransId);
 
     // The pop-out IS the large editor: a field tall enough for a multi-line guard, and a window
     // centered on the design surface rather than dropped at the parent's corner where its right

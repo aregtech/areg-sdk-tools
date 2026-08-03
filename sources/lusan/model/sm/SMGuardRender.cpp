@@ -28,6 +28,8 @@
 #include <QHash>
 #include <QSet>
 
+#include <algorithm>
+
 namespace
 {
     using eKind = SMGuardNode::eKind;
@@ -508,7 +510,26 @@ QString SMGuardRender::canvasSummary(const StateMachineData& data, uint32_t tran
 {
     if (guard.isDraft())
     {
-        return guard.getDraftText().simplified();
+        // A draft has no tree to walk, so it collapses by SHAPE. Returning the raw text unchanged
+        // -- what this used to do -- defeated the caller: a hand-typed C++ block arrived at full
+        // length and was then chopped mid-token, which is exactly what a summary exists to avoid.
+        const QString raw = guard.getDraftText();
+        if (raw.contains(QLatin1Char('{')))
+        {
+            return QStringLiteral("{ C++ }");
+        }
+
+        const QString flat = raw.simplified();
+        const int     line = raw.indexOf(QLatin1Char('\n'));
+        if (line < 0)
+        {
+            return flat;
+        }
+
+        // Multi-line: the first line is what the author wrote first, and it is the only part that
+        // reads as an opening. The ellipsis says the rest is there.
+        const QString first = raw.left(line).simplified();
+        return first.isEmpty() ? flat : (first + QStringLiteral(" ..."));
     }
 
     if (guard.isOk() && (guard.getTree() != nullptr))
@@ -517,6 +538,47 @@ QString SMGuardRender::canvasSummary(const StateMachineData& data, uint32_t tran
     }
 
     return QString();
+}
+
+QString SMGuardRender::chipText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, int maxChars)
+{
+    const QString full = guardText(data, transitionId, guard).simplified();
+    if (full.isEmpty() || (maxChars <= 0))
+    {
+        return full;
+    }
+
+    // A short, plain guard reads best in full. A long one, or one carrying an inline C++ block,
+    // is cut down STRUCTURALLY first -- the condition names survive and the bulk collapses.
+    QString label = full;
+    if ((full.length() > maxChars) || full.contains(QLatin1Char('{')))
+    {
+        label = canvasSummary(data, transitionId, guard).simplified();
+    }
+
+    if (label.length() <= maxChars)
+    {
+        return label;
+    }
+
+    // Still over budget: drop whole tokens from the end, never half of one. `!isNight...` reads as
+    // a symbol that does not exist, and these chips exist to tell near-identical rows apart.
+    const QString tail = QStringLiteral("...");
+    const int     tlen = static_cast<int>(tail.length());
+    const int     room = maxChars - tlen - 1;               // room for the space before the tail
+    int           cut  = -1;
+    for (int pos = 0; (pos < label.length()) && (pos <= room); ++pos)
+    {
+        if (label.at(pos).isSpace())
+        {
+            cut = pos;
+        }
+    }
+
+    // No boundary in range means one very long token; there is no structure left to preserve.
+    return (cut > 0)
+           ? (label.left(cut) + QLatin1Char(' ') + tail)
+           : (label.left(std::max(1, maxChars - tlen)) + tail);
 }
 
 QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, bool layout /*= false*/)

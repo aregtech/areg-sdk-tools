@@ -146,12 +146,12 @@ SMValidationPanel* OutputDock::ensureValidationPanel()
 
     // A finding names the document that owns it, so the reveal goes to that window.
     connect(mValidation, &SMValidationPanel::navigateRequestedIn, this
-           , [](QObject* owner, uint32_t elementId, eDocElementKind kind)
+           , [](QObject* owner, uint32_t elementId, eDocElementKind kind, int rule)
     {
         StateMachine* doc = qobject_cast<StateMachine*>(owner);
         if (doc != nullptr)
         {
-            doc->navigateToIssue(elementId, kind);
+            doc->navigateToIssue(elementId, kind, rule);
         }
     });
 

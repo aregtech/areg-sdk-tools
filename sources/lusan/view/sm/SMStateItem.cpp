@@ -24,12 +24,14 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMOperationValidation.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
+#include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 
 #include <QCoreApplication>
@@ -246,6 +248,7 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     , mRenameProxy      (nullptr)
     , mClosingRename    (false)
     , mHoverRow         (-1)
+    , mLinkClick        (false)
 {
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, true);
@@ -264,6 +267,11 @@ SMStateItem::~SMStateItem()
 QRectF SMStateItem::getBoxGeometry() const
 {
     return QRectF(pos(), mSize);
+}
+
+QRectF SMStateItem::getVisibleGeometry() const
+{
+    return QRectF(pos(), QSizeF(mSize.width(), visibleHeight()));
 }
 
 bool SMStateItem::isBorderDragZone(const QPointF& scenePos) const
@@ -687,11 +695,21 @@ int SMStateItem::bodyRowAt(const QPointF& pos) const
         const QRectF rowRect{ 0.0, slot.y, mSize.width(), rowH };
         if (rowRect.contains(pos))
         {
-            return (mRows.at(slot.index).refs.isEmpty() == false) ? slot.index : -1;
+            // A row is actionable when it references a declaration OR when it IS a transition;
+            // the header row of an internal transition is the second case, and it used to be
+            // reachable only as the first, which took the author to the stimulus method instead.
+            const BodyRow& row = mRows.at(slot.index);
+            return ((row.refs.isEmpty() == false) || (row.transitionId != 0u)) ? slot.index : -1;
         }
     }
 
     return -1;
+}
+
+const SMStateItem::BodyRow* SMStateItem::bodyRowAtPos(const QPointF& pos) const
+{
+    const int index = bodyRowAt(pos);
+    return (index >= 0) ? &mRows.at(index) : nullptr;
 }
 
 void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QColor& bodyColor)
@@ -724,9 +742,20 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         // A ` \` continuation cue at the right edge says "the next row belongs to this same
         // Enter/Do/Exit group"; reserve its width so it never overlaps the row text.
         const double cueW = (continues ? (metrics.horizontalAdvance(QStringLiteral("\\")) + 4.0) : 0.0);
-        const QRectF textRect{ padding + 16.0, rowY, box.width() - padding - (padding + 16.0) - cueW, rowH };
+        // A second mark (only the `on <stimulus>` header of an internal transition has one) takes a
+        // second gutter slot, so the text of that row starts one mark further in. It is the group's
+        // header and reads as one, which is why the extra indent sits there and nowhere else.
+        const bool   twoMarks = SMKindGlyph::isDrawn(row.kindIcon);
+        const double gutter   = padding + 16.0 + (twoMarks ? SMKindGlyph::GlyphSize : 0.0);
+        const QRectF textRect{ gutter, rowY, box.width() - padding - gutter - cueW, rowH };
 
         SMKindGlyph::paint(*painter, QRectF(padding, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0), row.icon, color);
+        if (twoMarks)
+        {
+            SMKindGlyph::paint(*painter, QRectF(padding + SMKindGlyph::GlyphSize, rowY + 2.0
+                                              , SMKindGlyph::GlyphSize, rowH - 4.0), row.kindIcon, color);
+        }
+
         painter->setFont(rowFont);
         painter->setPen(color);
         const QString elided = metrics.elidedText(row.text, Qt::ElideRight, static_cast<int>(textRect.width()));
@@ -749,7 +778,8 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
     for (const RowSlot& slot : layout)
     {
         const BodyRow& row = mRows.at(slot.index);
-        const bool linked = (slot.truncated == false) && (slot.index == mHoverRow) && (row.refs.isEmpty() == false);
+        const bool linked = (slot.truncated == false) && (slot.index == mHoverRow)
+                            && ((row.refs.isEmpty() == false) || (row.transitionId != 0u));
         drawRow(row, slot.y, slot.truncated, row.continues && (slot.truncated == false), linked);
     }
 }
@@ -1020,15 +1050,17 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         return SMKindGlyph::prefix(SMKindGlyph::operationGlyph(op)) + withoutRowVerb(op, summary);
     };
 
-    // The band mark of an Enter/Do/Exit group (`->|` enter, `<-|` exit, a self-loop for Do): the
-    // reader sees at a glance which activity band a row belongs to.
+    // The band mark of an Enter/Do/Exit group (`->|` enter, `<-|` exit, the repeat ring for Do): the
+    // reader sees at a glance which activity band a row belongs to. The internal transition is NOT
+    // in this table any more -- it is not a zone, it is a construct, and it brings its own band mark
+    // (and its own header row) below.
     const auto zoneGlyph = [](eRowZone zone) -> SMKindGlyph::eGlyph
     {
         switch (zone)
         {
         case eRowZone::Enter:   return SMKindGlyph::eGlyph::Entry;
         case eRowZone::Exit:    return SMKindGlyph::exitGlyph();
-        default:                return SMKindGlyph::eGlyph::Internal;
+        default:                return SMKindGlyph::eGlyph::Do;
         }
     };
 
@@ -1042,7 +1074,9 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     // that row is emitted anyway as `...`. Otherwise an event-only Enter list drew `->|` where its
     // lightning bolt belonged, and the reader could not tell an event from a timer from an action.
     // \p bandRow is false for the operations of an internal transition: that group is already
-    // introduced by its own `on <stimulus>` header row, so a second placeholder would be noise.
+    // introduced by its own `on <stimulus>` header row, so a second placeholder would be noise --
+    // and because the band mark is already spent on that header, those action rows take the gear
+    // (\ref SMKindGlyph::operationGlyph) instead, which is what tells the effect from the cause.
     const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone, bool bandRow = true)
     {
         QList<const SMOperationBase*> actions;
@@ -1077,7 +1111,10 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         {
             for (const SMOperationBase* op : std::as_const(actions))
             {
-                group.append(BodyRow{ zoneGlyph(zone), rowText(*op), zone, false, false, SMReferences::operationRefs(*op) });
+                // A band row takes its band's mark; a group that has no band row of its own (an
+                // internal transition's operations) takes the operation's own kind mark, the gear.
+                const SMKindGlyph::eGlyph mark = bandRow ? zoneGlyph(zone) : SMKindGlyph::operationGlyph(*op);
+                group.append(BodyRow{ mark, rowText(*op), zone, false, false, SMReferences::operationRefs(*op) });
             }
         }
 
@@ -1117,16 +1154,62 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     appendGroup(state.getEntryList(), eRowZone::Enter);
     appendGroup(state.getDoList(), eRowZone::Middle);
 
-    // External transitions show their operations on the edge (below the line); internal ones have no
-    // edge, so each reads here as its own group under an "on <stimulus>" header row.
+    // A transition with a target shows its operations on its edge (below the line). One without a
+    // target has no edge, so it reads here as its own group under a header row -- and the header
+    // says WHICH of the two edgeless cases it is: `on x` for an internal transition, which is
+    // finished and deliberate, and `on x (not connected)` for an external one that has no target
+    // yet, which is not. Those used to look the same, in the document and here.
+    // Two internal transitions of one state may share a stimulus and differ only by their guards --
+    // a normal thing to write, and the rows read identically without the number and the guard.
+    int internalCount = 0;
     for (const SMTransitionEntry* transition : state.getTransitions().getElements())
     {
-        if (transition->isExternal() == false)
+        if ((transition != nullptr) && transition->isInternal())
+        {
+            ++internalCount;
+        }
+    }
+
+    int internalIndex = 0;
+    for (const SMTransitionEntry* transition : state.getTransitions().getElements())
+    {
+        if (transition->hasTarget() == false)
         {
             const QString stim = (data != nullptr) ? SMOperationSummary::stimulusSignature(*data, *transition) : transition->getStimulus();
+            QString head;
+            if (transition->isInternal())
+            {
+                ++internalIndex;
 
-            // The header row links to the stimulus declaration (trigger / event / timer that fires
-            // the internal transition); its operations become their own navigable rows below.
+                // The number is the PRIORITY -- document order decides which of several transitions
+                // on one stimulus runs -- and the guard chip is what tells two of them apart. Both
+                // are dropped when the state has a single internal transition, where they say
+                // nothing and the box is short of width.
+                if (internalCount > 1)
+                {
+                    head = QStringLiteral("#") + QString::number(internalIndex) + QLatin1Char(' ');
+                }
+
+                head += QStringLiteral("on ") + stim;
+                if (data != nullptr)
+                {
+                    const QString chip = SMGuardRender::chipText(*data, transition->getId(), transition->getGuard()
+                                                                , SMGuardRender::ChipStateBox);
+                    if (chip.isEmpty() == false)
+                    {
+                        head += QStringLiteral(" [") + chip + QLatin1Char(']');
+                    }
+                }
+            }
+            else
+            {
+                head = QStringLiteral("on ") + stim + translate(" (not connected)");
+            }
+
+            // The header row still KNOWS the stimulus declaration (trigger / event / timer), but that
+            // is now its secondary action, offered on the context menu: the row IS the transition,
+            // so clicking it must open the transition. Sending the author to the method list from
+            // the one visible representation of the construct was the whole complaint.
             SMReferences::eTarget stimKind = SMReferences::eTarget::Trigger;
             switch (transition->getStimulusKind())
             {
@@ -1141,7 +1224,21 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
                 stimRef.append({ stimKind, transition->getStimulus() });
             }
 
-            mRows.append(BodyRow{ SMKindGlyph::eGlyph::Internal, QStringLiteral("on ") + stim, eRowZone::Middle, false, false, stimRef });
+            // Two marks, and they answer two different questions. The band mark says WHAT this is
+            // -- an internal transition, drawn on the same bar as the enter and exit rows above and
+            // below it -- and the kind mark says WHAT FIRES IT: a button for a trigger, a bolt for
+            // an event, a clock for a timer. An unfinished external edge is not a band at all, so it
+            // gets the kind mark alone; its `(not connected)` text already says what is wrong.
+            BodyRow header{ SMKindGlyph::eGlyph::Internal, head, eRowZone::Middle, false, false, stimRef };
+            header.kindIcon    = SMKindGlyph::stimulusGlyph(*transition);
+            header.transitionId = transition->getId();
+            if (transition->isInternal() == false)
+            {
+                header.icon     = header.kindIcon;
+                header.kindIcon = SMKindGlyph::eGlyph::None;
+            }
+
+            mRows.append(header);
             appendGroup(transition->getOperations(), eRowZone::Middle, false);
         }
     }
@@ -1250,11 +1347,25 @@ void SMStateItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
         const int linkRow = bodyRowAt(event->pos());
         if (linkRow >= 0)
         {
+            const BodyRow& row = mRows.at(linkRow);
             if (SMScene* canvas = getCanvas())
             {
-                canvas->requestGotoRefs(mRows.at(linkRow).refs);
+                // A row that IS a transition opens THAT transition -- the construct the author
+                // clicked. Its stimulus declaration stays one right-click away (`Go to ...
+                // Declaration` on the state's context menu); it is the secondary answer, not the
+                // one an author asking "what does this row do?" is looking for.
+                if (row.transitionId != 0u)
+                {
+                    canvas->requestInternalEdit(row.transitionId);
+                }
+                else
+                {
+                    canvas->requestGotoRefs(row.refs);
+                }
             }
 
+            // The matching release is ours too -- see mLinkClick.
+            mLinkClick = true;
             event->accept();
             return;
         }
@@ -1303,6 +1414,20 @@ void SMStateItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 
 void SMStateItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 {
+    if (mLinkClick)
+    {
+        // The press was consumed as a link, so the base never saw it. Letting the base see the
+        // release makes Qt read the pair as a click on nothing and clear the scene selection --
+        // which took the selection away from the very state the link had just opened.
+        if (event->button() == Qt::LeftButton)
+        {
+            mLinkClick = false;
+        }
+
+        event->accept();
+        return;
+    }
+
     if (mResizeHandle != eHandle::None)
     {
         if (event->button() == Qt::LeftButton)
@@ -1437,10 +1562,25 @@ void SMStateItem::commitResize()
     }
 
     StateMachineModel& model = canvas->getModel();
-    model.getUndoStack().push(new SMMoveNodeCommand(  model.getData(), model.getNotifier()
-                                                    , getElementId(), SMMoveNodeCommand::takeNextGesture()
-                                                    , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                                    , translate("Resize state")));
+    const QString text = translate("Resize state");
+    // A resized border carries the anchors of the transitions that end on it; they are written
+    // back in the same undo step (see SMScene::commitSelectionMove).
+    const QList<SMEdgeItem*> movedEdges{ canvas->driftedEdgeItems() };
+    const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
+    QUndoCommand*  parent  = movedEdges.isEmpty()
+                             ? nullptr : new SMCompositeCommand(model.getData(), model.getNotifier(), text);
+
+    QUndoCommand* resize = new SMMoveNodeCommand(  model.getData(), model.getNotifier()
+                                                 , getElementId(), gesture
+                                                 , geometry.x(), geometry.y(), geometry.width(), geometry.height()
+                                                 , text, parent);
+    for (SMEdgeItem* edge : movedEdges)
+    {
+        new SMSetEdgeGeometryCommand(  model.getData(), model.getNotifier()
+                                     , edge->getElementId(), gesture, edge->buildGeometry(), text, parent);
+    }
+
+    model.getUndoStack().push(parent != nullptr ? parent : resize);
 }
 
 void SMStateItem::toggleExpanded()

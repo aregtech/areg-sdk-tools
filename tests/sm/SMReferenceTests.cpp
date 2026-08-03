@@ -115,8 +115,8 @@ namespace
         toRun->getOperations().addOperation(aset);
 
         // Run: internal transitions on Event and Timer, exit TimerStop.
-        run->getTransitions().createTransition(eKind::Event, "Started");
-        run->getTransitions().createTransition(eKind::Timer, "Tick");
+        run->getTransitions().createTransition(eKind::Event, "Started", 0u, SMTransitionEntry::eTransitionKind::Internal);
+        run->getTransitions().createTransition(eKind::Timer, "Tick", 0u, SMTransitionEntry::eTransitionKind::Internal);
         SMTimerStop* tstop = new SMTimerStop();
         tstop->setTimer("Tick");
         run->getExitList().addOperation(tstop);
@@ -244,7 +244,7 @@ namespace
 
         // A trigger named "Shared" used by a transition stimulus.
         doc.getMethods().createMethod("Shared", SMMethodEntry::eMethodType::Trigger);
-        run->getTransitions().createTransition(eKind::Trigger, "Shared");
+        run->getTransitions().createTransition(eKind::Trigger, "Shared", 0u, SMTransitionEntry::eTransitionKind::Internal);
 
         CHECK(uses(doc, eTarget::Action,  "Shared", 0) == 1);
         CHECK(uses(doc, eTarget::Trigger, "Shared", 0) == 1);

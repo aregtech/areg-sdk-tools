@@ -43,6 +43,8 @@
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 
 #include "lusan/model/sm/SMTypeCompat.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
@@ -180,7 +182,7 @@ namespace
         QList<SMIssue> run();
 
     private:
-        void add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message);
+        void add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message, const QString& detail = QString());
 
         //!< Collects every machine level (root + painted nested) with its owner state ID.
         struct LevelInfo { const SMStateData* level; bool isRoot; uint32_t ownerId; };
@@ -198,7 +200,10 @@ namespace
         void checkRegistryNames();
 
         void validateLevel(const LevelInfo& info);
-        void validateState(const SMStateEntry& state, const SMStateData& level);
+        void checkAncestorShadowing(const SMStateData& level, QList<const SMStateEntry*>& ancestors);
+        void validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel);
+        void validatePseudoStart(const SMStateEntry& state, bool isRootLevel);
+        void validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr);
         void validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr);
         void validateOperations(const SMOperationList& ops, const Scope& scope);
         void validateArguments(uint32_t ownerId, eDocElementKind kind, const MethodBase* target, const QList<SMArgumentEntry>& args, const Scope& scope);
@@ -220,8 +225,9 @@ namespace
         // Warning rules (10.2 rules 1-11).
         void checkWarnings(const QList<LevelInfo>& levels);
         void checkGuards();
+        void checkDescriptions();
 
-        // Import rules (10.1 rules 19/22, 10.2 rule 12).
+        // Import rules.
         void checkImports(const QList<LevelInfo>& levels);
 
     private:
@@ -229,18 +235,16 @@ namespace
         QList<SMIssue>          mIssues;
     };
 
-    void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message)
+    void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message, const QString& detail)
     {
         SMIssue issue;
         issue.elementId = id;
         issue.kind      = kind;
         issue.severity  = sev;
-        // Callers pass the plain spec number for both classes; a 10.2 advisory is offset here so
-        // its id never collides with the like-numbered 10.1 error in the shared `rule` field.
-        // Info belongs to the same 10.2 space as Warning: a rule that is advisory for one element
-        // kind and a warning for another (rule 4) keeps one number and must keep one offset.
+        // Callers pass the plain spec number for both classes
         issue.rule      = (sev != eSeverity::Error) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
         issue.message   = message;
+        issue.detail    = detail;
         mIssues.append(issue);
     }
 
@@ -559,11 +563,66 @@ namespace
         for (SMStateEntry* state : info.level->getElements())
         {
             if (state != nullptr)
-                validateState(*state, *info.level);
+                validateState(*state, *info.level, info.isRoot);
         }
     }
 
-    void Ctx::validateState(const SMStateEntry& state, const SMStateData& level)
+    void Ctx::checkAncestorShadowing(const SMStateData& level, QList<const SMStateEntry*>& ancestors)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+                continue;
+
+            for (const SMTransitionEntry* tr : state->getTransitions().getElements())
+            {
+                // An initial transition reacts to nothing, so nothing can shadow it -- and every one
+                // of them would compare equal on the empty stimulus they all share.
+                if ((tr == nullptr) || tr->isInitial() || tr->getStimulus().isEmpty())
+                    continue;
+
+                // Outermost ancestor first: that is the order the candidates are tried in, so the
+                // first unguarded match is the one that actually wins and the one worth naming.
+                const SMStateEntry* winner = nullptr;
+                for (const SMStateEntry* ancestor : ancestors)
+                {
+                    for (const SMTransitionEntry* other : ancestor->getTransitions().getElements())
+                    {
+                        if ((other == nullptr) || other->isInitial() || other->hasCondition())
+                            continue;
+
+                        if ((other->getStimulusKind() == tr->getStimulusKind()) && (other->getStimulus() == tr->getStimulus()))
+                        {
+                            winner = ancestor;
+                            break;
+                        }
+                    }
+
+                    if (winner != nullptr)
+                        break;
+                }
+
+                if (winner != nullptr)
+                {
+                    add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_ANCESTOR_SHADOW
+                       , vtr("The transition of '%1' on '%2' can never fire: its ancestor '%3' reacts to the same stimulus with no guard")
+                            .arg(state->getName(), tr->getStimulus(), winner->getName())
+                       , vtr("A composite's transition is eligible while any of its descendants is active and is tried before the descendant's own. "
+                             "The first candidate with no guard always wins, so this one is dead code. Guard the transition on '%1', or remove this one.")
+                            .arg(winner->getName()));
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                ancestors.append(state);
+                checkAncestorShadowing(*state->getNestedStates(), ancestors);
+                ancestors.removeLast();
+            }
+        }
+    }
+
+    void Ctx::validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel)
     {
         const uint32_t id = state.getId();
         checkIdentifier(id, eDocElementKind::State, state.getName());
@@ -579,10 +638,12 @@ namespace
             if (hasSubstates)
                 add(id, eDocElementKind::State, eSeverity::Error, 8, vtr("A Final state cannot have substates"));
         }
-        else if (state.getKind() == SMStateEntry::eStateKind::Start)
+        else if (state.isPseudoStart())
         {
             if (hasSubstates)
                 add(id, eDocElementKind::State, eSeverity::Error, 9, vtr("A Start state cannot own substates"));
+
+            validatePseudoStart(state, isRootLevel);
         }
 
         // A painted submachine and an imported one are mutually exclusive, neither belongs on
@@ -605,10 +666,7 @@ namespace
         }
         else if (state.getOnFinal().isEmpty() == false)
         {
-            // A completion hook is a bare attribute -- there is no ArgumentList anywhere to map a
-            // payload through, so every parameter of the event has to supply its own value or the
-            // send cannot be generated at all. Same fault as an unmapped call argument, so it is
-            // filed under the same rule.
+            // A completion hook is a bare attribute
             const SMEventEntry* onFinal = mData.getEvents().findEvent(state.getOnFinal());
             for (const MethodParameter& param : onFinal->getElements())
             {
@@ -627,6 +685,15 @@ namespace
         validateOperations(state.getExitList(), entryScope);
         validateOperations(state.getDoList(), entryScope);
 
+        // Do activity is a timer loop, so it has to say how often it ticks
+        if ((state.getDoList().isEmpty() == false) && (state.getDoInterval() < SMStateEntry::MIN_DO_INTERVAL))
+        {
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_DO_ACTIVITY
+               , vtr("State '%1' has a Do activity with no repeat interval; a Do is a timer loop and Interval must be at least %2 ms. "
+                     "To react to one stimulus without leaving the state, use an internal transition -- it names which stimulus.")
+                    .arg(state.getName()).arg(SMStateEntry::MIN_DO_INTERVAL));
+        }
+
         for (SMTransitionEntry* tr : state.getTransitions().getElements())
         {
             if (tr != nullptr)
@@ -634,21 +701,160 @@ namespace
         }
     }
 
+    void Ctx::validatePseudoStart(const SMStateEntry& state, bool isRootLevel)
+    {
+        // Kind="Start" is a pseudo-state, not a state. It never becomes an entry
+        const uint32_t id   = state.getId();
+        const QString& name = state.getName();
+
+        if (state.getEntryList().isEmpty() == false)
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has entry operations; a Start is a marker and performs nothing").arg(name));
+        if (state.getExitList().isEmpty() == false)
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has exit operations; a Start is a marker and performs nothing").arg(name));
+        if (state.getDoList().isEmpty() == false)
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has a Do activity; a Start is a marker and performs nothing").arg(name));
+
+        // The outgoing transitions are the level's initial transitions
+        int outgoing = 0;
+        int unguarded = 0;
+        for (const SMTransitionEntry* tr : state.getTransitions().getElements())
+        {
+            if (tr == nullptr)
+                continue;
+
+            if (tr->hasTarget() == false)
+                continue;
+
+            ++outgoing;
+            if (tr->hasCondition() == false)
+                ++unguarded;
+
+            if (isRootLevel && tr->hasCondition())
+            {
+                add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                   , vtr("The root Start state '%1' has a conditional initial transition; there is no parent state to remain in, so the condition has no meaning")
+                        .arg(name));
+            }
+        }
+
+        if (outgoing == 0)
+        {
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has no outgoing transition, so the level never initialises").arg(name));
+        }
+        else if (isRootLevel)
+        {
+            if (outgoing > 1)
+            {
+                add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                   , vtr("The root Start state '%1' must have exactly one initial transition, not %2").arg(name).arg(outgoing));
+            }
+        }
+        else if ((outgoing > 1) && (unguarded > 0))
+        {
+            // Document order is priority order
+            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+               , vtr("Start state '%1' has %2 initial transitions, of which %3 carry no condition; with more than one every transition must carry one")
+                    .arg(name).arg(outgoing).arg(unguarded));
+        }
+    }
+
+    void Ctx::validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr)
+    {
+        // `Kind` says what the transition is, `To` and `Stimulus` are then required or
+        // forbidden rather than being the thing the meaning is read off.
+        const uint32_t id    = tr.getId();
+        const QString& where = owner.getName();
+        const bool startOwned = owner.isPseudoStart();
+
+        switch (tr.getKind())
+        {
+        case SMTransitionEntry::eTransitionKind::External:
+            if (startOwned)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("Start state '%1' owns an External transition; a Start is left on entering the level, so everything it owns is an Initial transition").arg(where));
+            }
+            if (tr.hasTarget() == false)
+            {
+                // The whole reason `Kind` exists: this used to be byte-identical to an internal
+                // transition, so a half-drawn edge silently meant "run the operations in place".
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The transition on '%1' names no target state: it is an unfinished edge. Connect it, or make it Internal if it was meant to stay in the state").arg(where));
+            }
+            break;
+
+        case SMTransitionEntry::eTransitionKind::Internal:
+            if (startOwned)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("Start state '%1' owns an Internal transition; a Start performs nothing and everything it owns is an Initial transition").arg(where));
+            }
+            if (tr.hasTarget())
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The Internal transition on '%1' names a target state; an internal transition runs its operations without leaving the state").arg(where));
+            }
+            break;
+
+        case SMTransitionEntry::eTransitionKind::Initial:
+            if (startOwned == false)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("State '%1' owns an Initial transition, but only a Start state has one: an initial transition is taken on entering the level, and nothing enters a real state that way").arg(where));
+            }
+            if (tr.hasTarget() == false)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The initial transition of '%1' names no target state, so the level never initialises").arg(where));
+            }
+            if (tr.getStimulus().isEmpty() == false)
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                   , vtr("The initial transition of '%1' names a stimulus ('%2'); it is taken on entering the level, so nothing fires it").arg(where, tr.getStimulus()));
+            }
+            break;
+        }
+
+        // Required for the two kinds that react to something
+        if ((tr.isInitial() == false) && tr.getStimulus().isEmpty())
+        {
+            add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+               , vtr("The transition on '%1' names no stimulus; only an initial transition may leave it out").arg(where));
+        }
+    }
+
     void Ctx::validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr)
     {
         const uint32_t id = tr.getId();
 
-        // An external target must resolve to a state, and that state must be a sibling of the owner.
-        if (tr.isExternal())
+        validateTransitionKind(owner, tr);
+
+        // A named target must resolve to a state, and that state must be a sibling of the owner.
+        if (tr.hasTarget())
         {
             const uint32_t targetId = tr.getToId();
-            if (level.findStateById(targetId) == nullptr)
+            const SMStateEntry* sibling = level.findStateById(targetId);
+            if (sibling == nullptr)
             {
                 const SMStateEntry* target = mData.findStateById(targetId);
                 if (target == nullptr)
                     add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target does not resolve"));
                 else
                     add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
+            }
+            else if (sibling->isPseudoStart())
+            {
+                // a pseudo-state exists to be passed through
+                if (targetId == owner.getId())
+                    add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                       , vtr("The initial transition of Start state '%1' targets the Start itself, so the level never initialises").arg(sibling->getName()));
+                else
+                    add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                       , vtr("Transition targets the Start state '%1'; a Start is a marker the machine never occupies").arg(sibling->getName()));
             }
         }
 
@@ -659,11 +865,8 @@ namespace
         scope.stimKind = tr.getStimulusKind();
         const QString& stim = tr.getStimulus();
 
-        // Start is a pseudo-state: its outgoing transition is the initial one, taken as the
-        // machine enters the level, so it needs no stimulus to trigger it. An empty stimulus
-        // there is the normal case, not a missing declaration.
-        const bool initialTransition = (owner.getKind() == SMStateEntry::eStateKind::Start) && stim.isEmpty();
-        if (initialTransition == false)
+        // An initial transition names no stimulus at all
+        if ((tr.isInitial() == false) && (stim.isEmpty() == false))
         {
             switch (tr.getStimulusKind())
             {
@@ -721,7 +924,7 @@ namespace
                     add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(set->getAttribute()));
                 validateValueSource(id, eDocElementKind::Operation, set->getSource(), set->getValue(), set->getExpression(), scope, true);
 
-                // The assigned value must fit the attribute's declared type (rule 17 / literal rule 15).
+                // The assigned value must fit the attribute's declared type
                 if (attr != nullptr)
                     checkAssignment(id, eDocElementKind::Operation, set->getSource(), set->getValue(), attr->getType(), scope, 17);
                 break;
@@ -765,9 +968,6 @@ namespace
                 paramTypes.insert(p.getName(), p.getType());
             }
 
-            // Orphan arguments and unmapped required formals are checked in exactly one place,
-            // which the canvas also calls per element -- so an edge glyph and a results row are
-            // always the same verdict.
             mIssues += SMOperationValidation::argumentIssues(*target, args, ownerId, kind, QString());
         }
 
@@ -775,7 +975,6 @@ namespace
         {
             validateValueSource(ownerId, kind, arg.getSource(), arg.getValue(), arg.getExpression(), scope, true);
 
-            // The mapped value must fit the declared parameter type (rule 13 / literal rule 15).
             auto it = paramTypes.constFind(arg.getName());
             if (it != paramTypes.constEnd())
                 checkAssignment(ownerId, kind, arg.getSource(), arg.getValue(), it.value(), scope, 13);
@@ -928,7 +1127,7 @@ namespace
 
         const DataTypeCustom* custom = customType(typeName);
         if (custom == nullptr)
-            return eTypeCat::Unknown;   // an unresolved name is rule 6's concern, not a type rule.
+            return eTypeCat::Unknown;   // an unresolved name
         if (custom->isEnumeration())    return eTypeCat::Enum;
         if (custom->isStructure())      return eTypeCat::Structure;
         if (custom->isContainer())      return eTypeCat::Container;
@@ -1017,11 +1216,26 @@ namespace
 
         const QString sourceType = operandType(src, ref, scope);
         if (sourceType.isEmpty())
-            return;                                     // unresolved source is rule 6's concern.
+            return;                                     // unresolved source
 
-        const SMTypeCompat::eRank rank = SMTypeCompat::rank(sourceType, targetType);
-        if ((rank == SMTypeCompat::eRank::Mismatch) || (rank == SMTypeCompat::eRank::Narrows))
-            add(id, kind, eSeverity::Error, mismatchRule, vtr("Type '%1' is not compatible with '%2'").arg(sourceType, targetType));
+        // narrowing is legal C++ that the generator writes as `static_cast<Target>(...)`
+        switch (SMTypeCompat::rank(sourceType, targetType))
+        {
+        case SMTypeCompat::eRank::Narrows:
+            add(id, kind, eSeverity::Warning, mismatchRule
+              , vtr("Narrowing '%1' to '%2': the value may be truncated").arg(sourceType, targetType)
+              , vtr("A legal but lossy conversion. The generated code casts it explicitly, so this does not block generation -- check that the value cannot exceed the target's range."));
+            break;
+
+        case SMTypeCompat::eRank::Mismatch:
+            add(id, kind, eSeverity::Error, mismatchRule
+              , vtr("No conversion from '%1' to '%2'").arg(sourceType, targetType)
+              , vtr("The two types are unrelated, so there is no cast the generated code could write. Change the source or the declared type."));
+            break;
+
+        default:
+            break;      // Exact, Converts, Unknown: nothing to report.
+        }
     }
 
     void Ctx::checkComparisonTypes(const SMConditionEntry& leaf, const Scope& scope)
@@ -1052,7 +1266,7 @@ namespace
         const eTypeCat lc = categorize(lhsType);
         const eTypeCat rc = categorize(rhsType);
 
-        // Rule 14: no structure/container operand, and no ordering on bool/String/enumeration.
+        // no structure/container operand, and no ordering on bool/String/enumeration.
         bool flagged14 = false;
         if ((lc == eTypeCat::Structure) || (lc == eTypeCat::Container) || (rc == eTypeCat::Structure) || (rc == eTypeCat::Container))
         {
@@ -1066,13 +1280,13 @@ namespace
             flagged14 = true;
         }
 
-        // Rule 15: a literal operand must parse against the other operand's declared type.
+        // literal operand must parse against the other operand's declared type.
         if ((leaf.getLhsKind() == eValueSource::Value) && (rhsType.isEmpty() == false))
             checkLiteral(id, eDocElementKind::Condition, rhsType, leaf.getLhs(), 15);
         if ((leaf.getRhsKind() == eValueSource::Value) && (lhsType.isEmpty() == false))
             checkLiteral(id, eDocElementKind::Condition, lhsType, leaf.getRhs(), 15);
 
-        // Rule 13: both operand types known and no implicit widening path between them.
+        // both operand types known and no implicit widening path between them.
         if ((flagged14 == false) && (lhsType.isEmpty() == false) && (rhsType.isEmpty() == false))
         {
             const QString reason = SMTypeCompat::areComparable(lhsType, op, rhsType);
@@ -1080,7 +1294,7 @@ namespace
                 add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
         }
 
-        // Warning 9: a comparison of two design-time constants (literals or Constant sources).
+        // a comparison of two design-time constants (literals or Constant sources).
         const bool lConst = (leaf.getLhsKind() == eValueSource::Value) || (leaf.getLhsKind() == eValueSource::Constant);
         const bool rConst = (leaf.getRhsKind() == eValueSource::Value) || (leaf.getRhsKind() == eValueSource::Constant);
         if (lConst && rConst)
@@ -1094,6 +1308,9 @@ namespace
 
         for (const LevelInfo& info : levels)
             validateLevel(info);
+
+        QList<const SMStateEntry*> ancestors;
+        checkAncestorShadowing(mData.getStates(), ancestors);
 
         checkDuplicateIds();
         checkDuplicateStateNames(levels);
@@ -1149,17 +1366,13 @@ namespace
         checkImports(levels);
         checkWarnings(levels);
         checkGuards();
+        checkDescriptions();
 
         return mIssues;
     }
 
     void Ctx::checkImports(const QList<LevelInfo>& levels)
     {
-        // Guards the recursive "the imported document fails its own validation" check. A cycle
-        // is caught below, but a document reached through a chain that does not close is still
-        // reached once per host, so the depth stops the work from multiplying.
-        static thread_local int _depth = 0;
-
         QSet<QString> brokenAliases;
         for (const IncludeEntry* import : mData.machineImports())
         {
@@ -1201,9 +1414,7 @@ namespace
                 break;
             }
 
-            // The cycle check terminates but does not bound the work: a wide graph is walked on
-            // every pass. The depth limit is what makes that cost predictable, and it gives the
-            // user a rule instead of a slowdown. Painted nesting is not counted here at all.
+            // The cycle check terminates but does not bound the work
             QStringList deep;
             if (SMImportResolver::importDepth(resolution.absolutePath, SMImportResolver::MAX_IMPORT_DEPTH, deep)
                 > SMImportResolver::MAX_IMPORT_DEPTH)
@@ -1236,12 +1447,7 @@ namespace
                         .arg(name, pinned.toString(), actual.toString()));
             }
 
-            // Threading pairing (10.1 rule 25, 10.2 rule 13). Each document is generated by its
-            // own `Threading`, which is what lets one imported machine serve every host that
-            // names it -- but the two settings then have to be compatible. A `Shared` host can be
-            // driven from several threads, so a `Local` import ends up reachable from several
-            // threads with no locking generated anywhere in it. The other way round is only
-            // wasteful: the import locks for a host that never needed it to.
+            // Each document is generated by its own `Threading`
             const SMOverviewData::eThreading hostMode = mData.getOverview().getThreading();
             const SMOverviewData::eThreading impMode  = resolution.document->getOverview().getThreading();
             if ((hostMode == SMOverviewData::eThreading::Shared) && (impMode == SMOverviewData::eThreading::Local))
@@ -1254,23 +1460,6 @@ namespace
                 add(id, eDocElementKind::Import, eSeverity::Warning, 13
                     , vtr("Import '%1' is a Shared machine but this machine is Local: the import pays for locking it cannot need").arg(name));
             }
-
-            if (_depth == 0)
-            {
-                ++_depth;
-                const QList<SMIssue> nested = SMValidator::validate(*resolution.document);
-                --_depth;
-                for (const SMIssue& issue : nested)
-                {
-                    if (issue.severity == eSeverity::Error)
-                    {
-                        add(id, eDocElementKind::Import, eSeverity::Error, 19
-                            , vtr("Imported machine '%1' has errors of its own: %2").arg(name, issue.message));
-                        brokenAliases.insert(name);
-                        break;
-                    }
-                }
-            }
         }
 
         if (brokenAliases.isEmpty())
@@ -1278,8 +1467,6 @@ namespace
             return;
         }
 
-        // The registration carries the finding, and so does every state that hosts it: the user
-        // works on the canvas, and a state whose machine cannot be loaded has to say so there.
         for (const LevelInfo& info : levels)
         {
             for (const SMStateEntry* state : info.level->getElements())
@@ -1295,14 +1482,13 @@ namespace
 
     void Ctx::checkGuards()
     {
-        // The guard checker owns the grammar, the symbol binding and the raw-fragment audit, so
-        // it stays the place those rules live -- but its findings are the document's findings and
-        // are collected here, not merged by whatever happens to be displaying them.
         for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
         {
             SMIssue issue;
-            issue.elementId = finding.transitionId;
-            issue.kind      = eDocElementKind::Transition;
+            issue.elementId = finding.target.getId();
+            issue.kind      = (finding.target.getOwner() == SMGuardRef::eOwner::DoActivity)
+                                    ? eDocElementKind::State
+                                    : eDocElementKind::Transition;
             issue.severity  = finding.severity;
             issue.rule      = SMValidator::RULE_GUARD;
             issue.message   = finding.message;
@@ -1310,6 +1496,69 @@ namespace
             issue.detail    = SMGuardValidation::describe(finding.kind);
             mIssues.append(issue);
         }
+    }
+
+    void Ctx::checkDescriptions()
+    {
+        // A description is what the code generator turns into the element's comment
+        const QString detail = vtr("The code generator writes the description as the comment of the generated element. Add one so the generated code explains itself.");
+        auto note = [this, &detail](uint32_t id, eDocElementKind kind, const QString& message, const QString& description)
+        {
+            if (description.trimmed().isEmpty())
+            {
+                add(id, kind, eSeverity::Info, SMValidator::RULE_MISSING_DESCRIPTION, message, detail);
+            }
+        };
+
+        const SMOverviewData& overview = mData.getOverview();
+        note(overview.getId(), eDocElementKind::Overview
+            , vtr("Machine '%1' has no description").arg(overview.getName()), overview.getDescription());
+
+        for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
+        {
+            if (d == nullptr)
+                continue;
+
+            note(d->getId(), eDocElementKind::DataType, vtr("Data type '%1' has no description").arg(d->getName()), d->getDescription());
+            if (d->isStructure())
+            {
+                for (const FieldEntry& f : static_cast<const DataTypeStructure*>(d)->getElements())
+                    note(f.getId(), eDocElementKind::DataType
+                        , vtr("Field '%1' of data type '%2' has no description").arg(f.getName(), d->getName()), f.getDescription());
+            }
+            else if (d->isEnumeration())
+            {
+                for (const EnumEntry& e : static_cast<const DataTypeEnum*>(d)->getElements())
+                    note(e.getId(), eDocElementKind::DataType
+                        , vtr("Field '%1' of data type '%2' has no description").arg(e.getName(), d->getName()), e.getDescription());
+            }
+        }
+
+        for (const SMAttributeEntry& a : mData.getAttributes().getElements())
+            note(a.getId(), eDocElementKind::Attribute, vtr("Attribute '%1' has no description").arg(a.getName()), a.getDescription());
+
+        for (SMMethodEntry* m : mData.getMethods().getElements())
+        {
+            if (m == nullptr)
+                continue;
+
+            note(m->getId(), eDocElementKind::Method, vtr("Method '%1' has no description").arg(m->getName()), m->getDescription());
+            for (const MethodParameter& p : m->getElements())
+                note(p.getId(), eDocElementKind::Method
+                    , vtr("Parameter '%1' of method '%2' has no description").arg(p.getName(), m->getName()), p.getDescription());
+        }
+
+        for (SMEventEntry* e : mData.getEvents().getElements())
+        {
+            if (e != nullptr)
+                note(e->getId(), eDocElementKind::Event, vtr("Event '%1' has no description").arg(e->getName()), e->getDescription());
+        }
+
+        for (const SMTimerEntry& t : mData.getTimers().getElements())
+            note(t.getId(), eDocElementKind::Timer, vtr("Timer '%1' has no description").arg(t.getName()), t.getDescription());
+
+        for (const ConstantEntry& c : mData.getConstants().getElements())
+            note(c.getId(), eDocElementKind::Constant, vtr("Constant '%1' has no description").arg(c.getName()), c.getDescription());
     }
 
     void Ctx::checkWarnings(const QList<LevelInfo>& levels)
@@ -1383,6 +1632,46 @@ namespace
             }
         };
 
+        // Which state owns each level, so a substate can ask what its ancestors do. A composite is
+        // left by its own transitions while any of its descendants is active, so an ancestor that
+        // leaves takes the substate with it.
+        QHash<uint32_t, uint32_t> ownerOf;
+        for (const LevelInfo& info : levels)
+        {
+            for (const SMStateEntry* st : info.level->getElements())
+            {
+                if (st != nullptr)
+                    ownerOf.insert(st->getId(), info.ownerId);
+            }
+        }
+
+        // A way out of the state: any transition that is not internal. An internal one reacts and
+        // stays, so a state that owns nothing else is still a place the machine cannot leave.
+        auto hasExit = [](const SMStateEntry& state)
+        {
+            for (const SMTransitionEntry* tr : state.getTransitions().getElements())
+            {
+                if ((tr != nullptr) && (tr->isInternal() == false))
+                    return true;
+            }
+
+            return false;
+        };
+
+        auto ancestorExits = [&](uint32_t stateId)
+        {
+            for (uint32_t owner = ownerOf.value(stateId, 0); owner != 0; owner = ownerOf.value(owner, 0))
+            {
+                const SMStateEntry* ancestor = mData.findStateById(owner);
+                if (ancestor == nullptr)
+                    break;
+                if (hasExit(*ancestor))
+                    return true;
+            }
+
+            return false;
+        };
+
         // Incoming (sibling) transition targets per level -- reachability and history re-entry.
         // The second set drops everything the Start state points at: a Start is left once and can
         // never be targeted, so a transition out of it fires exactly once. That is an entry, not a
@@ -1400,7 +1689,7 @@ namespace
                 const bool fromStart = (st->getKind() == SMStateEntry::eStateKind::Start);
                 for (SMTransitionEntry* tr : st->getTransitions().getElements())
                 {
-                    if ((tr == nullptr) || (tr->isExternal() == false))
+                    if ((tr == nullptr) || (tr->hasTarget() == false))
                         continue;
                     targets.insert(tr->getToId());
                     if (fromStart == false)
@@ -1432,11 +1721,38 @@ namespace
                 noteOps(st->getExitList());
                 noteOps(st->getDoList());
 
-                if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
-                    add(sid, eDocElementKind::State, eSeverity::Warning, 1, vtr("State '%1' is unreachable (no incoming transition)").arg(st->getName()));
+                // A Do stop condition is a use of everything it references, exactly as a guard is:
+                // an attribute read only by an `Until` is read, and reporting it unreferenced was
+                // the whole class of wrongness the reference-counting walk exists to avoid.
+                {
+                    GuardUses until;
+                    collectGuardUses(mData, st->getDoUntil().getTree(), until);
+                    attrsRead      += until.attributes;
+                    constsUsed     += until.constants;
+                    conditionsUsed += until.conditions;
+                    typesUsed      += until.types;
+                }
 
-                if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false) && (st->getTransitions().hasElements() == false))
+                // Unreachable: nothing at this level targets it, and the level's Start does not
+                // descend into it either -- the Start's initial transitions are in `targets` too.
+                // A warning and never an error: a half-drawn machine is the normal intermediate
+                // state of an editor, and the author is the one who knows whether it is finished.
+                if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
+                {
+                    const SMStateEntry* owner = (info.isRoot ? nullptr : mData.findStateById(info.ownerId));
+                    const QString where = (owner != nullptr ? QLatin1Char('\'') + owner->getName() + QLatin1Char('\'')
+                                                            : vtr("the root level"));
+                    add(sid, eDocElementKind::State, eSeverity::Warning, 1
+                       , vtr("State '%1' on %2 is unreachable: no transition targets it and no Start enters it").arg(st->getName(), where));
+                }
+
+                // A substate is not trapped by having no transition of its own: an enclosing
+                // composite that reacts to a stimulus carries every descendant out with it.
+                if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false)
+                    && (hasExit(*st) == false) && (ancestorExits(sid) == false))
+                {
                     add(sid, eDocElementKind::State, eSeverity::Warning, 2, vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));
+                }
 
                 if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (repeats.contains(sid) == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 10, vtr("History on '%1' is never re-entered").arg(st->getName()));
@@ -1448,19 +1764,25 @@ namespace
                         continue;
                     const uint32_t tid = tr->getId();
                     const QString& stim = tr->getStimulus();
-                    switch (tr->getStimulusKind())
+                    // An initial transition reacts to nothing, so it is not a use of anything in the
+                    // stimulus registries -- and counting its empty name as one would let a declared
+                    // trigger named "" look referenced.
+                    if (tr->isInitial() == false)
                     {
-                    case SMTransitionEntry::eStimulusKind::Trigger:
-                        triggersUsed.insert(stim);
-                        break;
-                    case SMTransitionEntry::eStimulusKind::Event:
-                        eventsReacted.insert(stim);
-                        reactedEvents.append({ tid, eDocElementKind::Transition, stim });
-                        break;
-                    case SMTransitionEntry::eStimulusKind::Timer:
-                        timersReacted.insert(stim);
-                        reactedTimers.append({ tid, eDocElementKind::Transition, stim });
-                        break;
+                        switch (tr->getStimulusKind())
+                        {
+                        case SMTransitionEntry::eStimulusKind::Trigger:
+                            triggersUsed.insert(stim);
+                            break;
+                        case SMTransitionEntry::eStimulusKind::Event:
+                            eventsReacted.insert(stim);
+                            reactedEvents.append({ tid, eDocElementKind::Transition, stim });
+                            break;
+                        case SMTransitionEntry::eStimulusKind::Timer:
+                            timersReacted.insert(stim);
+                            reactedTimers.append({ tid, eDocElementKind::Transition, stim });
+                            break;
+                        }
                     }
 
                     for (SMConditionEntry* leaf : tr->getConditions().collectLeaves())
@@ -1487,20 +1809,22 @@ namespace
                     // Condition-free means neither a legacy condition row nor a canonical guard.
                     const bool unconditional = tr->getConditions().collectLeaves().isEmpty() && (tr->getGuard().hasContent() == false);
 
-                    if ((tr->isExternal() == false) && tr->getOperations().isEmpty() && unconditional)
+                    if (tr->isInternal() && tr->getOperations().isEmpty() && unconditional)
                         add(tid, eDocElementKind::Transition, eSeverity::Warning, 7, vtr("Internal transition on '%1' has no operations or conditions").arg(stim));
 
-                    const QString key = QString::number(static_cast<int>(tr->getStimulusKind())) + QLatin1Char(':') + stim;
-                    if (unconditionalStimuli.contains(key))
-                        add(tid, eDocElementKind::Transition, eSeverity::Warning, 3, vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
-                    if (unconditional)
-                        unconditionalStimuli.insert(key);
+                    if (tr->isInitial() == false)
+                    {
+                        const QString key = QString::number(static_cast<int>(tr->getStimulusKind())) + QLatin1Char(':') + stim;
+                        if (unconditionalStimuli.contains(key))
+                            add(tid, eDocElementKind::Transition, eSeverity::Warning, 3, vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
+                        if (unconditional)
+                            unconditionalStimuli.insert(key);
+                    }
                 }
             }
         }
 
-        // Declared types referenced by declarations count as used (nested field/element type
-        // references are not followed -- an approximation that only relaxes W4).
+        // Declared types referenced by declarations count as used
         for (SMMethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)
@@ -1513,8 +1837,6 @@ namespace
         for (const SMAttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
         for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
 
-        // Rule 4: declared but unused registry entries.
-        //
         // Severity is decided per element kind, not per rule. An unused method, event, timer, data
         // type or import is behaviour or a contract that was written and then wired to nothing, and
         // that is worth a warning. An unused attribute or constant is just data the machine does not
@@ -1545,10 +1867,6 @@ namespace
         }
         for (const SMAttributeEntry& a : mData.getAttributes().getElements())
         {
-            // Direction is deliberately not judged. An FSM design reads its attributes; the writing
-            // side normally lives in the hand-written service code the generator never sees, so a
-            // read-only or write-only attribute here is the normal case and not a finding. Any
-            // reference at all, whatever its kind, settles the question.
             if ((attrsRead.contains(a.getName()) == false) && (attrsWritten.contains(a.getName()) == false))
                 add(a.getId(), eDocElementKind::Attribute, eSeverity::Info, 4, vtr("Attribute '%1' is never referenced").arg(a.getName()));
         }
@@ -1559,10 +1877,7 @@ namespace
         }
         for (const IncludeEntry* i : mData.machineImports())
         {
-            // An import is always another `.fsml` machine brought in to serve as a submachine, so
-            // one that no state adopts was imported for a purpose that never happened. That is the
-            // one import case worth a warning; C++ includes live in their own registry and carry
-            // no such expectation.
+            // An import is always another `.fsml` machine brought in to serve as a submachine
             if ((i->getAlias().isEmpty() == false) && (importsUsed.contains(i->getAlias()) == false))
                 add(i->getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never used as a submachine").arg(i->getAlias()));
         }
@@ -1595,4 +1910,27 @@ QList<SMIssue> SMValidator::validate(const StateMachineData& data)
 {
     Ctx ctx(data);
     return ctx.run();
+}
+
+eIssueField SMValidator::fieldOfRule(int rule)
+{
+    // Errors keep the plain number; everything advisory is stored shifted, so the two classes
+    // have to be told apart before the number means anything.
+    const bool advisory = (rule > SMValidator::WARNING_RULE_BASE);
+    const int plain = advisory ? (rule - SMValidator::WARNING_RULE_BASE) : rule;
+
+    if (advisory)
+    {
+        return (plain == SMValidator::RULE_MISSING_DESCRIPTION) ? eIssueField::Description : eIssueField::None;
+    }
+
+    switch (plain)
+    {
+    case SMValidator::RULE_DUPLICATE_NAME:
+    case SMValidator::RULE_INVALID_IDENTIFIER:
+        return eIssueField::Name;
+
+    default:
+        return eIssueField::None;
+    }
 }

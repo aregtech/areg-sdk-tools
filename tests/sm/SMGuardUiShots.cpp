@@ -148,9 +148,14 @@ namespace
     {
         for (const SMStateEntry* state : data.getStates().getElements())
         {
-            if ((state != nullptr) && (state->getTransitions().getElementCount() > 0))
+            if (state == nullptr)
+                continue;
+            for (const SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                return state->getTransitions().getElements().at(0)->getId();
+                if ((transition != nullptr) && (transition->isInitial() == false))
+                {
+                    return transition->getId();
+                }
             }
         }
 
@@ -229,7 +234,7 @@ int main(int argc, char** argv)
 
     // ---- the running example B committed into the guard --------------------
     std::printf("[ RUN  ] guardExample\n");
-    setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
+    setGuard(model, transId, QStringLiteral("WalkRequested && (has_waiting(count) || count >= MIN_WAITING) && !IsNightMode"));
     pump(300);
     grab(&bar, grabDir, "u3-guard-open.png");
 
@@ -259,7 +264,7 @@ int main(int argc, char** argv)
     ProbeField probe(model);
     probe.resize(600, 60);
     probe.show();
-    probe.setTransition(transId);
+    probe.setTarget(transId);
     pump(300);
     check(probe.islandCount() == 1, "the probe field folded the island");
 
@@ -303,7 +308,7 @@ int main(int argc, char** argv)
     // tree, one undo restores both) is covered headless in SMArgMapTableTests; here we assert the
     // outline lists the call and selecting it binds the shared table.
     std::printf("[ RUN  ] accordionArguments\n");
-    setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+    setGuard(model, transId, QStringLiteral("has_waiting(count)"));
     pump(300);
 
     // Section order is Generated (0), Conditions (1), Arguments (2) -- Generated sits directly
@@ -326,7 +331,7 @@ int main(int argc, char** argv)
     // section answers "what may I even use?" without typing anything -- restored 2026-07-22.
     std::printf("[ RUN  ] dataCatalog\n");
     {
-        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        setGuard(model, transId, QStringLiteral("has_waiting(count)"));
         pump(300);
         bar.accordion()->setCurrentIndex(3);        // the Data section
         pump(100);
@@ -336,7 +341,7 @@ int main(int argc, char** argv)
         const int all = (data != nullptr) ? data->symbolRowCount() : 0;
         check(all >= 4, "the catalog lists parameters, attributes, constants and conditions");
 
-        data->setFilter(QStringLiteral("HasWaiting"));
+        data->setFilter(QStringLiteral("has_waiting"));
         pump(50);
         check(data->symbolRowCount() < all, "the search box narrows the catalog");
         check(data->symbolRowCount() >= 1, "the searched symbol is still listed");
@@ -352,13 +357,13 @@ int main(int argc, char** argv)
     // makes the developer hunt for the first slot (SM-21 bug-fix, 2026-07-22).
     std::printf("[ RUN  ] firstGhostSelected\n");
     {
-        setGuard(model, transId, QStringLiteral("HasWaiting()"));
+        setGuard(model, transId, QStringLiteral("has_waiting()"));
         pump(300);
         check(field->selectFirstGhost(), "an unmapped formal is found and selected");
         checkEq(field->textCursor().selectedText(), QStringLiteral("<count>")
               , "the selection IS the first unmapped formal's ghost, ready to be typed over");
 
-        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        setGuard(model, transId, QStringLiteral("has_waiting(count)"));
         pump(300);
         check(field->selectFirstGhost() == false, "a fully mapped call leaves the caret alone");
     }
@@ -376,10 +381,10 @@ int main(int argc, char** argv)
         checkEq(SMGuardRender::canvasSummary(data, transId, t1->getGuard()), QStringLiteral("count > 3")
               , "a short plain guard summarises to itself");
 
-        setGuard(model, transId, QStringLiteral("HasWaiting(count) && WalkRequested"));
+        setGuard(model, transId, QStringLiteral("has_waiting(count) && WalkRequested"));
         const SMTransitionEntry* t2 = data.findTransitionById(transId);
         checkEq(SMGuardRender::canvasSummary(data, transId, t2->getGuard())
-              , QStringLiteral("HasWaiting(...) && WalkRequested")
+              , QStringLiteral("has_waiting(...) && WalkRequested")
               , "a condition call keeps its name and collapses its arguments");
 
         setGuard(model, transId, QStringLiteral("{ return count > 3; } && WalkRequested"));
@@ -441,12 +446,12 @@ int main(int argc, char** argv)
     std::printf("[ RUN  ] formFirstParity\n");
     setGuard(model, transId, QString());
     pump(300);
-    field->appendClause(QStringLiteral("&&"), QStringLiteral("HasWaiting(count)"));
+    field->appendClause(QStringLiteral("&&"), QStringLiteral("has_waiting(count)"));
     pump(600);      // the visible-insert delay plus the deferred rebuild
-    checkEq(guardText(model, transId), QStringLiteral("HasWaiting(count)"), "the popover-built clause committed");
+    checkEq(guardText(model, transId), QStringLiteral("has_waiting(count)"), "the popover-built clause committed");
 
     const SMTransitionEntry* transition = model.getData().findTransitionById(transId);
-    SMGuardParser::Result typed = SMGuardParser::parse(model.getData(), transId, QStringLiteral("HasWaiting(count)"));
+    SMGuardParser::Result typed = SMGuardParser::parse(model.getData(), transId, QStringLiteral("has_waiting(count)"));
     check((transition != nullptr) && typed.resolved() && (typed.tree != nullptr)
           && transition->getGuard().isOk()
           && transition->getGuard().getTree()->equals(*typed.tree)
@@ -466,7 +471,7 @@ int main(int argc, char** argv)
         ProbeField chipProbe(model);
         chipProbe.resize(600, 60);
         chipProbe.show();
-        chipProbe.setTransition(transId);
+        chipProbe.setTarget(transId);
         pump(300);
         check(chipProbe.chipCount() == 3, "the probe folded the same three chips");
         chipProbe.selectAll();
@@ -635,7 +640,7 @@ int main(int argc, char** argv)
     check(sig != nullptr, "the field owns a signature card");
     if ((sig != nullptr) && (comp2 != nullptr))
     {
-        for (const QChar c : QStringLiteral("HasWaiting("))
+        for (const QChar c : QStringLiteral("has_waiting("))
         {
             typeChar(field, c.unicode(), QString(c));
         }
@@ -664,13 +669,13 @@ int main(int argc, char** argv)
     // spurious undo step is manufactured (hazard 12.3 / D-SYNC).
     std::printf("[ RUN  ] foreignRenameKeepsTyping\n");
     {
-        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        setGuard(model, transId, QStringLiteral("has_waiting(count)"));
         pump(300);
         check(field->chipCount() >= 1, "the call folded to a chip");
-        checkEq(firstChipName(field), QStringLiteral("HasWaiting"), "the method chip shows its name before the rename");
+        checkEq(firstChipName(field), QStringLiteral("has_waiting"), "the method chip shows its name before the rename");
 
-        const SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("HasWaiting"));
-        check(hw != nullptr, "the demo document has the HasWaiting condition method");
+        const SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("has_waiting"));
+        check(hw != nullptr, "the demo document has the has_waiting condition method");
         if (hw != nullptr)
         {
             const uint32_t methodId = hw->getId();
@@ -686,12 +691,12 @@ int main(int argc, char** argv)
             const int undoBefore = model.getUndoStack().index();
 
             // A foreign rename (Methods page): fires elementChanged(methodId != transitionId).
-            model.getMethodModel().renameMethod(methodId, QStringLiteral("StillWaiting"));
+            model.getMethodModel().renameMethod(methodId, QStringLiteral("still_waiting"));
             pump(40);   // reproject is synchronous; stay well under the 150 ms commit debounce.
 
-            checkEq(firstChipName(field), QStringLiteral("StillWaiting"), "the method chip respelled to the new name (12.3 re-projection)");
+            checkEq(firstChipName(field), QStringLiteral("still_waiting"), "the method chip respelled to the new name (12.3 re-projection)");
             check(field->committableText().contains(QStringLiteral("ReadyChk")), "the half-typed token survived the foreign rename (12.3: no reflow)");
-            check(field->committableText().contains(QStringLiteral("StillWaiting")), "committable text carries the new canonical name, not the stale one");
+            check(field->committableText().contains(QStringLiteral("still_waiting")), "committable text carries the new canonical name, not the stale one");
             check(model.getUndoStack().index() == undoBefore + 1, "the rename is one undo step; the re-projection adds none");
         }
     }
@@ -786,11 +791,11 @@ int main(int argc, char** argv)
     // to empty the Arguments table and lose the mapping. Bindings key on the formal's ID (P1), so
     // the first formal's value must survive the add; the newly declared formal shows up unmapped
     // and its row is tinted amber. This reproduces that scenario end-to-end through the real table.
-    // IsCalmHours is used here rather than HasWaiting: the foreign-rename scenario above renamed
-    // HasWaiting to StillWaiting and does not restore it, so IsCalmHours is the untouched condition.
+    // is_calm_hours is used here rather than has_waiting: the foreign-rename scenario above renamed
+    // has_waiting to still_waiting and does not restore it, so is_calm_hours is the untouched condition.
     std::printf("[ RUN  ] addParamKeepsMapping\n");
     {
-        setGuard(model, transId, QStringLiteral("IsCalmHours(count)"));
+        setGuard(model, transId, QStringLiteral("is_calm_hours(count)"));
         pump(300);
         bar.accordion()->setCurrentIndex(2);        // open the Arguments section.
         pump(150);
@@ -799,12 +804,12 @@ int main(int argc, char** argv)
         check(args != nullptr, "the Arguments table is bound to the referenced condition");
         if (args != nullptr)
         {
-            check(args->rowCount() == 1, "IsCalmHours starts with a single formal");
+            check(args->rowCount() == 1, "is_calm_hours starts with a single formal");
             QComboBox* v0 = qobject_cast<QComboBox*>(args->valueWidget(0));
             check((v0 != nullptr) && (v0->currentText() == QStringLiteral("count")), "formal 0 is mapped to count");
 
-            SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("IsCalmHours"));
-            check(hw != nullptr, "the demo document has the IsCalmHours condition method");
+            SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("is_calm_hours"));
+            check(hw != nullptr, "the demo document has the is_calm_hours condition method");
             if (hw != nullptr)
             {
                 // Add a SECOND formal on the Methods side: this fires elementChanged for the method

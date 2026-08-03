@@ -81,13 +81,21 @@ namespace
                 if (treeReferences(guard.getTree(), symbolId))
                 {
                     QString location = state->getName() + QStringLiteral(" : ") + transition->getStimulus();
-                    if (transition->isExternal())
+                    if (transition->hasTarget())
                     {
                         location += QStringLiteral(" -> ") + transition->getTargetName();
                     }
 
-                    out.append({ transition->getId(), location });
+                    out.append({ SMGuardRef(transition->getId()), location });
                 }
+            }
+
+            // The Do stop condition is searched for the same reason the guards are: it binds by
+            // ID, so it follows a rename -- and a delete that ignored it would leave it dangling.
+            if ((state->getDoList().isEmpty() == false) && treeReferences(state->getDoUntil().getTree(), symbolId))
+            {
+                out.append({ SMGuardRef::doActivity(state->getId())
+                           , state->getName() + QStringLiteral(" : do/") });
             }
 
             if (state->hasNestedStates())

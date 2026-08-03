@@ -532,10 +532,15 @@ void SMGuard::clear()
 
 void SMGuard::writeToXml(QXmlStreamWriter& xml) const
 {
+    writeToXml(xml, XmlSM::xmlSMElementGuard);
+}
+
+void SMGuard::writeToXml(QXmlStreamWriter& xml, QLatin1StringView element) const
+{
     if (mState == eState::Empty)
         return;
 
-    xml.writeStartElement(XmlSM::xmlSMElementGuard);
+    xml.writeStartElement(element);
     xml.writeAttribute(XmlSM::xmlSMAttributeGuardState, toString(mState));
 
     if (mState == eState::Draft)
@@ -564,7 +569,12 @@ void SMGuard::writeToXml(QXmlStreamWriter& xml) const
 
 bool SMGuard::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() != XmlSM::xmlSMElementGuard)
+    return readFromXml(xml, XmlSM::xmlSMElementGuard);
+}
+
+bool SMGuard::readFromXml(QXmlStreamReader& xml, QLatin1StringView element)
+{
+    if (xml.name() != element)
         return false;
 
     clear();

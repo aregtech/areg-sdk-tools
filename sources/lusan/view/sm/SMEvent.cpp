@@ -33,6 +33,8 @@
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMWhereUsed.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include "lusan/view/sm/SMEventDetails.hpp"
 #include "lusan/view/sm/SMEventList.hpp"
 #include "lusan/view/sm/SMEventParamDetails.hpp"
@@ -211,6 +213,13 @@ void SMEvent::setupSignals()
     mTimerDetails->ctrlDescription()->installEventFilter(this);
 
     DocModelNotifier& notifier = mEventModel.getNotifier();
+
+    // The three forms carry document text. Typing in any of them marks the document changed at
+    // once, even though the text itself is handed over when the field loses the focus.
+    PendingEditWatcher::watchField(mDetails, notifier);
+    PendingEditWatcher::watchField(mParamDetails, notifier);
+    PendingEditWatcher::watchField(mTimerDetails, notifier);
+
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMEvent::onNotifierChanged);
     connect(&notifier, &DocModelNotifier::elementAdded  , this, [this](uint32_t, eDocElementKind kind) { if ((kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)) onNotifierChanged(); });
     connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if ((kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)) onNotifierChanged(); });
@@ -241,34 +250,38 @@ void SMEvent::setupSignals()
     connect(&notifier, &DocModelNotifier::listReordered , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
 }
 
+void SMEvent::commitPendingEdits(void)
+{
+    // Each form holds the text of what is selected right now, so the selection decides which of
+    // them has something to give. Handing over an unchanged text does nothing.
+    SMEventEntry* ev = currentEvent();
+    if ((ev != nullptr) && (currentKind() == eRowKind::Event))
+    {
+        mEventModel.setDescription(ev->getId(), mDetails->ctrlDescription()->toPlainText());
+    }
+
+    const uint32_t paramId = currentParamId();
+    if ((ev != nullptr) && (paramId != 0))
+    {
+        mEventModel.setParamDescription(ev, paramId, mParamDetails->ctrlDescription()->toPlainText());
+    }
+
+    const uint32_t timerId = currentTimerId();
+    if (timerId != 0)
+    {
+        mTimerModel.setDescription(timerId, mTimerDetails->ctrlDescription()->toPlainText());
+    }
+}
+
 bool SMEvent::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::FocusOut)
     {
-        if (watched == mDetails->ctrlDescription())
+        if ((watched == mDetails->ctrlDescription())
+            || (watched == mParamDetails->ctrlDescription())
+            || (watched == mTimerDetails->ctrlDescription()))
         {
-            SMEventEntry* ev = currentEvent();
-            if ((ev != nullptr) && (currentKind() == eRowKind::Event))
-            {
-                mEventModel.setDescription(ev->getId(), mDetails->ctrlDescription()->toPlainText());
-            }
-        }
-        else if (watched == mParamDetails->ctrlDescription())
-        {
-            SMEventEntry* ev = currentEvent();
-            const uint32_t paramId = currentParamId();
-            if ((ev != nullptr) && (paramId != 0))
-            {
-                mEventModel.setParamDescription(ev, paramId, mParamDetails->ctrlDescription()->toPlainText());
-            }
-        }
-        else if (watched == mTimerDetails->ctrlDescription())
-        {
-            const uint32_t timerId = currentTimerId();
-            if (timerId != 0)
-            {
-                mTimerModel.setDescription(timerId, mTimerDetails->ctrlDescription()->toPlainText());
-            }
+            commitPendingEdits();
         }
     }
 
@@ -870,14 +883,65 @@ bool SMEvent::currentReference(SMReferences::eTarget& target, uint32_t& id, QStr
     return false;
 }
 
-void SMEvent::revealEvent(uint32_t id)
+void SMEvent::revealEvent(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
-    selectEvent(id);
+    // A finding about a payload parameter carries the parameter's own id, so an event lookup
+    // that only tries the top-level rows would come back empty and reveal nothing.
+    uint32_t eventId = id;
+    uint32_t paramId = 0;
+    if (mEventModel.findEvent(id) == nullptr)
+    {
+        for (SMEventEntry* event : mEventModel.getEvents())
+        {
+            if ((event != nullptr) && (mEventModel.findParam(event, id) != nullptr))
+            {
+                eventId = event->getId();
+                paramId = id;
+                break;
+            }
+        }
+    }
+
+    if (selectEvent(eventId, paramId) == false)
+    {
+        return;
+    }
+
+    if (paramId != 0)
+    {
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mParamDetails->ctrlName());        break;
+        case eIssueField::Type:         WidgetHighlight::reveal(mParamDetails->ctrlTypes());       break;
+        case eIssueField::Value:        WidgetHighlight::reveal(mParamDetails->ctrlValue());       break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mParamDetails->ctrlDescription()); break;
+        default:                                                                                   break;
+        }
+    }
+    else
+    {
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+        default:                                                                              break;
+        }
+    }
 }
 
-void SMEvent::revealTimer(uint32_t id)
+void SMEvent::revealTimer(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
-    selectTimer(id);
+    if (selectTimer(id) == false)
+    {
+        return;
+    }
+
+    switch (field)
+    {
+    case eIssueField::Name:         WidgetHighlight::reveal(mTimerDetails->ctrlName());        break;
+    case eIssueField::Description:  WidgetHighlight::reveal(mTimerDetails->ctrlDescription()); break;
+    default:                                                                                   break;
+    }
 }
 
 void SMEvent::onRemoveClicked()

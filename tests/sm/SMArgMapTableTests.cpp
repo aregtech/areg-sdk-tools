@@ -92,7 +92,7 @@ namespace
         ready->setImplement(SMMethodEntry::eImplement::Handler);       // parameterless, returns bool
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
-        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u);
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u, SMTransitionEntry::eTransitionKind::Internal);
 
         SMActionCall* call = new SMActionCall();
         call->setAction(QStringLiteral("Walk"));
@@ -642,7 +642,7 @@ int main(int argc, char* argv[])
         walk->addParam(QStringLiteral("waiting"))->setType(QStringLiteral("uint32"));   // required, no default
 
         SMStateEntry*      root2 = d2.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
-        SMTransitionEntry* t2    = root2->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("go"), 0u);
+        SMTransitionEntry* t2    = root2->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("go"), 0u, SMTransitionEntry::eTransitionKind::Internal);
         SMActionCall*      c2    = new SMActionCall();
         c2->setAction(QStringLiteral("Walk"));
         t2->getOperations().addOperation(c2);

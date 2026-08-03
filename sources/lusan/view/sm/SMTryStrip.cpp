@@ -551,7 +551,10 @@ QString SMTryStrip::siblingLabel(uint32_t transitionId) const
         return QString();
     }
 
-    return transition->isExternal() ? (QStringLiteral("-> ") + transition->getTargetName()) : tr("(internal)");
+    if (transition->hasTarget())
+        return QStringLiteral("-> ") + transition->getTargetName();
+
+    return transition->isInternal() ? tr("(internal)") : tr("(not connected)");
 }
 
 QString SMTryStrip::winnerText(SMGuardEval::eTruth selfTruth, const SMGuardEval::Inputs& inputs) const

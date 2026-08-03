@@ -37,8 +37,8 @@ class SMStateEntry;
 /**
  * \class   SMCreateTransitionCommand
  * \brief   Creates a transition on its source state as one undo step: appends the entry to
- *          the source state's transition list and, for an external transition, creates its
- *          Edge layout at the drop geometry. Internal transitions (no target) carry no edge.
+ *          the source state's transition list and, when it has a target, creates its Edge
+ *          layout at the drop geometry. Internal transitions carry no edge.
  *          The transition's ID is allocated by the insertion; read it back with
  *          getTransitionId() after the push.
  **/
@@ -49,7 +49,8 @@ public:
                               , SMStateEntry& source, SMTransitionEntry::eStimulusKind kind
                               , const QString& stimulus, uint32_t targetId
                               , const QList<QPointF>& edgePoints
-                              , const QString& text, QUndoCommand* parent = nullptr);
+                              , const QString& text, QUndoCommand* parent = nullptr
+                              , SMTransitionEntry::eTransitionKind transKind = SMTransitionEntry::eTransitionKind::External);
 
     /**
      * \brief   The created transition's element ID; valid after the first redo (push).
@@ -74,9 +75,36 @@ public:
 };
 
 /**
+ * \class   SMSetTransitionKindCommand
+ * \brief   Sets what a transition IS -- \ref SMTransitionEntry::eTransitionKind. Switching to
+ *          Internal drops the target (an internal transition has none by definition) and undo
+ *          puts it back, so the round trip through the combo never loses where the edge pointed.
+ **/
+class SMSetTransitionKindCommand : public SMCommand
+{
+public:
+    SMSetTransitionKindCommand(  StateMachineData& data, DocModelNotifier& notifier
+                               , uint32_t transitionId, SMTransitionEntry::eTransitionKind kind
+                               , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(SMTransitionEntry::eTransitionKind kind, uint32_t targetId);
+
+private:
+    uint32_t                            mId;                //!< The transition's ID.
+    SMTransitionEntry::eTransitionKind  mNewKind;
+    SMTransitionEntry::eTransitionKind  mOldKind { SMTransitionEntry::eTransitionKind::External };
+    uint32_t                            mOldTarget { 0 };   //!< The target Internal drops, restored on undo.
+    bool                                mCaptured { false };
+};
+
+/**
  * \class   SMSetTransitionTargetCommand
- * \brief   Sets or clears a transition's target state (`To`). A target ID of 0 makes the
- *          transition internal; a non-zero one makes it external (target reconnection).
+ * \brief   Sets or clears a transition's target state (`To`). A target ID of 0 leaves the
+ *          transition unconnected -- it does NOT change the kind; a non-zero one (re)connects it.
  **/
 class SMSetTransitionTargetCommand : public SMCommand
 {
@@ -150,6 +178,44 @@ private:
     int                 mOldIndex { -1 };//!< The recorded position in the old list.
     SMLayoutEdge        mEdge;          //!< The captured Edge layout re-keyed across the move.
     bool                mHadEdge { false };
+};
+
+/**
+ * \class   SMMoveTransitionCommand
+ * \brief   Moves a transition to another position in its source state's list -- which IS its
+ *          priority, since document order decides which of several transitions on one stimulus
+ *          runs (see \ref SMTransitionData and the shadowing rule in SMValidator).
+ *
+ *          It moves the ENTRY and leaves every ID alone. The generic \ref TDocReorderCommand
+ *          cannot serve here: it swaps positions through `TEDataContainer::swapElements`, which
+ *          exchanges the two entries' IDs as well, so the layout `Edge` keyed by transition ID,
+ *          the guard's parameter scope and any queued command would follow the number onto the
+ *          wrong transition. \ref TEDataContainer::moveElement is the ID-preserving primitive.
+ *
+ *          A move is its own inverse in the obvious way -- undo moves it back -- and it notifies
+ *          `listReordered(stateId, Transition)`, which the canvas already answers by rebuilding
+ *          the state bodies and refreshing the edges.
+ **/
+class SMMoveTransitionCommand : public SMCommand
+{
+public:
+    SMMoveTransitionCommand(  StateMachineData& data, DocModelNotifier& notifier
+                            , SMStateEntry& owner, uint32_t transitionId, int newIndex
+                            , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(int from, int to);
+
+private:
+    SMTransitionData&   mList;          //!< The owning state's transition list.
+    uint32_t            mStateId;       //!< The owning state, for the notification.
+    uint32_t            mId;            //!< The transition being moved.
+    int                 mNewIndex;      //!< Where it goes.
+    int                 mOldIndex { -1 };//!< Where it came from, captured on the first redo.
+    bool                mCaptured { false };
 };
 
 #endif  // LUSAN_MODEL_SM_SMTRANSITIONCOMMANDS_HPP

@@ -242,11 +242,13 @@ private:
 
 /**
  * \class   SMGuard
- * \brief   A transition's guard state: `empty` (no guard, the transition always fires),
- *          `ok` (a fully resolved expression tree), or `draft` (the user's raw text kept
- *          losslessly, plus an optional last-good tree). Persisted under `<Guard>`; the
- *          absence of the element means an empty guard. `<Rendered>` is a human-readable
- *          cache written on save and ignored (semantically) on load -- the tree is the truth.
+ * \brief   A resolved boolean predicate: `empty` (none), `ok` (a fully resolved expression
+ *          tree), or `draft` (the user's raw text kept losslessly, plus an optional last-good
+ *          tree). Two things in a document are one of these: a transition's guard, persisted
+ *          under `<Guard>`, and a `DoList`'s stop condition, persisted under `<Until>` -- which
+ *          is why the XML element name is a parameter rather than a constant. The absence of
+ *          the element means empty. `<Rendered>` is a human-readable cache written on save and
+ *          ignored (semantically) on load -- the tree is the truth.
  **/
 class SMGuard
 {
@@ -315,7 +317,7 @@ public:
 // XML persistence
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< True when a `<Guard>` element is written (i.e. the guard is not empty).
+    //!< True when the element is written at all (i.e. the predicate is not empty).
     inline bool hasContent() const;
 
     /**
@@ -326,10 +328,20 @@ public:
     void writeToXml(QXmlStreamWriter& xml) const;
 
     /**
+     * \brief   The same, under the element name \p element. A `DoList`'s stop condition is
+     *          the very same value written as `<Until>`, so it gets the very same writer
+     *          rather than a second one that could drift from it.
+     **/
+    void writeToXml(QXmlStreamWriter& xml, QLatin1StringView element) const;
+
+    /**
      * \brief   Reads a `<Guard>` element (the reader must be positioned on its start
      *          element). Replaces this guard's content.
      **/
     bool readFromXml(QXmlStreamReader& xml);
+
+    //!< The same, expecting the element name \p element (`<Until>` for a `DoList`).
+    bool readFromXml(QXmlStreamReader& xml, QLatin1StringView element);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -339,6 +351,71 @@ private:
     SMGuardNode*    mTree;       //!< The owned tree (Ok tree / Draft last-good / nullptr).
     QString         mDraftText;  //!< The lossless raw text (Draft only).
     QString         mRendered;   //!< The cached display text.
+};
+
+//////////////////////////////////////////////////////////////////////////
+// SMGuardRef class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \class   SMGuardRef
+ * \brief   Which guard of the document an editor or an undo command is talking about. A
+ *          document holds two kinds: a transition's `<Guard>`, and a state `DoList`'s
+ *          `<Until>` stop condition. Both are an \ref SMGuard, both are edited on the same
+ *          surface and both are changed by the same command, so what they need is not two
+ *          implementations but one address that says which of them is meant.
+ *
+ *          A bare transition id converts implicitly, which is the spelling every existing
+ *          call site already uses -- the ref is what that id always meant.
+ *
+ *          \ref getScopeId is the difference that matters to the parser and the renderer:
+ *          a transition resolves stimulus parameters (its own), a `DoList` resolves none.
+ *          A `do/` activity runs on a timer with no stimulus in hand, so a parameter name
+ *          simply has nothing to bind to there, and scope 0 says exactly that.
+ **/
+class SMGuardRef
+{
+public:
+    /**
+     * \enum    eOwner
+     * \brief   What owns the addressed guard.
+     **/
+    enum class eOwner
+    {
+          None          //!< Addresses nothing (the cleared editor).
+        , Transition    //!< A transition's `<Guard>`.
+        , DoActivity    //!< A state `DoList`'s `<Until>` stop condition.
+    };
+
+    //!< Addresses the `<Until>` of the `DoList` owned by the state \p stateId.
+    static inline SMGuardRef doActivity(uint32_t stateId);
+
+public:
+    inline SMGuardRef();
+    //!< The transition-id spelling: a bare id has always meant "that transition's guard".
+    inline SMGuardRef(uint32_t transitionId);
+
+    inline eOwner getOwner() const;
+    inline uint32_t getId() const;
+    inline bool isValid() const;
+
+    /**
+     * \brief   The transition id that names the stimulus parameter scope of this guard: the
+     *          transition itself, or 0 for a `DoList` (which has no stimulus, so no parameter
+     *          is in scope). Pass it wherever \ref SMGuardParser / \ref SMGuardRender ask for
+     *          a transition id.
+     **/
+    inline uint32_t getScopeId() const;
+
+    inline bool operator == (const SMGuardRef& other) const;
+    inline bool operator != (const SMGuardRef& other) const;
+
+private:
+    inline SMGuardRef(eOwner owner, uint32_t id);
+
+private:
+    eOwner      mOwner; //!< What owns the addressed guard.
+    uint32_t    mId;    //!< The owning element's document ID (0 = none).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -517,6 +594,63 @@ inline void SMGuard::setRendered(const QString& rendered)
 inline bool SMGuard::hasContent() const
 {
     return (mState != eState::Empty);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMGuardRef inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline SMGuardRef::SMGuardRef()
+    : mOwner(eOwner::None)
+    , mId   (0u)
+{
+}
+
+inline SMGuardRef::SMGuardRef(uint32_t transitionId)
+    : mOwner(transitionId != 0u ? eOwner::Transition : eOwner::None)
+    , mId   (transitionId)
+{
+}
+
+inline SMGuardRef::SMGuardRef(eOwner owner, uint32_t id)
+    : mOwner(id != 0u ? owner : eOwner::None)
+    , mId   (id)
+{
+}
+
+inline SMGuardRef SMGuardRef::doActivity(uint32_t stateId)
+{
+    return SMGuardRef(eOwner::DoActivity, stateId);
+}
+
+inline SMGuardRef::eOwner SMGuardRef::getOwner() const
+{
+    return mOwner;
+}
+
+inline uint32_t SMGuardRef::getId() const
+{
+    return mId;
+}
+
+inline bool SMGuardRef::isValid() const
+{
+    return (mOwner != eOwner::None);
+}
+
+inline uint32_t SMGuardRef::getScopeId() const
+{
+    return (mOwner == eOwner::Transition) ? mId : 0u;
+}
+
+inline bool SMGuardRef::operator == (const SMGuardRef& other) const
+{
+    return ((mOwner == other.mOwner) && (mId == other.mId));
+}
+
+inline bool SMGuardRef::operator != (const SMGuardRef& other) const
+{
+    return ((mOwner != other.mOwner) || (mId != other.mId));
 }
 
 #endif  // LUSAN_DATA_SM_SMGUARDTREE_HPP

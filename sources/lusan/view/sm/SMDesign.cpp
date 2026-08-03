@@ -41,6 +41,7 @@
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
+#include "lusan/view/sm/SMInternalDialog.hpp"
 #include "lusan/view/sm/SMOperationsDialog.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
@@ -370,6 +371,24 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     {
         // Ctrl+Shift link on one state-body operation row: navigate to what that row references.
         gotoDefinitionForRefs(refs, QCursor::pos());
+    });
+    connect(mSceneManager, &SMSceneManager::signalInternalEditRequested, this, [this](uint32_t transitionId)
+    {
+        // Ctrl+Shift link on the `on <stimulus>` row of an internal transition: surface the
+        // Properties panel on the state's Internal tab, with that transition selected. An internal
+        // transition draws no edge, so this row is the only thing on the canvas that stands for it.
+        if (mProperties == nullptr)
+        {
+            return;
+        }
+
+        if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
+        {
+            mPropertiesDock->show();
+            mPropertiesDock->raise();
+        }
+
+        mProperties->focusInternal(transitionId);
     });
     connect(mView->horizontalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
     connect(mView->verticalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
@@ -730,7 +749,12 @@ void SMDesign::setupActions()
 
     // An internal transition runs its operations on the stimulus without exit/entry
     // and no state change; it is shown as a row in the state body, not as an edge.
-    mActAddInternal = new QAction(tr("Add Internal Transition"), this);
+    mActAddInternal = new QAction(SMToolIcons::icon(SMToolIcons::eIcon::AddInternal)
+                                 , tr("Add Internal Transition"), this);
+    // NOT an arming tool. Add State and Add Transition change the pointer and wait for a click or a
+    // drag, because what they create has geometry; an internal transition has none -- it is a row in
+    // a state body -- so this acts at once on the selected state and the pointer never changes.
+    mActAddInternal->setToolTip(tr("Add an internal transition to the selected state"));
     connect(mActAddInternal, &QAction::triggered, this, &SMDesign::addInternalToSelection);
 
     mActSetStimulus = new QAction(tr("Set Stimulus..."), this);
@@ -1065,7 +1089,7 @@ QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
     // the declarations right after them, then alignment, level navigation, color, grid,
     // edit, and zoom. The Design group order matches the canvas context menu.
     QList<ToolGroup> groups;
-    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddNote, mActAddFinal } });
+    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddInternal, mActAddNote, mActAddFinal } });
     groups.append(ToolGroup{ tr("Declare"),   declareActions() });
     groups.append(ToolGroup{ tr("Alignment"), { mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
                                                , mActDistributeH, mActDistributeV } });
@@ -1095,6 +1119,7 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
     QList<ToolGroup> groups;
     groups.append(ToolGroup{ tr("Design"),    { make(eIcon::AddState, tr("Add State"))
                                               , make(eIcon::AddTransition, tr("Add Transition"))
+                                              , make(eIcon::AddInternal, tr("Add Internal Transition"))
                                               , make(eIcon::AddNote, tr("Add Note"))
                                               , make(eIcon::AddFinalState, tr("Add Final State")) } });
     groups.append(ToolGroup{ tr("Declare"),   { make(eIcon::NewTrigger, tr("New Trigger"))
@@ -1135,29 +1160,22 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
 
 void SMDesign::populateDesignMenu(QMenu& menu)
 {
+    // What the author reaches for while DESIGNING leads the menu, in the order a machine is built:
+    // the things placed on the canvas, then what is declared for them, then moving between levels.
+    // Everything that adjusts the drawing rather than the machine -- colour, alignment, grid, zoom --
+    // is one step down in submenus: each is a set of siblings that is used rarely and read as a
+    // group, and flat they crowded out the entries used constantly. Shortcuts keep working from
+    // inside a submenu, and the toolbar still offers every one of them at top level.
     menu.addAction(mActAddState);
     menu.addAction(mActAddFinal);
     menu.addAction(mActAddTransition);
+    menu.addAction(mActAddInternal);
     menu.addAction(mActAddNote);
     menu.addSeparator();
-    menu.addAction(mActStateColor);
-    menu.addAction(mActEdgeColor);
-    menu.addAction(mActNoteColor);
-    // Reachable without right-clicking the transition; disabled unless exactly one is selected.
+    // The edge shape stays at top level. It is not colour and it is not alignment -- it changes what
+    // the selected transition IS on the canvas -- and it is here so it is reachable without
+    // right-clicking the edge itself. Disabled unless exactly one transition is selected.
     menu.addAction(shapeToggleAction(selectedEdge()));
-    menu.addSeparator();
-    menu.addAction(mActAlignLeft);
-    menu.addAction(mActAlignRight);
-    menu.addAction(mActAlignTop);
-    menu.addAction(mActAlignBottom);
-    menu.addAction(mActDistributeH);
-    menu.addAction(mActDistributeV);
-    menu.addSeparator();
-    menu.addAction(mActToggleGrid);
-    menu.addAction(mActGridDots);
-    menu.addAction(mActGridDotSize);
-    menu.addAction(mActToggleSnap);
-    menu.addAction(mActGridSize);
     menu.addSeparator();
     QMenu* declareMenu = menu.addMenu(tr("Add &Declaration"));
     declareMenu->addActions(declareActions());
@@ -1173,10 +1191,34 @@ void SMDesign::populateDesignMenu(QMenu& menu)
     menu.addAction(mActGoToParent);
     menu.addAction(mActCenterMachine);
     menu.addSeparator();
-    menu.addAction(mActZoomIn);
-    menu.addAction(mActZoomOut);
-    menu.addAction(mActZoomReset);
-    menu.addAction(mActZoomFit);
+
+    QMenu* colorMenu = menu.addMenu(tr("&Colour"));
+    colorMenu->addAction(mActStateColor);
+    colorMenu->addAction(mActEdgeColor);
+    colorMenu->addAction(mActNoteColor);
+
+    QMenu* alignMenu = menu.addMenu(tr("&Align"));
+    alignMenu->addAction(mActAlignLeft);
+    alignMenu->addAction(mActAlignRight);
+    alignMenu->addAction(mActAlignTop);
+    alignMenu->addAction(mActAlignBottom);
+    alignMenu->addSeparator();
+    alignMenu->addAction(mActDistributeH);
+    alignMenu->addAction(mActDistributeV);
+
+    QMenu* gridMenu = menu.addMenu(tr("&Grid"));
+    gridMenu->addAction(mActToggleGrid);
+    gridMenu->addAction(mActGridDots);
+    gridMenu->addAction(mActGridDotSize);
+    gridMenu->addAction(mActToggleSnap);
+    gridMenu->addAction(mActGridSize);
+
+    QMenu* zoomMenu = menu.addMenu(tr("&Zoom"));
+    zoomMenu->addAction(mActZoomIn);
+    zoomMenu->addAction(mActZoomOut);
+    zoomMenu->addAction(mActZoomReset);
+    zoomMenu->addAction(mActZoomFit);
+
     menu.addSeparator();
     menu.addAction(mActSelectAll);
     menu.addAction(mActRename);
@@ -1237,12 +1279,51 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
             state->setSelected(true);
         }
 
+        // Ordered by how often an author reaches for each group, most-used first, with the one
+        // destructive entry alone at the bottom:
+        //   1. rename -- the state's own identity, and the only entry that acts on the state itself;
+        //   2. what the state DOES: enter, exit and internal behaviour (the reason a state is
+        //      right-clicked at all in a finished machine);
+        //   3. what is ADDED to it: an internal transition, a substate, a submachine, history;
+        //   4. where its names are DECLARED -- navigation, frequent while reading;
+        //   5. clipboard;  6. appearance (colour, notes);  7. delete.
+        const uint32_t stateId = state->getElementId();
+        menu.addAction(mActRename);
+        menu.addSeparator();
+        connect(menu.addAction(tr("Enter Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, true); });
+        connect(menu.addAction(tr("Exit Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, false); });
+
+        // Internal transitions are the fourth thing a state does without leaving itself, so the
+        // entry sits beside Enter and Exit ALWAYS -- not only when the pointer happens to be on the
+        // `on <stimulus>` row. Right-clicking the title used to offer nothing, which left the
+        // construct unreachable from the very place the author was pointing at it.
+        // Right-clicking that row does one thing more: it preselects the transition under the
+        // pointer, so the dialog opens on the one that was clicked.
+        const SMStateItem::BodyRow* row = state->bodyRowAtPos(state->mapFromScene(scenePos));
+        const uint32_t rowTransition = (row != nullptr) ? row->transitionId : 0u;
+        connect(menu.addAction(tr("Internal Transitions...")), &QAction::triggered, this
+               , [this, stateId, rowTransition]() { openInternalDialog(stateId, rowTransition); });
+
+        // Clicking the row EDITS the transition -- that is what an author asking "what is this?"
+        // wants -- so the stimulus declaration it also names is offered here, as the secondary
+        // answer, and only when the pointer is actually on a row that names one.
+        menu.addSeparator();
         menu.addAction(mActAddInternal);
         menu.addAction(mActAddSubstate);
         menu.addAction(mActEnterSubmachine);
         menu.addAction(mActAddSubmachine);
         menu.addAction(mActRemoveSubmachine);
         addHistoryMenu(menu, state->getElementId());
+        menu.addSeparator();
+
+        if ((rowTransition != 0u) && (row->refs.isEmpty() == false))
+        {
+            const QList<SMReferences::Ref> rowRefs = row->refs;
+            connect(menu.addAction(tr("Go to Stimulus Declaration")), &QAction::triggered, this
+                   , [this, rowRefs]() { gotoDefinitionForRefs(rowRefs, QCursor::pos()); });
+        }
+
+        addGotoDeclarationMenu(menu, state->getElementId(), true);
         menu.addSeparator();
         menu.addAction(mActCut);
         menu.addAction(mActCopy);
@@ -1251,12 +1332,6 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActStateColor);
         addNoteMenuEntries(menu, state->getElementId(), true);
         menu.addSeparator();
-        const uint32_t stateId = state->getElementId();
-        connect(menu.addAction(tr("Enter Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, true); });
-        connect(menu.addAction(tr("Exit Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, false); });
-        addGotoDeclarationMenu(menu, state->getElementId(), true);
-        menu.addSeparator();
-        menu.addAction(mActRename);
         menu.addAction(mActDelete);
     }
     else if (edge != nullptr)
@@ -1388,6 +1463,20 @@ void SMDesign::openStateOperationsDialog(uint32_t stateId, bool entry)
     SMOperationList& list = entry ? state->getEntryList() : state->getExitList();
     const QString title = (entry ? tr("On Enter: %1") : tr("On Exit: %1")).arg(state->getName());
     SMOperationsDialog dialog(mModel, title, stateId, eDocElementKind::State, 0u, state, &list, this);
+    dialog.exec();
+}
+
+void SMDesign::openInternalDialog(uint32_t stateId, uint32_t transitionId /*= 0u*/)
+{
+    const SMStateEntry* state = mModel.getData().findStateById(stateId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    // The same shape as On Enter / On Exit above, hosting the same editor the Properties panel's
+    // `Internal` tab embeds -- so the three state activities are opened, titled and edited alike.
+    SMInternalDialog dialog(mModel, tr("Internal: %1").arg(state->getName()), stateId, transitionId, this);
     dialog.exec();
 }
 
@@ -1732,14 +1821,17 @@ void SMDesign::reorderSelectedTransition(bool raise)
         return;
     }
 
-    // The swap keeps IDs position-keyed; the moved content ends up under the other slot's
-    // ID, so re-select that ID to keep the selection on the transition the user moved.
-    const uint32_t followId = list.getElements().at(other)->getId();
+    // `SMMoveTransitionCommand`, not the generic `TDocReorderCommand`. The generic one swaps through
+    // `TEDataContainer::swapElements`, which exchanges the two entries' IDs as well as their
+    // positions -- and the layout `Edge` that carries this transition's waypoints and label position
+    // is keyed by that ID, so a raise silently traded the two edges' geometry. Re-selecting the
+    // other slot's ID used to paper over the visible half of that (the selection); the geometry was
+    // never put right. A move keeps every ID with its own transition, so the selection needs no
+    // fixing up either.
     const QString text = raise ? tr("Raise transition priority") : tr("Lower transition priority");
-    mModel.getUndoStack().push(new TDocReorderCommand<SMTransitionEntry*, DocumentElem>(  mModel.getNotifier(), list
-                                                                                        , index, other, owner->getId()
-                                                                                        , eDocElementKind::Transition, text));
-    mModel.getSelectionModel().setSelection(QList<uint32_t>{ followId });
+    mModel.getUndoStack().push(new SMMoveTransitionCommand(data, mModel.getNotifier(), *owner
+                                                          , transitionId, other, text));
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ transitionId });
 }
 
 void SMDesign::setStimulusOfSelection()
@@ -1824,7 +1916,8 @@ void SMDesign::addInternalToSelection()
     mModel.getUndoStack().push(new SMCreateTransitionCommand(  data, mModel.getNotifier(), *state
                                                              , SMTransitionEntry::eStimulusKind::Trigger, QString()
                                                              , 0u, QList<QPointF>()
-                                                             , tr("Add internal transition to %1").arg(state->getName())));
+                                                             , tr("Add internal transition to %1").arg(state->getName())
+                                                             , nullptr, SMTransitionEntry::eTransitionKind::Internal));
 }
 
 void SMDesign::addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge)
@@ -2822,7 +2915,7 @@ void SMDesign::revealOnCanvas(uint32_t levelId, uint32_t canvasElementId)
     }
 }
 
-void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind)
+void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule /*= 0*/)
 {
     const SMStateData& root = mModel.getData().getStates();
     const uint32_t rootLevel = mSceneManager->getRootLevel();
@@ -2869,7 +2962,7 @@ void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind)
 
     default:
         // A registry entry: its editor is another page, owned by the window.
-        emit signalNavigateToPage(kind);
+        emit signalNavigateToPage(kind, elementId, rule);
         break;
     }
 }
@@ -2906,8 +2999,15 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
                 continue;
             }
 
+            // An INITIAL transition (one leaving the Start pseudo-state) is not an element the
+            // author looks for by the name of the state it enters: it has no stimulus of its own,
+            // and it is FIRST in document order, so matching it on the target name would put the
+            // level's entry marker ahead of the very state that was typed. It still matches by
+            // its own ID.
+            const bool byTargetName = (state->isPseudoStart() == false)
+                                    && matchText(transition->getTargetName(), query);
             if (matchText(transition->getStimulus(), query)
-                || matchText(transition->getTargetName(), query)
+                || byTargetName
                 || (numeric && (transition->getId() == queryId)))
             {
                 out.append({ levelId, transition->getId(), false });

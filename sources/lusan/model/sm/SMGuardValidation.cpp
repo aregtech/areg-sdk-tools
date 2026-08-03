@@ -81,16 +81,29 @@ namespace
         return nullptr;
     }
 
-    void checkNode(const StateMachineData& data, uint32_t transitionId, const QString& location
+    //!< What the message calls the predicate being checked. A stop condition is not a guard, and
+    //!< a finding that says "guard" about a `do/` activity sends the reader to the wrong tab.
+    QString noun(const SMGuardRef& target)
+    {
+        return (target.getOwner() == SMGuardRef::eOwner::DoActivity)
+                    ? QStringLiteral("Do stop condition")
+                    : QStringLiteral("guard");
+    }
+
+    void checkNode(const StateMachineData& data, const SMGuardRef& target, const QString& location
                   , const SMGuardNode& node, QStringList& shadowed, QList<Finding>& findings)
     {
+        // The stimulus parameter scope of the checked predicate: its own, for a transition; none
+        // at all for a `do/` activity, which ticks on a timer with no stimulus in hand.
+        const uint32_t transitionId = target.getScopeId();
+        const QString what = noun(target);
         switch (node.getKind())
         {
         case eKind::Attr:
             if (SMGuardSymbols::attributeName(data, node.getSymbolId()).isEmpty())
             {
-                findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                , QStringLiteral("guard references a deleted attribute (id %1)").arg(node.getSymbolId())
+                findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
+                                , QStringLiteral("%1 references a deleted attribute (id %2)").arg(what).arg(node.getSymbolId())
                                 , node.getSymbolId() });
             }
             break;
@@ -98,8 +111,8 @@ namespace
         case eKind::Const:
             if (SMGuardSymbols::constantName(data, node.getSymbolId()).isEmpty())
             {
-                findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                , QStringLiteral("guard references a deleted constant (id %1)").arg(node.getSymbolId())
+                findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
+                                , QStringLiteral("%1 references a deleted constant (id %2)").arg(what).arg(node.getSymbolId())
                                 , node.getSymbolId() });
             }
             break;
@@ -109,8 +122,8 @@ namespace
             const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
             if ((method == nullptr) || (method->isCondition() == false))
             {
-                findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                , QStringLiteral("guard calls a deleted condition method (id %1)").arg(node.getSymbolId())
+                findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
+                                , QStringLiteral("%1 calls a deleted condition method (id %2)").arg(what).arg(node.getSymbolId())
                                 , node.getSymbolId() });
             }
             break;
@@ -135,14 +148,14 @@ namespace
 
                 if (rebindable)
                 {
-                    findings.append({ eSeverity::Info, eFinding::ParamRebind, transitionId, location
+                    findings.append({ eSeverity::Info, eFinding::ParamRebind, target, location
                                     , QStringLiteral("parameter '%1' re-binds to the new stimulus by name and type, so commit the guard again").arg(stale->getName())
                                     , node.getSymbolId() });
                 }
                 else
                 {
-                    findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                    , QStringLiteral("guard references a parameter the stimulus no longer has (id %1)").arg(node.getSymbolId())
+                    findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
+                                    , QStringLiteral("%1 references a parameter the stimulus no longer has (id %2)").arg(what).arg(node.getSymbolId())
                                     , node.getSymbolId() });
                 }
             }
@@ -154,7 +167,7 @@ namespace
                 if ((hidesAttr || hidesConst) && (shadowed.contains(name) == false))
                 {
                     shadowed.append(name);
-                    findings.append({ eSeverity::Warning, eFinding::Shadowing, transitionId, location
+                    findings.append({ eSeverity::Warning, eFinding::Shadowing, target, location
                                     , QStringLiteral("'%1' is the stimulus parameter and hides %2 '%1'")
                                           .arg(name, hidesAttr ? QStringLiteral("attribute") : QStringLiteral("constant"))
                                     , node.getSymbolId() });
@@ -165,7 +178,7 @@ namespace
 
         case eKind::Raw:
             // The audit: every verbatim fragment is listed -- never silent.
-            findings.append({ eSeverity::Info, eFinding::RawFragment, transitionId, location
+            findings.append({ eSeverity::Info, eFinding::RawFragment, target, location
                             , QStringLiteral("raw C++ fragment: %1").arg(elide(node.getText()))
                             , 0u });   // raw text names no declaration -- there is nothing to key on
             break;
@@ -176,43 +189,68 @@ namespace
 
         for (const SMGuardNode* child : node.getChildren())
         {
-            checkNode(data, transitionId, location, *child, shadowed, findings);
+            checkNode(data, target, location, *child, shadowed, findings);
         }
     }
 
-    void checkTransition(const StateMachineData& data, const SMStateEntry& state
-                        , const SMTransitionEntry& transition, QList<Finding>& findings)
+    //!< The one check every predicate gets, whichever element carries it.
+    void checkGuard(const StateMachineData& data, const SMGuardRef& target, const QString& location
+                   , const SMGuard& guard, QList<Finding>& findings)
     {
-        const SMGuard& guard = transition.getGuard();
         if (guard.isEmpty())
         {
             return;
         }
 
-        QString location = state.getName() + QStringLiteral(" : ") + transition.getStimulus();
-        if (transition.isExternal())
-        {
-            location += QStringLiteral(" -> ") + transition.getTargetName();
-        }
-
         if (guard.isDraft())
         {
-            findings.append({ eSeverity::Error, eFinding::Draft, transition.getId(), location
-                            , QStringLiteral("guard is still a draft: %1. Code generation refuses it").arg(elide(guard.getDraftText()))
-                            , 0u });   // a draft is the whole guard, not one element of it
+            findings.append({ eSeverity::Error, eFinding::Draft, target, location
+                            , QStringLiteral("%1 is still a draft: %2. Code generation refuses it").arg(noun(target), elide(guard.getDraftText()))
+                            , 0u });   // a draft is the whole predicate, not one element of it
             return;
         }
 
         if (guard.getTree() != nullptr)
         {
             QStringList shadowed;
-            checkNode(data, transition.getId(), location, *guard.getTree(), shadowed, findings);
+            checkNode(data, target, location, *guard.getTree(), shadowed, findings);
         }
     }
 
-    void checkLevel(const StateMachineData& data, const SMStateData& level, uint32_t onlyTransition
+    void checkTransition(const StateMachineData& data, const SMStateEntry& state
+                        , const SMTransitionEntry& transition, QList<Finding>& findings)
+    {
+        QString location = state.getName() + QStringLiteral(" : ") + transition.getStimulus();
+        if (transition.hasTarget())
+        {
+            location += QStringLiteral(" -> ") + transition.getTargetName();
+        }
+
+        checkGuard(data, SMGuardRef(transition.getId()), location, transition.getGuard(), findings);
+    }
+
+    //!< The `<Until>` of a state's `DoList`. A stop condition on a state with no activity is not
+    //!< checked: there is no timer for it to stop, so there is nothing there to be wrong about.
+    void checkDoActivity(const StateMachineData& data, const SMStateEntry& state, QList<Finding>& findings)
+    {
+        if (state.getDoList().isEmpty())
+        {
+            return;
+        }
+
+        checkGuard(data, SMGuardRef::doActivity(state.getId())
+                  , state.getName() + QStringLiteral(" : do/"), state.getDoUntil(), findings);
+    }
+
+    /**
+     * \brief   Walks a level. \p only addresses ONE predicate when it is valid -- the per-element
+     *          queries the canvas and the hover card make -- and an invalid (default) ref means
+     *          the whole document, which is the validation panel's run.
+     **/
+    void checkLevel(const StateMachineData& data, const SMStateData& level, const SMGuardRef& only
                    , QList<Finding>& findings)
     {
+        const bool all = (only.isValid() == false);
         for (const SMStateEntry* state : level.getElements())
         {
             if (state == nullptr)
@@ -222,16 +260,20 @@ namespace
 
             for (const SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if ((transition != nullptr)
-                    && ((onlyTransition == 0u) || (transition->getId() == onlyTransition)))
+                if ((transition != nullptr) && (all || (only == SMGuardRef(transition->getId()))))
                 {
                     checkTransition(data, *state, *transition, findings);
                 }
             }
 
+            if (all || (only == SMGuardRef::doActivity(state->getId())))
+            {
+                checkDoActivity(data, *state, findings);
+            }
+
             if (state->hasNestedStates())
             {
-                checkLevel(data, *state->getNestedStates(), onlyTransition, findings);
+                checkLevel(data, *state->getNestedStates(), only, findings);
             }
         }
     }
@@ -263,7 +305,7 @@ QString SMGuardValidation::describe(SMGuardValidation::eKind kind)
 QList<SMGuardValidation::Finding> SMGuardValidation::validate(const StateMachineData& data)
 {
     QList<Finding> findings;
-    checkLevel(data, data.getStates(), 0u, findings);
+    checkLevel(data, data.getStates(), SMGuardRef(), findings);
     return findings;
 }
 
@@ -272,7 +314,18 @@ QList<SMGuardValidation::Finding> SMGuardValidation::validateTransition(const St
     QList<Finding> findings;
     if (transitionId != 0u)
     {
-        checkLevel(data, data.getStates(), transitionId, findings);
+        checkLevel(data, data.getStates(), SMGuardRef(transitionId), findings);
+    }
+
+    return findings;
+}
+
+QList<SMGuardValidation::Finding> SMGuardValidation::validateDoActivity(const StateMachineData& data, uint32_t stateId)
+{
+    QList<Finding> findings;
+    if (stateId != 0u)
+    {
+        checkLevel(data, data.getStates(), SMGuardRef::doActivity(stateId), findings);
     }
 
     return findings;
