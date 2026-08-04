@@ -29,14 +29,10 @@ namespace
 {
     /**
      * \class   SectionHeader
-     * \brief   One accordion header, painted by the PLATFORM STYLE as a tool-box tab
-     *          (`CE_ToolBoxTabShape` + `CE_ToolBoxTabLabel`) rather than as a rectangle of our own
-     *          drawing. That primitive is what gives the header its stepped tab outline -- the rule
-     *          running along the top of the label and sloping away to the right -- which is the look
-     *          the Conditions tab had while it was a real QToolBox, and which a stylesheet on a
-     *          QToolButton cannot reproduce.
-     *          A button, not a QToolBox tab, because the accordion must be able to keep several
-     *          sections open at once, which QToolBox structurally cannot.
+     * \brief   One accordion header, painted by the platform style as a tool-box tab
+     *          (`CE_ToolBoxTabShape` + `CE_ToolBoxTabLabel`) to keep the stepped tab outline that
+     *          a stylesheet cannot reproduce. It is a button rather than a QToolBox tab, because
+     *          the accordion must be able to keep several sections open at once.
      **/
     class SectionHeader : public QAbstractButton
     {
@@ -125,10 +121,8 @@ int SMAccordion::addSection(const QIcon& icon, const QString& title, QWidget* co
 
     content->setParent(this);
 
-    // A section's content must never drive the accordion's WIDTH: an Ignored horizontal policy
-    // pins its minimum width to 0, so opening or closing a section changes the height only. Without
-    // this the hosting dock grew when a section expanded (its form's minimum width became visible)
-    // and shrank back when it collapsed, so every toggle resized the whole Properties panel.
+    // A section's content must never drive the accordion's width: an Ignored horizontal policy pins
+    // its minimum to 0, so opening or closing a section changes the height only.
     QSizePolicy policy = content->sizePolicy();
     policy.setHorizontalPolicy(QSizePolicy::Ignored);
     content->setSizePolicy(policy);

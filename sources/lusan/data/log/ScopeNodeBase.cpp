@@ -237,8 +237,8 @@ QString ScopeNodeBase::makePath() const
     if (isRoot() == false)
         result += getPathString();
 
-    // Nodes end with '_' so children can append their name with the correct separator.
-    // ScopeLeaf overrides this to swap the trailing '_' for '.' (leaf separator).
+    // Nodes end with '_' so children append their name with the right separator. ScopeLeaf
+    // swaps that trailing '_' for '.'.
     if (isNode())
         result += NELusanCommon::SCOPE_SEPRATOR;
 
@@ -416,10 +416,8 @@ int ScopeNodeBase::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) co
 
 int ScopeNodeBase::splitScopePath(QString& scopePath, QStringList& nodeNames) const
 {
-    // New syntax: '_' separates nodes, '.' separates the last node from its leaf name.
-    // The leaf name is taken verbatim after the first '.', preserving any '_' in it (snake_case).
-    // If no '.' is present, the last '_'-delimited token is the leaf (backward compatibility).
-    // Consecutive underscores ('__') encode a literal '_' prefix in a node name.
+    // '_' separates nodes, '.' separates the last node from its leaf name. Without a '.' the
+    // last '_'-delimited token is the leaf, and '__' encodes a literal '_' prefix.
 
     int dotPos = scopePath.indexOf(NELusanCommon::SCOPE_LEAF_SEPRATOR);
     QString nodePart = (dotPos >= 0) ? scopePath.left(dotPos) : scopePath;

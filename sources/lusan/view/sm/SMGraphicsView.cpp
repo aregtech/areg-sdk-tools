@@ -36,11 +36,9 @@
 namespace
 {
     /**
-     * \brief   Draws the crosshair shown while a placement tool is armed. It is drawn rather
-     *          than taken from Qt::CrossCursor because the system shape has a fixed size,
-     *          roughly twice as wide, which reads as heavy over a dense canvas; drawing it
-     *          makes the size the tunable NESMDesign::ToolCursorSize. The dark cross sits on
-     *          a light halo, so it stays visible on both a light and a dark canvas.
+     * \brief   Draws the crosshair shown while a placement tool is armed. Qt::CrossCursor has a
+     *          fixed, heavier size, so it is drawn instead at NESMDesign::ToolCursorSize, as a
+     *          dark cross on a light halo that stays visible on a light and a dark canvas.
      * \param   ratio   The device pixel ratio of the screen showing the cursor.
      **/
     QCursor makeToolCursor(qreal ratio)
@@ -186,22 +184,16 @@ void SMGraphicsView::applyToolCursor()
 {
     if (mToolArmed)
     {
-        // The viewport takes it too, not only the view. A cursor the scene has written onto the
-        // viewport -- an inline editor's I-beam, or the plain arrow the scene restores when that
-        // editor dies -- sits in front of the view's cursor and would mask the tool shape for good.
-        // A later hover cursor still wins: the scene sets those on the viewport as well, and the
-        // copy it remembers to restore afterwards is now the tool shape rather than an arrow.
+        // The viewport takes the cursor too. One the scene has written there sits in front of the
+        // view's own and would mask the tool shape.
         const QCursor tool = makeToolCursor(devicePixelRatioF());
         setCursor(tool);
         viewport()->setCursor(tool);
         return;
     }
 
-    // Disarming has to clear the viewport as well. The first time an item under the pointer sets a
-    // hover cursor, QGraphicsView remembers the viewport's cursor -- which, while a tool is armed,
-    // resolves to the inherited crosshair -- and writes that remembered copy back explicitly when
-    // the hover ends. That copy outlives the tool: unsetting the view alone left the crosshair on
-    // the canvas for good, which is what made the pointer feel permanently lost (issue #543).
+    // Disarming clears the viewport as well. QGraphicsView remembers the viewport cursor when an
+    // item sets a hover cursor and writes that copy back later, leaving the crosshair on the canvas.
     viewport()->unsetCursor();
     unsetCursor();
 }
@@ -234,11 +226,8 @@ void SMGraphicsView::mouseMoveEvent(QMouseEvent* event)
 
     QGraphicsView::mouseMoveEvent(event);
 
-    // Last word on the tool shape. An inline editor closed in the same breath as the arming dies
-    // deferred, and the scene writes its remembered cursor onto the viewport whenever that happens
-    // -- after applyToolCursor() has already run. Rather than depend on that ordering, re-assert
-    // here: the pointer has to move before the user can aim anyway. An item that carries its own
-    // cursor keeps it, so resize handles and links are untouched.
+    // Re-assert the tool shape here, because the scene may write its remembered cursor onto the
+    // viewport after applyToolCursor() has run. An item that carries its own cursor keeps it.
     if (mToolArmed && (mPanning == false))
     {
         const QGraphicsItem* under = itemAt(event->pos());

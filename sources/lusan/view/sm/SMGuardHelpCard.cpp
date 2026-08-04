@@ -32,9 +32,8 @@ namespace
 {
     constexpr int PopupGap { 2 };
 
-    //!< Word-wraps \p label AND tells the layout its height depends on its width. QLabel implements
-    //!< heightForWidth but does not advertise it, so without this every enclosing layout reports
-    //!< hasHeightForWidth() == false and the card sizes itself for text that has not wrapped yet.
+    //!< Word-wraps \p label and tells the layout its height depends on its width. QLabel implements
+    //!< heightForWidth without advertising it, so the card would size for text that has not wrapped.
     void setWrapped(QLabel* label)
     {
         label->setWordWrap(true);
@@ -145,9 +144,8 @@ void SMGuardHelpCard::buildUi()
     outer->setContentsMargins(12, 12, 12, 12);
     outer->setSpacing(8);
 
-    // This card is the ONLY place the editor explains itself: hovering answers what a symbol is and
-    // nothing else, so everything a first-time reader needs -- what a condition decides, what it may
-    // be written from, what the generator emits, the gestures, the operators -- has to be here.
+    // This card is the only place the editor explains itself, since hovering answers what a symbol
+    // is and nothing else. Everything a first-time reader needs has to be here.
     QLabel* lead = new QLabel(tr("A condition decides whether a transition may fire. When the stimulus arrives "
                                  "the machine evaluates the condition, and takes the transition only if the "
                                  "result is true. An empty condition always fires."), content);
@@ -160,10 +158,8 @@ void SMGuardHelpCard::buildUi()
     title->setFont(titleFont);
     outer->addWidget(title);
 
-    // The letters are the ones a committed guard really draws on its chips (NEGuardStyle::ownerGlyph)
-    // -- an attribute and a constant genuinely share `f`, and the description is what tells them
-    // apart. The card used to list `#` and `K` here, which are the catalog's letters: a legend for
-    // badges the user never sees is worse than no legend.
+    // The letters are the ones a committed guard really draws on its chips, where an attribute and
+    // a constant share `f` and the description tells them apart. The catalog's letters are not used.
     QGridLayout* uses = new QGridLayout();
     uses->setHorizontalSpacing(16);
     addUseRow(uses, 0, NEGuardStyle::eOwner::Stimulus, NEGuardStyle::ownerGlyph(NEGuardStyle::eOwner::Stimulus)
@@ -180,9 +176,8 @@ void SMGuardHelpCard::buildUi()
              , tr("lambda"), QStringLiteral("{ ... }"));
     outer->addLayout(uses);
 
-    // The Data catalog keeps its own two letters where a chip can only show one: `f` says "the
-    // machine declares it", `#` and `K` say which. Naming the difference costs one line; leaving
-    // the reader to notice it costs a hunt for a letter that is not in this table.
+    // The Data catalog keeps two letters where a chip shows one: `f` says the machine declares it,
+    // `#` and `K` say which. Naming the difference costs a line; leaving it out costs a hunt.
     QLabel* catalogNote = new QLabel(tr("The Data catalog narrows f to # attribute / K constant."), content);
     setWrapped(catalogNote);
     QFont noteFont = catalogNote->font();
@@ -244,18 +239,15 @@ void SMGuardHelpCard::buildUi()
 
 QSize SMGuardHelpCard::sizeHint() const
 {
-    // QScrollArea caps its own hint at 24 text lines, so asking the layout would open the card
-    // part-way through its own content on every screen. The scroll area is here so a SMALL screen
-    // can still reach everything, not so a large one has to scroll: popupAt caps to the screen
-    // afterwards, which is the only place shrinking belongs.
+    // QScrollArea caps its own hint at 24 text lines, which would open the card part-way through
+    // its content. The scroll area is for a small screen, and popupAt caps to the screen anyway.
     if (mContent == nullptr)
     {
         return QFrame::sizeHint();
     }
 
-    // heightForWidth, not the raw hint: several rows carry word-wrapped descriptions, and a wrapped
-    // label only knows how tall it is once the width is fixed. Asking for the hint alone opens the
-    // card one wrapped line short of its own last section.
+    // heightForWidth, not the raw hint: several rows carry wrapped descriptions, and a wrapped
+    // label only knows how tall it is once the width is fixed.
     QSize hint = mContent->sizeHint();
     const QLayout* layout = mContent->layout();
     if ((layout != nullptr) && layout->hasHeightForWidth())

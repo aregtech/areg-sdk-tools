@@ -164,10 +164,8 @@ namespace
         }
     };
 
-    //!< The placeholder text of a group's first row when the group has NO action method -- an
-    //!< event-only or timer-only Enter/Do/Exit list. The row exists so the band mark (`->|`,
-    //!< `<-|`, the do loop) always has a line of its own and never displaces the lightning bolt
-    //!< or the clock of the row below it (issue #543).
+    //!< The placeholder for a group's first row when the group has no action method. The row keeps
+    //!< the band mark on a line of its own, so it never displaces the mark of the row below.
     const QString NoActionText { QStringLiteral("...") };
 
     //!< The text of one behavior row for an operation.
@@ -191,11 +189,8 @@ namespace
         }
     }
 
-    //!< Drops the leading verb the shared one-line summary prepends for an event or a timer
-    //!< (`send `, `start `, `stop `). On a state body every such row already carries its own kind
-    //!< mark -- the lightning bolt for an event, the play/stop clock for a timer -- so the word is
-    //!< redundant beside it. The edge summary keeps the verbs (it has no per-op marks), so the
-    //!< strip lives here, in the body renderer, not in SMOperationSummary.
+    //!< Drops the leading verb (`send `, `start `, `stop `) the shared one-line summary prepends.
+    //!< Each body row already carries its own kind mark, so the word is redundant beside it.
     QString withoutRowVerb(const SMOperationBase& op, QString text)
     {
         const char* verb = nullptr;
@@ -332,10 +327,8 @@ QPainterPath SMStateItem::shape() const
     QPainterPath path;
     if (isSelected())
     {
-        // Cover the full resize-handle band with a plain rectangle so every handle -- the
-        // corner ones too -- is hit-testable. A rounded shape leaves the corner handles of a
-        // compact marker pill in the rounded-away region, which made the Start / Final state
-        // impossible to grab and resize.
+        // Cover the whole resize-handle band with a plain rectangle, so the corner handles stay
+        // hit-testable. A rounded shape put those of a compact marker pill out of reach.
         const double m = NESMDesign::HandleSize;
         path.addRect(QRectF(-m / 2.0, -m / 2.0, mSize.width() + m, visibleHeight() + m));
         return path;
@@ -463,9 +456,8 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
 
     const double glyphW  = 9.0;
     const double gap     = 4.0;
-    // The default marker pill is only 4 grid cells wide (issue #514); a tight padding keeps
-    // "Start" / "Final" un-elided. The vertically centered text never reaches the rounded
-    // corners, so the inset can be much smaller than the corner radius.
+    // The marker pill is only four grid cells wide, so a tight padding keeps "Start" and "Final"
+    // un-elided. The centered text never reaches the rounded corners.
     const double padding = 4.0 + radius * 0.25;
     const double availW  = std::max(box.width() - 2.0 * padding - glyphW - gap, 10.0);
     const QString elided = metrics.elidedText(mName, Qt::ElideRight, availW);
@@ -552,10 +544,8 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
 
     if (mComposite || mImported)
     {
-        // An imported machine is named on the box: which machine a state runs is the first thing
-        // a reader of the diagram wants, and the file it comes from is not on screen anywhere else.
-        // The alias is elided rather than dropped, so a long name shrinks instead of pushing out
-        // the state's own name.
+        // An imported machine is named on the box: which machine a state runs is the first thing a
+        // reader wants. The alias is elided, so a long name never pushes out the state's own.
         painter->setFont(badgeFont);
         const double aliasW = (mImported && (mSubmachine.isEmpty() == false))
                             ? qMin(QFontMetricsF{ badgeFont }.horizontalAdvance(mSubmachine) + 4.0
@@ -619,10 +609,8 @@ QList<SMStateItem::RowSlot> SMStateItem::bodyRowLayout() const
         return layout;
     }
 
-    // The body is read as three bands, in execution order: what runs on the way IN sits at the top,
-    // what runs while in the state sits in the middle, and what runs on the way OUT is anchored to
-    // the bottom edge. This packing is the single source of the row geometry; paintBodyRows draws it
-    // and bodyRowAt hit-tests it, so the drawn rows and the clickable links can never drift apart.
+    // The body reads as three bands in execution order: entry at the top, in-state in the middle,
+    // exit anchored to the bottom. paintBodyRows draws this packing and bodyRowAt hit-tests it.
     const QRectF box{ 0.0, 0.0, mSize.width(), visibleHeight() };
     const double rowH   = NESMDesign::StateRowHeight;
     const double top    = NESMDesign::StateHeaderHeight + 2.0;
@@ -691,9 +679,8 @@ int SMStateItem::bodyRowAt(const QPointF& pos) const
         const QRectF rowRect{ 0.0, slot.y, mSize.width(), rowH };
         if (rowRect.contains(pos))
         {
-            // A row is actionable when it references a declaration OR when it IS a transition;
-            // the header row of an internal transition is the second case, and it used to be
-            // reachable only as the first, which took the author to the stimulus method instead.
+            // A row is actionable when it references a declaration or when it is a transition. The
+            // header row of an internal transition is the second case.
             const BodyRow& row = mRows.at(slot.index);
             return ((row.refs.isEmpty() == false) || (row.transitionId != 0u)) ? slot.index : -1;
         }
@@ -738,9 +725,8 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         // A ` \` continuation cue at the right edge says "the next row belongs to this same
         // Enter/Do/Exit group"; reserve its width so it never overlaps the row text.
         const double cueW = (continues ? (metrics.horizontalAdvance(QStringLiteral("\\")) + 4.0) : 0.0);
-        // A second mark (only the `on <stimulus>` header of an internal transition has one) takes a
-        // second gutter slot, so the text of that row starts one mark further in. It is the group's
-        // header and reads as one, which is why the extra indent sits there and nowhere else.
+        // A second mark takes a second gutter slot, so that row's text starts one mark further in.
+        // Only the `on <stimulus>` header of an internal transition has one.
         const bool   twoMarks = SMKindGlyph::isDrawn(row.kindIcon);
         const double gutter   = padding + 16.0 + (twoMarks ? SMKindGlyph::GlyphSize : 0.0);
         const QRectF textRect{ gutter, rowY, box.width() - padding - gutter - cueW, rowH };
@@ -803,11 +789,8 @@ void SMStateItem::paintMiniature(QPainter* painter, const QRectF& /*box*/, const
         return;
     }
 
-    // A FIXED symbol -- one Start marker and two states -- never the real substates. The hint's job
-    // is to say "there is a machine inside", and it says exactly that whether the submachine holds
-    // three states or a million; drawing the real ones turned into an unreadable smear of hairlines
-    // the moment a level grew, and cost a scaled repaint of every substate on every frame. What is
-    // really inside is one Ctrl+Alt hover away (\ref SMScene::showSubmachinePeek).
+    // A fixed symbol of one Start marker and two states, never the real substates. It says that
+    // there is a machine inside at any size, where the real ones smeared and cost a repaint.
     const double w = avail.width();
     const double h = avail.height();
     const QRectF start{ avail.left(), avail.top() + (h * 0.34), w * 0.30, h * 0.32 };
@@ -987,9 +970,8 @@ void SMStateItem::updateFromModel()
     mName      = state->getName();
     mKind      = state->getKind();
     mHistory   = state->getHistory();
-    // A submachine counts as composite only when it is "real" -- it owns at least one Normal state.
-    // A just-entered-then-left submachine that still holds only its Start marker is not real (it is
-    // never persisted), so the box must not advertise a substate it does not really have.
+    // A submachine counts as composite only when it owns at least one Normal state. One holding
+    // just its Start marker is never persisted, so the box must not advertise it.
     mComposite = state->hasNestedStates() && state->getNestedStates()->hasRealState();
     mImported  = state->isImportedSubmachine();
     mSubmachine = state->getSubmachine();
@@ -1046,10 +1028,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         return SMKindGlyph::prefix(SMKindGlyph::operationGlyph(op)) + withoutRowVerb(op, summary);
     };
 
-    // The band mark of an Enter/Do/Exit group (`->|` enter, `<-|` exit, the repeat ring for Do): the
-    // reader sees at a glance which activity band a row belongs to. The internal transition is NOT
-    // in this table any more -- it is not a zone, it is a construct, and it brings its own band mark
-    // (and its own header row) below.
+    // The band mark of an Enter/Do/Exit group, so the reader sees which activity a row belongs to.
+    // An internal transition is not a zone but a construct, and brings its own mark below.
     const auto zoneGlyph = [](eRowZone zone) -> SMKindGlyph::eGlyph
     {
         switch (zone)
@@ -1060,19 +1040,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         }
     };
 
-    // One Enter/Do/Exit group, ordered action -> event -> timer(s): the actions each on a row, the
-    // events each on a row, then ALL timers combined on one row (start and stop together). Every row
-    // but the last flags a ` \` continuation cue so the group reads as one block, and an absent kind
-    // emits nothing (no empty row, no dangling backslash).
-    //
-    // The band mark and the kind marks never share a row (issue #543): the FIRST row of a group is
-    // always an action row and carries the band mark, and when the group declares no action method
-    // that row is emitted anyway as `...`. Otherwise an event-only Enter list drew `->|` where its
-    // lightning bolt belonged, and the reader could not tell an event from a timer from an action.
-    // \p bandRow is false for the operations of an internal transition: that group is already
-    // introduced by its own `on <stimulus>` header row, so a second placeholder would be noise --
-    // and because the band mark is already spent on that header, those action rows take the gear
-    // (\ref SMKindGlyph::operationGlyph) instead, which is what tells the effect from the cause.
+    // One Enter/Do/Exit group, ordered action, event, then all timers on one row. The first row
+    // always carries the band mark, except for an internal transition whose header already has it.
     const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone, bool bandRow = true)
     {
         QList<const SMOperationBase*> actions;
@@ -1150,13 +1119,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     appendGroup(state.getEntryList(), eRowZone::Enter);
     appendGroup(state.getDoList(), eRowZone::Middle);
 
-    // A transition with a target shows its operations on its edge (below the line). One without a
-    // target has no edge, so it reads here as its own group under a header row -- and the header
-    // says WHICH of the two edgeless cases it is: `on x` for an internal transition, which is
-    // finished and deliberate, and `on x (not connected)` for an external one that has no target
-    // yet, which is not. Those used to look the same, in the document and here.
-    // Two internal transitions of one state may share a stimulus and differ only by their guards --
-    // a normal thing to write, and the rows read identically without the number and the guard.
+    // A transition with a target shows its operations on its edge, one without reads here as its
+    // own group whose header separates an internal from an unconnected external transition.
     int internalCount = 0;
     for (const SMTransitionEntry* transition : state.getTransitions().getElements())
     {
@@ -1177,10 +1141,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
             {
                 ++internalIndex;
 
-                // The number is the PRIORITY -- document order decides which of several transitions
-                // on one stimulus runs -- and the guard chip is what tells two of them apart. Both
-                // are dropped when the state has a single internal transition, where they say
-                // nothing and the box is short of width.
+                // The number is the priority, document order deciding which of several transitions
+                // on one stimulus runs, and the guard chip is what tells two of them apart.
                 if (internalCount > 1)
                 {
                     head = QStringLiteral("#") + QString::number(internalIndex) + QLatin1Char(' ');
@@ -1202,10 +1164,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
                 head = QStringLiteral("on ") + stim + translate(" (not connected)");
             }
 
-            // The header row still KNOWS the stimulus declaration (trigger / event / timer), but that
-            // is now its secondary action, offered on the context menu: the row IS the transition,
-            // so clicking it must open the transition. Sending the author to the method list from
-            // the one visible representation of the construct was the whole complaint.
+            // The row is the transition, so clicking it opens the transition. Its stimulus
+            // declaration is the secondary action, offered on the context menu.
             SMReferences::eTarget stimKind = SMReferences::eTarget::Trigger;
             switch (transition->getStimulusKind())
             {
@@ -1220,11 +1180,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
                 stimRef.append({ stimKind, transition->getStimulus() });
             }
 
-            // Two marks, and they answer two different questions. The band mark says WHAT this is
-            // -- an internal transition, drawn on the same bar as the enter and exit rows above and
-            // below it -- and the kind mark says WHAT FIRES IT: a button for a trigger, a bolt for
-            // an event, a clock for a timer. An unfinished external edge is not a band at all, so it
-            // gets the kind mark alone; its `(not connected)` text already says what is wrong.
+            // Two marks: the band mark says what the row is, the kind mark says what fires it, a
+            // button, a bolt or a clock. An unfinished external edge gets the kind mark alone.
             BodyRow header{ SMKindGlyph::eGlyph::Internal, head, eRowZone::Middle, false, false, stimRef };
             header.kindIcon    = SMKindGlyph::stimulusGlyph(*transition);
             header.transitionId = transition->getId();
@@ -1244,9 +1201,8 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
 
 void SMStateItem::hoverMoveEvent(QGraphicsSceneHoverEvent* event)
 {
-    // Ctrl+Alt over the submachine hint opens the quick view. A DIFFERENT modifier from the link
-    // below on purpose: the hint sits inside the body, so Ctrl+Shift there would have to mean two
-    // things at once depending on a few pixels of pointer position.
+    // Ctrl+Alt over the submachine hint opens the quick view. A different modifier from the link
+    // below, since the hint sits inside the body and one chord cannot mean two things there.
     const Qt::KeyboardModifiers mods = event->modifiers();
     const bool peekMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::AltModifier);
     const QRectF hint = miniatureRect();
@@ -1346,10 +1302,8 @@ void SMStateItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
             const BodyRow& row = mRows.at(linkRow);
             if (SMScene* canvas = getCanvas())
             {
-                // A row that IS a transition opens THAT transition -- the construct the author
-                // clicked. Its stimulus declaration stays one right-click away (`Go to ...
-                // Declaration` on the state's context menu); it is the secondary answer, not the
-                // one an author asking "what does this row do?" is looking for.
+                // A row that is a transition opens that transition. Its stimulus declaration stays
+                // one right-click away on the state's context menu.
                 if (row.transitionId != 0u)
                 {
                     canvas->requestInternalEdit(row.transitionId);
@@ -1412,9 +1366,8 @@ void SMStateItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 {
     if (mLinkClick)
     {
-        // The press was consumed as a link, so the base never saw it. Letting the base see the
-        // release makes Qt read the pair as a click on nothing and clear the scene selection --
-        // which took the selection away from the very state the link had just opened.
+        // The press was consumed as a link, so the base never saw it. Letting it see the release
+        // would read the pair as a click on nothing and clear the selection the link just made.
         if (event->button() == Qt::LeftButton)
         {
             mLinkClick = false;
@@ -1451,11 +1404,8 @@ void SMStateItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton)
     {
-        // Start / Final markers have no title/body split and no submachine: double-click always
-        // edits the name. A normal state splits on the header band: the title (header) opens the
-        // in-place rename; the body descends into the state's submachine, which the owning page
-        // creates on the fly for a plain normal state (the same path as the Enter Submachine
-        // action). This is why a double-click on the body must NOT fall back to rename.
+        // Markers have no title and body split, so a double-click always renames. On a normal
+        // state the header opens the rename and the body descends into the submachine.
         const bool onTitle = isMarker() || (event->pos().y() <= NESMDesign::StateHeaderHeight);
         if (onTitle)
         {
@@ -1481,9 +1431,8 @@ QVariant SMStateItem::itemChange(GraphicsItemChange change, const QVariant& valu
     if (change == QGraphicsItem::ItemSelectedHasChanged)
     {
         prepareGeometryChange();
-        // A selected (active) box raises above the inactive transition lines (z = 1) so it can
-        // cover them, while an inactive box stays at z = 0, below every edge; a selected edge
-        // still wins at z = 3 so its handles stay grabbable (see SMEdgeItem).
+        // A selected box raises above the inactive transition lines so it can cover them, while an
+        // inactive one stays below every edge. A selected edge still wins, to keep its handles.
         setZValue(value.toBool() ? 2.0 : 0.0);
         if ((value.toBool() == false) && isRenameActive())
         {
@@ -1624,16 +1573,14 @@ void SMStateItem::startInlineRename()
         return;
     }
 
-    // Seed from the currently displayed name (mName), not state->getName(): the Properties panel
-    // mirrors an in-progress rename onto the canvas via a name preview that is not committed to
-    // the model until its field loses focus, so state->getName() can still hold the old value.
+    // Seed from the displayed name, not state->getName(): the Properties panel mirrors an
+    // in-progress rename onto the canvas before it is committed, so the model can still be stale.
     RenameEdit* edit = new RenameEdit(mName);
     edit->mValidate  = [this](const QString& name) { return validateName(name); };
     edit->mCancel    = [this]()
     {
-        // Esc discards the in-progress name and restores the committed one everywhere (canvas box
-        // and the Properties panel field) -- restore from the model, not mName, which holds the
-        // abandoned typing preview (Bug 3, Esc case).
+        // Esc restores the committed name everywhere. Restore from the model, not mName, which
+        // holds the abandoned typing preview.
         if (SMScene* canvas = getCanvas())
         {
             const SMStateEntry* state = getState();
@@ -1681,11 +1628,8 @@ void SMStateItem::setNamePreview(const QString& name)
         update();
     }
 
-    // When the state is in edit mode, the in-place editor widget covers the painted header, so
-    // updating mName alone is invisible: the on-canvas title is whatever the RenameEdit shows.
-    // Mirror the preview into the editor too, so typing the name in the Properties panel updates
-    // the on-canvas editor in real time (Bug 1). Skip when the editor is the source of the change
-    // (it has focus) to avoid clobbering the caret and to break the preview feedback loop.
+    // While the in-place editor is open it covers the painted header, so the preview is mirrored
+    // into it as well. Skip that when the editor has focus, to keep the caret and break the loop.
     if (mRenameProxy != nullptr)
     {
         QLineEdit* edit = qobject_cast<QLineEdit*>(mRenameProxy->widget());
@@ -1740,10 +1684,8 @@ void SMStateItem::commitRename(const QString& name)
         return;
     }
 
-    // Compare against the model's committed name, NOT mName: mName tracks the live typing preview
-    // (see setNamePreview), so it already equals the typed text by commit time. Guarding on mName
-    // made every rename a no-op, so the new name was never written and later reappeared as the old
-    // one (Bug 3). getState() is the single source of truth for what is actually stored.
+    // Compare against the model's committed name, not mName: mName already holds the live typing
+    // preview by commit time, so guarding on it turned every rename into a no-op.
     const SMStateEntry* state = getState();
     const QString committed = (state != nullptr ? state->getName() : QString());
     if (name == committed)
@@ -1786,9 +1728,8 @@ void SMStateItem::finishRename(bool immediate /*= false*/)
 
 void SMStateItem::finishInlineEdit()
 {
-    // Destroy the proxies now rather than deferring them: this path runs from a tool switch, never
-    // from an editor's own signal, and a proxy that outlives the switch keeps its I-beam on the
-    // viewport past the point the tool sets its cursor.
+    // Destroy the proxies now rather than deferring: this runs from a tool switch, and a proxy that
+    // outlives it keeps its I-beam on the viewport past the point the tool sets its cursor.
     finishRename(true);
     mNoteEditor.commit();
 }

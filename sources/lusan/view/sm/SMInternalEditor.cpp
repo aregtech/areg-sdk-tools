@@ -88,12 +88,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     , mSignatureKind(SMReferences::eTarget::Trigger)
     , mSignatureDecl(0u)
 {
-    // WHICH transition, and in WHAT ORDER. A list rather than a closed picker, for two reasons that
-    // only apply once a state has several: the rows exist to be COMPARED (they share a stimulus and
-    // differ by guard, and a picker hides all but one), and priority is now an edit -- pressing the
-    // up button must MOVE a row past its neighbour, not silently change a number inside a closed
-    // box. It is sized to its content and shown only when there are two, so the four-rows-for-one
-    // waste that made the first list box wrong cannot come back.
+    // A list rather than a closed picker: the rows exist to be compared, and priority is an edit,
+    // so the up button moves a row past its neighbour. Sized to its content, shown from two rows on.
     mList = new QListWidget(this);
     mList->setObjectName(QStringLiteral("smInternalList"));
     mList->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -103,10 +99,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
                          " whose condition holds is the one that runs. Each runs its operations on"
                          " its stimulus without leaving the state, so no exit or entry action runs."));
 
-    // The height is measured ONCE, from a probe row carrying an icon like the real ones, so it is
-    // the true row height rather than an estimate from the font -- an estimate leaves a sliver of a
-    // fourth row peeking, which reads as a rendering fault. Measured here, it can never drift when
-    // the content changes, which is the whole point of a fixed frame.
+    // The height is measured once from a probe row carrying an icon, so it is the true row height.
+    // An estimate from the font left a sliver of a fourth row peeking.
     mList->addItem(new QListWidgetItem(SMKindGlyph::icon(SMKindGlyph::eGlyph::Trigger, palette().color(QPalette::Text))
                                       , QStringLiteral("Mg")));
     const int rowHeight = std::max(mList->sizeHintForRow(0), 16);
@@ -124,9 +118,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     mSignature = new QLabel(this);
     mSignature->setObjectName(QStringLiteral("smInternalSignature"));
     mSignature->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    // Dimmed by PALETTE, never by setEnabled(false): a disabled widget is not delivered mouse
-    // events at all, so the Ctrl+Shift jump on this line could never fire. The colour is the same
-    // one the style would have used for a disabled label, so nothing looks different.
+    // Dimmed by palette, never by setEnabled(false): a disabled widget receives no mouse events, so
+    // the Ctrl+Shift jump on this line could never fire. The colour is the style's disabled one.
     QPalette dim = mSignature->palette();
     dim.setColor(QPalette::WindowText, dim.color(QPalette::Disabled, QPalette::WindowText));
     dim.setColor(QPalette::Text, dim.color(QPalette::Disabled, QPalette::Text));
@@ -147,10 +140,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
         return button;
     };
 
-    // The toolbar is the one every ordered list in this application wears -- add, remove, a rule,
-    // then move up / move down, with the same icons and the same Ctrl+Up / Ctrl+Down keys as
-    // AttributeListView and its four siblings. Add and remove were tucked beside the Stimulus row
-    // before, which is not where an author looks for them.
+    // The same toolbar every ordered list in the application wears: add, remove, a rule, then move
+    // up and move down, with the same icons and the same Ctrl+Up / Ctrl+Down keys.
     mBtnAdd    = makeButton(QStringLiteral("smBtnAddInternal")
                            , QIcon(QStringLiteral(":/icons/entry add"))
                            , tr("Add an internal transition to this state"));
@@ -172,21 +163,15 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     // The SAME operations editor and the SAME guard bar the transition page uses: an internal
     // transition is a transition, and a second, lesser editor for it would drift from the first.
     mOperations = new SMOperationsEditor(mModel, this);
-    // In THIS scope only one of its three sections opens at a time. On the Enter/Do/Exit tabs the
-    // editor owns the whole tab and can afford all three open; here it shares the height with a
-    // picker, a stimulus row and a tab bar, and three open sections pushed its own content out of
-    // reach. The section the author wants first is the action.
+    // Here the editor shares its height with a picker, a stimulus row and a tab bar, so only one
+    // section opens at a time. On the Enter/Do/Exit tabs it owns the tab and keeps all three open.
     mOperations->setSectionsCompact(true);
 
     mGuard = new SMGuardBar(mModel, this);
     connect(mGuard, &SMGuardBar::signalNavigateToDefinition, this, &SMInternalEditor::signalNavigateToDefinition);
 
-    // Every guard bar names its parts the same way (`smGuardField`, `smGuardAccordion`, ...), and a
-    // findChild by name walks children in construction order -- so THIS bar, built while the state
-    // page is built, would answer for the transition page's, which is the one the app and its tests
-    // mean by those names. Re-prefix ours, unconditionally and in every instance: the transition
-    // page's guard bar is the primary one, and an internal transition's guard is reached through
-    // this editor, never by name.
+    // Every guard bar names its parts the same way, and findChild walks children in construction
+    // order, so this bar would answer for the transition page's. Re-prefix ours in every instance.
     const QList<QObject*> guardParts = mGuard->findChildren<QObject*>();
     for (QObject* part : guardParts)
     {
@@ -197,10 +182,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
         }
     }
 
-    // The guard bar is built to own a whole tab (it does on the transition page) and its catalog
-    // and argument grid are tall. In a dock that is short because another one is open beside it,
-    // the mapping rows have to stay REACHABLE, so the bar scrolls as a whole -- the same escape
-    // the operations editor already gives itself.
+    // The guard bar is built to own a whole tab and its catalog and argument grid are tall, so in
+    // a short dock it scrolls as a whole and the mapping rows stay reachable.
     QScrollArea* guardScroll = new QScrollArea(this);
     guardScroll->setObjectName(QStringLiteral("smInternalGuardScroll"));
     guardScroll->setWidgetResizable(true);
@@ -208,9 +191,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     guardScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     guardScroll->setWidget(mGuard);
 
-    // Actions and Conditions are TABS, not accordion sections: each then takes the whole height
-    // that is left, and neither can be pushed off the bottom by the other. It is also how the
-    // transition page shows the very same two editors, so the two surfaces finally read alike.
+    // Actions and Conditions are tabs, not accordion sections, so each takes the whole remaining
+    // height and neither can push the other off the bottom. The transition page does the same.
     mTabs = new QTabWidget(this);
     mTabs->setObjectName(QStringLiteral("smInternalTabs"));
     mTabs->setDocumentMode(true);       // a nested tab bar reads as a strip, not as a second window
@@ -280,11 +262,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
         }
     });
 
-    // A transition added anywhere -- the canvas `Add Internal Transition` action, the Design menu,
-    // the toolbar, a redo -- becomes the SELECTED one. The author just asked for it, so it is the
-    // one they mean to fill in; leaving the previous row active made the new one look like it had
-    // not been created. The `+` button in this tab selects it too, and this makes the other routes
-    // behave the same.
+    // A transition added from anywhere, the canvas action, the Design menu, the toolbar or a redo,
+    // becomes the selected one, so every route behaves like the `+` button in this tab.
     connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t id, eDocElementKind kind)
     {
         if ((kind != eDocElementKind::Transition) || (mStateId == 0u))
@@ -314,10 +293,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     });
     connect(&notifier, &DocModelNotifier::documentReloaded, this, [this]() { refresh(); });
 
-    // Undo and redo MUST re-read, even while a field here holds focus. onElementChanged deliberately
-    // skips a refresh when the focus is inside this editor -- that is the author typing, and a
-    // rebuild would clobber it -- but Ctrl+Z is not typing: the field it is putting back is usually
-    // the very one with focus, and skipping there left the row label and the status line stale.
+    // Undo and redo must re-read even while a field here holds focus. onElementChanged skips a
+    // refresh when the author is typing, but Ctrl+Z is not typing and left the labels stale.
     connect(&mModel.getUndoStack(), &QUndoStack::indexChanged, this, [this](int) { refresh(); });
 
     // A shadowed transition (an earlier unconditional one on the same stimulus already answered the
@@ -362,9 +339,8 @@ void SMInternalEditor::refresh()
         const SMTransitionEntry* transition = list.at(index);
         QString label = rowLabel(*transition, index + 1, total);
 
-        // The chip in the row is a summary by design; the tooltip is where the guard is READ, and
-        // where a transition that can never fire says so in the validator's own words -- the same
-        // sentence the edge label and the Conditions status line show.
+        // The chip in the row is a summary; the tooltip is where the guard is read, and where a
+        // transition that can never fire says so in the validator's own words.
         QString tip = SMGuardRender::guardText(data, transition->getId(), transition->getGuard(), true);
         for (const SMIssue& issue : found)
         {
@@ -460,16 +436,8 @@ QString SMInternalEditor::rowLabel(const SMTransitionEntry& transition, int ordi
 
 void SMInternalEditor::updateListVisibility(int total)
 {
-    // The list is ALWAYS here, at a FIXED height, whether it holds nothing, one row or ten.
-    //
-    // Sizing it to its content was worse than it sounds: adding a second transition made the list
-    // appear, and adding a third grew it, and each time everything below -- the stimulus row, the
-    // status line, the whole Actions/Conditions tab -- jumped down the screen. An author who has
-    // just pressed `add` is looking at the row they created, not hunting for the field that moved.
-    // A fixed frame costs the same pixels every time and never moves anything.
-    //
-    // Three rows: most states carry one to three internal transitions, so the common case is fully
-    // visible without scrolling, and the fourth and beyond scroll into a frame that does not grow.
+    // The list keeps a fixed height whether it holds nothing, one row or ten. Sizing it to content
+    // pushed the stimulus row and everything below it down the screen on every add.
     const int position = mList->currentRow();
     mBtnUp->setEnabled((position > 0));
     mBtnDown->setEnabled((position >= 0) && (position < (total - 1)));
@@ -572,9 +540,8 @@ void SMInternalEditor::showSignature(const SMTransitionEntry* transition)
             mSignatureKind = SMReferences::eTarget::Timer;
             mSignatureDecl = timer->getId();
 
-            // Repeat 0 is continuous; 1 fires once and is the common case. Reading them as
-            // "after ... once" and "every ... N times" says what the timer DOES, where a bare
-            // `1000/1` pair asks the reader to remember which number is which.
+            // Repeat 0 is continuous and 1 fires once. Spelling it out says what the timer does,
+            // where a bare `1000/1` pair asks the reader which number is which.
             const uint32_t repeat = timer->getRepeat();
             if (repeat == 1u)
             {
@@ -602,9 +569,8 @@ void SMInternalEditor::showSignature(const SMTransitionEntry* transition)
             mSignatureKind = SMReferences::eTarget::Event;
             mSignatureDecl = event->getId();
 
-            // An event is a signal, not a call, so its payload is NOT written as a parameter list
-            // (issue #543: empty brackets claimed a call that does not exist). It is named as what
-            // it is -- what the event carries.
+            // An event is a signal, not a call, so its payload is not written as a parameter list.
+            // It is named as what the event carries.
             QStringList carried;
             for (const MethodParameter& param : event->getElements())
             {
@@ -650,8 +616,7 @@ void SMInternalEditor::showSignature(const SMTransitionEntry* transition)
 bool SMInternalEditor::eventFilter(QObject* watched, QEvent* event)
 {
     // The same gesture the guard field and the state-box rows carry: Ctrl+Shift click opens the
-    // declaration. The status line is where the author is already looking when asking "which timer
-    // is this?", so it is where the answer should be one click away.
+    // declaration. The status line is where the author is already looking.
     if ((watched == mSignature) && (event->type() == QEvent::MouseButtonPress) && (mSignatureDecl != 0u))
     {
         QMouseEvent* mouse = static_cast<QMouseEvent*>(event);
@@ -679,9 +644,8 @@ void SMInternalEditor::moveBy(int delta)
         return;
     }
 
-    // Priority is a position in the state's whole transition list, external transitions included --
-    // that is the list the shadowing rule reads. So the move is expressed in that list's indices:
-    // the row takes the place of the internal neighbour it is swapping priority with.
+    // Priority is a position in the state's whole transition list, external ones included, so the
+    // move is expressed in that list's indices.
     const int from = state->getTransitions().findIndex(list.at(here)->getId());
     const int to   = state->getTransitions().findIndex(list.at(there)->getId());
     if ((from < 0) || (to < 0))
@@ -723,9 +687,8 @@ void SMInternalEditor::onStimulusCommit()
     }
 
     SMStimulusPicker::apply(mModel, *mStimulus, mCurrentId);
-    // The row reads `on <stimulus>` and the signature line spells the kind out, so both follow the
-    // pick immediately. onElementChanged cannot do it: the picker still holds focus, and a rebuild
-    // from a notifier while an editor has focus is what clobbers typing elsewhere.
+    // The row and the signature line follow the pick at once. onElementChanged cannot do it: the
+    // picker still holds focus, and rebuilding from a notifier then clobbers typing.
     refresh();
 }
 
@@ -763,10 +726,8 @@ void SMInternalEditor::onRemove()
         return;
     }
 
-    // Where the selection lands after the delete, decided BEFORE it: the row above the one being
-    // removed, or the new first row when the first one goes. Falling back to the first row -- which
-    // is what happens when the selection is simply dropped -- threw the author to the top of the
-    // list every time they deleted from the bottom of it.
+    // Where the selection lands after the delete, decided before it: the row above, or the new
+    // first row. Simply dropping the selection threw the author to the top of the list.
     const QList<SMTransitionEntry*> list = internals();
     const int position = static_cast<int>(list.indexOf(data.findTransitionById(mCurrentId)));
     const int follow   = (position > 0) ? (position - 1) : ((list.size() > 1) ? 1 : -1);
@@ -783,9 +744,8 @@ void SMInternalEditor::onRemove()
 
 void SMInternalEditor::onElementChanged(uint32_t id, eDocElementKind kind)
 {
-    // The transition being edited changed under the editor (its guard was committed, its stimulus
-    // was set from the canvas): its row label and signature line have to follow. Not while an
-    // editor here has focus -- that is the author typing, and a rebuild would clobber it.
+    // The edited transition changed underneath, so its row label and signature line must follow.
+    // Not while an editor here has focus: that is the author typing and a rebuild would clobber it.
     QWidget* focus = QApplication::focusWidget();
     const bool editing = (focus != nullptr) && isAncestorOf(focus);
     if ((mStateId != 0u) && (kind == eDocElementKind::Transition) && (id == mCurrentId) && (id != 0u) && (editing == false))

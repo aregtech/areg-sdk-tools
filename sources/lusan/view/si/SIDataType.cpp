@@ -137,8 +137,7 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     rightLayout->addWidget(mDetails);
     rightLayout->addWidget(mFields);
 
-    // Ignored so the row splits by stretch alone, not by each child's size hint —
-    // see .claude/memory/equal-split-two-panels.md.
+    // Ignored so the row splits by stretch alone, not by each child's size hint.
     mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mRightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mWidget->mPanels->addWidget(mList, 1);
@@ -1161,10 +1160,8 @@ void SIDataType::updateWidgets()
     mKeysModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mKeysModel->updateDataTypeLists();
     
-    // Inline (in-table) editing: the shared TableCell delegate opens an editor per cell. The tree
-    // is heterogeneous (four data type categories plus struct/enum fields), so which cells are
-    // editable, whether a cell shows a combo or a text editor, and how it is validated are all
-    // resolved per cell by the controller. See cellChanged() for the commit routing.
+    // Inline editing through the shared TableCell delegate. The tree is heterogeneous, so
+    // editability, editor kind and validation are resolved per cell by the controller.
     QTreeWidget* treeList = mList->ctrlTableList();
     mTableCell = new TableCell(treeList, this, false);
     mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
@@ -1680,9 +1677,8 @@ inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) 
     Q_ASSERT(node != nullptr);
     Q_ASSERT(elem != nullptr);
 
-    // Tree items are not editable by default (unlike table items); set the flag so the shared
-    // TableCell delegate can open an inline editor. Which columns actually open is decided
-    // per-cell by isCellEditable().
+    // Tree items are not editable by default, unlike table items, so the flag is set for the shared
+    // delegate. Which columns actually open is decided per cell by isCellEditable().
     node->setFlags(node->flags() | Qt::ItemIsEditable);
 
     if (elem != nullptr)
@@ -1932,9 +1928,8 @@ QAbstractItemModel* SIDataType::editorModelFor(const QModelIndex& index) const
     const uint32_t id = index.sibling(index.row(), 1).data(Qt::ItemDataRole::UserRole).toUInt();
     if (id == 0)
     {
-        // Enumeration top node: pick the derived integer type from the SAME model that backs the
-        // details Derived combo, so the inline list and the Derived list are identical and stay
-        // in sync by construction (both edit the enum's derived type).
+        // Enumeration top node: pick the derived integer type from the same model that backs the
+        // details Derived combo, so the two lists stay identical by construction.
         if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
             return mDetails->ctrlEnumDerived()->model();
 

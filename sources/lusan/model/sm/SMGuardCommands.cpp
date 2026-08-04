@@ -44,9 +44,8 @@ namespace
         return node;
     }
 
-    //!< Replaces the node addressed by \p path with \p replacement (freeing the old node);
-    //!< an empty path replaces the whole tree \p root. Returns false when the path is invalid
-    //!< (in which case \p replacement is deleted and \p root is unchanged).
+    //!< Replaces the node at \p path with \p replacement and frees the old node; an empty path
+    //!< replaces the whole \p root. False when the path is invalid, leaving \p root unchanged.
     bool replaceAt(SMGuardNode*& root, const QList<int>& path, SMGuardNode* replacement)
     {
         if (path.isEmpty())

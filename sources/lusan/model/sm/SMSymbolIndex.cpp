@@ -36,10 +36,8 @@ namespace
     using VerbatimBlock = SMSymbolIndex::VerbatimBlock;
 
     /**
-     * \brief   Extracts the identifier tokens from verbatim C++ text. Comments and
-     *          string/char literals are skipped, and a token that is a member access
-     *          (`obj.name`, `p->name`) is dropped, so only free identifiers survive.
-     *          This is a scan, not a parse: no grammar, no types.
+     * \brief   Extracts the free identifier tokens from verbatim C++ text. Comments, literals and
+     *          member accesses (`obj.name`, `p->name`) are skipped.
      **/
     QStringList identifierTokens(const QString& text)
     {

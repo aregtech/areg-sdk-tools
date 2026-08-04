@@ -51,9 +51,8 @@ SMGuardStatusLine::SMGuardStatusLine(QWidget* parent /*= nullptr*/)
     mStatus = new QLabel(this);
     mStatus->setObjectName(QStringLiteral("smGuardStatus"));
     mStatus->setTextFormat(Qt::RichText);
-    // A verdict is a sentence, and a sentence is wider than a docked panel. An Ignored horizontal
-    // policy makes the label ask for NO width at all, so a diagnostic can never widen the panel the
-    // user sized -- the text elides to the width it is given and the tooltip keeps it whole.
+    // A verdict is a sentence and a sentence is wider than a docked panel, so an Ignored horizontal
+    // policy makes the label ask for no width. The text elides and the tooltip keeps it whole.
     mStatus->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     // LinksAccessibleByMouse is required in addition to the selectable flag: without it the
     // recovery hyperlink renders but never fires linkActivated (R20).
@@ -93,10 +92,8 @@ void SMGuardStatusLine::setStatus(  NEGuardStyle::eSeverity severity
     mVerdict  = verdict;
     mPreview  = generatedPreview;
 
-    // The generated preview and the `uses handler:` chips are NO LONGER shown here:
-    // they live in the `Generated` accordion section, which the developer opens only
-    // when interested. The status line keeps exactly one job -- the verdict -- while \ref previewText
-    // still reports the byte-exact generator output for the 23c contract.
+    // The generated preview and the handler chips live in the `Generated` section now, so the status
+    // line keeps one job: the verdict. previewText still reports the generator output.
     Q_UNUSED(handlerChips);
     mChips->hide();
 
@@ -153,18 +150,16 @@ void SMGuardStatusLine::updateLabel()
         mStatus->setToolTip(mVerdict);
     }
 
-    // The R20 recovery affordance: a trailing `  ->  <label>` hyperlink when a suggestion exists.
-    // No inline color -- the anchor uses the palette's Link role, so it stays theme-correct and
-    // carries no literal color. The href encodes the fix id + payload for the linkActivated route.
+    // A trailing `  ->  <label>` hyperlink when a suggestion exists. The anchor uses the palette's
+    // Link role, and the href encodes the fix id and payload for the linkActivated route.
     if (mSugFixId.isEmpty() == false)
     {
         html += QStringLiteral("  -&gt;  <a href=\"fix:%1:%2\">%3</a>")
                     .arg(mSugFixId, mSugPayload.toHtmlEscaped(), mSugLabel.toHtmlEscaped());
     }
 
-    // Only when it actually changed: setting the same text still asks the layout to run, and this
-    // is called FROM a resize -- re-entering the layout from inside it is what made the panel
-    // judder while the user dragged its edge.
+    // Only when it actually changed: setting the same text still runs the layout, and this is called
+    // from a resize, so re-entering the layout made the panel judder as its edge was dragged.
     if (html != mHtml)
     {
         mHtml = html;

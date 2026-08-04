@@ -266,11 +266,8 @@ void SMMethod::setupSignals()
     connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
     connect(&notifier, &DocModelNotifier::listReordered , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
 
-    // Inline (in-table) editing: the shared TableCell delegate opens an editor per cell. The tree
-    // is heterogeneous (method rows vs parameter rows), so which cells are editable, whether a
-    // cell shows a combo or a text editor, and how it is validated are resolved per cell by the
-    // controller. Wait-for-end mode commits a text edit once (on editing finished) so an inline
-    // rename pushes a single undo command; the commit routes through cellChanged().
+    // Inline editing through the shared TableCell delegate. Wait-for-end mode commits a text edit
+    // once, so an inline rename pushes a single undo command through cellChanged().
     mTableCell = new TableCell(table, this, true);
     mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
     mTableCell->setEditorModelResolver([this](const QModelIndex& idx) { return editorModelFor(idx); });
@@ -323,15 +320,8 @@ QString SMMethod::nameCollisionReason(const SMMethodEntry* method, const QString
     if (name.isEmpty())
         return QString();
 
-    // Method names collide only WITHIN the same kind. Each kind generates a distinct symbol in a
-    // distinct scope: a trigger becomes a member of the FSM class; an action becomes the pure-virtual
-    // `action_<name>()` on the handler class; a condition becomes `<name>()` on that same handler class
-    // (a virtual method, or a std::function member when it is a lambda). So `on` may legitimately exist
-    // once as a trigger, once as an action and once as a condition. Only two methods of the SAME kind
-    // (two triggers, two actions, or two conditions) named alike map to one symbol and truly collide.
-    // findMethod() is name-only and returns the first match regardless of kind, so it cannot answer this
-    // -- scan the list for a same-kind, same-name sibling instead. When no method is bound the kind is
-    // unknown, so the cross-method check is skipped (the live name hint fires only for a selected method).
+    // Method names collide only within the same kind, since each kind generates a distinct symbol.
+    // findMethod() is name-only, so the list is scanned for a same-kind sibling instead.
     if (method != nullptr)
     {
         for (const SMMethodEntry* other : mModel.getMethods())

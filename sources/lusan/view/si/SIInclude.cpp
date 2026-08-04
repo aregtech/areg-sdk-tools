@@ -53,8 +53,8 @@ namespace
 
 QStringList SIInclude::getSupportedExtensions()
 {
-    // A Service Interface is an API contract; a State Machine is a behaviour. Neither can consume
-    // the other, so `.fsml` is not offered here. A data type belongs to neither and is shared.
+    // A service interface is an API contract and a state machine is a behaviour, so `.fsml` is not
+    // offered here. A data type belongs to neither and is shared.
     QStringList exts{};
     exts.append(LusanApplication::getExternalFileExtensions());
     exts.append(LusanApplication::buildFileFilter(tr("Service Interface Files")
@@ -300,9 +300,8 @@ void SIInclude::onBrowseClicked()
 
 void SIInclude::onUpdateClicked()
 {
-    // Re-derives the Type/Name/Version columns from the current locations. Once service
-    // interface / data type includes are parsed, this is where their declared name and version
-    // are re-read from disk; today it simply rebuilds the derived columns from the live model.
+    // Re-derives the Type, Name and Version columns from the current locations. Today it rebuilds
+    // them from the live model; once includes are parsed, this is where disk is re-read.
     blockBasicSignals(true);
     const uint32_t id = currentId();
     rebuildRows();
@@ -394,9 +393,8 @@ void SIInclude::updateWidgets()
     // Forbid invalid include path characters when editing the Location column inline, exactly
     // as the details panel's Include File field does.
     mTableCell->setColumnValidation(COL_LOCATION, TableCell::eCellValidation::Path);
-    // Only Location is user-editable; Type and Name are derived from the location and Version is
-    // read from disk, so the delegate refuses an editor on every other column. The item keeps the
-    // ItemIsEditable flag (needed to open the Location editor), and this predicate gates the rest.
+    // Only Location is user-editable: Type and Name are derived and Version is read from disk, so
+    // the delegate refuses an editor elsewhere. The item keeps the flag the Location editor needs.
     mTableCell->setEditableCheck([](const QModelIndex& index) { return index.column() == COL_LOCATION; });
     table->setItemDelegate(mTableCell);
 

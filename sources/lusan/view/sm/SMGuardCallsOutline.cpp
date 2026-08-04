@@ -70,10 +70,8 @@ SMGuardCallsOutline::SMGuardCallsOutline(StateMachineModel& model, QWidget* pare
     mList->setUniformItemSizes(false);
     layout->addWidget(mList);
 
-    // Only itemActivated (a double-click on desktop styles, or Return): it fires ONCE per gesture.
-    // Wiring itemDoubleClicked as well double-fired the handler on one double-click, which inserted
-    // the reference twice and nested it (`@cond:x(@cond:x())`), because the first insert leaves the
-    // caret between the parens where the second insert then lands.
+    // Only itemActivated, which fires once per gesture. Wiring itemDoubleClicked as well inserted
+    // the reference twice and nested it, since the first insert leaves the caret between the parens.
     connect(mList, &QListWidget::itemActivated, this, &SMGuardCallsOutline::onItemActivated);
     connect(mList, &QListWidget::customContextMenuRequested, this, &SMGuardCallsOutline::onContextMenu);
 
@@ -127,10 +125,8 @@ QSize SMGuardCallsOutline::minimumSizeHint(void) const
 
 namespace
 {
-    //!< True when a document change can alter the set of insertable condition methods. The pickup
-    //!< list is a projection of the METHOD declarations only, so a guard edit (a Transition /
-    //!< Condition change) must not repopulate it -- rebuilding on every keystroke-commit rebuilt the
-    //!< whole catalog and the whole list widget for nothing.
+    //!< True when a document change can alter the set of insertable condition methods. The list
+    //!< projects method declarations only, so a guard edit must not repopulate it.
     bool affectsPickupList(eDocElementKind kind)
     {
         return (kind == eDocElementKind::Method);
@@ -190,10 +186,8 @@ void SMGuardCallsOutline::rebuild(void)
     mList->clear();
     mInsertable.clear();
 
-    // Pickup list only: the Conditions section is a simple palette of
-    // the defined condition methods; double-clicking one inserts its `@cond:name()` reference into
-    // the guard. It no longer projects the calls already used in the guard -- the guard field shows
-    // those (as chips) and the Arguments section maps the call the caret sits in.
+    // A pickup list only: the Conditions section is a palette of the defined condition methods, and
+    // a double-click inserts a reference. The guard field is what shows the calls already used.
     appendInsertableConditions();
 
     if (mList->count() == 0)

@@ -89,9 +89,8 @@ namespace
             arrowHead(p, QPointF(6.0, 23.0), QPointF(25.0, 9.0), 6.0, color);
             break;
 
-        // An internal transition is the one transition that never leaves its state, so the mark is a
-        // loop drawn INSIDE a state box -- the same idea as the hook SMKindGlyph paints on the
-        // state-box row, at toolbar size.
+        // An internal transition never leaves its state, so the mark is a loop drawn inside a state
+        // box, the same idea as the hook SMKindGlyph paints, at toolbar size.
         case SMToolIcons::eIcon::AddInternal:
             p.drawRoundedRect(QRectF(5.0, 8.0, 22.0, 17.0), 2.5, 2.5);
             p.drawLine(QPointF(11.0, 20.0), QPointF(11.0, 14.0));

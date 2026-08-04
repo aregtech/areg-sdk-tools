@@ -99,9 +99,8 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
 
     connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
         ensureTabInitialized(index);
-        // The toolbar and the Properties/Outline panels are active only on the Design page
-        // (issue #516). When they are hosted in the Navigation Window they must bind/unbind as
-        // the user enters or leaves the Design tab, so let the main window re-sync them.
+        // The toolbar and the Properties/Outline panels are active only on the Design page. Hosted
+        // in the Navigation Window they must bind and unbind as the user enters or leaves it.
         if (mMainWindow != nullptr)
         {
             mMainWindow->syncDesignWidgets();
@@ -207,9 +206,8 @@ void StateMachine::paste()
 
 void StateMachine::find()
 {
-    // Resolve the seed from the page that is in front BEFORE switching tabs: a selected registry
-    // entry (or state) makes Ctrl+F search that specific entry's usages by id+kind, so a
-    // same-named entry of another kind is ignored (issue #538). No selection -> plain Find.
+    // Resolve the seed from the page in front before switching tabs: a selected entry makes Ctrl+F
+    // search that entry's usages by id and kind. With no selection it is a plain Find.
     SMReferences::eTarget target = SMReferences::eTarget::State;
     uint32_t id = 0;
     QString name;
@@ -300,9 +298,8 @@ void StateMachine::findUsages()
 
 void StateMachine::gotoDefinition()
 {
-    // Go to Declaration navigates from a canvas use (state/transition) to the registry page that
-    // declares it, so it is meaningful only while the Design page is in front. On any other page
-    // the user is already looking at a declaration list.
+    // Go to Declaration navigates from a canvas use to the page that declares it, so it means
+    // something only while the Design page is in front.
     ensureTabInitialized(static_cast<int>(PageDesign));
     SMDesign* design = designPageIfBuilt();
     if (design == nullptr)
@@ -685,9 +682,8 @@ bool StateMachine::writeToFile(const QString& filePath)
 
 void StateMachine::commitPendingEdits(void)
 {
-    // A description box gives its text to the document when it loses the focus, and Ctrl+S leaves
-    // the caret where it is. Collect from every page that has something to give, so the file gets
-    // the text and the findings list stops reporting what the author has already written.
+    // A description box gives its text to the document on focus loss, and Ctrl+S leaves the caret
+    // where it is. Collect from every page, so the file gets the text the author already wrote.
     const QList<QWidget*> widgets = findChildren<QWidget*>();
     for (QWidget* widget : widgets)
     {

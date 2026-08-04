@@ -398,9 +398,8 @@ void SMPasteCommand::buildRegistryPlan(SMClipboardContent& content)
     planAttributes(content.mRefAttributes, true);
     planConstants(content.mRefConstants, true);
 
-    // Explicitly copied entries are always pasted as new entries (that is the copy the
-    // user asked for), renamed when the name is taken. Includes are the exception: a
-    // location cannot be meaningfully renamed, so an already-present include is reused.
+    // Explicitly copied entries are always pasted as new ones, renamed when the name is taken.
+    // Includes are the exception: a location cannot be renamed, so a present one is reused.
     for (DataTypeCustom* entry : content.mDataTypes.getElements())
     {
         const QString& name = entry->getName();

@@ -488,9 +488,8 @@ void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
     const int rule = item->data(ColumnSeverity, RoleRule).toInt();
     QObject* owner = item->data(ColumnSeverity, RoleOwner).value<QObject*>();
 
-    // The row remembers which window owns it as a plain pointer. Match it against the documents
-    // still listed before handing it out: a window closed since the last rebuild leaves rows whose
-    // owner no longer exists, and navigating to one of those would follow a dangling pointer.
+    // The row remembers its owning window as a plain pointer, so match it against the documents
+    // still listed: a window closed since the last rebuild leaves rows with a dangling owner.
     if (owner != nullptr)
     {
         bool alive = false;
@@ -566,9 +565,8 @@ void SMValidationPanel::rebuild()
             rows.append(row);
         }
 
-        // Worst first within a document; equal severities keep their discovery order (document
-        // order for the engine). The shared ladder ranks Error highest so a worst-of is a max,
-        // hence the descending compare.
+        // Worst first within a document; equal severities keep their discovery order. The ladder
+        // ranks Error highest, hence the descending compare.
         std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b)
         {
             return static_cast<int>(a.severity) > static_cast<int>(b.severity);

@@ -151,9 +151,8 @@ void SMDataType::setupSignals()
     connect(mList->actionNewImport()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
     connect(mList->actionNewContainer()    , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
 
-    // List keys, each doing what the matching toolbar button does: Delete removes the selected
-    // row, Insert adds one, F2 puts the caret in its name. Types and fields have separate
-    // toolbar buttons, so the selected level picks which one the key follows.
+    // List keys mirroring the toolbar buttons: Delete removes the selected row, Insert adds one, F2
+    // puts the caret in its name. The selected level picks which toolbar button the key follows.
     QTreeWidget* table = mList->ctrlTableList();
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
@@ -187,9 +186,8 @@ void SMDataType::setupSignals()
 
     // The identifier validator is installed inside the shared DataTypeDetailsView.
     connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &SMDataType::onNameCommitted);
-    // Live-preview the typed name into the selected type's Name column (no command; the real
-    // rename commits on editingFinished). Selection sets the field under a QSignalBlocker, so
-    // this only fires for genuine user edits.
+    // Live-preview the typed name into the Name column; the real rename commits on editingFinished.
+    // Selection sets the field under a QSignalBlocker, so this fires only for genuine user edits.
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged          , this, [this](const QString& text) {
         if ((currentFieldId() == 0) && (currentDataType() != nullptr))
         {
@@ -463,10 +461,8 @@ void SMDataType::selectedStructField(DataTypeStructure* parent, uint32_t fieldId
         const QSignalBlocker blockType(mFields->ctrlTypes());
         const QSignalBlocker blockValue(mFields->ctrlValue());
         const QSignalBlocker blockDescr(mFields->ctrlDescription());
-        // Must run under the signal blockers: combo->clear()/addItem() fire live
-        // currentIndexChanged signals that would otherwise re-enter the model mid-selection
-        // (onFieldTypeChanged -> a command -> notifier -> refreshAll() rebuilding the
-        // QTreeWidget while this very selection is in progress, i.e. unbounded recursion).
+        // Must run under the signal blockers: clear() and addItem() fire currentIndexChanged, which
+        // would re-enter the model mid-selection and rebuild the tree recursively.
         populateTypeCombo(mFields->ctrlTypes(), parent);
         mFields->ctrlName()->setText(field->getName());
         mFields->ctrlTypes()->setCurrentText(field->getType());

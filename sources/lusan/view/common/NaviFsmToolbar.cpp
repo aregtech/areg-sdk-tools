@@ -166,21 +166,9 @@ namespace
 
     /**
      * \class   RowToolButton
-     * \brief   A tool button whose label sits on the left in the text-only row mode.
-     *
-     *          The row modes give every button the full width of the panel, so a centred label
-     *          leaves each name floating in the middle of its own row and the column of names
-     *          never lines up. "Text beside icon" reads correctly because the style aligns an
-     *          icon-and-text label to the left of its own accord. "Text only" does not, and
-     *          nothing declarative repairs it -- measured against Qt 6.8 and the windows11
-     *          style: `text-align: left` in a stylesheet is ignored for a tool button in every
-     *          mode, and handing the style a "text beside icon" option with the icon taken out
-     *          is centred as well, because that branch only aligns left when there is really an
-     *          icon to align against.
-     *
-     *          So the label is painted here. The style still draws the frame from the real
-     *          option -- hover, pressed, checked and disabled all keep coming from it -- but it
-     *          is handed no text, and what it never sees it cannot centre.
+     * \brief   A tool button whose label sits on the left in the text-only row mode. Qt centres
+     *          that label and neither a stylesheet nor a "text beside icon" option repairs it,
+     *          so the label is painted here while the style still draws the frame.
      **/
     class RowToolButton : public QToolButton
     {
@@ -318,9 +306,8 @@ void NaviFsmToolbar::rebuild()
         delete item;
     }
 
-    // Unbound: show the same groups built from disabled stand-in actions, so the tab
-    // always presents the full tool set (issue #514). The stand-ins are owned by a
-    // dedicated holder recreated per rebuild, so they never accumulate.
+    // Unbound: show the same groups built from disabled stand-in actions, so the tab always
+    // presents the full tool set. A holder recreated per rebuild keeps them from accumulating.
     delete mFallback;
     mFallback = nullptr;
 
@@ -418,10 +405,8 @@ QToolButton* NaviFsmToolbar::buildToolButton(QAction* action)
 
     if (showsText())
     {
-        // Padding only. `text-align: left` used to be here and was measured to do nothing at all
-        // -- a tool button ignores it in every mode -- so it is gone rather than left standing as
-        // an explanation of an alignment it never produced. RowToolButton is what aligns the
-        // text-only label; the icon+text mode is aligned by the style itself.
+        // Padding only. A tool button ignores `text-align`, so RowToolButton is what aligns the
+        // text-only label.
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         button->setStyleSheet(QStringLiteral("QToolButton { padding: %1px %2px; }")
                                 .arg(_rowPaddingV).arg(_rowPaddingH));

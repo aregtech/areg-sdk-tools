@@ -232,9 +232,8 @@ bool NELusanCommon::isValidIdentifier(const QString& name)
 
 QValidator* NELusanCommon::createIdentifierValidator(QObject* parent)
 {
-    // QRegularExpressionValidator treats a full match as Acceptable and a prefix (including the
-    // empty string) as Intermediate, so the field can be cleared while typing but a space or a
-    // leading digit is rejected as it is typed.
+    // A full match is Acceptable and a prefix Intermediate, so the field can be cleared while
+    // typing, but a space or a leading digit is rejected as it is typed.
     return new QRegularExpressionValidator(QRegularExpression(identifierPattern()), parent);
 }
 
@@ -246,9 +245,8 @@ QValidator* NELusanCommon::createPathValidator(QObject* parent)
 
 QValidator* NELusanCommon::createQualifiedNameValidator(QObject* parent)
 {
-    // A C++ qualified name: one or more identifiers joined by '::' (e.g. NameSpace::Inner).
-    // A full match is Acceptable; a prefix such as "NameSpace" or "NameSpace::" is Intermediate,
-    // so the namespace can be typed segment by segment but a leading digit or a space is rejected.
+    // A qualified name is one or more identifiers joined by '::'. A partial name stays
+    // Intermediate, so a namespace can be typed segment by segment.
     static const QString _pattern{ QStringLiteral("[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*") };
     return new QRegularExpressionValidator(QRegularExpression(_pattern), parent);
 }

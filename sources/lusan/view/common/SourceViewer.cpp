@@ -140,8 +140,7 @@ bool SourceViewer::readFile(const QString& filePath)
         return false;
     }
 
-    // A NUL byte in the head is the practical test for "not text". It is not a proof either way,
-    // but every encoding this viewer can render keeps NUL out of ordinary content, and showing a
+    // A NUL byte in the head is the practical test for "not text". It is no proof, but showing a
     // binary as mojibake is worse than saying plainly that it cannot be shown.
     const QByteArray head = file.peek(_sniffSize);
     if (head.contains('\0'))
@@ -153,10 +152,8 @@ bool SourceViewer::readFile(const QString& filePath)
     const QByteArray raw = file.readAll();
     file.close();
 
-    // The decoder consumes a byte order mark when there is one. When the bytes are not valid
-    // UTF-8 the file is in some legacy code page we cannot name, and Latin-1 is the honest
-    // fallback: it maps every byte to a character, so it never fails. Non-ASCII text then reads
-    // wrong, but the code around it stays legible -- better than refusing the file outright.
+    // The decoder consumes a byte order mark when there is one. Latin-1 is the fallback for bytes
+    // that are not valid UTF-8: it never fails, so the file still opens and the code stays legible.
     QStringDecoder decoder(QStringConverter::Utf8);
     QString text = decoder(raw);
     if (decoder.hasError())

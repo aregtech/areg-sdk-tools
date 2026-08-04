@@ -103,10 +103,8 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
     outer->setContentsMargins(8, 8, 8, 8);
     outer->setSpacing(6);
 
-    // The body is its OWN SMGuardField (its own QTextDocument -- the two highlighters and slot
-    // cursors never collide, per the hazard). Auto-commit-on-focus-out is disabled so Cancel (which
-    // blurs the field before its slot runs) cannot slip the discarded text into the model; OK
-    // commits explicitly instead.
+    // The body is its own SMGuardField with its own document, so the two highlighters never collide.
+    // Auto-commit on focus-out is off, so Cancel cannot slip discarded text into the model.
     mField = new SMGuardField(mModel, this);
     mField->setObjectName(QStringLiteral("smGuardPopoutField"));
     mField->setAutoCommit(false);
@@ -147,10 +145,8 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
     // Mirror the base bar's status line (connected BEFORE the seeding reflow so the first status shows).
     connect(mField, &SMGuardField::statusUpdated, this, &SMGuardPopout::onStatusUpdated);
 
-    // Islands work identically: open the editor, edit the body into the field's token, close. The
-    // body edits stay a draft carried by the eventual OK commit (no immediate commit -- the pop-out
-    // gates every edit behind OK/Cancel). The `Name it...` / `Move to handler...` ladder is a
-    // bar-owned flow, so it is forwarded to the bar which runs it over the shared model.
+    // Islands work the same way: open the editor, edit the body into the field's token, close. The
+    // body edits stay a draft until OK commits, and the naming ladder is forwarded to the bar.
     connect(mField, &SMGuardField::islandEditRequested, this, [this](int islandIndex, const QString& body)
     {
         mIsland->openFor(mModel, mTransId, islandIndex, body);
@@ -178,14 +174,12 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
         emit nameIslandRequested(islandIndex, body, true);
     });
 
-    // Seed from the base field's committable text: the bar commits the base before opening, so a
-    // reflow from the model shows exactly what the base showed -- chips and islands folded the same
-    // way (identical to a fresh commit render).
+    // Seed from the base field's committable text. The bar commits the base before opening, so a
+    // reflow from the model shows exactly what the base showed.
     mField->setTarget(mTransId);
 
-    // The pop-out IS the large editor: a field tall enough for a multi-line guard, and a window
-    // centered on the design surface rather than dropped at the parent's corner where its right
-    // edge fell off the screen.
+    // The pop-out is the large editor: a field tall enough for a multi-line guard, in a window
+    // centered on the design surface rather than dropped at the parent's corner.
     resize(760, 420);
     centerOnHost(this, parent);
 }
@@ -196,9 +190,8 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
 
 void SMGuardPopout::onCommit()
 {
-    // OK: commit through the standard text -> parse -> SMGuardCommands path as ONE undoable command
-    // (SMGuardField::commitNow -> commit). The base bar's field reflows from the model on the
-    // resulting elementChanged(transitionId). A no-change edit pushes nothing.
+    // OK commits through the standard text -> parse -> commands path as one undoable command. A
+    // no-change edit pushes nothing.
     mField->commitNow();
     close();    // WA_DeleteOnClose -> closeEvent emits closed().
 }

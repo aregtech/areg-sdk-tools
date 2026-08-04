@@ -176,12 +176,8 @@ namespace
             }
         }
 
-        //!< The `@kind:` prefix a reference needs so a bare re-parse would not bind a different
-        //!< symbol (minimal disambiguation, like minimal parentheses). A bare name binds
-        //!< param > attr > const, so a Param never needs a prefix; an Attr needs `@attr:` only
-        //!< when a same-named parameter shadows it; a Const needs `@const:` when a parameter or
-        //!< attribute shares its name. This keeps the common guard bare and makes a same-name /
-        //!< different-kind guard round-trip (parse(render(tree)) == tree).
+        //!< The `@kind:` prefix a reference needs so a bare re-parse binds the same symbol. A bare
+        //!< name binds param > attr > const, so only a shadowed attribute or constant needs one.
         QString kindPrefix(eKind kind, const QString& name) const
         {
             switch (kind)
@@ -329,12 +325,9 @@ namespace
         }
 
         /**
-         * \brief   Renders a call's arguments in SIGNATURE order: each formal's
-         *          bound value in place, an unmapped formal as a labeled ghost `<name>` (only in
-         *          the ghost/display mode -- canonical text omits it so it round-trips), and any
-         *          value mapped AFTER a hole as the named `@arg:name = value` so its target slot
-         *          is unambiguous. Never an empty comma. Arguments key on the formal's id
-         *          (Option A); a legacy arg with id 0 falls back to position.
+         * \brief   Renders a call's arguments in signature order: each formal's bound value in
+         *          place, an unmapped formal as a ghost `<name>` in display mode only, and a
+         *          value mapped after a hole as the named `@arg:name = value`.
          **/
         void renderArgs(const SMGuardNode& node, const SMMethodEntry* method)
         {
@@ -510,9 +503,8 @@ QString SMGuardRender::canvasSummary(const StateMachineData& data, uint32_t tran
 {
     if (guard.isDraft())
     {
-        // A draft has no tree to walk, so it collapses by SHAPE. Returning the raw text unchanged
-        // -- what this used to do -- defeated the caller: a hand-typed C++ block arrived at full
-        // length and was then chopped mid-token, which is exactly what a summary exists to avoid.
+        // A draft has no tree to walk, so it collapses by shape. Returning the raw text unchanged
+        // let a hand-typed C++ block arrive at full length and then be chopped mid-token.
         const QString raw = guard.getDraftText();
         if (raw.contains(QLatin1Char('{')))
         {

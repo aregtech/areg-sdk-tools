@@ -48,9 +48,8 @@ NaviDesignPanel::NaviDesignPanel(NaviDesignPanel::eKind kind, MdiMainWindow* wnd
 
 void NaviDesignPanel::bindDesign(SMDesign* design)
 {
-    // mBound is a guarded pointer: it reads nullptr once the page is gone, so "same page" alone
-    // would keep a panel that is still bound to the destroyed page's model. The empty flag is
-    // what tells an unbound host from one that merely lost its page.
+    // mBound is a guarded pointer that reads nullptr once the page is gone, so "same page" alone
+    // would keep a panel bound to a destroyed model. The empty flag tells the two apart.
     const bool unchanged = (design != nullptr) ? ((design == mBound.data()) && (mEmpty == false)) : mEmpty;
     if (unchanged && (mContent != nullptr))
     {

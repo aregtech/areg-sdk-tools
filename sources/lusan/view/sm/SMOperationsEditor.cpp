@@ -53,9 +53,8 @@ namespace
 
     constexpr int RoleTimerOpId { Qt::UserRole + 1 };
 
-    //!< The Actions/Events source universe: a literal, a stimulus parameter (transition
-    //!< scope only, gated by the table), a machine attribute, or a constant. The condition and
-    //!< verbatim-C++ kinds are Conditions-only and are not offered here.
+    //!< The Actions/Events source universe: a literal, a stimulus parameter, a machine attribute or
+    //!< a constant. The condition and verbatim-C++ kinds belong to Conditions only.
     QList<eSource> kActionSources(void)
     {
         return { eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant };
@@ -134,13 +133,8 @@ void SMOperationsEditor::buildUi()
     box->setContentsMargins(6, 6, 6, 6);
     box->setSpacing(8);
 
-    // Action / Event / Timers are three collapsible sections under a shared SMSectionChrome, so the
-    // chrome's header carries the very toolbar every other Properties tab has: one icon-only jump
-    // button per section (toggle it open/closed) plus the compact toggle. Compact defaults OFF so the
-    // three stay open together, each collapsible on its own. Because this lives in the shared editor,
-    // every scope it serves -- a transition's Actions tab and a state's Enter/Do/Exit tabs -- gets the
-    // same toolbar+accordion; the gear/pulse/clock glyphs mark Action/Event/Timers respectively. The
-    // state Do tab appends a fourth "Repeat" section through addSection().
+    // Action / Event / Timers are three collapsible sections under a shared chrome. The state Do
+    // tab appends a fourth "Repeat" section through addSection().
     mChrome = new SMSectionChrome(content);
 
     // Action section.
@@ -151,10 +145,8 @@ void SMOperationsEditor::buildUi()
     connect(mActionCombo, &QComboBox::activated, this, [this](int) { setActionName(mActionCombo->currentText()); });
     actionBox->addWidget(mActionCombo);
     mActionParams = new SMArgMapTable(mModel, actionBody);
-    // One MERGED cell per parameter, not a source picker beside a value editor: a parameter is
-    // bound to a source or to a typed value, never to both, so two controls only asked the same
-    // question twice and cost the narrow dock a column. The cell lists exactly what exists --
-    // typed value, stimulus parameters, attributes, constants -- each marked with its kind.
+    // One merged cell per parameter rather than a source picker beside a value editor: a parameter
+    // binds to a source or to a typed value, never both, and the narrow dock keeps a column.
     mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);
     mActionParams->setAllowedSources(kActionSources());
     actionBox->addWidget(mActionParams);
@@ -204,8 +196,7 @@ void SMOperationsEditor::buildUi()
 
     mChrome->setCompact(false);
     // Every section starts open, so the tab reads as one short form instead of a stack of closed
-    // bars the developer has to click through. A host section appended later (the Do tab's Repeat)
-    // opens itself the same way.
+    // bars. A section appended later opens itself the same way.
     mChrome->openAllSections();
 
     box->addWidget(mChrome);
@@ -371,9 +362,8 @@ void SMOperationsEditor::bindParamRows(SMArgMapTable* table, SMArgSinkOperation&
         params.append(SMArgMapTable::Param{ param.getName(), param.getType(), param.getValue(), param.hasDefault(), false });
     }
 
-    // Orphan case (b): a formal removed on the Methods page leaves a stored argument whose name
-    // matches no current parameter. Never drop it silently; surface it as a red
-    // orphan row (value kept, remove quick-fix) appended after the live parameters.
+    // A formal removed on the Methods page leaves a stored argument matching no parameter. It is
+    // never dropped silently: it becomes a red orphan row after the live parameters.
     for (const SMArgumentEntry& arg : args)
     {
         if (formalNames.contains(arg.getName()) == false)
@@ -490,9 +480,8 @@ void SMOperationsEditor::setActionName(const QString& name)
         mModel.getUndoStack().push(new SMAddOperationCommand(notifier, *mList, call, 0, tr("Add action")));
     }
 
-    // Reflect the change at once: the combo already shows the pick, so refresh only the parameter
-    // rows (a full rebuild would destroy the combo the user just clicked). The canvas edge updates
-    // through the Operation notification the command emitted.
+    // The combo already shows the pick, so refresh only the parameter rows; a full rebuild would
+    // destroy the combo just clicked. The canvas edge follows the command's own notification.
     SMActionCall* updated = findAction();
     bindParamRows(mActionParams, mActionSink, updated != nullptr ? updated->getId() : 0u, false);
 }
@@ -638,12 +627,8 @@ QStringList SMOperationsEditor::timerNames() const
 
 void SMOperationsEditor::onElementRemoved(uint32_t id, eDocElementKind kind)
 {
-    // The bound owner (a transition, or a state for its Enter/Do/Exit list) was deleted -- e.g. an
-    // undo of "Add transition". mOwner/mList point straight into that now-freed element, so a still-
-    // queued deferred rebuild (scheduleRebuild) would iterate the freed operation list: a use-after-
-    // free that crashes on the poisoned pointer. Drop the binding immediately; a null mList makes
-    // rebuild() a no-op, and the panel re-binds on the next selection. Guard by (id, kind) so an
-    // unrelated removal still refreshes the pickers through the normal path.
+    // The bound owner was deleted, so mOwner and mList point into freed memory that a queued
+    // rebuild would iterate. Drop the binding; the panel re-binds on the next selection.
     if ((id == mOwnerId) && (kind == mOwnerKind))
     {
         clearBinding();
@@ -656,10 +641,8 @@ void SMOperationsEditor::onElementRemoved(uint32_t id, eDocElementKind kind)
 
 void SMOperationsEditor::onNotifierChanged(uint32_t /*id*/, eDocElementKind kind)
 {
-    // Operation edits and any registry change that can shift what the combos or the arg cells should
-    // show: an action/event/timer name (the pickers), or a stimulus parameter, attribute, constant or
-    // data type (the merged value cell's source list and its type-fit status). Refresh, but never
-    // while the user is mid-edit in a field.
+    // Operation edits, and any registry change that shifts what the combos or the argument cells
+    // show. Refresh, but never while the user is mid-edit in a field.
     if ((kind == eDocElementKind::Operation) || (kind == eDocElementKind::Method) || (kind == eDocElementKind::Event)
         || (kind == eDocElementKind::Timer) || (kind == eDocElementKind::Attribute) || (kind == eDocElementKind::Constant)
         || (kind == eDocElementKind::DataType) || (kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
@@ -688,12 +671,8 @@ void SMOperationsEditor::scheduleRebuild()
 
 bool SMOperationsEditor::isEditing() const
 {
-    // Use the application's ACTIVE focus, not QWidget::focusWidget(): the latter returns the
-    // last-focused DESCENDANT and stays non-null forever once the user has clicked a field here,
-    // so it reported "editing" permanently and every later notification-driven rebuild was
-    // silently skipped -- the arg combos never picked up a newly set stimulus or a freshly created
-    // attribute/event/constant until the whole editor was rebound. Skip a rebuild only while the
-    // caret is really inside this editor.
+    // Use the application's active focus, not QWidget::focusWidget(): the latter keeps returning
+    // the last-focused descendant, which reported "editing" forever and skipped every rebuild.
     QWidget* focus = QApplication::focusWidget();
     return (focus != nullptr) && isAncestorOf(focus);
 }

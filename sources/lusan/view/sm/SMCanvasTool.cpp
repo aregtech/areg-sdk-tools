@@ -320,8 +320,7 @@ void SMTransitionTool::appendWaypoint(const QPointF& scenePos)
     if (mWaypoints.isEmpty() == false)
     {
         // A corner dropped within half a cell of the previous one was meant to be square with it;
-        // beyond that the user is drawing at an angle on purpose. The first corner needs no help:
-        // the border anchor lines up with it instead.
+        // beyond that the angle is deliberate. The first corner lines up with the border anchor.
         const QPointF prev = mWaypoints.last();
         const double  tol  = std::max(getScene().getGridSize() / 2.0, 1.0);
         if (std::abs(point.x() - prev.x()) <= tol)
@@ -397,11 +396,8 @@ void SMTransitionTool::updatePreview(const QPointF& cursor)
     const double srcRadius = (sourceItem != nullptr ? sourceItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
     const QPointF ref = (mWaypoints.isEmpty() ? cursor : mWaypoints.first());
 
-    // The live preview's start anchor must track where the source was pressed, the same way the
-    // committed edge does in completeExternal(): the facing side is chosen center-to-center, then
-    // for a straight (no-waypoint) drag the anchor slides along that side to the grid-aligned press
-    // position. Without this the dashed line starts mid-border while dragging and only jumps to the
-    // pressed row when the solid edge is committed.
+    // The preview's start anchor tracks where the source was pressed, the same way the committed
+    // edge does, so the dashed line does not start mid-border and jump when the edge is committed.
     const int     grid  = getScene().getGridSize();
     const bool    snap  = getScene().isSnapToGrid();
     const QPointF begin = mWaypoints.isEmpty()
@@ -535,10 +531,8 @@ bool SMTransitionTool::mouseDoubleClick(QGraphicsSceneMouseEvent* event)
 {
     if (mArmed)
     {
-        // A double-click away from any state abandons the unfinished transition and cleans up
-        // the preview (issue #516 bug 3): without a valid target the user would otherwise be
-        // stuck with a pending gesture. A double-click on a state was already completed as a
-        // transition by the first click, so there only the repeat is swallowed.
+        // A double-click away from any state abandons the unfinished transition, which would
+        // otherwise leave a pending gesture. On a state the first click already completed it.
         if (getScene().stateAt(event->scenePos()) == nullptr)
         {
             cancelGesture();
@@ -561,9 +555,8 @@ bool SMTransitionTool::keyPress(QKeyEvent* event)
         return true;
     }
 
-    // Esc abandons the unfinished transition and cleans up the preview (issue #516 bug 3).
-    // The scene also maps Esc to cancelActiveGesture(), but handling it here guarantees the
-    // pending gesture is dropped even if the key is routed to the active tool first.
+    // Esc abandons the unfinished transition and cleans up the preview. The scene maps Esc too, but
+    // handling it here drops the pending gesture even when the tool sees the key first.
     if (mArmed && (event->key() == Qt::Key_Escape))
     {
         getScene().cancelActiveGesture();
@@ -603,9 +596,8 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         return;
     }
 
-    // A Start state is the entry point of its machine level: no transition may enter it
-    // (same for a submachine's own Start). Reject the target and keep the gesture armed so
-    // the user can pick a valid target; give a brief hint at the cursor.
+    // A Start is the entry point of its level, so no transition may enter it. Reject the target,
+    // keep the gesture armed, and hint briefly at the cursor.
     if (target->getKind() == SMStateEntry::eStateKind::Start)
     {
         const QList<QGraphicsView*> views = canvas.views();
@@ -641,15 +633,8 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         SMStateItem* targetItem = canvas.stateItem(targetId);
         const double srcRadius = (sourceItem != nullptr ? sourceItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
         const double tgtRadius = (targetItem != nullptr ? targetItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
-        // For a straight (no-waypoint) external transition, the endpoints follow where the user
-        // actually pressed on the source and released on the target: the facing side is still
-        // chosen center-to-center (so the edge leaves/enters the correct side), but each endpoint
-        // is then slid along that side to the grid-aligned pointer coordinate. This makes a
-        // straight drag connect press-point to release-point instead of snapping mid-border to
-        // mid-border; a center press/release reproduces the old mid-border result exactly.
-        // With waypoints the endpoints keep the pressed/released position too, and are squared to
-        // the adjacent corner only when that leg is already near an axis -- a deliberate diagonal
-        // first leg must not be dragged onto the waypoint's row or column.
+        // A straight external transition keeps where the user pressed and released: the facing side
+        // is chosen center-to-center, then each endpoint slides along it to the grid.
         const int  grid = canvas.getGridSize();
         const bool snap = canvas.isSnapToGrid();
         QPointF begin;
@@ -672,9 +657,8 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         points.append(end);
     }
 
-    // An edge drawn OUT of a Start is the level's initial transition, not an external one: it is
-    // taken on entering the level and there is no stimulus to pick for it. Saying so at creation
-    // is what keeps the author from being offered a stimulus they then have to remove.
+    // An edge drawn out of a Start is the level's initial transition, taken on entry with no
+    // stimulus to pick. Saying so at creation spares the author a stimulus they must remove.
     const QString text = QCoreApplication::translate("SMTransitionTool", "Add transition");
     const SMTransitionEntry::eTransitionKind transKind = source->isPseudoStart()
                                                          ? SMTransitionEntry::eTransitionKind::Initial
@@ -697,9 +681,8 @@ void SMTransitionTool::completeInternal()
     StateMachineModel& model = canvas.getModel();
     StateMachineData&  data  = model.getData();
 
-    // A Start is a pseudo-state: its transitions are the level's initial ones and each must say
-    // where the level begins, so an internal one -- which initialises nothing -- is not a thing it
-    // can own. The Design menu's action is already disabled for a Start; this covers the gesture.
+    // A Start is a pseudo-state whose transitions are the level's initial ones, so it can own no
+    // internal transition. The menu action is already disabled; this covers the gesture.
     SMStateEntry* source = data.findStateById(mSourceId);
     if ((source != nullptr) && source->isPseudoStart())
     {
@@ -744,9 +727,8 @@ bool SMPlaceNoteTool::mousePress(QGraphicsSceneMouseEvent* event)
     SMScene& canvas = getScene();
     StateMachineModel& model = canvas.getModel();
 
-    // Clicking on a state binds the note to that state (badge + popup editor over the box);
-    // clicking empty canvas drops a free note box. Only one note per state, so an existing
-    // state note is edited instead of creating a second.
+    // A click on a state binds the note to it, a click on empty canvas drops a free note box. Only
+    // one note per state, so an existing state note is edited instead.
     SMStateItem* state = canvas.stateAt(event->scenePos());
     if (state != nullptr)
     {

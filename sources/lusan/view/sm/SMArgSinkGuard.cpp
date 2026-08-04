@@ -169,8 +169,7 @@ SMGuardNode* SMArgSinkGuard::buildOperand(SMArgumentEntry::eValueSource src, con
     }
 
     // Build the equivalent operand text and parse it exactly as the field would, so a clicked
-    // mapping resolves to the very node typing that text produces (parity). A parameterless
-    // condition source is spelled `name()` so it parses as a zero-arg Call.
+    // mapping resolves to the node that typing it produces. A parameterless condition gets `()`.
     QString text = value.trimmed();
     if (text.isEmpty())
     {

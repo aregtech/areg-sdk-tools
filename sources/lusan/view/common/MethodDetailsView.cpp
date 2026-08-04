@@ -184,9 +184,8 @@ void MethodDetailsView::buildUi()
     // typed name into its list row without the view knowing about the model or the tree/table.
     connect(mName, &QLineEdit::textChanged, this, &MethodDetailsView::nameEdited);
 
-    // Escape cancels the edit: the live-synced text fields restore their pre-edit value. Combos
-    // (Type / Reply / Return) commit immediately and need no cancel; the multi-line Description
-    // and the Body editor keep their own commit-on-focus-out behavior.
+    // Escape cancels the edit and the live-synced text fields restore their pre-edit value. The
+    // combos commit immediately, and the description and body keep their own commit behaviour.
     EditCancelFilter::install(mName);
     EditCancelFilter::install(mDeprecateHint);
 

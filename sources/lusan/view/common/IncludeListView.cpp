@@ -70,10 +70,8 @@ void IncludeListView::buildUi()
     mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected include entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
     mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new include entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
-    // Add has no kind menu on purpose. The extension of the location decides the group, and it
-    // decides it with certainty, so asking the user first would be asking for something the
-    // editor is about to work out anyway. A new entry starts under Include Files and moves the
-    // moment its location says otherwise.
+    // Add has no kind menu: the extension of the location decides the group. A new entry starts
+    // under Include Files and moves as soon as its location says otherwise.
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
     sep->setMaximumSize(24, 24);
@@ -156,9 +154,8 @@ void IncludeListView::updateGroupCounts(int sourceCount, int dataTypeCount, int 
     }
 
     mGroupSource->setText(static_cast<int>(eColumn::ColLocation), tr("Include Files (%1)").arg(sourceCount));
-    // The Data Types group is a placeholder until `.dtml` becomes a real document type: entries
-    // are listed and classified, never resolved, version-checked or validated. Do not give it a
-    // status, a version or an Update path before that parser exists.
+    // The Data Types group is a placeholder until `.dtml` becomes a real document type: entries are
+    // listed and classified, never resolved, version-checked or validated.
     mGroupDataType->setText(static_cast<int>(eColumn::ColLocation), tr("Data Types (%1)").arg(dataTypeCount));
     mGroupDocument->setText(static_cast<int>(eColumn::ColLocation), QStringLiteral("%1 (%2)").arg(mConfig.groupDocLabel).arg(documentCount));
     decorateGroup(mGroupSource);

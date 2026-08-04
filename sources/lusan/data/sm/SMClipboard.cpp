@@ -275,9 +275,8 @@ bool SMClipboardContent::isEmpty() const
 
 QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t>& elementIds)
 {
-    // Classify the selection. Start states are skipped: a pasted level may never
-    // receive a second Start. States nested inside another selected state are covered
-    // by their ancestor's subtree and are skipped as well.
+    // Start states are skipped: a pasted level may never receive a second Start. A state nested
+    // inside another selected state comes with its ancestor's subtree.
     QList<const SMStateEntry*>      states;
     QList<uint32_t>                 noteIds;
     QList<const DataTypeCustom*>    dataTypes;
@@ -775,9 +774,7 @@ void SMClipboard::remapTransitionTargets(SMStateEntry& state, const QHash<uint32
         if (transition->hasTarget())
         {
             // 0 when the target lay outside the pasted set. The transition keeps the kind it was
-            // copied with: an external transition that lost its target is an edge waiting to be
-            // reconnected, and saying so is the point of the Kind attribute -- turning it into an
-            // internal transition would silently invent behaviour the author never wrote.
+            // copied with, so a lost target reads as an edge waiting to be reconnected.
             transition->setToId(oldToNew.value(transition->getToId(), 0));
         }
     }

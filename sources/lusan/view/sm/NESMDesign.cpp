@@ -258,9 +258,8 @@ QPointF NESMDesign::gridAlignedBorderPoint(const QRectF& rect, double radius, co
     const double half = std::max(static_cast<double>(gridSize) / 2.0, 1.0);
     const double rad  = std::clamp(radius, 0.0, std::min(rect.width(), rect.height()) / 2.0);
 
-    // Slide along whichever edge the point sits on: on a top/bottom edge the x coordinate runs
-    // along it, on a left/right edge the y coordinate. The other coordinate stays pinned to the
-    // border. Clamp the sliding coordinate to the straight span so it never climbs a rounded corner.
+    // Slide along the edge the point sits on: x runs along a top or bottom edge, y along a left or
+    // right one. Clamp it to the straight span so it never climbs a rounded corner.
     const double dl = std::abs(onBorder.x() - rect.left());
     const double dr = std::abs(onBorder.x() - rect.right());
     const double dt = std::abs(onBorder.y() - rect.top());

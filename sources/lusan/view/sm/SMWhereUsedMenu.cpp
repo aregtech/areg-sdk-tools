@@ -39,9 +39,8 @@ void SMWhereUsedMenu::present(QWidget* parent, const QList<SMReferences::Use>& u
         QAction* action = menu.addAction(use.location);
         const uint32_t navId = use.navId;
         const bool isState = use.isState;
-        // Ask the window+canvas to reveal the referencing element: it brings the Design page
-        // forward, navigates to the element's level, selects and centers it. Works from any
-        // page, so clicking an entry on a registry page jumps to the referencing state/transition.
+        // Ask the window and canvas to reveal the referencing element: it brings the Design page
+        // forward, navigates to the element's level, then selects and centers it.
         QObject::connect(action, &QAction::triggered, &selection, [&selection, navId, isState]()
         {
             selection.requestReveal(navId, isState);

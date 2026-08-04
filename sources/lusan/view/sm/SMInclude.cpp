@@ -121,9 +121,8 @@ SMInclude::SMInclude(SMIncludeModel& model, QWidget* parent /*= nullptr*/)
 
 QStringList SMInclude::getSupportedExtensions()
 {
-    // A State Machine is a behaviour, a Service Interface is an API contract, and neither can
-    // consume the other -- so `.siml` is not offered here. A data type belongs to neither and is
-    // shared by both, which is why `.dtml` is.
+    // A state machine is a behaviour and a service interface is an API contract, so `.siml` is not
+    // offered here. A data type belongs to neither and is shared, which is why `.dtml` is.
     QStringList exts{};
     exts.append(LusanApplication::getExternalFileExtensions());
     exts.append(LusanApplication::buildFileFilter(tr("State Machine Files")
@@ -226,9 +225,8 @@ void SMInclude::buildUi()
     setWidgetResizable(true);
     setWidget(content);
 
-    // Inline editing of the Location column: commit once on editing-finished so a single undo
-    // command is pushed (matching the details field). Type, Name and Version are derived and must
-    // not be edited, so the delegate refuses an editor on every other column.
+    // Inline editing of the Location column, committed once on editing-finished so one undo command
+    // is pushed. Type, Name and Version are derived, so the delegate refuses an editor there.
     QTreeWidget* table = mList->ctrlTableList();
     mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(IncludeListView::eColumn::ColLocation), TableCell::eCellValidation::Path);
@@ -297,9 +295,8 @@ void SMInclude::setupSignals()
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMInclude::onMoveDownClicked);
     connect(mList->ctrlButtonUpdate()  , &QToolButton::clicked           , this, &SMInclude::onUpdateClicked);
 
-    // List keys, each doing what the matching toolbar button does: Delete removes the selected
-    // include, Insert adds one, F2 puts the caret in its location. A group heading carries no
-    // include, so Delete and F2 do nothing there.
+    // List keys mirroring the toolbar buttons: Delete removes the selected include, Insert adds
+    // one, F2 puts the caret in its location. A group heading carries none, so those do nothing.
     QTreeWidget* table = mList->ctrlTableList();
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
@@ -323,9 +320,8 @@ void SMInclude::setupSignals()
             return;
         }
 
-        // The heading a row sits under is part of what the location says, so the row moves while
-        // it is typed rather than at commit -- otherwise it reads "Data Type" under "Include
-        // Files" until focus leaves.
+        // The heading a row sits under is part of what the location says, so the row moves while it
+        // is typed rather than at commit.
         const eIncludeKind kind = mList->kindForLocation(text);
         const QSignalBlocker blocker(mList->ctrlTableList());
         mList->placeRow(item, kind, id);
@@ -567,9 +563,8 @@ bool SMInclude::acceptTypedLocation(const QString& location)
         return true;
     }
 
-    // Only a location that actually names a file can be checked: an empty or not-yet-created
-    // path cannot close a cycle or sit too deep, and refusing it would fight a user who is
-    // typing the name of a file they are about to make. Validation reports it either way.
+    // Only a location that names a file can be checked: an empty or not-yet-created path cannot
+    // close a cycle, and refusing it would fight a user typing the name of a file still to come.
     const QString absolute = mModel.absolutePathOf(location);
     if (absolute.isEmpty() || (QFileInfo(absolute).isFile() == false))
     {
