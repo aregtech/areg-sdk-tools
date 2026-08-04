@@ -46,6 +46,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QToolButton>
@@ -295,6 +296,21 @@ void SMInclude::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMInclude::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMInclude::onMoveDownClicked);
     connect(mList->ctrlButtonUpdate()  , &QToolButton::clicked           , this, &SMInclude::onUpdateClicked);
+
+    // List keys, each doing what the matching toolbar button does: Delete removes the selected
+    // include, Insert adds one, F2 puts the caret in its location. A group heading carries no
+    // include, so Delete and F2 do nothing there.
+    QTreeWidget* table = mList->ctrlTableList();
+    QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
+    QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
+    QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
+    scRemove->setContext(Qt::WidgetWithChildrenShortcut);
+    scAdd->setContext(Qt::WidgetWithChildrenShortcut);
+    scRename->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(scRemove, &QShortcut::activated, this, &SMInclude::onRemoveClicked);
+    connect(scAdd   , &QShortcut::activated, this, &SMInclude::onAddClicked);
+    connect(scRename, &QShortcut::activated, this, &SMInclude::focusLocationField);
+
     // The include path keystroke validator lives inside the shared IncludeDetailsView.
     connect(mDetails->ctrlInclude()      , &QLineEdit::editingFinished, this, &SMInclude::onLocationCommitted);
     // Live-preview the typed path into the selected include's row (location + derived type/name
@@ -584,6 +600,15 @@ void SMInclude::onInsertClicked()
     if (entry != nullptr)
     {
         selectInclude(entry->getId());
+        mDetails->ctrlInclude()->setFocus();
+        mDetails->ctrlInclude()->selectAll();
+    }
+}
+
+void SMInclude::focusLocationField()
+{
+    if (currentIncludeId() != 0)
+    {
         mDetails->ctrlInclude()->setFocus();
         mDetails->ctrlInclude()->selectAll();
     }

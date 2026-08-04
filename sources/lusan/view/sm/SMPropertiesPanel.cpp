@@ -704,6 +704,22 @@ void SMPropertiesPanel::focusConditions(uint32_t transitionId)
     }
 }
 
+void SMPropertiesPanel::focusStimulus(uint32_t transitionId)
+{
+    if (mModel.getData().findTransitionById(transitionId) == nullptr)
+    {
+        return;
+    }
+
+    mModel.getSelectionModel().setSelection({ transitionId });
+    if (mPage == PageTransition)
+    {
+        mTransTabs->setCurrentIndex(0);
+        mStimulusName->setFocus();
+        mStimulusName->showPopup();
+    }
+}
+
 void SMPropertiesPanel::focusInternal(uint32_t transitionId)
 {
     StateMachineData& data = mModel.getData();
@@ -1425,8 +1441,6 @@ void SMPropertiesPanel::onTargetCommit()
     const uint32_t targetId = mTarget->currentData().toUInt();
     if (targetId == 0)
     {
-        // Disconnecting no longer changes what the transition IS. It says the edge has no target
-        // yet -- which validation reports -- and the Kind combo is where "internal" is asked for.
         if (transition->hasTarget())
         {
             mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, 0u, tr("Disconnect target")));
@@ -1435,8 +1449,6 @@ void SMPropertiesPanel::onTargetCommit()
         return;
     }
 
-    // Backstop for the spec rule: a Start state has no incoming transition. The picker already omits
-    // Start rows, so this only fires if a stale/programmatic selection slips through.
     const SMStateEntry* targetState = data.findStateById(targetId);
     if ((targetState != nullptr) && (targetState->getKind() == SMStateEntry::eStateKind::Start))
     {
@@ -1473,17 +1485,11 @@ void SMPropertiesPanel::onSourceCommit()
         return;
     }
 
-    // Backstop for the spec rule: a Final state has no outgoing transition. The picker already omits
-    // Final rows, so this only fires if a stale/programmatic selection slips through.
     if (newSource->getKind() == SMStateEntry::eStateKind::Final)
     {
         return;
     }
 
-    // Same for the pseudo-state rule, in both directions: a Start's transitions are the level's
-    // initial ones, so an ordinary transition may not be moved ONTO a Start (it would hand a
-    // marker a stimulus to react to) and an initial one may not be moved OFF it (it would leave an
-    // ordinary state with a transition nothing can trigger).
     if (newSource->isPseudoStart() || oldSource->isPseudoStart())
     {
         return;

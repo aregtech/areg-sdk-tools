@@ -51,6 +51,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QToolButton>
 #include <QTreeWidget>
@@ -149,6 +150,40 @@ void SMDataType::setupSignals()
     connect(mList->actionNewEnum()         , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Enumeration); });
     connect(mList->actionNewImport()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
     connect(mList->actionNewContainer()    , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
+
+    // List keys, each doing what the matching toolbar button does: Delete removes the selected
+    // row, Insert adds one, F2 puts the caret in its name. Types and fields have separate
+    // toolbar buttons, so the selected level picks which one the key follows.
+    QTreeWidget* table = mList->ctrlTableList();
+    QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
+    QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
+    QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
+    scRemove->setContext(Qt::WidgetWithChildrenShortcut);
+    scAdd->setContext(Qt::WidgetWithChildrenShortcut);
+    scRename->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(scRemove, &QShortcut::activated, this, [this]()
+    {
+        if (currentFieldId() != 0)
+        {
+            onRemoveFieldClicked();
+        }
+        else
+        {
+            onRemoveClicked();
+        }
+    });
+    connect(scAdd, &QShortcut::activated, this, [this]()
+    {
+        if (currentFieldId() != 0)
+        {
+            onAddFieldClicked();
+        }
+        else
+        {
+            onAddClicked();
+        }
+    });
+    connect(scRename, &QShortcut::activated, this, &SMDataType::focusNameField);
 
     // The identifier validator is installed inside the shared DataTypeDetailsView.
     connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &SMDataType::onNameCommitted);
@@ -796,6 +831,16 @@ void SMDataType::onInsertClicked()
         selectDataType(dataType->getId());
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
+    }
+}
+
+void SMDataType::focusNameField()
+{
+    QLineEdit* name = (currentFieldId() != 0) ? mFields->ctrlName() : mDetails->ctrlName();
+    if (currentDataType() != nullptr)
+    {
+        name->setFocus();
+        name->selectAll();
     }
 }
 

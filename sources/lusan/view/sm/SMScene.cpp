@@ -22,6 +22,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMCanvasItem.hpp"
@@ -756,9 +757,7 @@ void SMScene::onNameChanged(uint32_t id, const QString& /*oldName*/, const QStri
         item->updateFromModel();
     }
 
-    // An edge label resolves its target's name live, so only the edges touching the renamed
-    // state can change. Refreshing all of them made a rename cost O(level size) -- 200 ms on a
-    // 200-node level (SM-27 responsiveness gate).
+    // An edge label resolves its target's name live, so only the edges touching the renamed state can change.
     for (SMCanvasItem* edgeItem : std::as_const(mItems))
     {
         SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(edgeItem);
@@ -918,13 +917,52 @@ void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateI
     mModel.getUndoStack().push(command);
 }
 
-void SMScene::startRenameOfSelection()
+uint32_t SMScene::placeNewState(SMStateEntry::eStateKind kind, const QRectF& box)
 {
-    const QList<SMStateItem*> selection{ selectedStateItems() };
-    if (selection.size() == 1)
+    StateMachineData& data = mModel.getData();
+    SMStateData* level = data.findLevel(getLevelId());
+    if (level == nullptr)
     {
-        selection.first()->startInlineRename();
+        return 0u;
     }
+
+    // A Final marker reads as a terminal, so it is named plainly "Final" (then Final2,
+    // Final3, ...), not "NewFinalN".
+    const QString base = (kind == SMStateEntry::eStateKind::Final) ? QStringLiteral("Final")
+                                                                  : QStringLiteral("NewState");
+    QString name{ base };
+    for (int i = 2; data.findState(name) != nullptr; ++i)
+    {
+        name = base + QString::number(i);
+    }
+
+    SMCreateStateCommand* command = new SMCreateStateCommand(  data, mModel.getNotifier(), *level, name, kind
+                                                             , box
+                                                             , QCoreApplication::translate("SMScene", "Add state %1").arg(name));
+    mModel.getUndoStack().push(command);
+
+    const uint32_t stateId = command->getStateId();
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ stateId });
+    return stateId;
+}
+
+bool SMScene::startRenameOfSelection()
+{
+    const QList<SMStateItem*> states{ selectedStateItems() };
+    if (states.size() == 1)
+    {
+        states.first()->startInlineRename();
+        return true;
+    }
+
+    const QList<SMNoteItem*> notes{ selectedNoteItems() };
+    if (notes.size() == 1)
+    {
+        notes.first()->startInlineEdit();
+        return true;
+    }
+
+    return false;
 }
 
 bool SMScene::isInlineEditorActive() const

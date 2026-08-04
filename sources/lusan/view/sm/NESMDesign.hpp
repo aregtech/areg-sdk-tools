@@ -90,6 +90,13 @@ namespace NESMDesign
     //!< The margin in scene units kept around the content by zoom-to-fit.
     constexpr double    ZoomFitMargin   { 48.0 };
 
+    //!< The text size of the zoom box in device-independent pixels.
+    constexpr int       ZoomTextSize    { 9 };
+    //!< The gap between the canvas edge and the zoom box.
+    constexpr int       ZoomBoxIndent   { 2 };
+    //!< The characters the closed zoom box makes room for.
+    constexpr int       ZoomBoxChars    { 5 };
+
     //!< The grid is hidden when one cell is smaller than this on screen (device pixels).
     constexpr double    GridHidePixels  { 4.0 };
     //!< The grid reaches full opacity when one cell is at least this large on screen.

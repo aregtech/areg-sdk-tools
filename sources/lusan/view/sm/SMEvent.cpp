@@ -73,8 +73,7 @@ namespace
         hintEdit->setText(deprecated ? hint : QString());
     }
 
-    //!< Confirms deleting a referenced entry, listing every place it is used (spec 9.4).
-    //!< Returns true to proceed; on confirm the references become validation errors.
+    //!< Confirms deleting a referenced entry
     bool confirmReferencedDelete(QWidget* parent, const StateMachineData& data, SMReferences::eTarget target
                                  , const QString& name, uint32_t id, const QString& kindLabel)
     {

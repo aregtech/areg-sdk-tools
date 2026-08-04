@@ -31,7 +31,7 @@
  * \class   SMRewriteReferencesCommand
  * \brief   The reference-rewriting half of an atomic rename. Paired as a child with the
  *          primary name-set command inside one composite so a registry-entry rename and
- *          every name-based reference to it move in a single undo step (spec 9.7). Redo flips
+ *          every name-based reference to it move in a single undo step. Redo flips
  *          every reference from the old name to the new; undo flips them back. ID-based
  *          references (transition targets, guard symbols) are not touched -- they already
  *          reflect the new name -- so this command never has to know about them.

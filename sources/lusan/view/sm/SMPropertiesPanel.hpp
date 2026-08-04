@@ -112,6 +112,12 @@ public:
     void focusConditions(uint32_t transitionId);
 
     /**
+     * \brief   Selects the transition and opens its stimulus picker on the General tab. A
+     *          transition has no name of its own, the stimulus is what identifies it.
+     **/
+    void focusStimulus(uint32_t transitionId);
+
+    /**
      * \brief   Selects the transition's OWNING STATE and opens its Internal tab on that transition
      *          (a click on the `on <stimulus>` row inside a state box). It deliberately does not
      *          select the transition itself: an internal transition is something the state does,

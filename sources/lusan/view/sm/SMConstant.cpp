@@ -46,6 +46,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QToolButton>
 #include <QTreeWidget>
@@ -125,6 +126,19 @@ void SMConstant::setupSignals()
     connect(mList->ctrlButtonRemove()  , &QToolButton::clicked           , this, &SMConstant::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMConstant::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMConstant::onMoveDownClicked);
+
+    // List keys, each doing what the matching toolbar button does: Delete removes the selected
+    // constant, Insert adds one, F2 puts the caret in its name.
+    QTreeWidget* table = mList->ctrlTableList();
+    QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
+    QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
+    QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
+    scRemove->setContext(Qt::WidgetWithChildrenShortcut);
+    scAdd->setContext(Qt::WidgetWithChildrenShortcut);
+    scRename->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(scRemove, &QShortcut::activated, this, &SMConstant::onRemoveClicked);
+    connect(scAdd   , &QShortcut::activated, this, &SMConstant::onAddClicked);
+    connect(scRename, &QShortcut::activated, this, &SMConstant::focusNameField);
 
     // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMConstant::onNameCommitted);
@@ -464,15 +478,21 @@ void SMConstant::onInsertClicked()
     }
 }
 
+void SMConstant::focusNameField()
+{
+    if (currentConstantId() != 0)
+    {
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+    }
+}
+
 void SMConstant::onRemoveClicked()
 {
     const uint32_t id = currentConstantId();
     if (id == 0)
         return;
 
-    // Deleting a referenced constant shows every place it is used (name-based mappings plus
-    // ID-bound guards); `Delete anyway` breaks the references VISIBLY -- each becomes an
-    // unresolved-reference validation error (spec 9.4).
     StateMachineData& data = mModel.getFacade().getData();
     const ConstantEntry* constant = data.getConstants().findElement(id);
     const QString name = (constant != nullptr) ? constant->getName() : QString();

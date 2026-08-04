@@ -248,13 +248,6 @@ bool SMPlaceStateTool::mouseDoubleClick(QGraphicsSceneMouseEvent* event)
 void SMPlaceStateTool::placeState(const QRectF& box)
 {
     SMScene& canvas = getScene();
-    StateMachineModel& model = canvas.getModel();
-    StateMachineData&  data  = model.getData();
-    SMStateData* level = data.findLevel(canvas.getLevelId());
-    if (level == nullptr)
-    {
-        return;
-    }
 
     // A level's Start state comes with the level and cannot be removed, so it is never placed
     // by hand: this tool makes a Normal or a Final state only.
@@ -262,31 +255,13 @@ void SMPlaceStateTool::placeState(const QRectF& box)
                                             ? SMStateEntry::eStateKind::Final
                                             : SMStateEntry::eStateKind::Normal;
 
-    // A Final marker reads as a terminal, so it is named plainly "Final" (then Final2,
-    // Final3, ...), not "NewFinalN" (issue #514).
-    const QString base = (kind == SMStateEntry::eStateKind::Final) ? QStringLiteral("Final")
-                                                                  : QStringLiteral("NewState");
-    QString name{ base };
-    for (int i = 2; data.findState(name) != nullptr; ++i)
-    {
-        name = base + QString::number(i);
-    }
-
-    SMCreateStateCommand* command = new SMCreateStateCommand(  data, model.getNotifier(), *level, name, kind
-                                                             , box
-                                                             , QCoreApplication::translate("SMCanvasTool", "Add state %1").arg(name));
-    model.getUndoStack().push(command);
-
-    const uint32_t stateId = command->getStateId();
-    model.getSelectionModel().setSelection(QList<uint32_t>{ stateId });
-
-    SMStateItem* item = dynamic_cast<SMStateItem*>(canvas.findCanvasItem(stateId));
+    const uint32_t stateId = canvas.placeNewState(kind, box);
 
     // May retire this tool (single-shot); only stack locals are used afterwards.
     canvas.finishToolGesture();
-    if (item != nullptr)
+    if (stateId != 0u)
     {
-        item->startInlineRename();
+        canvas.startRenameOfSelection();
     }
 }
 

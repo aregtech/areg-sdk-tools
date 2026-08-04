@@ -152,12 +152,27 @@ void SMMethod::setupSignals()
     connect(mList->typeAction(1)        , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Action); });
     connect(mList->typeAction(2)        , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Condition); });
 
+    // List keys: Delete removes the selected row, Insert adds one at the selected level, F2
+    // puts the caret in its name.
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
+    QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
     scAdd->setContext(Qt::WidgetWithChildrenShortcut);
     scRemove->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(scAdd   , &QShortcut::activated, this, &SMMethod::onAddClicked);
+    scRename->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(scAdd, &QShortcut::activated, this, [this]()
+    {
+        if (currentKind() == eRowKind::Param)
+        {
+            addNewParam();
+        }
+        else
+        {
+            onAddClicked();
+        }
+    });
     connect(scRemove, &QShortcut::activated, this, &SMMethod::onRemoveClicked);
+    connect(scRename, &QShortcut::activated, this, &SMMethod::focusNameField);
 
     // The shared MethodDetailsView installs the C++ identifier validator on the Name field.
     connect(mDetails                 , &MethodDetailsView::nameEdited, this, &SMMethod::onMethodNameTextChanged);
@@ -716,9 +731,31 @@ QString SMMethod::genParamName(const SMMethodEntry* method) const
 
 void SMMethod::onAddClicked()
 {
-    // The Add button (and the Insert-key shortcut) always creates a method; parameters are
-    // added through the separate Add-Parameter toolbar button.
+    // The Add button always creates a method; parameters are added through the separate
+    // Add-Parameter toolbar button.
     addNewMethod(SMMethodEntry::eMethodType::Trigger);
+}
+
+void SMMethod::focusNameField()
+{
+    QLineEdit* name = nullptr;
+    switch (currentKind())
+    {
+    case eRowKind::Method:
+        name = mDetails->ctrlName();
+        break;
+    case eRowKind::Param:
+        name = mParamDetails->ctrlName();
+        break;
+    default:
+        break;
+    }
+
+    if (name != nullptr)
+    {
+        name->setFocus();
+        name->selectAll();
+    }
 }
 
 void SMMethod::addNewMethod(SMMethodEntry::eMethodType type)
@@ -927,10 +964,7 @@ void SMMethod::onRemoveClicked()
             }
         }
 
-        // A referenced entry's deletion is confirmed, showing where it is used; on confirm
-        // the entry is removed and its former references become unresolved-reference
-        // validation errors -- nothing else is deleted silently (spec 9.4). A guard-bound
-        // condition is refused above instead, since ID-bound trees cannot dangle by name.
+        // A referenced entry's deletion is confirmed, showing where it is used
         const SMReferences::eTarget target = method->isTrigger() ? SMReferences::eTarget::Trigger
                                            : method->isAction()  ? SMReferences::eTarget::Action
                                                                  : SMReferences::eTarget::Condition;
