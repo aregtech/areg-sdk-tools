@@ -180,9 +180,8 @@ DataTypeBase::eCategory DataTypeCustom::fromTypeString(const QString& type)
     }
     else
     {
-        // An unknown `Type` comes from a hand-edited or newer-format document, never from a
-        // programming error: the readers skip the element and validation reports it. Asserting
-        // here turned a malformed file into a debug abort dialog.
+        // An unknown `Type` comes from a hand-edited or newer document, never from a programming
+        // error: the readers skip the element and validation reports it.
         return DataTypeBase::eCategory::CustomDefined;
     }
 }

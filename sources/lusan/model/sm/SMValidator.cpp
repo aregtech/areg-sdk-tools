@@ -108,12 +108,8 @@ namespace
     };
 
     /**
-     * \brief   Collects, from a committed guard tree, every declaration the guard references.
-     *
-     *          A guard is the SECOND place a declaration is used from, and the only one that
-     *          binds by document ID rather than by name, so the usage sets (which are keyed by
-     *          name) can only be filled through the reverse lookups. Without this walk an
-     *          attribute used solely by a guard was reported as never referenced.
+     * \brief   Collects every declaration a committed guard tree references. A guard binds by
+     *          document id, so the name-keyed usage sets can only be filled through this walk.
      **/
     void collectGuardUses(const StateMachineData& data, const SMGuardNode* node, GuardUses& out)
     {
@@ -274,9 +270,8 @@ namespace
 
     bool Ctx::fragmentResolves(const QString& fragment) const
     {
-        // Anything that is not a plain identifier after trimming -- a nested expression, a
-        // pointer or reference suffix -- is left alone. This is a type registry lookup, not a
-        // C++ parser.
+        // Anything that is not a plain identifier after trimming is left alone. This is a type
+        // registry lookup, not a C++ parser.
         if (StateMachineData::isValidIdentifier(fragment) == false)
             return true;
         if (DataTypeFactory::fromString(fragment) != DataTypeBase::eCategory::Undefined)
@@ -286,9 +281,8 @@ namespace
 
     QString Ctx::unresolvedFragment(const QString& typeName) const
     {
-        // A templated type is the container name plus its arguments, and every one of them is a
-        // type that has to exist. Checking only the whole string let `NEArray<Foo>` through with
-        // an undefined Foo.
+        // A templated type is the container name plus its arguments, and each of those must exist
+        // too. Checking only the whole string let `NEArray<Foo>` through with an undefined Foo.
         const QStringList fragments = typeName.split(QRegularExpression(QStringLiteral("[<>,]")), Qt::SkipEmptyParts);
         for (const QString& fragment : fragments)
         {
@@ -437,10 +431,8 @@ namespace
             }
         };
 
-        // Methods are unique per KIND, not per name: a trigger, an action and a condition may
-        // all be called `on` -- each becomes a member of a different generated class, so they
-        // can never collide. Two triggers named `on` is the error. Qualifying the name with
-        // its kind expresses exactly that.
+        // Methods are unique per kind, not per name: a trigger, an action and a condition may all
+        // be called `on`. Qualifying the name with its kind expresses that.
         QStringList mNames; QList<uint32_t> mIds;
         for (SMMethodEntry* m : mData.getMethods().getElements())
         {
@@ -476,9 +468,8 @@ namespace
         for (const IncludeEntry* i : mData.machineImports()) { iNames << i->getAlias(); iIds << i->getId(); }
         dupWithin(iNames, iIds, eDocElementKind::Import);
 
-        // A file listed twice is redundant rather than wrong: the second entry changes nothing
-        // about the generated machine. The UI cannot create one, so this only fires on a
-        // hand-edited or merged file, which is exactly when a quiet nudge helps.
+        // A file listed twice is redundant rather than wrong. The UI cannot create one, so this
+        // only fires on a hand-edited or merged file.
         QHash<QString, int> seenLocations;
         for (const IncludeEntry& i : mData.getIncludes().getElements())
         {
@@ -1632,8 +1623,7 @@ namespace
         };
 
         // Which state owns each level, so a substate can ask what its ancestors do. A composite is
-        // left by its own transitions while any of its descendants is active, so an ancestor that
-        // leaves takes the substate with it.
+        // left by its own transitions while a descendant is active, taking the substate with it.
         QHash<uint32_t, uint32_t> ownerOf;
         for (const LevelInfo& info : levels)
         {
@@ -1671,10 +1661,8 @@ namespace
             return false;
         };
 
-        // Incoming (sibling) transition targets per level -- reachability and history re-entry.
-        // The second set drops everything the Start state points at: a Start is left once and can
-        // never be targeted, so a transition out of it fires exactly once. That is an entry, not a
-        // re-entry, and history is only worth anything on a state the machine comes back to.
+        // Incoming sibling transition targets per level. The second set drops what the Start state
+        // points at, because entering a level once is not a re-entry.
         QHash<const SMStateData*, QSet<uint32_t>> incoming;
         QHash<const SMStateData*, QSet<uint32_t>> reentered;
         for (const LevelInfo& info : levels)
@@ -1720,9 +1708,8 @@ namespace
                 noteOps(st->getExitList());
                 noteOps(st->getDoList());
 
-                // A Do stop condition is a use of everything it references, exactly as a guard is:
-                // an attribute read only by an `Until` is read, and reporting it unreferenced was
-                // the whole class of wrongness the reference-counting walk exists to avoid.
+                // A Do stop condition uses everything it references, exactly as a guard does, so an
+                // attribute read only by an `Until` still counts as read.
                 {
                     GuardUses until;
                     collectGuardUses(mData, st->getDoUntil().getTree(), until);
@@ -1733,9 +1720,7 @@ namespace
                 }
 
                 // Unreachable: nothing at this level targets it, and the level's Start does not
-                // descend into it either -- the Start's initial transitions are in `targets` too.
-                // A warning and never an error: a half-drawn machine is the normal intermediate
-                // state of an editor, and the author is the one who knows whether it is finished.
+                // descend into it. A warning, never an error, since a half-drawn machine is normal.
                 if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
                 {
                     const SMStateEntry* owner = (info.isRoot ? nullptr : mData.findStateById(info.ownerId));
@@ -1763,9 +1748,8 @@ namespace
                         continue;
                     const uint32_t tid = tr->getId();
                     const QString& stim = tr->getStimulus();
-                    // An initial transition reacts to nothing, so it is not a use of anything in the
-                    // stimulus registries -- and counting its empty name as one would let a declared
-                    // trigger named "" look referenced.
+                    // An initial transition reacts to nothing, so it uses nothing in the stimulus
+                    // registries. Counting its empty name would make a trigger named "" look used.
                     if (tr->isInitial() == false)
                     {
                         switch (tr->getStimulusKind())
@@ -1794,10 +1778,8 @@ namespace
                     }
                     noteOps(tr->getOperations());
 
-                    // The canonical guard counts as a use exactly as a legacy condition row does.
-                    // A draft's last-good tree is walked too: the names in it are still what the
-                    // document refers to, and reporting them unused while the user is mid-edit
-                    // would make the list flicker on every keystroke.
+                    // The canonical guard counts as a use, exactly as a legacy condition row does.
+                    // A draft's last-good tree is walked too, so the list does not flicker mid-edit.
                     GuardUses guard;
                     collectGuardUses(mData, tr->getGuard().getTree(), guard);
                     attrsRead      += guard.attributes;
@@ -1836,11 +1818,8 @@ namespace
         for (const SMAttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
         for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
 
-        // Severity is decided per element kind, not per rule. An unused method, event, timer, data
-        // type or import is behaviour or a contract that was written and then wired to nothing, and
-        // that is worth a warning. An unused attribute or constant is just data the machine does not
-        // happen to read yet: legitimate at any point in a design, so it is reported as information
-        // and never as a warning.
+        // Severity is decided per element kind. An unused method, event, timer, data type or
+        // import is a warning; an unused attribute or constant is only information.
         for (SMMethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)

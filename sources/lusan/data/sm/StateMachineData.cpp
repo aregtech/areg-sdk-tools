@@ -37,10 +37,8 @@ namespace
         return kCurrent;
     }
 
-    //!< Binds the transitions of a pre-SM-26 document, whose `To` holds a state name, to the
-    //!< matching state ID. Runs after the whole tree is read because a target may be declared
-    //!< later in the file. A name that resolves to nothing leaves the transition internal --
-    //!< the same outcome as a deleted target, which validation already reports.
+    //!< Binds transitions whose `To` still holds a state name to the matching state id. Runs after
+    //!< the whole tree is read, because a target may be declared later in the file.
     void resolvePendingTargets(const StateMachineData& doc, SMStateData& level)
     {
         for (SMStateEntry* state : level.getElements())
@@ -74,9 +72,8 @@ namespace
     constexpr double PSEUDO_NODE_HEIGHT { 32.0 };
     constexpr double PSEUDO_NODE_GAP    { 48.0 };
 
-    //!< A state name no state in the document uses yet: `Start`, then `Start1`, `Start2`, ...
-    //!< State names are unique across the whole document, not only within a level, so the search
-    //!< is document-wide.
+    //!< A state name no state in the document uses yet: `Start`, then `Start1`, `Start2` and so on.
+    //!< Names are unique document-wide, not only within a level, so the search is document-wide.
     QString uniqueStartName(const StateMachineData& doc)
     {
         const QString base{ QString::fromLatin1(SMStateEntry::STR_KIND_START) };
@@ -95,9 +92,8 @@ namespace
         }
     }
 
-    //!< Gives the new pseudo-state a node ABOVE its target, so the level reads top-down the way
-    //!< the designer draws it. Without a node for the target there is nothing to be above, and the
-    //!< canvas auto-places the pseudo-state like any other node with no geometry.
+    //!< Gives the new pseudo-state a node above its target, so the level reads top-down. With no
+    //!< node for the target the canvas auto-places it like any other node without geometry.
     void placePseudoNode(StateMachineData& doc, uint32_t pseudoId, uint32_t targetId)
     {
         const SMLayoutNode* target = doc.getLayout().findNode(targetId);
@@ -113,13 +109,8 @@ namespace
         node.height = PSEUDO_NODE_HEIGHT;
     }
 
-    //!< Rewrites the LEGACY MERGED FORM in memory, level by level. A document written before
-    //!< `Kind="Start"` became a pseudo-state spelled the same thing by marking the level's first
-    //!< REAL state as the Start and giving it operations and stimulus-driven transitions. Such a
-    //!< state is split in two: a new pseudo-state takes the Start kind and the old state is demoted
-    //!< to `Normal` with everything it carries untouched, wired together by one unguarded initial
-    //!< transition. Nothing is dropped, so the transformation is lossless and the next save writes
-    //!< the corrected form.
+    //!< Splits a legacy merged Start state into a pseudo-state and a Normal state, wired by one
+    //!< unguarded initial transition. Nothing is dropped, so the next save writes the new form.
     void convertLegacyStartStates(StateMachineData& doc, SMStateData& level)
     {
         // The list is mutated while walking it, so take the states first.
@@ -145,9 +136,7 @@ namespace
             state->setKind(SMStateEntry::eStateKind::Normal);
 
             // The demoted state is a real state now, so nothing it owns is an initial transition
-            // any more. Only a document that mixed the two spellings -- an operation-carrying Start
-            // whose transitions had no stimulus -- reaches this, and leaving them Initial would put
-            // an initial transition on a Normal state, an error the author never wrote.
+            // any more. Leaving them Initial would put an initial transition on a Normal state.
             for (SMTransitionEntry* transition : state->getTransitions().getElements())
             {
                 if ((transition != nullptr) && transition->isInitial())
@@ -202,12 +191,8 @@ namespace
         }
     }
 
-    //!< Walks the state tree and records the layout a not-real submachine drops from the saved
-    //!< file: the composite's own sublevel ID (dropLevels -- its View and level-scoped notes) and
-    //!< every nested owner (dropOwners -- the nested states' Nodes, their transitions' Edges, and
-    //!< owned notes). A real submachine is kept but still recursed into, so a deeper empty one is
-    //!< found. This keeps SMStateEntry::writeToXml (which omits the empty <StateList>) and the
-    //!< Layout section consistent, so no orphan geometry survives to be reused by a future ID.
+    //!< Collects the layout that a not-real submachine drops from the saved file: the composite's
+    //!< own sublevel id and every nested owner. Keeps the saved Layout section free of orphans.
     void collectDroppedLayout(const SMStateData& level, QSet<uint32_t>& dropOwners, QSet<uint32_t>& dropLevels)
     {
         for (const SMStateEntry* state : level.getElements())
@@ -399,13 +384,8 @@ std::unique_ptr<StateMachineData> StateMachineData::createNewDocument(const QStr
     SMStateEntry* start = result->mStates.createState(QStringLiteral("Start"), SMStateEntry::eStateKind::Start);
     if (start != nullptr)
     {
-        // The Start state is a compact marker box placed at the top-left of the level so it
-        // reads as the machine's entry point. The geometry mirrors the view-layer marker
-        // size (NESMDesign::MarkerStateWidth/Height) and auto-placement origin (64;64); the
-        // data layer cannot include the view constants, so the values are spelled out here.
-        // No View entry is persisted for a fresh document: the Design page anchors the first
-        // view to the top-left content itself (a stored center of 0;0 would otherwise push
-        // the single Start state into the middle of the viewport).
+        // The Start marker sits at the top-left of the level. The values mirror the view-layer
+        // marker size and auto-placement origin, which the data layer cannot include.
         SMLayoutNode& node = result->mLayout.addNode(start->getId());
         node.x      = 64.0;
         node.y      = 64.0;
@@ -660,10 +640,8 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     }
 
     resolvePendingTargets(*this, mStates);
-    // The legacy merged `Kind="Start"` is a content shim, not a version one: a document carrying
-    // the current FormatVersion can still hold the old spelling, so the test is what the states
-    // say and not what the header claims. Runs after the by-name targets are bound, so a demoted
-    // state is already reachable by ID.
+    // The legacy merged `Kind="Start"` is a content shim, not a version one, so the test is what
+    // the states say. It runs after the by-name targets are bound, so a demoted state is reachable.
     convertLegacyStartStates(*this, mStates);
 
     if (mFormatVersion < current)
@@ -718,9 +696,8 @@ void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
     writeUnknownBucket(9);
     mStates.writeToXml(xml);
     writeUnknownBucket(10);
-    // A not-real submachine (only Start/Final, or empty) is omitted from the StateList above, so
-    // its layout must be omitted too -- otherwise an orphan Node/View would linger and a future
-    // element could inherit it by ID reuse (the ID counter is derived from the max saved ID).
+    // A not-real submachine is omitted from the StateList above, so its layout goes too. An orphan
+    // node would otherwise linger and a future element could inherit it through id reuse.
     QSet<uint32_t> dropOwners;
     QSet<uint32_t> dropLevels;
     collectDroppedLayout(mStates, dropOwners, dropLevels);
@@ -732,9 +709,8 @@ void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
 
 void StateMachineData::readLegacyImportList(QXmlStreamReader& xml)
 {
-    // A 1.0.0 document keeps its machine imports in their own section. They become ordinary
-    // include entries carrying an alias and a pinned version, appended after whatever the
-    // <IncludeList> already contributed, so document order survives the fold.
+    // An older document keeps its machine imports in their own section. They become ordinary
+    // include entries with an alias and a pinned version, appended so document order survives.
     while ((xml.atEnd() == false)
            && ((xml.tokenType() != QXmlStreamReader::EndElement) || (xml.name() != XmlSM::xmlSMElementImportList)))
     {
@@ -832,9 +808,8 @@ bool StateMachineData::migrateTo100(const VersionNumber& sourceVersion)
 
 bool StateMachineData::migrateTo110(const VersionNumber& sourceVersion)
 {
-    // The <ImportList> fold happens while reading, because a 1.0.0 document can carry the
-    // section in either order and the reader is the only place that sees both. Nothing is left
-    // to transform here; the step exists so the chain stays readable when 1.2.0 arrives.
+    // The <ImportList> fold happens while reading, because the reader is the only place that sees
+    // both orders. Nothing is left to transform here; the step keeps the chain readable.
     Q_UNUSED(sourceVersion);
     return true;
 }

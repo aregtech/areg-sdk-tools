@@ -33,9 +33,8 @@ namespace
     //!< The free space kept between two automatically placed boxes.
     constexpr double PlacementGap{ 40.0 };
 
-    //!< The top-left origin of automatic placement: comfortably off the (0;0) corner
-    //!< (four default grid cells) but still clearly in the top-left region, so the
-    //!< auto-placed Start state reads as the machine's entry point.
+    //!< The top-left origin of automatic placement: four grid cells off the corner, so the
+    //!< auto-placed Start state still reads as the machine's entry point.
     constexpr double PlacementOriginX{ 64.0 };
     constexpr double PlacementOriginY{ 64.0 };
 

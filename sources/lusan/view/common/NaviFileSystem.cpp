@@ -407,9 +407,8 @@ void NaviFileSystem::setupSignals()
     connect(ctrlToolOpen()          , &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
     connect(ctrlToolDelete()        , &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
     connect(ctrlToolNaviRoot()      , &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
-    // `activated` -- not `doubleClicked` -- is the view's "the user wants this item opened"
-    // signal: it covers both the double-click and Enter, and it is emitted once per gesture, so
-    // a file that fails to open cannot report its failure twice.
+    // `activated` rather than `doubleClicked`: it covers both the double-click and Enter, and it
+    // fires once per gesture, so a file that fails to open cannot report its failure twice.
     connect(ctrlTable()             , &QTreeView::activated,      this, &NaviFileSystem::onTreeViewOpenRequested);
     connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::updateToolButtons);
     connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);

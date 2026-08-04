@@ -328,19 +328,16 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mSearchStatus->setMinimumWidth(72);
     topLayout->addWidget(mSearchStatus);
 
-    // The Design page is a QMainWindow: its central widget is the canvas (breadcrumb + viewport),
-    // and its own drawing toolbar, Properties, and Outline panels dock to the page's edges
-    // (issue #516). They live inside this page and can be moved to the Navigation Window; they are
-    // only present while this Design page is the shown tab of the active document.
+    // The Design page is a QMainWindow: the canvas is its central widget, and the drawing toolbar,
+    // Properties and Outline panels dock to its edges and can move to the Navigation Window.
     QWidget* central = new QWidget(this);
     QVBoxLayout* layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     layout->addWidget(topBar);
 
-    // The canvas keeps neither of its own scrollbars: the row below and the column right of it
-    // own the visible ones, which is what lets the zoom box share the bottom line and gives both
-    // bars the same step arrows. The fourth cell stays empty and squares off their corner.
+    // The canvas keeps neither of its own scrollbars: the row below and the column beside it own
+    // the visible ones, which lets the zoom box share the bottom line.
     QGridLayout* canvasLayout = new QGridLayout();
     canvasLayout->setContentsMargins(0, 0, 0, 0);
     canvasLayout->setSpacing(0);
@@ -359,9 +356,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     connect(mSceneManager, &SMSceneManager::signalToolChanged, this, &SMDesign::onToolChanged);
     connect(mSceneManager, &SMSceneManager::signalRequestSubstate, this, [this](uint32_t stateId)
     {
-        // Body double-click on a state: descend into its submachine, creating one on the fly for a
-        // plain normal state (the same create-or-enter path as the Enter Submachine action). Make
-        // the double-clicked state the selection so the shared logic acts on it.
+        // Body double-click descends into the state's submachine, creating one for a plain normal
+        // state. Make the double-clicked state the selection, so the shared logic acts on it.
         mModel.getSelectionModel().setSelection(QList<uint32_t>{ stateId });
         enterSelectedSubmachine();
     });
@@ -386,9 +382,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     });
     connect(mSceneManager, &SMSceneManager::signalInternalEditRequested, this, [this](uint32_t transitionId)
     {
-        // Ctrl+Shift link on the `on <stimulus>` row of an internal transition: surface the
-        // Properties panel on the state's Internal tab, with that transition selected. An internal
-        // transition draws no edge, so this row is the only thing on the canvas that stands for it.
+        // Ctrl+Shift on the `on <stimulus>` row: surface the Properties panel on the Internal tab
+        // with that transition selected. It draws no edge, so this row is all that stands for it.
         if (mProperties == nullptr)
         {
             return;
@@ -412,11 +407,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     buildDesignPanels();
     mView->installEventFilter(this);
 
-    // Context-sensitive canvas/state/transition/note menus, built on
-    // demand from the same action set the toolbar and Design menu reuse. A QGraphicsView
-    // routes context-menu events through contextMenuEvent(), so a Qt::CustomContextMenu
-    // policy never fires customContextMenuRequested; the view's own signal (emitted from its
-    // contextMenuEvent override, viewport coordinates) is the reliable hook.
+    // Context-sensitive menus built on demand from the same action set. A QGraphicsView routes
+    // context-menu events through contextMenuEvent(), so the view's own signal is the hook.
     connect(mView, &SMGraphicsView::signalContextMenuRequested, this, &SMDesign::onViewContextMenuRequested);
 
     // A read-only view still navigates, zooms and reads; it just cannot author. The undo stack
@@ -442,9 +434,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
             updateNavActions();
         }
     });
-    // Adding or removing a state changes whether the current level has a transition target, so
-    // the Add Transition tool must re-evaluate its enabled state on add/remove too - not only on
-    // selection change (issue #516 bug 2; also covers undo/redo of a state create/delete).
+    // Adding or removing a state changes whether the level has a transition target, so Add
+    // Transition re-evaluates here as well as on a selection change.
     connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) {
         if (kind == eDocElementKind::State)
         {
@@ -483,17 +474,15 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
     if ((event->type() == QEvent::Close) && ((watched == mPropertiesDock) || (watched == mOutlineDock)))
     {
         // The dock's own close button hides the widget but knows nothing about the placement the
-        // main window persists and re-applies on every activation -- without this the panel came
-        // back on the next repaint. Route the close through the same channel as the View menus.
+        // main window re-applies, so the close goes through the same channel as the View menus.
         const int widget = (watched == mPropertiesDock) ? 1 : 2;
         emit signalPlaceDesignWidget(widget, 0);
     }
 
     if ((watched == mZoomBox) && (event->type() == QEvent::Wheel) && (mZoomBox->hasFocus() == false))
     {
-        // A combo box takes the wheel to step through its entries. Over the zoom box that would
-        // rescale the canvas for anyone who scrolled past it, so the wheel is refused until the
-        // box is the widget the user is working in.
+        // A combo takes the wheel to step through its entries, which over the zoom box would
+        // rescale the canvas for anyone scrolling past, so it is refused until the box is focused.
         return true;
     }
 
@@ -519,19 +508,16 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
             mRestoringView = true;
             QMetaObject::invokeMethod(this, [this]() {
                 mRestoringView = false;
-                // Re-anchor the default (top-left) view when the level has no stored viewport
-                // yet: the first onLevelChanged ran before the page was shown at full size, so
-                // the initial anchor used a placeholder viewport rect. Once a View entry exists
-                // (the user scrolled/zoomed), the resize just re-pins that stored center.
+                // Re-anchor the default view when the level has no stored viewport yet: the first
+                // onLevelChanged ran before the page was shown at full size.
                 const bool hasEntry = (mModel.getData().getLayout().findView(mShownLevel) != nullptr);
                 restoreViewport(mShownLevel, hasEntry == false);
             }, Qt::QueuedConnection);
         }
         else if (event->type() == QEvent::ShortcutOverride)
         {
-            // Accept the override for any key that maps to a tool action so Qt's own
-            // WidgetWithChildrenShortcut actions never fire on their own; the matching
-            // KeyPress below is what actually dispatches (or, while editing, is left alone).
+            // Accept the override for any key that maps to a tool action, so Qt's own shortcuts
+            // never fire on their own. The matching KeyPress below is what dispatches.
             if (matchAction(*static_cast<QKeyEvent*>(event)) != nullptr)
             {
                 event->accept();
@@ -540,12 +526,8 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
         }
         else if (event->type() == QEvent::KeyPress)
         {
-            // A proxy-backed inline editor (state rename / note edit) owns the whole key
-            // stream while it is open. The single-key tool shortcuts (S, F, T, N, Backspace,
-            // Delete, ...) must not steal a keystroke destined for that editor -- doing so
-            // both blocked editing keys (Backspace/Delete) and spawned stray items (S/F/T/N).
-            // While an inline editor is active, never dispatch a tool action: let the key fall
-            // through the view to the scene's focused proxy editor.
+            // An open inline editor owns the whole key stream. Dispatching a single-key tool
+            // shortcut there ate editing keys and spawned stray items, so let the key fall through.
             if (getScene().isInlineEditorActive() == false)
             {
                 QAction* action = matchAction(*static_cast<QKeyEvent*>(event));
@@ -662,9 +644,8 @@ void SMDesign::setupActions()
         settings.setValue(QStringLiteral("smDesign/gridDots"), checked);
     });
 
-    // The stored checked state was seeded before the connect (no toggled signal fired), so
-    // push it to the scene explicitly - the canvas and the checked button must agree from
-    // the very first paint (issue #514).
+    // The stored checked state was seeded before the connect, so no toggled signal fired. Push it
+    // to the scene explicitly, so the canvas and the button agree from the first paint.
     getScene().setGridStyle(mActGridDots->isChecked() ? NESMDesign::eGridStyle::Dots : NESMDesign::eGridStyle::Lines);
 
     // The dot diameter is likewise an application-level display preference (keeps
@@ -710,10 +691,8 @@ void SMDesign::setupActions()
     mActRedo = new QAction(tr("Redo"), this);
     connect(mActRedo, &QAction::triggered, this, [this]() { mModel.getUndoStack().redo(); });
 
-    // The placement actions are checkable: the checked one is the armed tool, which is what
-    // makes the picked tool visible on the toolbar, in the Design menu, and in the context
-    // menu at once (they all share these action objects, issue #541). Unchecking disarms.
-    // onToolChanged() is the only place that writes the checked state back.
+    // The placement actions are checkable, so the armed tool shows as checked on the toolbar, in
+    // the Design menu and in the context menu at once. onToolChanged() is the only writer.
     auto placementAction = [this](const QString& text, const QKeySequence& shortcut, NESMDesign::eCanvasTool tool) -> QAction*
     {
         QAction* action = new QAction(text, this);
@@ -773,9 +752,8 @@ void SMDesign::setupActions()
     // and no state change; it is shown as a row in the state body, not as an edge.
     mActAddInternal = new QAction(SMToolIcons::icon(SMToolIcons::eIcon::AddInternal)
                                  , tr("Add Internal Transition"), this);
-    // NOT an arming tool. Add State and Add Transition change the pointer and wait for a click or a
-    // drag, because what they create has geometry; an internal transition has none -- it is a row in
-    // a state body -- so this acts at once on the selected state and the pointer never changes.
+    // Not an arming tool. An internal transition has no geometry, being a row in a state body, so
+    // this acts at once on the selected state and the pointer never changes.
     mActAddInternal->setToolTip(tr("Add an internal transition to the selected state"));
     connect(mActAddInternal, &QAction::triggered, this, &SMDesign::addInternalToSelection);
 
@@ -800,10 +778,8 @@ void SMDesign::setupActions()
     mActInsert->setShortcut(QKeySequence(Qt::Key_Insert));
     connect(mActInsert, &QAction::triggered, this, &SMDesign::insertIntoSelection);
 
-    // Cut/Copy/Paste keep Qt::WidgetShortcut: the page itself never has focus, so the
-    // registration stays inert and cannot turn the main window's Edit actions (which
-    // carry the same key sequences and call back into this page) ambiguous. While the
-    // canvas has focus the eventFilter dispatches the keys to these actions directly.
+    // Cut/Copy/Paste keep Qt::WidgetShortcut: the page never has focus, so the registration stays
+    // inert and cannot make the main window's Edit actions ambiguous.
     mActCut = new QAction(tr("Cut"), this);
     mActCut->setShortcut(QKeySequence::Cut);
     mActCut->setShortcutContext(Qt::WidgetShortcut);
@@ -934,9 +910,8 @@ void SMDesign::setupActions()
         addAction(action);
     }
 
-    // Registered for matchAction() dispatch only. Their keys are bare letters and Insert, which
-    // a docked panel or an outline row would otherwise claim while the user types in it, so the
-    // registration stays inert and the canvas event filter is what dispatches them.
+    // Registered for matchAction() dispatch only. Their keys are bare letters and Insert, which a
+    // docked panel would otherwise claim, so the canvas event filter is what dispatches them.
     const QList<QAction*> canvasOnly{ mActAddState, mActAddFinal, mActAddTransition, mActAddNote
                                     , mActInsert, mActCut, mActCopy, mActPaste };
     for (QAction* action : canvasOnly)
@@ -2789,9 +2764,8 @@ void SMDesign::gotoDefinitionFor(uint32_t elementId, bool isState, const QPoint&
 
     QList<SMGoToDef::Target> targets = SMGoToDef::collect(mModel.getData(), elementId, isState);
 
-    // A Ctrl+Shift click on the action part: keep only the operations (action calls, sent events,
-    // started/stopped timers), never the stimulus (which can share an event/timer with an
-    // operation) and never the guard symbols (those are reached through the guard editor).
+    // Keep only the operations: the stimulus can share an event or timer with one, and the guard
+    // symbols are reached through the guard editor.
     if (scope == SMScene::GotoAction)
     {
         const SMGoToDef::Target stim = SMGoToDef::stimulusOf(mModel.getData(), elementId);
@@ -3130,11 +3104,8 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
                 continue;
             }
 
-            // An INITIAL transition (one leaving the Start pseudo-state) is not an element the
-            // author looks for by the name of the state it enters: it has no stimulus of its own,
-            // and it is FIRST in document order, so matching it on the target name would put the
-            // level's entry marker ahead of the very state that was typed. It still matches by
-            // its own ID.
+            // An initial transition has no stimulus and comes first in document order, so matching
+            // it on the target name would put the entry marker ahead of the state that was typed.
             const bool byTargetName = (state->isPseudoStart() == false)
                                     && matchText(transition->getTargetName(), query);
             if (matchText(transition->getStimulus(), query)
@@ -3205,10 +3176,8 @@ void SMDesign::updateNavActions()
     const bool imported = (single != nullptr) && single->isImportedSubmachine();
     const bool painted  = (single != nullptr) && single->hasNestedStates();
 
-    // At most one of the three is ever meaningful, so one control carries all three -- and says
-    // which one it is, because two of them change the document. A state that hosts an imported
-    // machine cannot gain a painted one, a painted one can only be entered, and a bare Normal
-    // state gets a painted subtree (imported is set through the Submachine picker, not here).
+    // At most one of the three is ever meaningful, so one control carries all three and says which
+    // it is. An imported host cannot gain a painted machine, and a painted one can only be entered.
     mActEnterSubmachine->setEnabled(imported || painted || normal);
     if (imported)
     {
@@ -3232,16 +3201,12 @@ void SMDesign::updateNavActions()
     mActAddSubmachine->setEnabled(true);
     mActRemoveSubmachine->setEnabled(imported || painted);
 
-    // Internal transitions run operations without leaving the state; only a Normal (possibly
-    // composite) state can carry them. A Start state is a pure entry marker with no entry /
-    // exit / internal behaviour, and a Final state has no outgoing transitions at all, so
-    // both exclude the action (issue #516 bug 5).
+    // Only a Normal state can carry internal transitions: a Start is a pure entry marker, and a
+    // Final has no outgoing transitions at all.
     mActAddInternal->setEnabled((single != nullptr) && (single->getKind() == SMStateEntry::eStateKind::Normal));
 
-    // Add Transition needs at least one valid target on the current level. A Start state can
-    // never be a transition target, so a level that holds only its Start (no other state)
-    // offers nowhere to draw a transition: disable the tool button and the menu entry until a
-    // non-Start state exists (issue #516 bug 2).
+    // Add Transition needs at least one valid target on the level. A Start can never be a target,
+    // so a level holding only its Start offers nowhere to draw one and the action stays disabled.
     bool hasTargetState = false;
     const SMStateData* level = mModel.getData().findLevel(getScene().getLevelId());
     if (level != nullptr)
@@ -3360,10 +3325,8 @@ void SMDesign::enterSelectedSubmachine()
     }
     else if (state->getKind() == SMStateEntry::eStateKind::Normal)
     {
-        // The state has no submachine yet: create a painted composite (with its Start state)
-        // and descend into it, so "Enter Submachine" doubles as "start designing one here".
-        // (Follow-up: an auto-created submachine left with only its Start state should revert
-        // to a plain state when the user leaves it; that needs an undoable revert command.)
+        // No submachine yet: create a painted composite and descend into it. An auto-created one
+        // left with only its Start state is not reverted yet; that needs an undoable command.
         addSubstateToSelection();
     }
 }

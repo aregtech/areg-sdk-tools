@@ -196,10 +196,8 @@ QPointF SMScene::snapDragPosition(const QGraphicsItem& item, const QPointF& posi
         origin = mDragOrigins.insert(&item, item.pos());
     }
 
-    // The step is the same for every item of the selection; snap it once, against the item the
-    // drag started on. That item -- or a lone dragged item, which is its own reference -- still
-    // lands on the grid, and the rest of the selection travels the identical distance instead of
-    // each one rounding to its own nearest cell (issue #550 bug 1).
+    // The step is the same for every selected item, so snap it once against the item the drag
+    // started on. The rest travel the identical distance instead of each rounding to its own cell.
     const QPointF reference = ((mDragLeader != nullptr) ? mDragLeaderPos : *origin);
     const QPointF step      = position - *origin;
     return (*origin + (NESMDesign::snapPoint(reference + step, mGridSize) - reference));
@@ -225,11 +223,8 @@ void SMScene::setActiveTool(NESMDesign::eCanvasTool tool, bool sticky /*= false*
         mTool->cancelGesture();
     }
 
-    // Arming a tool is a mode switch, so an open in-place editor ends here -- before the tool
-    // change is announced. An editor left open owns a proxy widget whose cursor QGraphicsView
-    // remembers and restores onto the viewport when the pointer leaves it; that restored copy
-    // is captured from before the tool armed, so it masks the crosshair the tool then sets.
-    // Ending the editors first puts that restore ahead of applyToolCursor() (issue 8).
+    // Arming a tool is a mode switch, so an open in-place editor ends before the change is
+    // announced. Otherwise the cursor the view restores from that editor masks the tool crosshair.
     closeInlineEditors();
 
     // A tool may switch tools from inside its own event handler; keep the replaced
@@ -375,9 +370,8 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
         mDragLeader = nullptr;
         mDragOrigins.clear();
 
-        // Select-tool border drag: a press in a state's border band starts a transition --
-        // unless a selected edge's grab handle lies under the cursor: endpoint and
-        // waypoint drags on the edge win over the border band.
+        // Select-tool border drag: a press in a state's border band starts a transition, unless a
+        // selected edge's grab handle lies under the cursor, which wins.
         if ((mTool != nullptr) && (mTool->getKind() == NESMDesign::eCanvasTool::Select))
         {
             bool onEdgeHandle = false;
@@ -606,9 +600,8 @@ void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
 
     if (kind == eDocElementKind::Method)
     {
-        // A method's signature is rendered as a trigger stimulus on transition edges and, via the
-        // operations that call it, summarized in state bodies. A parameter add emits the parameter's
-        // id (not the method's) under the Method kind, so re-read both surfaces unconditionally.
+        // A method's signature is drawn on edges and summarized in state bodies. A parameter add
+        // emits the parameter's id under the Method kind, so re-read both surfaces unconditionally.
         refreshEdges();
         refreshStateBodies();
     }
@@ -697,9 +690,8 @@ void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
 
     if (kind == eDocElementKind::Method)
     {
-        // A method rename, or a parameter rename/retype/default change, alters the trigger stimulus
-        // signature shown on edges and the called-method summaries in state bodies. The changed id is
-        // the method's (never a canvas item's), so re-read both surfaces rather than a single item.
+        // A method or parameter rename alters the trigger signature on edges and the summaries in
+        // state bodies. The changed id is the method's, so re-read both surfaces.
         refreshEdges();
         refreshStateBodies();
         return;
@@ -866,9 +858,8 @@ void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetSt
         return;
     }
 
-    // One undo step: persist the drop geometry (the end anchor at the release position, the label
-    // reset) and retarget the transition. Geometry first, so the retarget's edge refresh reads the
-    // final anchor and there is no flash back to the old endpoint.
+    // One undo step: persist the drop geometry, then retarget. Geometry first, so the retarget's
+    // refresh reads the final anchor and there is no flash back to the old endpoint.
     const QString text = QCoreApplication::translate("SMScene", "Reconnect transition");
     SMCompositeCommand* command = new SMCompositeCommand(data, mModel.getNotifier(), text);
     new SMSetEdgeGeometryCommand(data, mModel.getNotifier(), transitionId, SMMoveNodeCommand::takeNextGesture(), geometry, text, command);
@@ -898,18 +889,15 @@ void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateI
         return;
     }
 
-    // Same backstop for the Start pseudo-state, in both directions: its transitions are the
-    // level's initial ones, taken on entry and naming no stimulus, so an ordinary transition may
-    // not be moved onto one and an initial one may not be moved off it.
+    // The same backstop for a Start in both directions: its transitions are the level's initial
+    // ones, so an ordinary transition may not move onto one, nor an initial one off it.
     if (newSource->isPseudoStart() || oldSource->isPseudoStart())
     {
         return;
     }
 
-    // One undo step: persist the drop geometry under the current (old) id first, then reparent --
-    // the reparent captures that edge and re-keys it to the new source, so the begin anchor lands
-    // at the release position, the label re-centres, and the edge never flashes back to its old
-    // source before the command redraws it.
+    // One undo step: persist the drop geometry under the old id first, then reparent, so the begin
+    // anchor lands at the release position and the edge never flashes back to its old source.
     const QString text = QCoreApplication::translate("SMScene", "Reconnect transition source");
     SMCompositeCommand* command = new SMCompositeCommand(data, mModel.getNotifier(), text);
     new SMSetEdgeGeometryCommand(data, mModel.getNotifier(), transitionId, SMMoveNodeCommand::takeNextGesture(), geometry, text, command);
@@ -1420,9 +1408,8 @@ bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
         return false;
     }
 
-    // Every box travels the identical step, and the transitions between them are carried along by
-    // their own boxes; a transition is nudged in its own right only when neither of the states it
-    // connects is moving, otherwise it would take the step twice (issue #550 bugs 1 and 2).
+    // Every box travels the identical step and carries its transitions along, so a transition is
+    // nudged in its own right only when neither state it connects is moving.
     QSet<uint32_t>     movingStates;
     QList<SMEdgeItem*> edges;
     QList<QGraphicsItem*> boxes;
@@ -1510,10 +1497,8 @@ void SMScene::commitSelectionMove(const QString& text)
         }
     }
 
-    // A box that moved took the anchors of its transitions with it, and a group move took their
-    // waypoints too; those points are stored in scene coordinates, so they are written back in the
-    // very same undo step -- otherwise the file would keep anchors of boxes that are no longer
-    // there, and re-reading it would snap the transitions to whichever border came nearest.
+    // A moved box took its transitions' anchors with it, and those points are stored in scene
+    // coordinates, so they are written back in the very same undo step.
     const QList<SMEdgeItem*> movedEdges{ driftedEdgeItems() };
 
     if (movedStates.isEmpty() && movedNotes.isEmpty() && movedEdges.isEmpty())

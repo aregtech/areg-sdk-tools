@@ -166,10 +166,8 @@ namespace
     //!< Minimal stylesheet used with the system default theme, keeps overview links consistent.
     QString baseStyleSheet()
     {
-        // The dock drop guides need explicit colors here too: their palette fallback paints the
-        // arrow in the icon's own background color, which leaves the guides blank (see the
-        // matching rule in theme-template.qss). The system palette is unknown at build time, so
-        // this uses a fixed accent that reads on both light and dark system themes.
+        // The dock drop guides need explicit colors: their palette fallback paints the arrow in the
+        // icon's own background and leaves the guides blank. A fixed accent reads on both themes.
         return QString::fromUtf8(
             "QPushButton#linkDataTypes, QPushButton#linkAttributes, QPushButton#linkMethods,"
             "QPushButton#linkConstants, QPushButton#linkIncludes"

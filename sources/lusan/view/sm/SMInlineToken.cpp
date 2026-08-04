@@ -30,11 +30,8 @@ namespace
 {
     const QString TOKEN_LABEL { QStringLiteral("{} {...}") };
 
-    // A chip reads as an inline mention -- `[h] #Name` -- not as a boxed widget: only the tiny kind
-    // badge keeps an edge, the name follows it in the owner hue over a soft highlight, and the whole
-    // thing sits on the surrounding text's baseline. The vertical metric
-    // is the font ASCENT, because the layout aligns an inline object's BOTTOM with the line baseline:
-    // asking for anything taller lifts the chip above the text, which is what looked broken before.
+    // A chip reads as an inline mention, not a boxed widget: only the kind badge keeps an edge, and
+    // the whole thing sits on the surrounding text's baseline, so the metric is the font ascent.
     constexpr qreal BADGE_PAD_X { 3.0 };    //!< Horizontal padding inside the kind badge.
     constexpr qreal BADGE_GAP   { 3.0 };    //!< Gap between the badge and the `#name` text.
     constexpr qreal EDGE_PAD    { 2.0 };    //!< Leading/trailing breathing room of the highlight.
@@ -97,9 +94,8 @@ QSizeF SMInlineToken::intrinsicSize(QTextDocument* doc, int /*posInDocument*/, c
 
     const qreal badge = badgeWidth(format, metrics);
     const qreal gap   = (badge > 0.0) ? BADGE_GAP : 0.0;
-    // The height is the ascent ONLY: the layout puts an inline object's bottom edge on the line
-    // baseline, so an ascent-tall box makes the chip's own baseline the line's baseline. Descenders
-    // of the name paint into the line's descent band, exactly as plain text does.
+    // The height is the ascent only: the layout puts an inline object's bottom edge on the line
+    // baseline, so an ascent-tall box makes the chip's own baseline the line's baseline.
     return QSizeF((2.0 * EDGE_PAD) + badge + gap + metrics.horizontalAdvance(chipMention(format))
                  , metrics.ascent());
 }

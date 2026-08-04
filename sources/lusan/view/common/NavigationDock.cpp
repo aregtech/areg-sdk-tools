@@ -221,12 +221,8 @@ void NavigationDock::showDesignTab(NavigationDock::eNaviWindow navi, NavigationW
         mTabs.setTabVisible(index, true);
     }
 
-    // Do NOT force the content visible. Its widget lives in the tab widget's stacked layout,
-    // which shows it only while its tab is the current one and hides every other page. An
-    // unconditional show() painted the Design content (its "Design" toolbar, etc.) over the
-    // current tab -- e.g. bleeding through the top-left of the Workspace tab on startup, since
-    // showDesignTab deliberately keeps the current tab unchanged. Let the stacked layout own
-    // the page visibility; only mirror it when this tab already happens to be the current one.
+    // Do not force the content visible. The tab widget's stacked layout shows only the current
+    // page, and an unconditional show() painted the Design content over the current tab.
     if (mTabs.currentIndex() == index)
     {
         content->show();
@@ -276,9 +272,8 @@ bool NavigationDock::isNaviTabVisible(NavigationDock::eNaviWindow navi) const
 
 void NavigationDock::initSize()
 {
-    // The user may shrink the dock down to the absolute minimum width (issue #516), while the
-    // default/preferred width stays at MIN_NAVI_WIDTH. The tab widget must accept the same floor,
-    // otherwise its own minimum would keep the dock from getting narrow.
+    // The user may shrink the dock to the absolute minimum width while the preferred width stays
+    // larger. The tab widget must accept the same floor, or its minimum would hold the dock open.
     const int absMinWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH_ABS);
     const int defWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH);
     const int minHeight = static_cast<int>(NELusanCommon::MIN_NAVI_HEIGHT);

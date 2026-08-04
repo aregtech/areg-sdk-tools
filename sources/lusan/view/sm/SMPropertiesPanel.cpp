@@ -98,9 +98,8 @@ namespace
         return QObject::tr("(internal)");
     }
 
-    //!< The label shown for a transition that SHOULD have a target and does not: an edge the
-    //!< author started drawing. Distinct from `(internal)` on purpose -- the two used to be the
-    //!< same document and read the same everywhere, which is the ambiguity `Kind` removes.
+    //!< The label for a transition that should have a target and does not, an edge the author
+    //!< started drawing. Deliberately distinct from `(internal)`, which used to read the same.
     QString unconnectedLabel()
     {
         return QObject::tr("(not connected)");
@@ -258,9 +257,8 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
 
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMPropertiesPanel::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMPropertiesPanel::onElementRemoved);
-    // A newly added trigger method / event / timer expands the stimulus vocabulary; if a
-    // transition is on screen, rebuild its stimulus picker so the new stimulus is selectable
-    // immediately (the added element's id is never mCurrentId, so onElementChanged misses it).
+    // A newly added trigger, event or timer expands the stimulus vocabulary. Its id is never
+    // mCurrentId, so rebuild the picker here to make the new stimulus selectable at once.
     connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) {
         if (isEditing())
         {
@@ -325,9 +323,8 @@ void SMPropertiesPanel::buildStatePage()
     mStateDesc->setPlaceholderText(tr("Description"));
     mStateDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
-    // General tab (R21): the scalar fields and the transitions list are two accordion sections under
-    // the shared chrome, so this tab wears the same header/section/compact language as Conditions.
-    // Compact defaults UNCHECKED here (few sections): the details and the transitions read together.
+    // General tab: the scalar fields and the transitions list are two accordion sections under the
+    // shared chrome. Compact defaults unchecked, so the details and the transitions read together.
     QWidget* details = new QWidget(this);
     QFormLayout* form = new QFormLayout(details);
     mStateForm = form;
@@ -345,9 +342,8 @@ void SMPropertiesPanel::buildStatePage()
                              , tr("The state name, kind and description"));
     mStateGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionList), tr("Transitions"), mTransitions
                              , tr("The transitions leaving this state"));
-    // The submachine controls: the same operations the Design menu and toolbar carry, put where
-    // the user already is when they decide a state needs one. A separator keeps them from reading
-    // as more section-jump buttons.
+    // The submachine controls, put where the user already is when they decide a state needs one. A
+    // separator keeps them from reading as more section-jump buttons.
     QFrame* submachineSep = new QFrame(this);
     submachineSep->setFrameShape(QFrame::VLine);
     submachineSep->setMaximumSize(12, 20);
@@ -361,11 +357,8 @@ void SMPropertiesPanel::buildStatePage()
         return button;
     };
 
-    // Icon-only, like every other button in this header. The first one changes meaning with the
-    // selection, and its label used to say so -- but a label reading "Open Imported Machine" is
-    // wider than half the dock, and a header row that wide drags the whole panel out over the
-    // canvas. Its icon still separates adding a submachine from entering one, its tooltip spells
-    // the current meaning out, and the Design menu carries the same action in words.
+    // Icon-only, like every other button in this header: a label such as "Open Imported Machine"
+    // is wider than half the dock. The tooltip spells the current meaning out.
     mBtnEnterSubmachine  = makeSubmachineButton(QStringLiteral("smBtnEnterSubmachine"));
     mBtnGoToParent       = makeSubmachineButton(QStringLiteral("smBtnGoToParent"));
     mBtnAddSubmachine    = makeSubmachineButton(QStringLiteral("smBtnAddSubmachine"));
@@ -377,9 +370,8 @@ void SMPropertiesPanel::buildStatePage()
     mStateGeneral->addHeaderWidget(mBtnRemoveSubmachine);
 
     mStateGeneral->setCompact(false);
-    // Both sections start OPEN: selecting a state must land on an editable name, a readable kind and
-    // the description without a click, which is what a General tab is for. Sections are still
-    // collapsible by hand -- only the initial state changed.
+    // Both sections start open, so selecting a state lands on an editable name, a readable kind and
+    // the description without a click. They stay collapsible by hand.
     mStateGeneral->openAllSections();
     mStateGeneral->addFooterStretch();
 
@@ -403,26 +395,17 @@ void SMPropertiesPanel::buildStatePage()
         QTimer::singleShot(0, this, [this, from, to]() { reorderTransition(from, to); });
     };
 
-    // Actions (R22/R24, redesigned): one tab per state activity -- Enter, Do, Exit -- instead of a
-    // single crowded accordion, so the panel stays navigable when every part is open. Each tab hosts
-    // the shared SMOperationsEditor, whose Action/Event/Timer accordion is identical in every scope
-    // (the reuse the redesign asked for). Enter and Exit are symmetric; the Do activity is not --
-    // besides its operation list it carries a repeat interval (0 = trigger-driven, >0 = a timer loop)
-    // and an optional stop-condition, so its tab page is built by hand with those two fields above the
-    // editor. Each tab's tooltip carries the per-list summary the old section headers used to show.
+    // One tab per state activity, Enter, Do and Exit, each hosting the shared SMOperationsEditor.
+    // The Do page is built by hand, since it adds a repeat interval and a stop condition.
     mEnterOps = new SMOperationsEditor(mModel, this);
     mDoOps    = new SMOperationsEditor(mModel, this);
     mExitOps  = new SMOperationsEditor(mModel, this);
 
     // The Do repeat policy is its own collapsible `Repeat` section appended to the Do editor's
-    // accordion, under the same expand/collapse toolbar, so the interval and stop condition sit
-    // beside the Action/Event/Timers sections instead of floating in a form above them. The circular
-    // repeat glyph (SectionDo) marks it.
+    // accordion, so the interval and stop condition sit beside the other sections.
     mDoInterval = new QSpinBox(this);
-    // The minimum is 1, not 0: a Do activity is a timer loop, and there is no such thing as a loop
-    // with no period. The value that used to mean "run on every trigger" is simply not offered --
-    // reacting to ONE named stimulus without leaving the state is an internal transition, which the
-    // state page has its own tab for.
+    // The minimum is 1, not 0: a Do activity is a timer loop and a loop has no zero period.
+    // Reacting to one named stimulus without leaving the state is an internal transition instead.
     mDoInterval->setRange(static_cast<int>(SMStateEntry::MIN_DO_INTERVAL), 3600000);
     mDoInterval->setSingleStep(50);
     mDoInterval->setSuffix(tr(" ms"));
@@ -430,14 +413,11 @@ void SMPropertiesPanel::buildStatePage()
                                "The first tick is one interval after entry, never at entry -- "
                                "work that must happen on arrival belongs in Enter."));
 
-    // The stop condition is the SAME editing surface a transition guard uses, pointed at this
-    // state's activity instead of at a transition. Reusing it is the point of the change: one
-    // grammar, one completer, one set of diagnostics, and -- because the surface commits an
-    // ID-bound tree -- a rename of an attribute it names re-renders it instead of breaking it.
+    // The stop condition is the same editing surface a transition guard uses, pointed at this
+    // state's activity: one grammar, one completer, and a rename re-renders instead of breaking it.
     mDoUntil = new SMGuardField(mModel, this);
-    // The panel now hosts TWO guard surfaces -- this one and the Conditions tab's -- and both
-    // would otherwise answer to the object name the field gives itself. Naming this pair for what
-    // it edits keeps every by-name lookup (tests, stylesheets, accessibility) unambiguous.
+    // The panel hosts two guard surfaces that would otherwise share one object name. Naming each
+    // for what it edits keeps every by-name lookup unambiguous.
     mDoUntil->setObjectName(QStringLiteral("smDoUntilField"));
     mDoUntil->setHeightLines(1, 4);
     mDoUntil->setPlaceholderText(tr("Stop condition (optional)"));
@@ -495,9 +475,8 @@ void SMPropertiesPanel::buildStatePage()
 
 void SMPropertiesPanel::buildInternalTab()
 {
-    // The tab hosts the SHARED editor, not a copy of it: the canvas context menu opens the very
-    // same widget in SMInternalDialog, exactly as Enter/Exit Actions open SMOperationsEditor in
-    // SMOperationsDialog. One implementation, one undo path, and the two access paths cannot drift.
+    // The tab hosts the shared editor, not a copy: the canvas context menu opens the same widget in
+    // SMInternalDialog. One implementation, one undo path, and the two access paths cannot drift.
     mInternal = new SMInternalEditor(mModel, this);
     connect(mInternal, &SMInternalEditor::countChanged, this, &SMPropertiesPanel::onInternalCountChanged);
     connect(mInternal, &SMInternalEditor::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
@@ -528,23 +507,19 @@ void SMPropertiesPanel::bindSubmachineActions(QAction* enterOrAdd, QAction* goTo
 
 void SMPropertiesPanel::buildTransitionPage()
 {
-    // The General tab wears the shared chrome (R21): the trigger form and the description are two
-    // accordion sections, so this tab matches Conditions' header/section/compact language. The
-    // stimulus/target accessors keep pointing at the same widgets. Compact defaults UNCHECKED here.
+    // The General tab wears the shared chrome: the trigger form and the description are two
+    // accordion sections. Compact defaults unchecked here.
     QWidget* trigger = new QWidget(this);
     QFormLayout* form = new QFormLayout(trigger);
     form->setContentsMargins(6, 6, 6, 6);
 
-    // One picker over the whole stimulus vocabulary (triggers, events, timers). The kind is
-    // encoded per row (and by the on_event_/on_timer_ prefix), so a separate "kind" combo is
-    // redundant. The picker is read-only (a closed list, like the Actions tab): the user cannot
-    // type a free name; typing a letter jumps to the matching row (Qt's built-in type-ahead).
+    // One picker over the whole stimulus vocabulary of triggers, events and timers; the kind is
+    // encoded per row. It is read-only, so typing a letter jumps to the matching row.
     mStimulusName = new QComboBox(trigger);
     mStimulusName->setEditable(false);
 
-    // What the transition IS, said outright instead of read off which attributes are missing. It
-    // sits ABOVE the endpoints because it decides what they may say: Internal has no target at all,
-    // and Initial has no stimulus.
+    // What the transition is, said outright. It sits above the endpoints because it decides what
+    // they may say: Internal has no target and Initial has no stimulus.
     mTransKind = new QComboBox(trigger);
     mTransKind->setEditable(false);
     mTransKind->addItem(tr("External (leaves the state)"), static_cast<int>(SMTransitionEntry::eTransitionKind::External));
@@ -651,9 +626,8 @@ void SMPropertiesPanel::buildRegistryPage()
 
 bool SMPropertiesPanel::isEditing() const
 {
-    // Use the application's ACTIVE focus, not QWidget::focusWidget(): the latter returns the
-    // last-focused DESCENDANT and stays non-null once any field here was clicked, so it reported
-    // "editing" permanently and blocked the live stimulus-picker refresh after the first click.
+    // Use the application's active focus, not QWidget::focusWidget(): the latter keeps returning
+    // the last-focused descendant, which reported "editing" forever after the first click.
     QWidget* focus = QApplication::focusWidget();
     return (focus != nullptr) && isAncestorOf(focus);
 }
@@ -735,9 +709,8 @@ void SMPropertiesPanel::focusInternal(uint32_t transitionId)
     mModel.getSelectionModel().setSelection(QList<uint32_t>{ owner->getId() });
     if ((mPage == PageState) && (mCurrentId == owner->getId()) && (mInternalTab >= 0))
     {
-        // Select the row unconditionally: when that state was ALREADY the selection, the selection
-        // model has nothing to announce and showState() never runs, so nothing would move to the
-        // row the author clicked.
+        // Select the row unconditionally: when that state was already the selection, the selection
+        // model announces nothing and showState() never runs.
         mInternal->setCurrentTransition(transitionId);
         mStateTabs->setCurrentIndex(mInternalTab);
         mInternal->list()->setFocus();
@@ -778,9 +751,8 @@ void SMPropertiesPanel::showEmpty()
         mConditions->setTransition(0u);
     }
 
-    // The Do tab's stop-condition surface is bound to the shown state for the same reason the
-    // Conditions tab is bound to the shown transition, so it is released for the same reason:
-    // its rebuild is deferred, and a deferred rebuild must not outlive the element it reads.
+    // The Do tab's stop-condition surface is bound to the shown state and its rebuild is deferred,
+    // so it is released here: a deferred rebuild must not outlive the element it reads.
     if (mDoUntil != nullptr)
     {
         mDoUntil->setTarget(SMGuardRef());
@@ -813,13 +785,8 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mStateName->setReadOnly(state->isPseudoStart());
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
 
-    // A Kind="Start" is a pseudo-state: a marker saying where the level begins. It never becomes a
-    // state in the generated code and the machine never occupies it, so it cannot act -- no entry,
-    // exit or Do operations, and nothing to describe. The editor must not OFFER what the document
-    // may not carry, so the three activity tabs and the rows that only a real state can use go
-    // away entirely rather than sit there disabled: a greyed field still reads as "not yet", and
-    // this one is "never". What stays is the name, the kind, and the initial transitions, which is
-    // everything a Start has.
+    // A Start is a pseudo-state that the machine never occupies, so it cannot act. The activity
+    // tabs and the rows only a real state can use are hidden rather than left disabled.
     const bool pseudoStart = state->isPseudoStart();
     for (const ActionSlot& slot : mActionSlots)
     {
@@ -844,9 +811,8 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     {
         mStateTabs->setCurrentIndex(0);
     }
-    // Only a composite has substates to remember, so a plain state gets a disabled field that
-    // says why instead of a silently missing one -- the same field then comes alive the moment
-    // the state grows a submachine.
+    // Only a composite has substates to remember, so a plain state gets a disabled field that says
+    // why rather than a missing one. It comes alive the moment the state grows a submachine.
     const bool composite = state->isComposite();
 
     // A state hosts an import or paints its own substates, never both. Once substates are painted
@@ -937,10 +903,8 @@ void SMPropertiesPanel::refreshActionSummaries()
 
     for (const ActionSlot& slot : mActionSlots)
     {
-        // The tab tooltip carries the summary the old collapsed section headers used to show:
-        // `On Enter: doWork(), send evGo` or `On Enter: not set`, so hovering answers "what happens
-        // around this state?" without switching tabs. The Do tooltip also folds in its repeat policy
-        // -- `Do (every 200 ms)` or `Do (on trigger)`.
+        // The tab tooltip carries the per-list summary, so hovering says what happens around this
+        // state without switching tabs. The Do tooltip also folds in its repeat policy.
         const SMOperationList* list = nullptr;
         QString title;
         switch (slot.role)
@@ -976,9 +940,8 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
         return;
     }
 
-    // A Start's transitions are the level's INITIAL transitions: nothing triggers them, so there
-    // is no stimulus to show and a `<stimulus>` placeholder would invite the author to fill one in.
-    // What decides between them is the condition, so that is what the row carries instead.
+    // A Start's transitions are the level's initial ones: nothing triggers them, so there is no
+    // stimulus to show and the row carries the condition that decides between them instead.
     const bool pseudoStart = state->isPseudoStart();
     int internalCount = 0;
     for (const SMTransitionEntry* transition : state->getTransitions().getElements())
@@ -1017,9 +980,8 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
             }
             else if (transition->isInternal())
             {
-                // The same shorthand the Internal tab and the state box use: the priority number
-                // when there is a priority to speak of, and the guard that tells two transitions on
-                // one stimulus apart.
+                // The same shorthand the Internal tab and the state box use: the priority number,
+                // and the guard that tells two transitions on one stimulus apart.
                 ++internalIndex;
                 label = (internalCount > 1)
                         ? (QStringLiteral("#") + QString::number(internalIndex) + QLatin1Char(' ') + stimulus)
@@ -1071,18 +1033,16 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
                               : SMKindGlyph::word(SMKindGlyph::stimulusGlyph(transition->getStimulusKind()));
     mStimulusSig->setText(kindWord.isEmpty() ? signature : (kindWord + QLatin1Char(' ') + signature));
 
-    // Populate the target and source pickers from the sibling states of the transition's level.
-    // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID.
-    // Robust even when several states share a display name (Start/Final).
+    // Fill the target and source pickers from the sibling states of the transition's level. Each
+    // item carries the sibling's element id, so the endpoint is committed by id and not by name.
     mTarget->clear();
     const SMStateEntry* owner = data.findTransitionOwner(transitionId);
     const uint32_t sourceId = (owner != nullptr ? owner->getId() : 0u);
 
     const bool initial = transition->isInitial() || ((owner != nullptr) && owner->isPseudoStart());
 
-    // `To` means the target and nothing else now, so the row that used to double as "make this
-    // internal" is gone: the empty row says only that no target is named yet, and the Kind combo
-    // is where an internal transition is asked for.
+    // `To` means the target and nothing else, so the empty row says only that no target is named
+    // yet. The Kind combo is where an internal transition is asked for.
     mTarget->addItem(unconnectedLabel(), 0u);
 
     mSource->clear();
@@ -1114,8 +1074,7 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     }
 
     // A Start owns nothing but initial transitions and a real state owns no initial one, so the
-    // combo offers only what the owner can actually hold -- the kind is editable, but not into a
-    // document that would immediately fail validation.
+    // combo offers only what the owner can hold.
     const bool internal = transition->isInternal();
     setComboRowEnabled(*mTransKind, 0, initial == false);   // External: on a real state only
     setComboRowEnabled(*mTransKind, 1, initial == false);   // Internal: on a real state only
@@ -1541,9 +1500,8 @@ void SMPropertiesPanel::reorderTransition(int from, int to)
 
 void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
 {
-    // The State-Actions headers summarize the live entry/exit lists; re-label them even mid-edit --
-    // this only re-titles the collapsed headers, it never rebinds the editors, so it cannot clobber
-    // typing. Any operation edit fires elementChanged, and the summary re-reads the state's lists.
+    // Re-label the State-Actions headers even mid-edit: this only re-titles them and never rebinds
+    // the editors, so it cannot clobber typing.
     if (mPage == PageState)
     {
         refreshActionSummaries();
@@ -1561,10 +1519,8 @@ void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
     else if ((mPage == PageTransition)
              && ((kind == eDocElementKind::Method) || (kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)))
     {
-        // A trigger method changing type (trigger <-> action/condition), or an event/timer edit,
-        // changes the stimulus vocabulary; the changed element's id is never mCurrentId, so rebuild
-        // the transition page (and its picker) here so the Stimulus combo always reflects the
-        // current triggers (live sync). A rename already routes through onNameChanged.
+        // A method changing type, or an event or timer edit, changes the stimulus vocabulary. The
+        // changed id is never mCurrentId, so rebuild the transition page and its picker here.
         refresh();
     }
     else if ((mPage == PageState) && (kind == eDocElementKind::Import))

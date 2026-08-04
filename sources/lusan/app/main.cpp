@@ -41,9 +41,8 @@ int main(int argc, char *argv[])
     LusanApplication::setApplicationName(_application);
     LusanApplication::setApplicationVersion(_version);
 
-    // Application / window icon (taskbar, title bar, macOS dock, Linux WM). The multi-size
-    // PNG set is baked from res/logo/lusan.svg by res/logo/make-icons.py; the Windows .exe
-    // and macOS .app bundle icons are wired separately in the top-level CMakeLists.txt.
+    // Window and taskbar icon. The PNG set is baked from res/logo/lusan.svg; the .exe and .app
+    // bundle icons are wired in the top-level CMakeLists.txt.
     QIcon appIcon;
     for (int iconSize : { 16, 24, 32, 48, 64, 128, 256 })
     {

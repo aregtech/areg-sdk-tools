@@ -745,10 +745,8 @@ void MdiMainWindow::watchDockFloating(ads::CDockWidget* dock)
             return;
         }
 
-        // ADS finishes the drop after this signal, so the splitter it lands in does not exist
-        // yet; the geometry is only ours to correct once that layout pass is done. Painting
-        // is held off until then, or the dock is seen at its floating size for a frame and
-        // the correction reads as a jump.
+        // ADS finishes the drop after this signal, so the splitter it lands in does not exist yet.
+        // Painting is held off until that layout pass, or the correction reads as a jump.
         const QSize floatingSize = mFloatingSizes.value(dock, dock->size());
         QWidget* container = dock->dockContainer();
         if (container != nullptr)
@@ -829,9 +827,8 @@ void MdiMainWindow::syncDesignWidgets()
         return;     // the navigation hosts are not created yet (very early startup)
     }
 
-    // A window that has accepted its close is still the active one until it is deleted, and its
-    // pages are on their way out: binding the navigation hosts to them would leave them holding
-    // widgets that are about to disappear.
+    // A window that has accepted its close is still the active one until it is deleted, so binding
+    // the navigation hosts to its pages would leave them holding widgets about to disappear.
     StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
     if ((stateMachine != nullptr) && stateMachine->isClosing())
     {
@@ -873,10 +870,8 @@ void MdiMainWindow::syncDesignWidgets()
     case eDesignPlace::InNavigation:
         if (design != nullptr) { design->setToolbarVisible(false); }
         {
-            // The Navigation Window form of the toolbar defaults to Icon and Text (its custom
-            // vector icons are hard to tell apart at nav width), independent of the in-page
-            // toolbar's Icon Only default. Once the user picks any Toolbutton Mode the choice is
-            // stored and honored here too (issue #516 bug 6).
+            // The Navigation Window form defaults to Icon and Text, since the vector icons are
+            // hard to tell apart at nav width. A stored Toolbutton Mode choice wins over that.
             QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
             const Qt::ToolButtonStyle style = settings.contains(QStringLiteral("smDesign/naviToolbarStyle"))
                     ? static_cast<Qt::ToolButtonStyle>(settings.value(QStringLiteral("smDesign/naviToolbarStyle")).toInt())
@@ -944,9 +939,8 @@ void MdiMainWindow::onFsmToolbarStyle(QAction* action)
         return;
     }
 
-    // Persist the choice and apply it to the active Design page's in-page toolbar and the
-    // Navigation Window toolbar host; every Design page seeds its toolbar from this stored
-    // style when built (issue #516).
+    // Persist the choice and apply it to the active Design page and the Navigation Window host.
+    // Every Design page seeds its toolbar from this stored style when it is built.
     const Qt::ToolButtonStyle style = static_cast<Qt::ToolButtonStyle>(action->data().toInt());
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setValue(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(style));
@@ -975,10 +969,8 @@ void MdiMainWindow::onShowMenuDesign()
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     if (design == nullptr)
     {
-        // No Design page yet: present the full command set as grouped, disabled stand-ins so the
-        // user sees every available command (and that it is inactive) instead of a lone note
-        // (issue #516). Undo/Redo belong to the Edit menu and are not repeated here. The stand-in
-        // actions are parented to the menu, so the next clear() disposes of them.
+        // No Design page yet: show the full command set as grouped, disabled stand-ins so the user
+        // still sees what exists. They are parented to the menu, so the next clear() frees them.
         const QList<SMDesign::ToolGroup> groups = SMDesign::placeholderToolGroups(*mDesignMenu);
         const QString undoText = SMDesign::tr("Undo");
         const QString redoText = SMDesign::tr("Redo");
@@ -1262,9 +1254,8 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
         mdiActive->onWindowActivated();
     }
 
-    // Re-apply the design-widget placement to the newly active document: show/hide each widget's
-    // Design-page dock and bind or empty its Navigation Window host, so the toolbar, Properties,
-    // and Outline are populated only while an FSM Design page is current (issue #516).
+    // Re-apply the design-widget placement to the newly active document, so the toolbar, Properties
+    // and Outline are populated only while a Design page is current.
     syncDesignWidgets();
 }
 
@@ -1324,9 +1315,8 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     }
     else
     {
-        // Everything Lusan has no editor for -- the C and C++ sources and headers the navigation
-        // tree lists, and whatever else the user picks in the Open dialog. Before this the chain
-        // ended here with a nullptr, so opening a header silently did nothing at all.
+        // Everything Lusan has no editor for: the C and C++ sources and headers the navigation
+        // tree lists, and whatever else is picked in the Open dialog.
         result = createSourceViewer(filePath);
     }
 
@@ -1370,12 +1360,8 @@ StateMachine* MdiMainWindow::createStateMachineView(const QString& filePath /*= 
             QPushButton* restore = recovery.addButton(tr("Restore"), QMessageBox::AcceptRole);
             QPushButton* discard = recovery.addButton(tr("Discard"), QMessageBox::DestructiveRole);
             QPushButton* cancel  = recovery.addButton(QMessageBox::Cancel);
-            // Size it BEFORE showing it. QMessageBox computes its own final size in showEvent and
-            // pins it with setFixedSize -- by then the native window already exists at the default
-            // 100x30 a parented widget starts with, so the platform is handed a geometry its own
-            // fresh min == max forbids and logs "Unable to set geometry 125x38". Harmless (the box
-            // still appears at the right size) and only ever printed by a debug Qt, but it is
-            // console noise on every recovery prompt. Verified: with this call the warning is gone.
+            // Size the box before showing it. QMessageBox pins its size in showEvent, by which
+            // time the native window still carries the default geometry and a debug Qt complains.
             recovery.adjustSize();
             recovery.exec();
 
@@ -1678,9 +1664,8 @@ void MdiMainWindow::_createMenus()
 
     mViewMenu = menuBar()->addMenu(tr("&View"));
 
-    // View > Navigation: the navigation dock, its explorer tabs, and the three State Machine
-    // design widgets when they are moved to the Navigation Window (issue #516). Every entry is
-    // checkable; onShowMenuNavigation() refreshes the check marks from the live state on open.
+    // View > Navigation: the navigation dock, its explorer tabs, and the design widgets once moved
+    // here. Every entry is checkable and refreshed from the live state when the menu opens.
     mNavigationMenu = mViewMenu->addMenu(tr("&Navigation"));
     connect(mNavigationMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuNavigation);
 
@@ -1731,9 +1716,8 @@ void MdiMainWindow::_createMenus()
         setDesignWidgetPlacement(eDesignWidget::Outline, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
     });
 
-    // View > Design: the same three widgets when docked inside the active FSM Design page. Each
-    // Design entry is mutually exclusive with its Navigation counterpart (handled in
-    // setDesignWidgetPlacement); unchecking a widget hides it from both homes.
+    // View > Design: the same three widgets when docked inside the active Design page. Each entry
+    // is mutually exclusive with its Navigation counterpart.
     mViewDesignMenu = mViewMenu->addMenu(tr("&Design"));
     connect(mViewDesignMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuNavigation);
 
@@ -1858,11 +1842,8 @@ void MdiMainWindow::_createDockWindows()
     // (issue #516), so they float, tab, and drag together with the State Machine design panels.
     mNaviDockWidget = new ads::CDockWidget(tr("Navigation"), mDockManager);
     mNaviDockWidget->setObjectName(QStringLiteral("NavigationDock"));
-    // Insert the content directly (ForceNoScrollArea): the default AutoScrollArea wraps the
-    // content in a QScrollArea whose own size hints hide NavigationDock's overrides, so ADS
-    // sizes the dock generically (~half the window) and it will not narrow. Inserted directly,
-    // NavigationDock's sizeHint (MIN_NAVI_WIDTH) and minimumSize (MIN_NAVI_WIDTH_ABS) govern the
-    // dock width, so it opens at the preferred width and shrinks down to 64 px (issue #516).
+    // Insert the content directly: the default scroll area hides NavigationDock's size hints, so
+    // ADS would size the dock generically and it would not narrow again.
     mNaviDockWidget->setWidget(&mNaviDock, ads::CDockWidget::ForceNoScrollArea);
     mNaviDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
     mDockManager->addDockWidget(ads::LeftDockWidgetArea, mNaviDockWidget);
@@ -1878,17 +1859,14 @@ void MdiMainWindow::_createDockWindows()
     watchDockFloating(mNaviDockWidget);
     watchDockFloating(mOutputDockWidget);
 
-    // The editor area starts empty: only Navigation (left) and Output (bottom) surround it. The
-    // State Machine drawing toolbar and the Properties/Outline panels are NOT global docks; each
-    // Design page hosts its own inside itself and they appear only while that page is shown
-    // (issue #516).
+    // The editor area starts empty, with only Navigation and Output around it. The State Machine
+    // toolbar and panels are not global docks; each Design page hosts its own.
 }
 
 void MdiMainWindow::_createMdiArea()
 {
-    // One ADS dock manager owns the whole window (issue #516): the MDI area is its non-closable
-    // central widget, and every panel (navigation, output, and the State Machine design panels)
-    // is an ADS dock that can float, tab, or dock anywhere against it.
+    // One ADS dock manager owns the window: the MDI area is its non-closable central widget, and
+    // every panel is a dock that can float, tab or dock anywhere against it.
     ads::CDockManager::setConfigFlag(ads::CDockManager::OpaqueSplitterResize, true);
     ads::CDockManager::setConfigFlag(ads::CDockManager::FocusHighlighting, true);
     mDockManager = new ads::CDockManager(this);
@@ -1901,9 +1879,8 @@ void MdiMainWindow::_createMdiArea()
 
     connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::onSubWindowActivated);
 
-    // Every document window announces itself while it is being built; that is where its close is
-    // subscribed to, so nothing that lists the open documents has to wait for the deletion to
-    // notice one has gone.
+    // Every document window announces itself while it is built, and its close is subscribed to
+    // there, so nothing listing the open documents waits for the deletion to notice one has gone.
     connect(this, &MdiMainWindow::signalMdiWindowCreated, this, [this](MdiChild* child)
     {
         if (child != nullptr)

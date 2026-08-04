@@ -131,9 +131,8 @@ SMRefCompleter::SMRefCompleter(QWidget* parent /*= nullptr*/)
     , mModel  (nullptr)
 {
     setObjectName(QStringLiteral("smRefCompleter"));
-    // A top-level, frameless, non-activating window: the field keeps focus and forwards keys,
-    // so nothing here can swallow a keystroke. Being top-level, its width is
-    // irrelevant to the Properties dock.
+    // A top-level, frameless, non-activating window: the field keeps focus and forwards keys, and
+    // being top-level its width is irrelevant to the Properties dock.
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_ShowWithoutActivating);
 

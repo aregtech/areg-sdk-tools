@@ -251,9 +251,8 @@ QHash<uint32_t, int> SMGuardCatalog::useCounts(const SMGuardNode* tree)
 
 namespace
 {
-    //!< True when \p text is exactly one bare C++ identifier: [A-Za-z_][A-Za-z0-9_]* and nothing
-    //!< else. This is the ONLY shape W1 flags -- operators, calls, member access, literals, and
-    //!< any span with a space are never bare identifiers, so the raw escape hatch stays unchecked.
+    //!< True when \p text is exactly one bare C++ identifier and nothing else. Operators, calls,
+    //!< member access, literals and anything with a space are never bare identifiers.
     bool isBareIdentifier(const QString& text)
     {
         if (text.isEmpty())

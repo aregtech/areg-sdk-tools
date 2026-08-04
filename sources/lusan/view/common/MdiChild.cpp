@@ -57,9 +57,8 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     Q_ASSERT(wndMain != nullptr);
     emit wndMain->signalMdiWindowCreated(this);
 
-    // Ctrl+PageDown / Ctrl+PageUp cycle the document's own pages (Ctrl+Tab / Ctrl+Shift+Tab
-    // stay reserved for switching MDI windows). The children scope keeps them local to the
-    // active document, and switchToAdjacentPage() is inert for children without page tabs.
+    // Ctrl+PageDown and Ctrl+PageUp cycle the document's own pages, leaving Ctrl+Tab for the MDI
+    // windows. The children scope keeps them local, and the call is inert without page tabs.
     QShortcut* nextPage = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageDown), this);
     nextPage->setContext(Qt::WidgetWithChildrenShortcut);
     connect(nextPage, &QShortcut::activated, this, [this]() { switchToAdjacentPage(1); });

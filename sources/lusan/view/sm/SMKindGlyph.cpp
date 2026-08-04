@@ -39,11 +39,8 @@
 namespace
 {
     /**
-     * \brief   Which of the two exit marks a generic exit operation draws. Both are implemented
-     *          (\c Exit is `<-|`, \c ExitAlt is `|<-`) so the pair can be compared on a real
-     *          diagram; change this one line to adopt the other. `<-|` is the current choice: it
-     *          mirrors the entry mark `->|` exactly -- the same bar, the arrow reversed -- so the
-     *          two read as a pair rather than as two unrelated marks.
+     * \brief   Which of the two exit marks a generic exit operation draws. `<-|` mirrors the entry
+     *          mark `->|`, so the two read as a pair; change this line to adopt `|<-` instead.
      **/
     constexpr SMKindGlyph::eGlyph ExitBandGlyph { SMKindGlyph::eGlyph::Exit };
 }
@@ -62,18 +59,16 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
     painter.setBrush(Qt::NoBrush);
 
     const double midY = rect.center().y();
-    // The kind marks are drawn inside a centered square scaled by StimulusGlyphScale, so the one
-    // constant resizes them all. Square, not the caller's rect: a body row is taller than it is wide,
-    // and a bolt stretched to the row height would tower over the name it belongs to.
+    // The kind marks are drawn inside a centered square, so one constant resizes them all. Square,
+    // not the caller's rect: a bolt stretched to a body row's height would tower over its name.
     const double  markSide = std::min(rect.width(), rect.height()) * StimulusGlyphScale;
     const QRectF  mark{ rect.center().x() - (markSide / 2.0), midY - (markSide / 2.0), markSide, markSide };
     switch (glyph)
     {
     case eGlyph::Entry:
     {
-        // `->|` -- an arrow running rightwards INTO the bar that stands for the state: control
-        // arrives here. The bar sits on the right so the arrow reads left-to-right, the same
-        // direction the eye travels along the row text beside it.
+        // `->|`, an arrow running into the bar that stands for the state: control arrives here. The
+        // bar sits on the right, so the arrow reads the way the eye travels along the row text.
         const double barX = rect.right() - 1.0;
         const double tipX = barX - 2.0;
         painter.drawLine(QPointF(rect.left() + 1.0, midY), QPointF(tipX, midY));
@@ -85,9 +80,8 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Exit:
     {
-        // `<-|` -- the mirror of the entry mark: the same bar on the right, but the arrow runs
-        // AWAY from it, leftwards. Entry and exit therefore differ only in arrow direction,
-        // which is what makes the pair readable at a glance in a small box.
+        // `<-|`, the mirror of the entry mark: the same bar, the arrow running away from it. Entry
+        // and exit differ only in arrow direction, which is what makes the pair readable.
         const double barX = rect.right() - 1.0;
         const double tipX = rect.left() + 1.0;
         painter.drawLine(QPointF(barX - 2.0, midY), QPointF(tipX, midY));
@@ -99,9 +93,8 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::ExitAlt:
     {
-        // `|<-` -- the alternative exit mark: the bar on the LEFT with the arrow pointing back
-        // into it. Offered beside `<-|` so the two can be compared on a real diagram; flip
-        // ExitBandGlyph (above) to adopt it.
+        // `|<-`, the alternative exit mark, with the bar on the left. Offered beside `<-|` so the
+        // two can be compared on a real diagram; flip ExitBandGlyph to adopt it.
         const double barX = rect.left() + 1.0;
         const double tipX = barX + 2.0;
         painter.drawLine(QPointF(barX, midY - 4.5), QPointF(barX, midY + 4.5));
@@ -113,11 +106,8 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Do:
     {
-        // A circular repeat arrow -- the same mark the `Do` tab header already wears
-        // (SMToolIcons::eIcon::SectionDo), so the tab and the band rows it edits agree. Deliberately
-        // WITHOUT the state bar that Entry / Exit / Internal share: a Do activity never crosses the
-        // state's boundary, it just runs while inside, and that is the whole distinction from the
-        // internal transition this glyph used to be shared with.
+        // A circular repeat arrow, the same mark the Do tab header wears. Deliberately without the
+        // state bar the others share: a Do activity never crosses the state's boundary.
         const double radius = 3.6;
         const QRectF loop{ rect.center().x() - radius, midY - radius, 2.0 * radius, 2.0 * radius };
         painter.drawArc(loop, 300 * 16, 300 * 16);
@@ -131,12 +121,8 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::Internal:
     {
-        // An internal transition: the SAME bar Entry and Exit use, with a hook that leaves it and
-        // turns straight back into it. The three then read as one family -- `->|` arrives, `<-|`
-        // departs, and this one goes out and comes back without ever leaving the state. It is drawn
-        // square rather than as a circle so it cannot be mistaken for the Do repeat ring.
-        // The hook is kept SMALLER than the bar on purpose: the bar is what ties the mark to the
-        // entry and exit pair, and a hook as tall as the bar closes into a plain rectangle.
+        // An internal transition: the same bar the entry and exit marks use, with a hook that leaves
+        // it and turns back in. Square and smaller than the bar, so it is not the Do repeat ring.
         const double barX = rect.right() - 1.0;
         const double left = barX - 6.5;
         const double up   = midY - 2.5;
@@ -315,11 +301,8 @@ bool SMKindGlyph::isDrawn(eGlyph glyph)
     case eGlyph::TimerStart:
     case eGlyph::TimerStop:
     case eGlyph::Action:
-        // A trigger IS marked now. It used to carry nothing on the grounds that it is the plain
-        // case with nothing to be told apart from -- but the row `on someTrigger` then drew an empty
-        // gutter next to `someAction()`, and the reader could not tell the cause from the effect
-        // without reading both. What it must not draw is the `( )` arc pair it once did, which read
-        // as an empty argument list in front of a signature that already ends in one: `( )on()`.
+        // A trigger is marked too, otherwise the row `on someTrigger` drew an empty gutter next to
+        // `someAction()`. It must not draw the `( )` arc pair, which read as an empty argument list.
         return (Style == eStyle::Glyph);
     default:
         return true;
@@ -356,10 +339,8 @@ SMKindGlyph::eGlyph SMKindGlyph::operationGlyph(const SMOperationBase& op)
     case SMOperationBase::eOperation::TimerStop:
         return eGlyph::TimerStop;
     default:
-        // An action call and an attribute assignment are what the owner's vocabulary calls an
-        // action, and an action wears the gear. They used to fall back to their band's mark, which
-        // is why the operations of an internal transition drew the very same self-loop as the
-        // `on <stimulus>` row that fires them.
+        // An action call and an attribute assignment are both actions, so both wear the gear. The
+        // band-mark fallback made them draw the self-loop of the row that fires them.
         return eGlyph::Action;
     }
 }

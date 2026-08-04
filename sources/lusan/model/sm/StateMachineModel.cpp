@@ -62,18 +62,10 @@ namespace
     }
 
     /**
-     * \brief   The L3 read-shim: a `DoList` whose stop condition is still the pre-L3 free-text
-     *          `Until` attribute is resolved ONCE, here, into the ID-bound tree every other
-     *          predicate in the format already is. Resolution needs the grammar and the document
-     *          registries, neither of which the data layer knows, which is why the reader keeps
-     *          the bytes and this decides what they mean.
-     *
-     *          `allowRaw` is on: the text was verbatim C++ and may legitimately be something the
-     *          guard grammar has no node for. Whatever resolves becomes real references -- which
-     *          is the point, because a rename then follows them -- and whatever does not becomes
-     *          a single `Raw` node, which is exactly what the whole attribute already was. The
-     *          scope is 0: a `do/` activity ticks on a timer with no stimulus in hand, so no
-     *          parameter is in scope and a parameter name in the old text was never bindable.
+     * \brief   Resolves a `DoList` whose stop condition is still the legacy free-text `Until`
+     *          attribute into the id-bound tree every other predicate already is.
+     *          `allowRaw` is on, so whatever the grammar has no node for stays a single `Raw`
+     *          node; the scope is 0, because a do activity runs with no stimulus in hand.
      **/
     void convertLegacyDoUntil(const StateMachineData& data, SMStateData& level)
     {
@@ -109,11 +101,8 @@ namespace
     }
 
     /**
-     * \brief   Refreshes the advisory `name` (R19) on every guard tree in the document just
-     *          before a save, so the human-readable names written to `.fsml` reflect the current
-     *          declarations even after a rename. The name is never read back -- the id binds.
-     *          A `DoList`'s `<Until>` is a guard tree too, and it gets the same pass for the same
-     *          reason: it is the rename safety the whole L3 change exists to buy.
+     * \brief   Refreshes the advisory `name` on every guard tree before a save, so the names
+     *          written to the file follow renames. The name is never read back; the id binds.
      **/
     void refreshGuardNames(const StateMachineData& data, SMStateData& level)
     {

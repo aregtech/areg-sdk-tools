@@ -201,9 +201,6 @@ QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom() const
 
 void NaviOfflineLogsScopes::setupWidgets()
 {
-    // Configure the tree view for database information display
-    // ctrlTable()->setHeaderHidden(false);
-    // ctrlTable()->setRootIsDecorated(true);
     ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
     ctrlTable()->setAlternatingRowColors(false);
 }

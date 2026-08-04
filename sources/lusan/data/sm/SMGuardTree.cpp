@@ -271,9 +271,8 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
     case eKind::Const:
     case eKind::Param:
         xml.writeAttribute(XmlSM::xmlSMAttributeGuardRefId, QString::number(mSymbolId));
-        // Advisory display name (R19): human-readable only, refreshed from the id before every
-        // save and never read back. Written only when resolved, so a tree whose names were never
-        // refreshed (e.g. a unit-test fixture) stays byte-identical.
+        // Display name only, refreshed from the id before each save and never read back. Written
+        // only when resolved, so a tree whose names were never refreshed stays byte-identical.
         if (mCacheName.isEmpty() == false)
         {
             xml.writeAttribute(XmlSM::xmlSMAttributeGuardName, mCacheName);
@@ -301,9 +300,8 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
     }
     else if (mKind == eKind::Call)
     {
-        // Each argument wraps in <Arg>, in declared-parameter order. The wrapper carries the
-        // bound formal's id (Option A) when known; a legacy arg (0) writes no id and is
-        // matched back to a formal by position on load.
+        // Each argument wraps in <Arg>, in declared-parameter order. The wrapper carries the bound
+        // formal's id when known; a legacy arg writes none and is matched back by position.
         for (const SMGuardNode* child : mChildren)
         {
             xml.writeStartElement(XmlSM::xmlSMElementGuardArg);
@@ -346,9 +344,8 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
     else if ((kind == eKind::Call) || node->isReference())
     {
         node->mSymbolId = attributes.value(XmlSM::xmlSMAttributeGuardRefId).toUInt();
-        // The advisory `name` (R19) never binds anything -- the id does -- but it is read back
-        // into the display cache so a writer that cannot resolve names (the headless data layer)
-        // resaves the file unchanged. The editor refreshes it from the id before every save.
+        // The advisory name never binds anything, the id does, but it is read back into the display
+        // cache so a writer that cannot resolve names resaves the file unchanged.
         node->mCacheName = attributes.value(XmlSM::xmlSMAttributeGuardName).toString();
     }
 

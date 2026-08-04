@@ -303,9 +303,8 @@ bool SMStateEntry::isLegacyMergedStart() const
         return true;
     }
 
-    // A stimulus is the second mark, and it is the decisive one: a pseudo-state's transitions are
-    // the level's initial ones, taken on entry, so they can never name what triggers them. Any
-    // transition here that does is a real state's reaction wearing the wrong kind.
+    // A pseudo-state's transitions are the level's initial ones, taken on entry, so they can never
+    // name what triggers them. One that does is a real state's reaction wearing the wrong kind.
     for (const SMTransitionEntry* transition : mTransitions.getElements())
     {
         if ((transition != nullptr) && (transition->getStimulus().isEmpty() == false))
@@ -362,16 +361,13 @@ bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
             }
             else if (xml.name() == XmlSM::xmlSMElementDoList)
             {
-                // The tick period rides on the wrapper element; capture it before delegating the
-                // child operations (the list reader ignores attributes). `Until` used to ride
-                // there too, as verbatim C++ -- it is kept byte-for-byte for the load shim to
-                // resolve, because the grammar it is written in is not this layer's business.
+                // The tick period rides on the wrapper element, so capture it before delegating the
+                // child operations. The legacy `Until` text is kept byte-for-byte for the load shim.
                 const QXmlStreamAttributes doAttributes = xml.attributes();
                 mDoInterval    = doAttributes.value(XmlSM::xmlSMAttributeInterval).toUInt();
                 mDoUntilLegacy = doAttributes.value(XmlSM::xmlSMAttributeUntil).toString();
-                // The stop condition is now a tree, and a tree is a child element. It is the one
-                // child of an operation-list wrapper that is not an operation, so the list reader
-                // hands it back here rather than skipping it.
+                // The stop condition is a tree, so it is a child element. It is the one child of an
+                // operation-list wrapper that is not an operation, so the reader hands it back here.
                 mDoList.readFromXml(xml, XmlSM::xmlSMElementDoList, [this](QXmlStreamReader& reader) -> bool
                 {
                     return (reader.name() == XmlSM::xmlSMElementUntil)
@@ -401,10 +397,8 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
     xml.writeAttribute(XmlSM::xmlSMAttributeKind, SMStateEntry::toString(mKind));
-    // A half-built painted submachine is dropped below, and the two attributes that only make
-    // sense with one have to go with it -- otherwise the file reloads as a plain state carrying
-    // history, an error the user never made. Anything hand-written stays untouched: a state that
-    // never had a submachine keeps whatever it was given, and validation is where that is judged.
+    // A half-built painted submachine is dropped below, and the attributes that only make sense
+    // with one go with it, so the file cannot reload as a plain state carrying history.
     const bool droppingNested = (mNested != nullptr) && (mNested->hasRealState() == false);
     if ((mHistory != eHistory::None) && (droppingNested == false))
     {
@@ -422,16 +416,13 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
     mEntryList.writeToXml(xml, XmlSM::xmlSMElementEntryList);
     mExitList.writeToXml(xml, XmlSM::xmlSMElementExitList);
-    // The Do list carries a repeat policy, so it is written by hand: the tick period on the wrapper
-    // element, then the stop condition, then the operations. Nothing is written when there are no Do
-    // operations, exactly like an empty entry/exit list.
+    // The Do list carries a repeat policy, so it is written by hand: the tick period, the stop
+    // condition, then the operations. Nothing is written when the list is empty.
     if (mDoList.isEmpty() == false)
     {
         xml.writeStartElement(XmlSM::xmlSMElementDoList);
-        // ALWAYS written, including a 0 that no document should contain: a Do is a timer loop, so
-        // the period is what makes it one, and an omitted attribute is the fault that hid behind
-        // the old "omitted when 0" rule. Writing the 0 back keeps the fault visible -- in the
-        // validation panel and against the schema -- until the author re-authors the activity.
+        // Always written, including a 0 that no document should contain: a Do is a timer loop, so
+        // the period is what makes it one, and writing the 0 back keeps the fault visible.
         xml.writeAttribute(XmlSM::xmlSMAttributeInterval, QString::number(mDoInterval));
         mDoUntil.writeToXml(xml, XmlSM::xmlSMElementUntil);
         for (const SMOperationBase* op : mDoList.getOperations())
@@ -441,11 +432,8 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeEndElement();
     }
     mTransitions.writeToXml(xml);
-    // A painted submachine is persisted only when it is "real" -- it owns at least one Normal
-    // state. A submachine left with only Start/Final markers (or empty) was created in RAM while
-    // the user was building it but is not a real state, so it is dropped on save: the state
-    // serializes as a plain leaf. StateMachineData::writeToXml drops the matching layout too, so
-    // no orphan Node/View lingers to collide with a future ID.
+    // A submachine is persisted only when it owns at least one Normal state. Otherwise the state
+    // serializes as a plain leaf and its layout is dropped with it.
     if ((mNested != nullptr) && mNested->hasRealState())
     {
         mNested->writeToXml(xml);
@@ -461,11 +449,8 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
 SMStateData::SMStateData(ElementBase* parent /*= nullptr*/)
     : TEDataContainer<SMStateEntry*, DocumentElem>(parent)
 {
-    // A state's ID is its identity, not its position: transitions name it in `To` and every
-    // Layout entry names it in `Owner`, and none of those are rewritten when the container
-    // re-numbers. Leaving the default on is how a `Start` written first with the highest ID
-    // came back from a plain load owning its neighbour's number, with a self-loop the file
-    // never contained.
+    // A state's id is its identity, not its position: transitions name it in `To` and every layout
+    // entry names it in `Owner`, and none of those are rewritten when the container re-numbers.
     setIdReordering(false);
 }
 

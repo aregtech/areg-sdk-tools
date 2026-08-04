@@ -77,9 +77,8 @@ namespace
         return std::hypot(a.x() - b.x(), a.y() - b.y());
     }
 
-    //!< Moves one coordinate by a single keyboard step. A pixel-wise step moves exactly one
-    //!< unit; otherwise the result snaps to the next multiple of \a base strictly beyond the
-    //!< current value in the \a dir direction (e.g. base 5: 3 -> 5 -> 10, or 3 -> 0 -> -5).
+    //!< Moves one coordinate by a single keyboard step. A pixel-wise step moves one unit, otherwise
+    //!< the result snaps to the next multiple of \a base beyond the current value in \a dir.
     double nudgeAxis(double value, int dir, int base, bool pixelWise)
     {
         if (dir == 0)
@@ -99,9 +98,8 @@ namespace
         return target * static_cast<double>(base);
     }
 
-    //!< Two points that differ by less than a thousandth of a scene unit are the same point.
-    //!< Anchors are re-derived from a box origin every rebuild, so bit-exact comparison would
-    //!< report a move where the arithmetic merely rounded differently.
+    //!< Two points less than a thousandth of a scene unit apart are the same point. The anchors are
+    //!< re-derived every rebuild, so an exact comparison would report rounding as a move.
     inline bool samePoint(const QPointF& a, const QPointF& b)
     {
         return (std::abs(a.x() - b.x()) < 1e-3) && (std::abs(a.y() - b.y()) < 1e-3);
@@ -169,9 +167,8 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setAcceptedMouseButtons(Qt::LeftButton);
     setAcceptHoverEvents(true);     // drives the Ctrl+Shift label links (go-to-declaration).
-    // A transition line always paints ABOVE the inactive state boxes so a box never hides it
-    // (z = 1 vs a box's z = 0). A selected box raises to z = 2 to cover the inactive edges, and a
-    // selected edge raises to z = 3 so it -- and its grab handles -- stay on top of everything.
+    // A transition line paints above the inactive state boxes, so a box never hides it. A selected
+    // box rises above the inactive edges, and a selected edge rises above everything.
     setZValue(1.0);
 }
 
@@ -284,9 +281,8 @@ void SMEdgeItem::setAnchorPoint(bool begin, const QPointF& point)
 {
     if (mHasAnchors == false)
     {
-        // First manual endpoint move: seed BOTH anchors from the drawn path, so the endpoint
-        // that was not touched keeps the place it was drawn at instead of falling back to the
-        // center-facing default.
+        // First manual endpoint move: seed both anchors from the drawn path, so the untouched one
+        // keeps where it was drawn instead of the center-facing default.
         mAnchorBegin = mBegin;
         mAnchorEnd   = mEnd;
         mHasAnchors  = true;
@@ -353,9 +349,8 @@ void SMEdgeItem::updateFromModel()
     mTargetName  = (target != nullptr ? target->getName() : QString());
     mSelfLoop    = (mTargetId != 0) && (mTargetId == mSourceId);
 
-    // Show the guard next to the stimulus (`stimulus[summary]`); the full guard is the tooltip.
-    // No guard -> the stimulus alone (no empty brackets). Summary only, never rotated.
-    // The label carries the guard's severity color + glyph when the guard is not ok.
+    // Show the guard next to the stimulus (`stimulus[summary]`) and the full guard as the tooltip.
+    // Without a guard the stimulus stands alone, and the label takes the guard severity color.
     const QString summary = SMGuardRender::guardText(data, getElementId(), transition->getGuard()).simplified();
     mGuardSeverity = -1;
     QString guardIssue;
@@ -386,10 +381,8 @@ void SMEdgeItem::updateFromModel()
         }
     }
 
-    // Only a trigger reads as a method signature (`walk(count)`); an event and a timer are named
-    // bare and say WHAT they are through a mark drawn in front of the text -- a lightning bolt or a
-    // clock -- rather than through empty brackets or a generated `on_event_` prefix (issue #543).
-    // The guard clause is kept separate so paintLabels can tint stimulus and condition distinctly.
+    // Only a trigger reads as a method signature; an event and a timer are named bare and say what
+    // they are through the mark in front of the text. The guard clause stays separate for tinting.
     const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
     mStimulusText  = SMKindGlyph::prefix(SMKindGlyph::stimulusGlyph(*transition)) + signature;
     mStimulusGlyph = SMKindGlyph::stimulusGlyph(*transition);
@@ -401,9 +394,8 @@ void SMEdgeItem::updateFromModel()
     else
     {
         constexpr int MAX_SUMMARY = SMGuardRender::ChipEdge;
-        // One glyph per severity: an error and a warning must not look alike on the canvas while
-        // the status line calls them by different names. The glyph is the grayscale/color-blind
-        // channel -- the severity color alone would carry the whole distinction.
+        // One glyph per severity, so an error and a warning never look alike on the canvas. It is
+        // also the channel that survives grayscale and color blindness.
         QString glyph;
         if (mGuardSeverity == static_cast<int>(NEGuardStyle::eSeverity::Err))
         {
@@ -414,10 +406,8 @@ void SMEdgeItem::updateFromModel()
             glyph = QStringLiteral("(!) ");
         }
 
-        // The shared one-line renderer: full text, else a structural summary, else a cut taken at a
-        // token boundary. It lives in SMGuardRender because the internal-transition picker, the
-        // state-box rows and the transition list must speak the same shorthand as this label; only
-        // the budget differs. The tooltip always carries the whole text.
+        // The shared one-line renderer: full text, else a structural summary, else a cut at a
+        // token boundary. Only the budget differs per caller; the tooltip carries the whole text.
         const QString shortSummary = SMGuardRender::chipText(data, getElementId(), transition->getGuard(), MAX_SUMMARY);
         mGuardText = QChar('[') + glyph + shortSummary + QChar(']');
         // A tooltip cannot carry a drawn mark, so it spells the kind out instead.
@@ -434,9 +424,8 @@ void SMEdgeItem::updateFromModel()
         setToolTip(tip);
     }
 
-    // An action/event whose arguments are not fully mapped warns on the canvas, so the developer
-    // sees which transitions a method edit broke without opening each Properties panel; the glyph
-    // clears the instant every argument is mapped.
+    // An action or event with unmapped arguments warns on the canvas, so a method edit shows its
+    // damage without opening every Properties panel. The glyph clears once each argument is mapped.
     mActionSeverity = -1;
     DocIssue::eSeverity opSeverity = DocIssue::eSeverity::Info;
     if (SMOperationValidation::worstForTransition(data, getElementId(), opSeverity))
@@ -446,9 +435,8 @@ void SMEdgeItem::updateFromModel()
                                            : NEGuardStyle::eSeverity::Warn);
     }
 
-    // The transition's operations are summarized below the line on ONE line -- action, event, and
-    // timer(s) in order, joined with a thin separator. As many as fit the width budget are shown;
-    // the rest collapse into a trailing `(+N)` rather than spilling onto new lines (issue #532).
+    // The operations are summarized below the line on one line: action, event, then timers. As many
+    // as fit the width budget are shown, and the rest collapse into a trailing `(+N)`.
     const SMOperationList& ops = transition->getOperations();
     mActionText.clear();
     if (ops.getCount() > 0)
@@ -508,11 +496,8 @@ void SMEdgeItem::updateFromModel()
         }
     }
 
-    // The persisted first/last points are the user-placed border anchors; the drawn begin/end are
-    // these projected onto the live border. They are re-measured against their boxes on the next
-    // rebuild (mAnchorsMeasured), from where on they follow those boxes rather than the stored
-    // scene coordinates -- otherwise moving a box far enough would let the projection pick the
-    // opposite side and the transition would jump around the box (issue #550 bug 3).
+    // The persisted first and last points are the user-placed border anchors; the drawn ends are
+    // those projected onto the live border, re-measured against their boxes on the next rebuild.
     mHasAnchors      = (edge != nullptr) && (edge->points.size() >= 2);
     mAnchorsMeasured = false;
     mHasOrigins      = false;   // the waypoints just read belong to the boxes as they stand now
@@ -541,9 +526,7 @@ void SMEdgeItem::refreshAnchors(bool fromModel /*= false*/)
         if (fromModel)
         {
             // The document moved the box, so its stored anchors belong to where it stands now.
-            // One undo step may carry a box and its transitions as separate children, which reach
-            // the canvas one after the other; re-measuring on each of them leaves the last -- and
-            // therefore consistent -- pair as the one that counts.
+            // Re-measuring on each child of the undo step leaves the last, consistent pair.
             mAnchorsMeasured = false;
         }
 
@@ -577,19 +560,16 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
 
     const QPointF tc = tgt.center();
 
-    // The anchors live in their boxes, not in the scene: measure them once against the stored box
-    // (the collapsed body must not move them), then re-derive them from wherever the box stands
-    // now. Moving a box therefore only changes the length and the angle of the line.
+    // The anchors live in their boxes, not in the scene: measure them once against the stored box,
+    // then re-derive them from wherever the box stands now.
     const QPointF srcFrame = anchorFrame(mSourceId);
     const QPointF tgtFrame = anchorFrame(mSelfLoop ? mSourceId : mTargetId);
     if (mHasAnchors)
     {
         if (mAnchorsMeasured == false)
         {
-            // Measure the point the DOCUMENT holds against the box as it now stands. The member
-            // anchors are not used here: one undo step reaches the canvas as several changes, and
-            // in between them an anchor may already have been re-derived from a box that has not
-            // caught up yet -- measuring that would freeze the mismatch instead of ending it.
+            // Measure the stored point against the box as it stands now. Within one undo step a
+            // member anchor may have been re-derived from a box that has not caught up yet.
             const SMScene* owner = getCanvas();
             const SMLayoutEdge* stored = (owner != nullptr)
                     ? owner->getModel().getData().getLayout().findEdge(getElementId()) : nullptr;
@@ -610,9 +590,8 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
         }
     }
 
-    // Both boxes travelled by the same step: the whole transition was carried along by a group
-    // move, so its interior waypoints and its label travel with it and the drawn line keeps its
-    // shape. One box moving alone leaves them where they are and reshapes the line instead.
+    // Both boxes moved by the same step, so the whole transition was carried by a group move and
+    // its waypoints and label travel with it. One box moving alone reshapes the line instead.
     if (followBoxes && mHasOrigins)
     {
         const QPointF delta = srcFrame - mSrcOrigin;
@@ -645,9 +624,8 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
         mHasOrigins = true;
     }
 
-    // A self-loop with no stored waypoints gets a default loop above the box. An ARC self-loop gets
-    // none: its two border anchors and the bulge already describe the whole loop, and a seeded
-    // waypoint here would be written straight back into the layout as if the user had placed it.
+    // A self-loop with no stored waypoints gets a default loop above the box. An arc gets none: its
+    // anchors and bulge already describe it, and a seeded waypoint would be written to the layout.
     if (mSelfLoop && mWaypoints.isEmpty() && (mShape != SMLayoutEdge::eShape::Arc))
     {
         const double off = NESMDesign::EdgeSelfLoopStandoff;
@@ -658,9 +636,8 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
     const double srcRad = stateRadius(mSourceId, src);
     const double tgtRad = (mSelfLoop ? srcRad : stateRadius(mTargetId, tgt));
 
-    // A default (never-dragged) endpoint sticks to the border facing the other box; with snap-to-grid
-    // on it also lands on a grid-aligned border position (crossing or midpoint), so it stops jittering
-    // as either box moves (issue #532).
+    // A never-dragged endpoint sticks to the border facing the other box, and with snap-to-grid on
+    // it lands on a grid-aligned border position, so it stops jittering as either box moves.
     SMScene* canvas = getCanvas();
     const bool snap = (canvas != nullptr) && canvas->isSnapToGrid();
     const int  grid = (canvas != nullptr) ? canvas->getGridSize() : NESMDesign::GridSizeDefault;
@@ -694,8 +671,7 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
     else
     {
         // Without waypoints the endpoint faces the other box; with them it lines up with the
-        // adjacent corner, so the first and last legs leave the border square instead of fanning
-        // back toward the box center.
+        // adjacent corner, so the first and last legs leave the border square.
         const bool    poly     = (mWaypoints.isEmpty() == false);
         const QPointF beginRef = poly ? mWaypoints.first() : tc;
         const QPointF endRef   = poly ? mWaypoints.last()  : sc;
@@ -1080,10 +1056,8 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
     painter->setBrush(Qt::NoBrush);
     painter->drawPolyline(mPath.constData(), mPath.size());
 
-    // Begin dot on the source border -- doubled into the filled entry ball for an INITIAL
-    // transition. That is the one drawing difference between the two kinds that carry an edge, and
-    // it is the notation an author already reads as "this is where the level begins"; the absent
-    // stimulus label is the other half of it.
+    // Begin dot on the source border, doubled into a filled entry ball for an initial transition.
+    // That and the absent stimulus label are what mark where the level begins.
     const double beginDot = mIsInitial
                             ? (NESMDesign::EdgeBeginDotRadius * 2.0)
                             : NESMDesign::EdgeBeginDotRadius;
@@ -1279,9 +1253,8 @@ void SMEdgeItem::paintLabels(QPainter* painter, const QPalette& palette)
         painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 9.5), QPointF(badge.right() - 4.5, badge.top() + 9.5));
     }
 
-    // Ctrl+Shift link feedback: underline the label part under the pointer so the user sees exactly
-    // what a click opens (the stimulus, the guard editor, or the operations), matching the editor's
-    // go-to-definition affordance. Drawn last so the rule sits above the text.
+    // Underline the label part under the pointer, so the user sees what a Ctrl+Shift click opens.
+    // Drawn last, so the rule sits above the text.
     if (mHoverLink != LinkNone)
     {
         QRectF region;
@@ -1453,9 +1426,8 @@ double SMEdgeItem::selfLoopBulge() const
         return NESMDesign::EdgeArcBulgeDefault;
     }
 
-    // Stand the apex the same distance off the border as the polyline loop's corners, so switching
-    // a loop between the two shapes keeps it the same size, and bow it AWAY from the box: a loop
-    // curving back through its own state reads as a line crossing it, not as a transition.
+    // Stand the apex off the border by the distance the polyline loop uses, and bow it away from
+    // the box: a loop curving back through its own state reads as a line crossing it.
     const QPointF normal { -chord.y() / c, chord.x() / c };
     const QPointF outward = ((mBegin + mEnd) / 2.0) - box.center();
     const double  side    = (((normal.x() * outward.x()) + (normal.y() * outward.y())) < 0.0) ? -1.0 : 1.0;
@@ -1508,9 +1480,8 @@ void SMEdgeItem::setShape(SMLayoutEdge::eShape shape)
         mBulge = 0.0;
         if (mSelfLoop && mWaypoints.isEmpty())
         {
-            // Both anchors of a self-loop sit on the same box, so a two-point run between them has
-            // nothing to draw. Straightening gives it the rectangle the arc stood in: one corner
-            // off each anchor, at the standoff the default loop uses.
+            // Both anchors of a self-loop sit on the same box, so a two-point run has nothing to
+            // draw. Straightening gives it the rectangle the arc stood in.
             mWaypoints = selfLoopCorners();
         }
     }
@@ -1528,9 +1499,8 @@ SMLayoutEdge SMEdgeItem::buildGeometry() const
     edge.shape = mShape;
     edge.bulge = mBulge;
     edge.color = mColorName;
-    // The ANCHORS are persisted, not the drawn endpoints: the two differ only while a box is
-    // collapsed, and then it is the anchor that has to survive -- expanding the box must give the
-    // endpoint its old place back rather than the header edge it was clamped to (issue #550 bug 4).
+    // The anchors are persisted, not the drawn endpoints: the two differ while a box is collapsed,
+    // and expanding the box must give the endpoint its old place back.
     edge.points.append(mHasAnchors ? mAnchorBegin : mBegin);
     edge.points.append(mWaypoints);
     edge.points.append(mHasAnchors ? mAnchorEnd : mEnd);
@@ -1609,10 +1579,8 @@ bool SMEdgeItem::nudgeGeometry(const QPointF& delta)
         return false;
     }
 
-    // An endpoint may only travel along the border it is stuck to, and only within that border's
-    // straight span: the step that runs across the border is dropped, so the transition never
-    // leaves the state it connects. Everything else -- the interior waypoints and the label --
-    // takes the whole step, so the run between the two ends moves as one.
+    // An endpoint travels only along the border it is stuck to, and only within its straight span,
+    // so the transition never leaves its state. The waypoints and the label take the whole step.
     const auto slide = [this, &delta](uint32_t stateId, const QRectF& box, const QPointF& anchor) -> QPointF
     {
         if ((box.width() <= 0.0) || (box.height() <= 0.0))
@@ -1728,9 +1696,8 @@ void SMEdgeItem::setLabelActive(bool active)
 
     if (active && (mHasLabel == false))
     {
-        // Freeze the label at its CURRENT on-screen position -- the default placement sits ABOVE the
-        // line, so seeding from the line anchor would shift the text down onto the transition. Read
-        // labelRect() while mHasLabel is still false to get that above-line rect and keep its centre.
+        // Freeze the label where it is drawn now. The default placement sits above the line, so
+        // labelRect() is read while mHasLabel is still false to get that rect and keep its centre.
         const QRectF current = labelRect();
         mLabelPos = current.isNull() ? labelAnchor() : current.center();
         mHasLabel = true;
@@ -1887,9 +1854,8 @@ QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value
 {
     if (change == QGraphicsItem::ItemSelectedHasChanged)
     {
-        // A selected edge raises to the top (above even a selected state box, z = 2) so its
-        // endpoint and waypoint handles stay grabbable where they overlap a box; an unselected
-        // edge falls back to z = 1, still above the inactive boxes (see the constructor).
+        // A selected edge raises above even a selected box, so its handles stay grabbable where
+        // they overlap it. Unselected, it falls back to just above the inactive boxes.
         setZValue(value.toBool() ? 3.0 : 1.0);
         if (value.toBool() == false)
         {
@@ -1904,9 +1870,8 @@ QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value
 
 void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
-    // Ctrl+Shift + primary click on a referenced label part is a link: the stimulus and the
-    // operations jump to their declarations; the guard opens the transition's guard editor. Plain
-    // clicks are untouched, so clicking a label to select or drag the transition still works.
+    // Ctrl+Shift and a primary click on a referenced label part is a link: the stimulus and the
+    // operations jump to their declarations, the guard opens the transition's guard editor.
     const Qt::KeyboardModifiers mods = event->modifiers();
     const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
     if ((event->button() == Qt::LeftButton) && linkMode)
@@ -2041,9 +2006,8 @@ void SMEdgeItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
     case eDrag::Begin:
     case eDrag::End:
     {
-        // Free follow for reconnection feedback; near a state box the endpoint sticks to the
-        // border AND snaps to a grid-aligned border position (crossing or midpoint), so it settles
-        // on stable steps instead of jittering under the cursor (issue #532).
+        // Free follow while reconnecting. Near a state box the endpoint sticks to the border and
+        // snaps to a grid-aligned position, so it settles on steps instead of jittering.
         QPointF point = event->scenePos();
         SMStateItem* over = (canvas != nullptr ? canvas->stateAt(point) : nullptr);
         if (over != nullptr)
@@ -2112,18 +2076,14 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
             const QRectF   ownBox = stateRect(ownId);
             if ((overId != 0) && (overId != ownId))
             {
-                // a Start state is a source only, no transition may END on it, and a Final state is a target only -- no
-                // transition may BEGIN on it. Reject such a drop: restore the edge to its stored
-                // geometry (undo the drag feedback) and warn briefly at the cursor.
+                // No transition may end on a Start or begin on a Final. Reject the drop: restore
+                // the stored geometry and warn briefly at the cursor.
                 const SMStateEntry* overState = canvas->getModel().getData().findStateById(overId);
                 const SMStateEntry::eStateKind overKind =
                         (overState != nullptr ? overState->getKind() : SMStateEntry::eStateKind::Normal);
                 const bool rejectEnd   = (drag == eDrag::End)   && (overKind == SMStateEntry::eStateKind::Start);
-                // A Start is a source only for its OWN initial transitions, which are taken on
-                // entering the level and name no stimulus. Dragging an ordinary transition's
-                // begin onto one would hand a marker a stimulus to react to, and dragging an
-                // initial one off it would leave an ordinary state with a transition nothing can
-                // trigger -- so the begin endpoint may neither land on a Start nor leave one.
+                // A Start is a source only for its own initial transitions, so the begin endpoint
+                // may neither land on a Start nor leave one.
                 const bool startSource = (overKind == SMStateEntry::eStateKind::Start) || mSourceIsStart;
                 const bool rejectBegin = (drag == eDrag::Begin)
                                       && ((overKind == SMStateEntry::eStateKind::Final) || startSource);
@@ -2139,11 +2099,8 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
                     break;
                 }
 
-                // Dropped on another state: reconnect. Pin the dragged endpoint to the border of
-                // the drop state at the release position, reset the label so it re-centres on the
-                // new line, and hand the finished geometry to the deferred reconnection. The drag
-                // feedback is NOT reverted here: keeping the dropped path drawn until the command
-                // redraws the identical geometry removes the one-frame flash back to the old anchor.
+                // Dropped on another state: pin the dragged endpoint to that state's border at the
+                // release position and reset the label. The feedback stays until the command redraws.
                 const QRectF  overBox = over->getVisibleGeometry();
                 const double  overRad = over->boxCornerRadius();
                 const int     grid    = canvas->getGridSize();
@@ -2213,9 +2170,8 @@ void SMEdgeItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
     {
         const QPointF p = event->pos();
 
-        // Double-click on the trigger/guard text or the operation summary toggles label reposition
-        // mode: the block is framed and tethered to the line so the user can move it with the mouse
-        // or the arrow keys (issue #532). Conditions are still edited from the Properties panel.
+        // Double-click on the label toggles reposition mode: the block is framed and tethered to
+        // the line, so it can be moved with the mouse or the arrow keys.
         if (labelRect().contains(p) || actionRect().contains(p))
         {
             setLabelActive(mLabelActive == false);

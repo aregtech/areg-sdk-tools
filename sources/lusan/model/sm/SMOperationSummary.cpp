@@ -113,9 +113,8 @@ QString SMOperationSummary::stimulusSignature(const StateMachineData& data, cons
         return name;
     }
 
-    // Only a trigger is a declared method, so only a trigger reads as a signature. A timer expiry
-    // has no parameters at all, and an event is a signal rather than a call -- writing `evGo()`
-    // invented a method the model does not have.
+    // Only a trigger is a declared method, so only a trigger reads as a signature. Writing `evGo()`
+    // for an event invented a method the model does not have.
     if (transition.getStimulusKind() != SMTransitionEntry::eStimulusKind::Trigger)
     {
         return name;
@@ -146,10 +145,8 @@ QString SMOperationSummary::text(const StateMachineData& data, const SMOperation
 
     case SMOperationBase::eOperation::EventSend:
     {
-        // An event is signalled, not called: no parentheses, and the payload is not spelled here.
-        // The verb survives only because the surfaces that use this text (the edge action line,
-        // the Properties summaries) carry no kind mark of their own; the state box strips it and
-        // draws the lightning bolt instead.
+        // An event is signalled, not called: no parentheses and no payload here. The verb survives
+        // because these surfaces carry no kind mark; the state box strips it and draws the bolt.
         return QStringLiteral("send ") + static_cast<const SMEventSend&>(op).getEvent();
     }
 

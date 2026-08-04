@@ -312,9 +312,8 @@ void SMMoveTransitionCommand::apply(int from, int to)
         return;
     }
 
-    // moveElement, never swapElements: the entry travels and its ID stays with it, so the layout
-    // Edge keyed by that ID, the guard parameter scope and the selection all keep pointing at the
-    // transition the author moved. See TEDataContainer::moveElement.
+    // moveElement, never swapElements: the entry travels and its id stays with it, so the layout
+    // edge, the guard parameter scope and the selection all keep pointing at the same transition.
     mList.moveElement(from, to);
     notifier().notifyListReordered(mStateId, eDocElementKind::Transition);
 }

@@ -253,10 +253,8 @@ void SMArgMapTable::buildHost(void)
 
     if (mStyle == eRowStyle::Compact)
     {
-        // The Actions shape: a plain form host, indented under its group's picker. No inner
-        // scroll area -- both cells shrink, and the operations editor already scrolls. The form
-        // gives every row one shared field column, so the merged cells all line up at one width
-        // however long or short the parameter names beside them are.
+        // The Actions shape: a plain form host with no inner scroll area, since the operations
+        // editor already scrolls. One shared field column lines every merged cell up at one width.
         QFormLayout* form = new QFormLayout(mHost);
         form->setContentsMargins(12, 2, 0, 0);
         form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
@@ -286,9 +284,8 @@ void SMArgMapTable::clearRows(void)
 {
     mRows.clear();
 
-    // The host is only ever torn down from bind() (driven by the host widget, never by one
-    // of these rows' own signals) or from the deferred scheduleRebuild -- so no row is
-    // destroyed while its signal is still unwinding.
+    // The host is only torn down from bind() or from the deferred rebuild, so no row is destroyed
+    // while its own signal is still unwinding.
     QLayoutItem* item = nullptr;
     while ((item = layout()->takeAt(0)) != nullptr)
     {
@@ -375,12 +372,8 @@ void SMArgMapTable::buildCompactRow(int index)
     // cells line up at the same width whatever their parameter names are.
     row.compact->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // The list is built in a fixed reading order and NOTHING is listed that does not exist -- a
-    // kind with no members contributes no rows at all rather than a placeholder:
-    //   [0]      the empty entry (always) -- picking it un-maps the formal
-    //   [1]      the one custom value, when this formal currently holds a typed literal
-    //   then     stimulus parameters, then attributes, then constants -- each entry marked with
-    //            its kind's glyph, so what a name refers to is readable without opening anything.
+    // Fixed reading order: the empty entry that un-maps the formal, the one custom value when there
+    // is a typed literal, then parameters, attributes and constants, each marked with its glyph.
     row.compact->addItem(QString());
 
     const SMArgumentEntry* cur = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
@@ -434,9 +427,8 @@ void SMArgMapTable::buildCompactRow(int index)
     // verdict (required / converts / narrows / mismatch) rides the tooltip and the name tint.
     row.compact->setToolTip(compactStatus(param, cur));
 
-    // A formal that still has no binding (nor a typed literal, nor a default) gets an amber wash on
-    // its name cell. A parameter freshly added to a referenced condition lands here, so it reads as
-    // "still needs mapping" rather than as a silently blank row the developer might miss.
+    // A formal with no binding, literal or default gets an amber wash on its name cell, so a
+    // parameter freshly added to a referenced condition reads as still needing a mapping.
     if (row.committed.isEmpty() && (param.hasDefault == false))
     {
         row.name->setStyleSheet(QStringLiteral("background-color: %1;").arg(NEGuardStyle::unmappedTint().name()));
@@ -445,10 +437,8 @@ void SMArgMapTable::buildCompactRow(int index)
     static_cast<QFormLayout*>(mHost->layout())->addRow(row.name, row.compact);
     mRows.append(row);
 
-    // `activated` is a real user pick. `editingFinished`, however, ALSO fires when the popup takes
-    // focus away from the line edit -- committing there re-projected the table and destroyed the
-    // combo mid-gesture, so the list appeared to open and snap shut and the caret was lost
-    // . onCompactCommitted now ignores a no-op edit.
+    // `activated` is a real user pick. `editingFinished` also fires when the popup takes focus
+    // away from the line edit, so onCompactCommitted ignores a no-op edit.
     connect(row.compact, QOverload<int>::of(&QComboBox::activated), this, [this, index](int) { onCompactCommitted(index); });
     connect(row.compact->lineEdit(), &QLineEdit::editingFinished, this, [this, index]() { onCompactCommitted(index); });
     watchEditor(row.compact->lineEdit());
@@ -456,10 +446,8 @@ void SMArgMapTable::buildCompactRow(int index)
 
 void SMArgMapTable::buildCompactOrphanRow(int index)
 {
-    // The same orphan case the Detailed grid renders, in one form row: the formal behind this stored
-    // mapping was removed on the Methods page, so the value can no longer be re-typed as a live
-    // argument. It is never silently discarded -- it stays in a red row until the developer clears
-    // it through the quick-fix beside it.
+    // The formal behind this stored mapping was removed on the Methods page, so the value can no
+    // longer be re-typed. It stays in a red row until the developer clears it through the quick-fix.
     const Param& param = mParams.at(index);
 
     Row row {};
@@ -501,11 +489,8 @@ void SMArgMapTable::buildCompactOrphanRow(int index)
 
 QList<SMArgumentEntry::eValueSource> SMArgMapTable::compactKinds(void) const
 {
-    // The reference kinds a merged cell offers, in list order. A host that declared a source filter
-    // gets exactly its reference kinds (the Actions tab: parameters, attributes, constants); a host
-    // that declared none keeps the historical pair. A kind that is illegal in this scope -- a
-    // stimulus parameter outside a transition -- is dropped, and a kind with no members contributes
-    // nothing, so the list never carries an entry that cannot be picked.
+    // The reference kinds a merged cell offers, in list order. A kind that is illegal in this
+    // scope or has no members is dropped, so the list never carries an entry that cannot be picked.
     const eSource ordered[] = { eSource::Param, eSource::Attribute, eSource::Constant };
 
     QList<eSource> kinds;
@@ -570,10 +555,8 @@ QString SMArgMapTable::compactStatus(const Param& param, const SMArgumentEntry* 
 
 void SMArgMapTable::updateCompactCustom(int row)
 {
-    // The one custom value: a merged cell lists at most a single typed literal, so a newly typed
-    // value REPLACES the one listed before it rather than piling up. Done in place -- a Compact
-    // commit deliberately does not re-project (it would fight the caret), so without this the list
-    // would still be offering the value the developer just typed over.
+    // A merged cell lists at most one typed literal, so a newly typed value replaces the previous
+    // one. Done in place, because a Compact commit does not re-project.
     Row& r = mRows[row];
     if (r.compact == nullptr)
     {
@@ -730,10 +713,8 @@ void SMArgMapTable::buildDetailedRow(int index)
 
 void SMArgMapTable::buildOrphanRow(int index)
 {
-    // Orphan case (b): the callee still exists but this parameter was removed on the Methods
-    // page, so its stored value can no longer be re-typed as a live formal. The mapping is never
-    // silently discarded: the value is shown in a red row that keeps it until the
-    // developer removes it through the quick-fix. The same red row appears in both tabs.
+    // The callee still exists, but this parameter was removed on the Methods page. The stored
+    // value is kept in a red row until the developer removes it through the quick-fix.
     const Param& param = mParams.at(index);
     const int gridRow = index + 1;
 
@@ -1022,9 +1003,8 @@ void SMArgMapTable::commit(int row, bool mapped, SMArgumentEntry::eValueSource s
     }
     mApplying = false;
 
-    // A Compact row already shows what was committed and its host refreshes through the
-    // model notification, so rebuilding here would only fight the caret. A Detailed row's
-    // status, type and value cells all follow the new state, so it re-projects (deferred).
+    // A Compact row already shows what was committed and refreshes through the model notification,
+    // so rebuilding would only fight the caret. A Detailed row re-projects instead.
     if (mStyle == eRowStyle::Detailed)
     {
         scheduleRebuild();
@@ -1046,9 +1026,8 @@ void SMArgMapTable::watchEditor(QLineEdit* edit)
 
 bool SMArgMapTable::eventFilter(QObject* watched, QEvent* event)
 {
-    // While a drop-down is up it holds the mouse grab, so the SECOND click of a double click never
-    // reaches the line edit -- it lands on the popup container instead. Catching it here is what
-    // makes the "open, close, select the text" fallback work.
+    // A drop-down holds the mouse grab, so the second click of a double click lands on the popup
+    // container instead of the line edit. Catching it here is what makes the fallback work.
     if (event->type() == QEvent::MouseButtonPress)
     {
         QComboBox* owner = comboOfPopup(watched);
@@ -1091,17 +1070,14 @@ bool SMArgMapTable::eventFilter(QObject* watched, QEvent* event)
             break;
 
         case QEvent::MouseButtonPress:
-            // NOT swallowed: the press must reach QLineEdit so the
-            // caret lands exactly where the developer clicked. Opening the popup from the press
-            // was also what made the list flash open and shut -- the matching release landed on
-            // the freshly grabbed popup and dismissed it at once.
+            // Not swallowed: the press must reach QLineEdit, so the caret lands where the developer
+            // clicked. Opening the popup from the press made the list flash open and shut.
             break;
 
         case QEvent::MouseButtonRelease:
         {
-            // A click in the field opens the value list, rather than leaving it reachable only
-            // through the tiny drop arrow. Opening on the RELEASE keeps the list up: by then the
-            // press has already positioned the caret and no stray release remains to dismiss it.
+            // A click in the field opens the value list, not only the tiny drop arrow. Opening on
+            // the release keeps the list up, since no stray release remains to dismiss it.
             QComboBox* combo = qobject_cast<QComboBox*>(edit->parentWidget());
             if ((combo != nullptr) && (combo->count() > 0) && (combo->view() != nullptr)
                 && (combo->view()->isVisible() == false))
@@ -1143,9 +1119,8 @@ void SMArgMapTable::scheduleRebuild(void)
         mRebuildQueued = false;
         if (isEditing())
         {
-            // The developer has a popup open or a caret in a cell: rebuilding would delete the
-            // widget under their hands. The row already shows the live value; re-project when
-            // the edit ends.
+            // A popup is open or a caret is in a cell, so rebuilding would delete the widget under
+            // the developer's hands. The row already shows the live value; re-project on edit end.
             return;
         }
 

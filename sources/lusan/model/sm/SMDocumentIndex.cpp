@@ -248,9 +248,8 @@ SMDocumentIndex::ParamScope SMDocumentIndex::paramScope(uint32_t transitionId) c
     const SMTransitionEntry* entry = transition(transitionId);
     if (entry != nullptr)
     {
-        // A trigger is looked up by bare name on purpose: the stimulus name space is shared, so
-        // the entry that carries the name is the one the transition fires on. A timer expiry
-        // has no payload at all and leaves the scope empty.
+        // A trigger is looked up by bare name: the stimulus name space is shared, so the entry
+        // carrying the name is the one the transition fires on. A timer expiry has no payload.
         switch (entry->getStimulusKind())
         {
         case SMTransitionEntry::eStimulusKind::Trigger:

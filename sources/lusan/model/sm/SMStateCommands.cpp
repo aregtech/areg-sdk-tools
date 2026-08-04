@@ -58,9 +58,8 @@ namespace
         uint32_t            id;     //!< The transition's element ID.
     };
 
-    //!< Walks every state outside the removed set and collects the transitions whose target ID
-    //!< belongs to it (transitions reference their target by ID). A state in the removed set is
-    //!< skipped whole: its own transitions go with it.
+    //!< Walks every state outside the removed set and collects the transitions whose target id
+    //!< belongs to it. A state in the removed set is skipped whole: its transitions go with it.
     void collectIncoming(SMStateData& level, const QSet<uint32_t>& removedIds, QList<IncomingRef>& incoming)
     {
         for (SMStateEntry* state : level.getElements())
@@ -86,9 +85,8 @@ namespace
     }
 
     /**
-     * \brief   The transitions of surviving states that target the removed subtree, with their
-     *          IDs appended to \p owners so their layout goes with them. Dangling `To` references
-     *          only surface at validation, which is why both delete paths share this one sweep.
+     * \brief   The transitions of surviving states that target the removed subtree, with their ids
+     *          appended to \p owners so their layout goes with them.
      * \param   data        The document root; the walk starts at its root level.
      * \param   removedIds  The state IDs disappearing in this command.
      * \param   owners      Receives the doomed transitions' IDs, for the layout child.
@@ -155,9 +153,8 @@ void SMRenameStateCommand::apply(const QString& name, const QString& previous)
     SMStateEntry* state = data().findStateById(mId);
     if (state != nullptr)
     {
-        // Transitions reference their target by ID, so a rename touches only the state's name --
-        // every connection to it survives untouched. The canvas repaints affected edge labels
-        // (which resolve the target name live) in response to notifyNameChanged.
+        // Transitions reference their target by id, so a rename touches only the name and every
+        // connection survives. The canvas repaints the affected edge labels on the notification.
         state->setName(name);
         notifier().notifyNameChanged(mId, previous, name);
     }
@@ -332,13 +329,10 @@ namespace
 {
     /**
      * \class   SMAttachNestedCommand
-     * \brief   Toggles the ownership of a composite state's nested StateList between the
-     *          state and this command, so undo/redo reuse the same list object and every ID
-     *          inside it survives history navigation.
-     *
-     *          The direction is the constructor's choice: attaching is how a state becomes a
-     *          painted composite, detaching is how it stops being one. One class, because the
-     *          two are the same ownership handover read in opposite directions.
+     * \brief   Moves the ownership of a composite state's nested StateList between the state and
+     *          this command, so undo and redo reuse the same list and every id inside it survives.
+     *          The constructor picks the direction: attaching makes a state composite, detaching
+     *          stops it being one.
      **/
     class SMAttachNestedCommand : public SMCommand
     {

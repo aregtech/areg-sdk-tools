@@ -69,9 +69,8 @@ OutputDock::OutputDock(MdiMainWindow* parent)
 {
     mTabs.addTab(&mScopeOutput, QIcon(), tr("Scopes Analyzes"));
 
-    // The findings of the active State Machine document: errors, warnings and advisory notes,
-    // one per row, worst severity first. The output window is where a build-style diagnostic
-    // list belongs, so the findings live here rather than in a per-document panel.
+    // The findings of the active state machine document, one per row, worst severity first. A
+    // build-style diagnostic list belongs in the output window rather than a per-document panel.
     mValidationTab = new QWidget(this);
     mValidationTab->setObjectName(QStringLiteral("outputValidationTab"));
     mValidationBody = new QVBoxLayout(mValidationTab);
@@ -100,9 +99,8 @@ OutputDock::~OutputDock()
 
 void OutputDock::initSize()
 {
-    // Expanding vertically on purpose. A Fixed policy here makes the content's maximum height
-    // equal its hint, which propagates to the ADS dock area: the splitter between the editor
-    // and this dock then has min == max, so it offers no handle and the dock cannot be resized.
+    // Expanding vertically on purpose: a Fixed policy makes the content's maximum height equal its
+    // hint, which leaves the ADS splitter with min == max and no handle to resize the dock.
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }
 

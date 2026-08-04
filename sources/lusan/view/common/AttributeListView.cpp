@@ -74,10 +74,8 @@ void AttributeListView::buildUi()
     toolbarLayout->addWidget(mButtonMoveDown);
     toolbarLayout->addStretch(1);
 
-    // The third column depends on the editor: State Machine attributes carry a default Value,
-    // Service Interface attributes carry an update Notification kind. Exactly one of the two
-    // config flags is set for the current editors, giving three columns with the differing one
-    // at index ColExtra (2).
+    // The third column depends on the editor: a state machine attribute carries a default value, a
+    // service interface attribute an update notification kind. Exactly one config flag is set.
     QStringList headers{ tr("Name:"), tr("Data Type:") };
     if (mConfig.hasValue)
     {
@@ -102,10 +100,8 @@ void AttributeListView::buildUi()
     mTable->header()->setMinimumSectionSize(50);
     mTable->setHeaderLabels(headers);
 
-    // One column policy shared by every list page (Data Types, Attributes, Events, Methods,
-    // Constants): the Name column takes all the horizontal slack (Stretch) so names stay readable,
-    // and every other column fits its content (ResizeToContents). Kept identical to the Methods
-    // table so the Name / Type / Value columns look and behave the same across all pages.
+    // The column policy every list page shares: the Name column takes the horizontal slack so names
+    // stay readable, and every other column fits its content.
     QHeaderView* header = mTable->header();
     header->setSectionResizeMode(0, QHeaderView::Stretch);
     header->setSectionResizeMode(1, QHeaderView::ResizeToContents);

@@ -192,9 +192,8 @@ QString SMHoverCard::symbolTip(StateMachineModel& model, uint32_t transitionId, 
     const SMMethodEntry* method = symbol.isCall ? SMGuardSymbols::method(data, symbol.symbolId) : nullptr;
     const SymbolFacts facts = symbolFacts(symbol, method);
 
-    // Leads with the badge the user is LOOKING at -- the owner letter the chip draws -- not the
-    // catalog's own glyph vocabulary. Reading `#  FSM attribute` under the pointer while the chip
-    // says `[f]` is how a legend teaches the wrong letter.
+    // Leads with the badge the user is looking at, the owner letter the chip draws, not the
+    // catalog's own glyph. A legend teaching a letter the chip never shows is worse than none.
     const QString glyph = NEGuardStyle::ownerGlyph(symbol.owner);
     const QString badge = glyph.isEmpty() ? facts.noun : QStringLiteral("%1 : %2").arg(glyph, facts.noun);
     QString tip = QStringLiteral("<b><span style='color:%1'>%2</span></b><br>")
@@ -215,9 +214,8 @@ QString SMHoverCard::symbolTip(StateMachineModel& model, uint32_t transitionId, 
 
     tip += tipLine(tr("called as %1").arg(facts.generated), true);
 
-    // Only what this ELEMENT is guilty of. The transition's other findings belong to the status
-    // line and the results panel; repeating them here would make every chip of a troubled guard
-    // look equally broken.
+    // Only what this element is guilty of. The transition's other findings belong to the status line
+    // and the results panel, and repeating them makes every chip look equally broken.
     if ((transitionId != 0u) && (symbol.symbolId != 0u))
     {
         for (const SMGuardValidation::Finding& finding : SMGuardValidation::validateTransition(data, transitionId))
@@ -372,9 +370,8 @@ void SMHoverCard::addValidationLines(const StateMachineData& data, uint32_t tran
         return;
     }
 
-    // Only what this ELEMENT is guilty of. The transition's other findings belong to the status
-    // line and the results panel; repeating them here would make every chip of a troubled guard
-    // look equally broken.
+    // Only what this element is guilty of. The transition's other findings belong to the status line
+    // and the results panel, and repeating them makes every chip look equally broken.
     for (const SMGuardValidation::Finding& finding : SMGuardValidation::validateTransition(data, transitionId))
     {
         if (finding.symbolId != symbolId)

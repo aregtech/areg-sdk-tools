@@ -219,11 +219,8 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
-    // The shared section chrome carries the `Guard` title, one jump button per accordion section and
-    // the compact toggle over the accordion; this bar only fills its slots. The icon-only action strip
-    // (Insert / Pop-out / Clear / Help) is guard-specific, so it rides the chrome's trailing header
-    // slot. Every glyph is drawn by SMToolIcons -- the same thin-stroke vector language as the canvas
-    // toolbar -- and icon-only keeps the narrow Properties dock usable; each button carries a tooltip.
+    // The shared chrome carries the title, one jump button per accordion section and the compact
+    // toggle; this bar fills its slots and adds the guard-specific icon-only action strip.
     mChrome = new SMSectionChrome(this);
     mChrome->setTitle(tr("Guard"));
 
@@ -445,14 +442,12 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         }
     });
 
-    // The Arguments table follows the call the caret sits in (or the single/first call in the
-    // guard): moving the caret in the field re-binds the shared table, replacing the
-    // retired "select a call row" driver.
+    // The Arguments table follows the call the caret sits in, or the first call in the guard, so
+    // moving the caret in the field re-binds the shared table.
     connect(mField, &QTextEdit::cursorPositionChanged, this, [this]() { syncArgumentsToCaret(); });
 
-    // A foreign rename / add / remove changes the method signatures the Arguments rows project, with
-    // NO guard edit: re-project the shared table off the model pass (the Conditions pickup
-    // list re-enumerates itself on the same notifier signals).
+    // A foreign rename, add or remove changes the signatures the Arguments rows project without any
+    // guard edit, so the shared table re-projects off the model pass.
     DocModelNotifier& notifier = mModel.getNotifier();
     connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
     connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });

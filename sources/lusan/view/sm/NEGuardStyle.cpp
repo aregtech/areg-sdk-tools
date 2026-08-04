@@ -46,10 +46,8 @@ QColor NEGuardStyle::ownerColor(eOwner owner)
 
 QColor NEGuardStyle::severityColor(eSeverity severity)
 {
-    // Dark severity hues clear WCAG AA (>= 4.5:1) against the lightest dark surface (Nord #3b4252).
-    // Severity has no glyph channel in the field underline, so the status-line icon + text carry the
-    // Ok/Warn/Err distinction where two hues land at a similar grayscale luminance (Err is a light
-    // coral: a strict-AA red on a mid-dark surface cannot stay fully saturated -- sRGB luminance).
+    // The dark severity hues clear WCAG AA against the lightest dark surface. The underline has no
+    // glyph channel, so the status-line icon and text carry the distinction where hues are close.
     const bool dark = isDark();
     switch (severity)
     {

@@ -123,9 +123,8 @@ void AttributeDetailsView::buildUi()
     // typed name into its list row without the view knowing about the model or the tree/table.
     connect(mName, &QLineEdit::textChanged, this, &AttributeDetailsView::nameEdited);
 
-    // Escape cancels the edit: the live-synced text fields restore their pre-edit value. Combos
-    // (Type / Notify) commit immediately and need no cancel; the multi-line Description is left
-    // as-is.
+    // Escape cancels the edit and the live-synced text fields restore their pre-edit value. The
+    // combos commit immediately and need no cancel.
     EditCancelFilter::install(mName);
     EditCancelFilter::install(mValue);
     EditCancelFilter::install(mDeprecateHint);

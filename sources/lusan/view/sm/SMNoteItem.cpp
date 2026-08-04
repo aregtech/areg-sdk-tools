@@ -372,9 +372,8 @@ void SMNoteItem::startInlineEdit()
 
 void SMNoteItem::finishInlineEdit()
 {
-    // NoteTextEdit commits in focusOutEvent; go through it so there is one commit path. The commit
-    // closes the editor deferred, so flush it here: a proxy that outlives an arming tool keeps its
-    // I-beam on the viewport and masks the tool cursor.
+    // NoteTextEdit commits in focusOutEvent, so go through it and keep one commit path. The commit
+    // closes the editor deferred, so flush it here before an arming tool sets its cursor.
     if ((mEditProxy != nullptr) && (mEditProxy->widget() != nullptr))
     {
         mEditProxy->widget()->clearFocus();

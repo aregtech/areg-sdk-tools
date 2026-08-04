@@ -163,9 +163,8 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         QComboBox* combo = new QComboBox(parent);
         combo->setModel(model);
         combo->setProperty("index", index);
-        // The platform drop-down otherwise inherits the (often narrow) cell width and elides long
-        // entries such as "uint32_t"; widen the popup view to its longest item so every type is
-        // fully visible no matter how narrow the Type column is.
+        // The platform drop-down inherits the cell width and elides entries such as "uint32_t", so
+        // the popup view is widened to its longest item.
         if (QAbstractItemView* popup = combo->view())
         {
             popup->setTextElideMode(Qt::ElideNone);
@@ -175,12 +174,8 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
                 popup->setMinimumWidth(hint + 24);
             }
         }
-        // Commit ONLY on user activation (mouse pick or keyboard choose), never on
-        // currentTextChanged. Programmatic setCurrentText() in setEditorData() must not commit:
-        // when the controller updates the cell it emits the model's dataChanged, which reopens
-        // this editor mid-commit and re-seeds it with the still-stale cell text; committing on
-        // that would revert the user's choice. The line editor commits on user-only textEdited
-        // for the same reason, so the combo mirrors it here.
+        // Commit only on user activation, never on currentTextChanged: a programmatic
+        // setCurrentText() in setEditorData() would commit stale text over the user's choice.
         connect(combo, &QComboBox::activated, this, &TableCell::onComboActivated);
 
         return combo;
@@ -271,9 +266,8 @@ void TableCell::onComboActivated(int /*index*/)
     QComboBox* combo = qobject_cast<QComboBox*>(sender());
     if (combo != nullptr)
     {
-        // Route the user's choice through the same signal the line editor uses, then dismiss the
-        // drop-down. The owning controller updates the model and cell text (single source of
-        // truth), so the base setModelData() is intentionally not invoked.
+        // Route the choice through the same signal the line editor uses, then dismiss the drop-down.
+        // The owning controller updates the model, so the base setModelData() stays uncalled.
         emit signalEditorDataChanged(combo->property("index").toModelIndex(), combo->currentText());
         emit closeEditor(combo);
     }
@@ -319,9 +313,8 @@ void TableCell::onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHin
     mSelIndex = QModelIndex();
     mNewText.clear();
 
-    // In live mode the model, cell and details panel were updated on every keystroke; replay the
-    // pre-edit value through the same path so the owning controller rolls all of them back. In
-    // wait-for-end mode nothing was committed, so discarding the pending text above is enough.
+    // In live mode every keystroke updated the model, cell and details panel, so replay the
+    // pre-edit value through the same path. Wait-for-end mode committed nothing.
     if ((mWaitEnd == false) && (qobject_cast<QLineEdit*>(editor) != nullptr) && index.isValid())
     {
         emit signalEditorDataChanged(index, mEditOriginal);

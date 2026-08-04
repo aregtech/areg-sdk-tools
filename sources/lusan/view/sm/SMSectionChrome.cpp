@@ -56,10 +56,8 @@ SMSectionChrome::SMSectionChrome(QWidget* parent /*= nullptr*/)
     mOuter->setContentsMargins(8, 8, 8, 8);
     mOuter->setSpacing(6);
 
-    // Header row: the title label, one jump button per accordion section, the compact toggle,
-    // a rule, a stretch, then whatever action buttons the host appends. Every glyph is drawn by
-    // SMToolIcons -- the same thin-stroke vector language as the canvas toolbar -- and icon-only
-    // keeps the narrow Properties dock usable; each button carries a tooltip.
+    // Header row: the title, one jump button per accordion section, the compact toggle, a rule, a
+    // stretch, then the host's action buttons. Icon-only keeps the narrow dock usable.
     mHeader = new QHBoxLayout();
 
     mTitle = new QLabel(this);
@@ -157,9 +155,8 @@ int SMSectionChrome::addSection(const QIcon& icon, const QString& title, QWidget
         mSectionBtns[index]->setChecked(mAccordion->isSectionOpen(index));
     });
 
-    // Alt+1 .. Alt+N reach the same section as the Nth button. The shortcut just presses that
-    // button, so button, header and shortcut stay one code path. Scoped to the chrome and its
-    // children so it never leaks app-wide.
+    // Alt+1 to Alt+N press the Nth section button, so button, header and shortcut stay one code
+    // path. The shortcut is scoped to the chrome and its children.
     QShortcut* jumpKey = new QShortcut(QKeySequence(QKeyCombination(Qt::AltModifier, static_cast<Qt::Key>(Qt::Key_1 + index))), this);
     jumpKey->setContext(Qt::WidgetWithChildrenShortcut);
     connect(jumpKey, &QShortcut::activated, this, [this, index]() { mSectionBtns[index]->click(); });

@@ -132,11 +132,8 @@ void MethodListView::buildUi()
     mTable->setHeaderLabels(headers);
 
     QHeaderView* header = mTable->header();
-    // Service Interface and State Machine share ONE column policy so the two Methods tables behave
-    // identically: the Name column takes all the horizontal slack (auto-stretch) so method and
-    // parameter names stay readable, while every other column fits its content so types, values and
-    // (SI only) response links are shown in full and never clipped. The type editor drop-down is
-    // widened separately in TableCell so a narrow Type column still lists every type in full.
+    // The column policy every list page shares: the Name column takes the horizontal slack so names
+    // stay readable, and every other column fits its content so nothing is clipped.
     header->setSectionResizeMode(ColName , QHeaderView::Stretch);
     header->setSectionResizeMode(ColType , QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ColValue, QHeaderView::ResizeToContents);

@@ -185,9 +185,8 @@ void SMTransitionEntry::setKind(SMTransitionEntry::eTransitionKind kind)
     mKind = kind;
     if (mKind == eTransitionKind::Internal)
     {
-        // An internal transition has no target by definition. Dropping it here is what keeps the
-        // document honest: `To` then means "the target" and nothing else, and there is no state
-        // in which a transition claims to be internal while still naming somewhere to go.
+        // An internal transition has no target by definition, so `To` means the target and nothing
+        // else, and no transition claims to be internal while still naming somewhere to go.
         mToId = 0;
         mToName.clear();
     }
@@ -301,13 +300,11 @@ void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSM::xmlSMElementTransition);
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
-    // Always written, including at its `External` default. Omitting it would put the format back
-    // where it started: an unconnected external edge and an internal transition would again be the
-    // same bytes, and the reader would have to guess which one the author meant.
+    // Always written, including at its `External` default. Omitting it would make an unconnected
+    // external edge and an internal transition the same bytes again.
     xml.writeAttribute(XmlSM::xmlSMAttributeKind, SMTransitionEntry::toString(mKind));
-    // An initial transition names no stimulus, so the two placeholder attributes it used to fill
-    // are simply not written -- unless a hand-edited document actually put a name there, which is
-    // a fault the file has to keep carrying until its author resolves it.
+    // An initial transition names no stimulus, so the placeholder attributes are not written. A
+    // hand-edited document that put a name there keeps carrying it until its author resolves it.
     if ((mKind != eTransitionKind::Initial) || (mStimulus.isEmpty() == false))
     {
         xml.writeAttribute(XmlSM::xmlSMAttributeStimulusKind, SMTransitionEntry::toString(mStimulusKind));
@@ -341,9 +338,8 @@ void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
 SMTransitionData::SMTransitionData(ElementBase* parent /*= nullptr*/)
     : TEDataContainer<SMTransitionEntry*, DocumentElem>(parent)
 {
-    // Document order here is PRIORITY order, so transitions are reordered on purpose -- and the
-    // layout `Edge` entries name them by ID. Re-numbering on a list change would re-key the
-    // geometry of every sibling. Same reason as SMStateData.
+    // Document order is priority order, and layout edges name transitions by id, so re-numbering
+    // on a list change would re-key the geometry of every sibling.
     setIdReordering(false);
 }
 

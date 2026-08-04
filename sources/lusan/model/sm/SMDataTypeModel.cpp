@@ -42,9 +42,8 @@ namespace
         QString hint { };
     };
 
-    //!< Basic-container object + the key it leaves behind, committed as one undo step:
-    //!< DataTypeContainer::setContainer() auto-defaults/clears the key as a side effect, so
-    //!< the key must travel with the container name for undo to restore the exact prior key.
+    //!< A basic-container object and the key it leaves behind, committed as one undo step:
+    //!< setContainer() clears the key as a side effect, so undo must restore both together.
     struct ContainerObjectState
     {
         QString container { };

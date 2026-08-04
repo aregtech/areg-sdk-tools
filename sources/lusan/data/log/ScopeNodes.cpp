@@ -65,8 +65,7 @@ void ScopeLeaf::addPriority(unsigned int prio)
 
 QString ScopeLeaf::makePath() const
 {
-    // The parent node's makePath() ends with '_'. Replace that trailing '_' with '.'
-    // so the full path uses the new areg leaf syntax: "areg_path_node.leaf_name".
+    // The parent path ends with '_'. Swap it for the leaf separator '.'.
     QString parentPath = mParent != nullptr ? mParent->makePath() : QString();
     if (parentPath.isEmpty() == false && parentPath.back() == NELusanCommon::SCOPE_SEPRATOR)
     {

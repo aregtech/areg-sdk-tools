@@ -242,9 +242,8 @@ QList<SMReferences::Use> SMReferences::whereUsed(const StateMachineData& data, e
         }
     }
 
-    // Guard trees bind method/attribute/constant symbols by ID; that reference knowledge
-    // lives in the model layer (SMGuardWhereUsed). The where-used UI unions those in through
-    // SMWhereUsed so this headless data-layer walker stays free of any model dependency.
+    // Guard trees bind their symbols by id, and that knowledge lives in the model layer. The
+    // where-used UI unions it in, so this data-layer walker stays free of model dependencies.
     (void)targetId;
     return out;
 }
@@ -274,9 +273,8 @@ QList<SMReferences::Ref> SMReferences::definitionsOf(const StateMachineData& dat
 
 QList<SMReferences::Ref> SMReferences::operationRefs(const SMOperationBase& op)
 {
-    // The primary declaration each operation kind names. This mirrors the primary reference of
-    // collectOperationSites (the mutation walker), kept read-only here so the go-to-declaration
-    // direction shares the same definition of "what an operation references".
+    // The primary declaration each operation kind names. It mirrors collectOperationSites, so the
+    // go-to-declaration direction shares one definition of what an operation references.
     QList<Ref> refs;
     switch (op.getOperationType())
     {

@@ -145,9 +145,8 @@ void SMAttribute::setupSignals()
     // The shared AttributeDetailsView already installs the C++ identifier validator on the Name
     // field, so the controller only wires the commit/preview signals here.
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMAttribute::onNameCommitted);
-    // Live-preview the typed name into the selected attribute's Name column; the rename commits
-    // on editingFinished. Selection sets the field under a QSignalBlocker, so this only fires
-    // for genuine user edits.
+    // Live-preview the typed name into the Name column; the rename commits on editingFinished.
+    // Selection sets the field under a QSignalBlocker, so this fires only for genuine user edits.
     connect(mDetails->ctrlName()   , &QLineEdit::textChanged        , this, [this](const QString& text) {
         if (currentAttributeId() != 0)
         {
@@ -185,21 +184,16 @@ void SMAttribute::setupInlineEditing()
 {
     QTreeWidget* table = mList->ctrlTableList();
 
-    // Wait until editing finishes before committing: unlike the Service Interface page (which
-    // mutates the entry directly), every commit here routes through an undo command that fires a
-    // notifier signal rebuilding the whole list, so a per-keystroke commit would tear down the
-    // open editor. Wait-for-end mode also gives clean Escape semantics for free: the pending text
-    // is simply discarded (TableCell::onCloseEditor), so nothing is committed.
+    // Wait until editing finishes before committing: every commit here routes through an undo
+    // command whose notifier rebuilds the list, which would tear down an open editor.
     mTableCell = new TableCell(table, this, true);
 
     // Forbid invalid C++ identifier characters when editing the Name column inline, exactly as
     // the details panel's Name field does.
     mTableCell->setColumnValidation(static_cast<int>(AttributeListView::eColumn::ColName), TableCell::eCellValidation::Identifier);
 
-    // The Type column opens a combo populated from the SAME model as the details Type combo, so
-    // both offer the identical predefined + custom type list. The resolver path deliberately does
-    // not transfer model ownership (unlike the model-list constructor), so the details combo keeps
-    // owning its model.
+    // The Type column opens a combo fed from the same model as the details Type combo, so both
+    // offer the same list. The resolver path does not transfer model ownership.
     mTableCell->setEditorModelResolver([this](const QModelIndex& index) -> QAbstractItemModel*
         {
             return (index.column() == static_cast<int>(AttributeListView::eColumn::ColType)) ? mDetails->ctrlTypes()->model() : nullptr;

@@ -170,10 +170,8 @@ namespace
             }
             if (c == NEGuardText::RefSigil)
             {
-                // A typed reference `#kind:name`. The whole mention is one Ref
-                // token; the parser resolves `kind`+`name` to a symbol id (or a formal slot
-                // for `#arg:`). A malformed sigil (missing kind/colon/name) yields a Ref token
-                // with empty parts, which the parser reports.
+                // A typed reference `#kind:name` is one Ref token; the parser resolves it to a
+                // symbol id. A malformed sigil yields empty parts, which the parser reports.
                 int j = start + 1;
                 const int kindStart = j;
                 while ((j < n) && isIdentPart(s.at(j))) { ++j; }
@@ -224,10 +222,8 @@ namespace
         out.append({ eTok::End, QString(), n, 0 });
     }
 
-    //!< Marks each token that opens a new source line and records that line's leading indent
-    //!< (R18). The whitespace between two tokens is either all spaces/tabs or a single run
-    //!< containing newlines; the indent is the character count after the LAST newline, so a
-    //!< blank line collapses and the operand keeps only its own line's indent.
+    //!< Marks each token that opens a new source line and records that line's leading indent. The
+    //!< indent is counted after the last newline, so a blank line collapses.
     void annotateLayout(const QString& s, QList<Token>& out)
     {
         int prevEnd = 0;
@@ -284,9 +280,8 @@ namespace
 
             if (mSyntaxError)
             {
-                // A structural error: keep the whole input as a raw fragment when the caller
-                // opted in (the "Keep as raw C++" quick-fix), otherwise report and let the
-                // caller store a draft.
+                // A structural error: keep the whole input as a raw fragment when the caller opted
+                // in, otherwise report and let the caller store a draft.
                 delete node;
                 node = SMGuardNode::makeVerbatim(eKind::Raw, mText.trimmed());
                 if (mAllowRaw)
@@ -401,9 +396,8 @@ namespace
             }
             if (peek().type == eTok::Assign)
             {
-                // A single '=' in a boolean guard is almost always a typo for '=='.
-                // Flag it (a warning, not a gate) and parse it as an equality comparison --
-                // a guard is read-only, so we never build a setter.
+                // A single '=' in a boolean guard is almost always a typo for '=='. Warn and parse
+                // it as an equality: a guard is read-only, so no setter is ever built.
                 const Token assign = peek();
                 warn(assign.start, qMax(1, assign.len), QStringLiteral("assignment in a guard; did you mean '=='?"));
                 advance();
@@ -501,12 +495,9 @@ namespace
         }
 
         /**
-         * \brief   A scope-qualified operand -- `Numbers::Zero`. The head names a data type of
-         *          this machine and the tail names one of its members, so the whole mention is a
-         *          literal OF that type: the type check below can then judge what it is compared
-         *          with, and the generator emits the text unchanged. An imported type is opaque
-         *          past its own name (only the import is declared here), so its tail is accepted
-         *          as written.
+         * \brief   A scope-qualified operand such as `Numbers::Zero`. The head names a data type
+         *          of this machine and the tail one of its members; an imported type is opaque,
+         *          so its tail is accepted as written.
          **/
         SMGuardNode* parseScopedPrimary(const Token& idTok)
         {
@@ -603,9 +594,8 @@ namespace
             if (text.contains(QStringLiteral("::")))
             {
                 QString typeName;
-                // Only a value this document declares carries a type we may judge. An imported
-                // type is opaque: `NEService::eResult::Ok` is a value of the FOREIGN type its
-                // header names, not of the import, so claiming a type here would invent one.
+                // Only a value this document declares carries a type we may judge. An imported type
+                // is opaque, so claiming a type for one of its members would invent one.
                 return (SMGuardSymbols::scopedValue(mData, text.split(QStringLiteral("::")), typeName)
                         == SMGuardSymbols::eScoped::Ok)
                      ? typeName : QString();
@@ -651,9 +641,8 @@ namespace
             SMGuardNode* value { nullptr };
         };
 
-        //!< Parses `( ... )` (peek is at the '('); returns the raw arg entries. \p endOut gets
-        //!< the offset just past the ')'. Enforces the Python mixed rule: a positional
-        //!< after a named argument is a syntax error.
+        //!< Parses `( ... )` and returns the raw arg entries; \p endOut gets the offset past ')'.
+        //!< A positional argument after a named one is a syntax error.
         QList<ArgEntry> parseArgList(int& endOut)
         {
             advance();  // consume '('
@@ -718,8 +707,7 @@ namespace
         }
 
         //!< Resolves \p entries to value nodes for a known \p method, keying each on the formal's
-        //!< document id (Option A): a positional fills the nth unfilled formal; a named binds its
-        //!< formal by name. Extra positionals past the declared count keep id 0.
+        //!< document id. A positional fills the nth unfilled formal, a named one binds by name.
         QList<SMGuardNode*> bindArgs(const SMMethodEntry* method, QList<ArgEntry>& entries)
         {
             QList<SMGuardNode*> args;
@@ -834,10 +822,8 @@ namespace
 
             if (refTok.text.contains(NEGuardText::KindSep) == false)
             {
-                // `#count` -- the sigil marks a document symbol without stating which kind it is.
-                // Resolve it exactly as the bare name resolves (parameter, then attribute, then
-                // constant): the shorthand a user naturally types means what it looks like, and
-                // stating the kind stays the way to disambiguate.
+                // `#count` marks a document symbol without stating its kind, so it resolves exactly
+                // as a bare name does: parameter, then attribute, then constant.
                 if (kind.isEmpty())
                 {
                     mSyntaxError = true;
@@ -919,13 +905,8 @@ namespace
             if (aid != 0u) { return SMGuardNode::makeRef(eKind::Attr, aid); }
             if (cid != 0u) { return SMGuardNode::makeRef(eKind::Const, cid); }
 
-            // Every bare name in a guard must resolve to a DEFINED, typed symbol: a stimulus
-            // parameter, an FSM attribute, or an FSM constant (all data objects that must be
-            // declared). A name that resolves to none of these is undefined -- an error, NOT silent
-            // "raw C++". The one exception is the explicit "raw code" mode (allowRaw): there the user
-            // deliberately opted out of validation and owns correctness, so unresolved() keeps the
-            // text verbatim without error. A named condition method is a call (`name(...)`) resolved
-            // elsewhere; an inline lambda is an island (`{...}`); literals are handled before here.
+            // A bare name must resolve to a declared parameter, attribute or constant. In raw
+            // mode the user owns correctness, so the text is kept verbatim without an error.
             return unresolved(name, idTok.start, idTok.len
                             , QStringLiteral("unknown symbol '%1': it is not a defined parameter, attribute, or constant").arg(name));
         }

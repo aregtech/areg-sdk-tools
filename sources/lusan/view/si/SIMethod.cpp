@@ -85,9 +85,8 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
 {
     mParams->setHidden(true);
 
-    // Two equal-width panels: the list on the left, and the swapped details/parameter forms
-    // wrapped in a single right panel. Both columns use an Ignored horizontal size policy so
-    // the row splits exactly 50/50 regardless of either side's size hint.
+    // Two equal-width panels: the list on the left, the swapped details and parameter forms on the
+    // right. Both use an Ignored horizontal policy, so the row splits exactly in half.
     QWidget* rightPanel = new QWidget(mWidget);
     QVBoxLayout* rightLayout = new QVBoxLayout(rightPanel);
     rightLayout->setContentsMargins(0, 0, 0, 0);
@@ -942,10 +941,8 @@ void SIMethod::setupSignals()
     connect(mParams->ctrlDeprecated()       , &QCheckBox::toggled           , this, &SIMethod::onParamDeprecateChecked);
     connect(mParams->ctrlDeprecateHint()    , &QLineEdit::textEdited        , this, &SIMethod::onParamDeprecateHintChanged);
 
-    // Inline (in-table) editing: the shared TableCell delegate opens an editor per cell. The tree
-    // is heterogeneous (method rows vs parameter rows), so which cells are editable, whether a
-    // cell shows a combo or a text editor, and how it is validated are resolved per cell by the
-    // controller; the commit routes through cellChanged(), matching the details-panel validation.
+    // Inline editing through the shared TableCell delegate. The tree is heterogeneous, so
+    // editability, editor kind and validation are resolved per cell by the controller.
     QTreeWidget* table = mList->ctrlTableList();
     mTableCell = new TableCell(table, this, false);
     mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
@@ -1397,9 +1394,8 @@ bool SIMethod::isCellEditable(const QModelIndex& index) const
     const int col = index.column();
     if (id == 0)
     {
-        // Method row: the name is always editable; the response link only for a request. The
-        // data-type and value columns are read-only (the kind is set by the details radios and
-        // the value column shows the parameter count).
+        // Method row: the name is always editable, the response link only for a request. The
+        // data-type and value columns are read-only.
         if (col == static_cast<int>(MethodListView::ColName))
             return true;
         if (col == static_cast<int>(MethodListView::ColResponse))
