@@ -176,6 +176,9 @@ private:
     uint32_t currentAttributeId() const;
     QString genName();
 
+    //!< Puts the caret in the selected attribute's Name field with its text selected.
+    void focusNameField();
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

@@ -971,8 +971,8 @@ void SMGuardField::scheduleRebuild()
         return;
     }
 
-    // Never rebuild synchronously inside a notifier slot (the emitting command is still on the
-    // stack). Defer to the next event turn -- the sm-condition-editor discipline.
+    // Never rebuild synchronously inside a notifier slot (the emitting command is still on the stack).
+    // Defer to the next event turn -- the sm-condition-editor discipline.
     mRebuildPending = true;
     QTimer::singleShot(0, this, [this]()
     {

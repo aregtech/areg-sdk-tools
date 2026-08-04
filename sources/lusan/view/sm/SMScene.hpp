@@ -28,6 +28,7 @@
 #include "lusan/view/sm/SMCanvasTool.hpp"
 
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/data/sm/SMState.hpp"
 
 #include <QHash>
 #include <QList>
@@ -272,9 +273,20 @@ public:
     void reparentTransition(uint32_t transitionId, uint32_t newSourceStateId, const SMLayoutEdge& geometry);
 
     /**
-     * \brief   Opens the in-place name editor when exactly one state is selected (F2).
+     * \brief   Creates a state of the given kind on the current level, selects it and pushes
+     *          the undo command. Used by the placement tool and by the Insert key.
+     * \param   kind    Normal or Final; a level's Start state is never placed by hand.
+     * \param   box     The new state's geometry, in scene coordinates.
+     * \return  The new state's element ID, or 0 if the level was not found.
      **/
-    void startRenameOfSelection();
+    uint32_t placeNewState(SMStateEntry::eStateKind kind, const QRectF& box);
+
+    /**
+     * \brief   Opens the in-place editor of the single selected element: the name of a state,
+     *          the text of a note.
+     * \return  True if an editor was opened.
+     **/
+    bool startRenameOfSelection();
 
     /**
      * \brief   True while a proxy-backed inline editor (state rename / note edit) holds the

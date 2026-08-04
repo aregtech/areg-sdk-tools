@@ -178,6 +178,67 @@ QComboBox::down-arrow
     height: 12px;
 }
 
+/* The canvas zoom box and the two step arrows share their line with the horizontal scrollbar,
+   so all three are exactly as tall as it is. That leaves no room for the padding, the minimum
+   height or the frame the other combo boxes and tool buttons carry: a border would add its two
+   pixels back and the line would no longer match the vertical scrollbar. They mark themselves
+   on hover with a background instead, which costs no height. */
+QComboBox#smCanvasZoom
+{
+    background: transparent;
+    border: none;
+    padding: 0px 2px;
+    min-height: 12px;
+    max-height: 12px;
+}
+
+QComboBox#smCanvasZoom:hover, QComboBox#smCanvasZoom:focus
+{
+    background: ${hover};
+}
+
+/* The editor of that box is a QLineEdit and would take the frame and the padding every other
+   text field has. On a line this short the padding alone is most of the height and cuts the
+   top and the bottom off the percentage. */
+QComboBox#smCanvasZoom QLineEdit
+{
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+
+QComboBox#smCanvasZoom::drop-down
+{
+    width: 12px;
+}
+
+QComboBox#smCanvasZoom::down-arrow
+{
+    width: 8px;
+    height: 8px;
+}
+
+QToolButton#smCanvasStepLeft, QToolButton#smCanvasStepRight,
+QToolButton#smCanvasStepUp, QToolButton#smCanvasStepDown
+{
+    background: transparent;
+    border: none;
+    padding: 0px;
+    min-width: 12px;
+    max-width: 12px;
+    min-height: 12px;
+    max-height: 12px;
+}
+
+QToolButton#smCanvasStepLeft:hover, QToolButton#smCanvasStepRight:hover,
+QToolButton#smCanvasStepUp:hover, QToolButton#smCanvasStepDown:hover,
+QToolButton#smCanvasStepLeft:pressed, QToolButton#smCanvasStepRight:pressed,
+QToolButton#smCanvasStepUp:pressed, QToolButton#smCanvasStepDown:pressed
+{
+    background: ${hover};
+    border: none;
+}
+
 QComboBox QAbstractItemView
 {
     background-color: ${base};

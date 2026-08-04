@@ -241,7 +241,6 @@ namespace
         issue.elementId = id;
         issue.kind      = kind;
         issue.severity  = sev;
-        // Callers pass the plain spec number for both classes
         issue.rule      = (sev != eSeverity::Error) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
         issue.message   = message;
         issue.detail    = detail;

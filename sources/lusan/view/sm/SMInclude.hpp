@@ -189,6 +189,10 @@ private:
     //!< The include ID stored on the currently selected row, or 0 if none.
     uint32_t currentIncludeId() const;
 
+    //!< Puts the caret in the selected include's Location field with its text selected. An
+    //!< include has no name of its own, the location is what identifies it.
+    void focusLocationField();
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

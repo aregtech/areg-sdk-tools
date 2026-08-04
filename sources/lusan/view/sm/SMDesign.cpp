@@ -49,13 +49,17 @@
 #include "lusan/view/sm/SMToolIcons.hpp"
 #include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
+#include <QAbstractItemView>
 #include <QAction>
 #include <QActionGroup>
 #include <QClipboard>
 #include <QColorDialog>
+#include <QComboBox>
 #include <QCursor>
 #include <QGuiApplication>
 #include <QDockWidget>
+#include <QFont>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QInputDialog>
@@ -69,11 +73,13 @@
 #include <QPainter>
 #include <QPair>
 #include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
 #include <QSize>
 #include <QStringList>
+#include <QStyle>
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -203,6 +209,9 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mBreadcrumbLayout(nullptr)
     , mSearchEdit   (nullptr)
     , mSearchStatus (nullptr)
+    , mZoomBox      (nullptr)
+    , mHScroll      (nullptr)
+    , mVScroll      (nullptr)
     , mSearchIndex  (-1)
     , mToolBar      (nullptr)
     , mPropertiesDock(nullptr)
@@ -227,6 +236,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActAddNote   (nullptr)
     , mActDelete    (nullptr)
     , mActRename    (nullptr)
+    , mActInsert    (nullptr)
     , mActCut       (nullptr)
     , mActCopy      (nullptr)
     , mActPaste     (nullptr)
@@ -327,7 +337,17 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     layout->addWidget(topBar);
-    layout->addWidget(mView);
+
+    // The canvas keeps neither of its own scrollbars: the row below and the column right of it
+    // own the visible ones, which is what lets the zoom box share the bottom line and gives both
+    // bars the same step arrows. The fourth cell stays empty and squares off their corner.
+    QGridLayout* canvasLayout = new QGridLayout();
+    canvasLayout->setContentsMargins(0, 0, 0, 0);
+    canvasLayout->setSpacing(0);
+    canvasLayout->addWidget(mView, 0, 0);
+    canvasLayout->addWidget(buildRightBar(), 0, 1);
+    canvasLayout->addWidget(buildBottomBar(), 1, 0);
+    layout->addLayout(canvasLayout, 1);
     setCentralWidget(central);
 
     connect(mSearchEdit, &QLineEdit::textChanged, this, &SMDesign::onSearchTextChanged);
@@ -348,18 +368,10 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     connect(mSceneManager, &SMSceneManager::signalGuardEditRequested, this, [this](uint32_t transitionId)
     {
         // Edge-label double-click: surface the Properties panel and focus the guard field.
-        if (mProperties == nullptr)
+        if (revealProperties())
         {
-            return;
+            mProperties->focusConditions(transitionId);
         }
-
-        if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
-        {
-            mPropertiesDock->show();
-            mPropertiesDock->raise();
-        }
-
-        mProperties->focusConditions(transitionId);
     });
     connect(mSceneManager, &SMSceneManager::signalGotoDefinitionRequested, this, [this](uint32_t elementId, bool isState, int scope)
     {
@@ -462,6 +474,8 @@ SMDesign::~SMDesign()
     mView->disconnect(this);
     mView->horizontalScrollBar()->disconnect(this);
     mView->verticalScrollBar()->disconnect(this);
+    mHScroll->disconnect(this);
+    mVScroll->disconnect(this);
 }
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
@@ -473,6 +487,14 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
         // back on the next repaint. Route the close through the same channel as the View menus.
         const int widget = (watched == mPropertiesDock) ? 1 : 2;
         emit signalPlaceDesignWidget(widget, 0);
+    }
+
+    if ((watched == mZoomBox) && (event->type() == QEvent::Wheel) && (mZoomBox->hasFocus() == false))
+    {
+        // A combo box takes the wheel to step through its entries. Over the zoom box that would
+        // rescale the canvas for anyone who scrolled past it, so the wheel is refused until the
+        // box is the widget the user is working in.
+        return true;
     }
 
     if (watched == mSearchEdit)
@@ -772,9 +794,11 @@ void SMDesign::setupActions()
 
     mActRename = new QAction(tr("Rename"), this);
     mActRename->setShortcut(QKeySequence(Qt::Key_F2));
-    connect(mActRename, &QAction::triggered, this, [this]() {
-        getScene().startRenameOfSelection();
-    });
+    connect(mActRename, &QAction::triggered, this, &SMDesign::editSelection);
+
+    mActInsert = new QAction(tr("Insert"), this);
+    mActInsert->setShortcut(QKeySequence(Qt::Key_Insert));
+    connect(mActInsert, &QAction::triggered, this, &SMDesign::insertIntoSelection);
 
     // Cut/Copy/Paste keep Qt::WidgetShortcut: the page itself never has focus, so the
     // registration stays inert and cannot turn the main window's Edit actions (which
@@ -894,7 +918,7 @@ void SMDesign::setupActions()
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
                                  , mActToggleGrid, mActGridDots, mActGridDotSize, mActToggleSnap, mActGridSize, mActSelectAll
                                  , mActUndo, mActRedo
-                                 , mActAddState, mActAddFinal, mActAddTransition, mActAddNote, mActAddInternal
+                                 , mActAddInternal
                                  , mActDelete, mActRename, mActDuplicate
                                  , mActStateColor, mActEdgeColor, mActNoteColor, mActSetColor
                                  , mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
@@ -910,10 +934,16 @@ void SMDesign::setupActions()
         addAction(action);
     }
 
-    // Registered for matchAction() dispatch; their WidgetShortcut context stays as set.
-    addAction(mActCut);
-    addAction(mActCopy);
-    addAction(mActPaste);
+    // Registered for matchAction() dispatch only. Their keys are bare letters and Insert, which
+    // a docked panel or an outline row would otherwise claim while the user types in it, so the
+    // registration stays inert and the canvas event filter is what dispatches them.
+    const QList<QAction*> canvasOnly{ mActAddState, mActAddFinal, mActAddTransition, mActAddNote
+                                    , mActInsert, mActCut, mActCopy, mActPaste };
+    for (QAction* action : canvasOnly)
+    {
+        action->setShortcutContext(Qt::WidgetShortcut);
+        addAction(action);
+    }
 
     // Seeding the checked state must not push a grid command for simply opening the page.
     mSyncingGrid = true;
@@ -992,15 +1022,11 @@ void SMDesign::buildDesignToolbar()
     mToolBar->setAllowedAreas(Qt::AllToolBarAreas);
     mToolBar->setIconSize(QSize(16, 16));
 
-    // Icon-only by default (spec issue #516); the View menu's Toolbutton Mode submenu can switch
-    // this and the choice is persisted, so seed the toolbar from the stored style.
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     const Qt::ToolButtonStyle style = static_cast<Qt::ToolButtonStyle>(
             settings.value(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(Qt::ToolButtonIconOnly)).toInt());
     mToolBar->setToolButtonStyle(style);
 
-    // One button per action of toolGroups(), a separator between groups. The actions are this
-    // page's own (added in setupActions()), so they act on this canvas and enable/disable with it.
     bool firstGroup = true;
     for (const ToolGroup& group : toolGroups())
     {
@@ -1059,14 +1085,8 @@ void SMDesign::buildDesignPanels()
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
-    // Settle the width now, once. Until a dock is given one it keeps following what its widget
-    // asks for, so the first state or transition put into the panel would move the canvas edge --
-    // the selection deciding how much room the drawing gets. After this, only a drag does.
     resizeDocks(QList<QDockWidget*>{ mPropertiesDock }, QList<int>{ NESMDesign::PanelDefaultWidth }, Qt::Horizontal);
 
-    // F8 / Shift+F8 step through the findings (spec 9.1). The findings themselves live in the
-    // output window's Validation tab, so the page asks for it and the window brings it forward
-    // -- otherwise the canvas jumps to a finding with nothing on screen saying why.
     QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
     connect(nextIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(1); });
@@ -1075,8 +1095,6 @@ void SMDesign::buildDesignPanels()
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
 {
-    // Every tool's tooltip shows its shortcut alongside the label. Refresh here so
-    // the tooltip is present whichever way the toolbar is (re)built.
     for (QAction* action : actions())
     {
         if (action->shortcut().isEmpty() == false)
@@ -1085,9 +1103,7 @@ QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
         }
     }
 
-    // Ordered by importance: the design/placement operations first,
-    // the declarations right after them, then alignment, level navigation, color, grid,
-    // edit, and zoom. The Design group order matches the canvas context menu.
+    // Ordered by importance
     QList<ToolGroup> groups;
     groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddInternal, mActAddNote, mActAddFinal } });
     groups.append(ToolGroup{ tr("Declare"),   declareActions() });
@@ -1105,10 +1121,6 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
 {
     using SMToolIcons::eIcon;
 
-    // Display-only stand-ins: same titles, order, icons, and labels as toolGroups(), but
-    // disabled - the Design Toolbar tab always shows its buttons, they just do not act
-    // until a State Machine's Design page is open (issue #514). Keep in sync with
-    // toolGroups() above.
     const auto make = [&owner](eIcon glyph, const QString& text) -> QAction*
     {
         QAction* action = new QAction(SMToolIcons::icon(glyph), text, &owner);
@@ -1160,21 +1172,12 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
 
 void SMDesign::populateDesignMenu(QMenu& menu)
 {
-    // What the author reaches for while DESIGNING leads the menu, in the order a machine is built:
-    // the things placed on the canvas, then what is declared for them, then moving between levels.
-    // Everything that adjusts the drawing rather than the machine -- colour, alignment, grid, zoom --
-    // is one step down in submenus: each is a set of siblings that is used rarely and read as a
-    // group, and flat they crowded out the entries used constantly. Shortcuts keep working from
-    // inside a submenu, and the toolbar still offers every one of them at top level.
     menu.addAction(mActAddState);
     menu.addAction(mActAddFinal);
     menu.addAction(mActAddTransition);
     menu.addAction(mActAddInternal);
     menu.addAction(mActAddNote);
     menu.addSeparator();
-    // The edge shape stays at top level. It is not colour and it is not alignment -- it changes what
-    // the selected transition IS on the canvas -- and it is here so it is reachable without
-    // right-clicking the edge itself. Disabled unless exactly one transition is selected.
     menu.addAction(shapeToggleAction(selectedEdge()));
     menu.addSeparator();
     QMenu* declareMenu = menu.addMenu(tr("Add &Declaration"));
@@ -1182,10 +1185,6 @@ void SMDesign::populateDesignMenu(QMenu& menu)
     menu.addSeparator();
     menu.addAction(mActAddSubstate);
     menu.addAction(mActEnterSubmachine);
-    // Reachable without right-clicking the state; dead unless exactly one composite is selected.
-    // The shared selection model, not the scene's item selection: a selection made from the
-    // outline, a search hit or the validation panel never touches the scene of a level that is
-    // not on screen, and the menu must agree with the Properties panel about what is selected.
     const QList<uint32_t>& stateSelection = mModel.getSelectionModel().getSelection();
     addHistoryMenu(menu, stateSelection.size() == 1 ? stateSelection.first() : 0u);
     menu.addAction(mActGoToParent);
@@ -1236,8 +1235,6 @@ bool SMDesign::placementToolFor(QAction* action, NESMDesign::eCanvasTool& toolOu
 
 void SMDesign::armStickyTool(NESMDesign::eCanvasTool tool)
 {
-    // The single click already activated the tool single-shot; re-activating it sticky just
-    // flips the flag (SMScene::setActiveTool early-exits when the kind is unchanged).
     getScene().setActiveTool(tool, true);
 }
 
@@ -1265,8 +1262,6 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         }
     }
 
-    // Undo/Redo carry no shortcut of their own; reflect the document stack's state each
-    // time the menu opens so the shared group shows them enabled only when they act.
     mActUndo->setEnabled(mModel.getUndoStack().canUndo());
     mActRedo->setEnabled(mModel.getUndoStack().canRedo());
 
@@ -1279,34 +1274,17 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
             state->setSelected(true);
         }
 
-        // Ordered by how often an author reaches for each group, most-used first, with the one
-        // destructive entry alone at the bottom:
-        //   1. rename -- the state's own identity, and the only entry that acts on the state itself;
-        //   2. what the state DOES: enter, exit and internal behaviour (the reason a state is
-        //      right-clicked at all in a finished machine);
-        //   3. what is ADDED to it: an internal transition, a substate, a submachine, history;
-        //   4. where its names are DECLARED -- navigation, frequent while reading;
-        //   5. clipboard;  6. appearance (colour, notes);  7. delete.
         const uint32_t stateId = state->getElementId();
         menu.addAction(mActRename);
         menu.addSeparator();
         connect(menu.addAction(tr("Enter Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, true); });
         connect(menu.addAction(tr("Exit Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, false); });
 
-        // Internal transitions are the fourth thing a state does without leaving itself, so the
-        // entry sits beside Enter and Exit ALWAYS -- not only when the pointer happens to be on the
-        // `on <stimulus>` row. Right-clicking the title used to offer nothing, which left the
-        // construct unreachable from the very place the author was pointing at it.
-        // Right-clicking that row does one thing more: it preselects the transition under the
-        // pointer, so the dialog opens on the one that was clicked.
         const SMStateItem::BodyRow* row = state->bodyRowAtPos(state->mapFromScene(scenePos));
         const uint32_t rowTransition = (row != nullptr) ? row->transitionId : 0u;
         connect(menu.addAction(tr("Internal Transitions...")), &QAction::triggered, this
                , [this, stateId, rowTransition]() { openInternalDialog(stateId, rowTransition); });
 
-        // Clicking the row EDITS the transition -- that is what an author asking "what is this?"
-        // wants -- so the stimulus declaration it also names is offered here, as the secondary
-        // answer, and only when the pointer is actually on a row that names one.
         menu.addSeparator();
         menu.addAction(mActAddInternal);
         menu.addAction(mActAddSubstate);
@@ -1373,9 +1351,6 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
     }
     else
     {
-        // The empty-canvas menu mirrors the Design Toolbar tab's group order (issue #514):
-        // the Design group on top (same action order as the toolbar), then alignment,
-        // then navigation; the grid/view helpers follow, "Show Design Toolbar" closes.
         menu.addAction(mActAddState);
         menu.addAction(mActAddTransition);
         menu.addAction(mActAddNote);
@@ -1406,8 +1381,6 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
 
     if ((state != nullptr) || (edge != nullptr) || (note != nullptr))
     {
-        // The shared command group: present in every element context so the four
-        // core actions stay reachable (the canvas menu above already leads with them).
         menu.addSeparator();
         menu.addAction(mActAddState);
         menu.addAction(mActAddTransition);
@@ -1417,12 +1390,9 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
 
     menu.addSeparator();
     QMenu* viewMenu = menu.addMenu(tr("View"));
-    // viewMenu->setIcon(NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeSmall));
 
     const auto addPair = [this, viewMenu](const QString& designText, const QString& naviText, int widget, int place)
     {
-        // Unchecking the current home hides the widget, matching the View menu; without it the
-        // context menu could only move a widget between its two homes, never put it away.
         QAction* inDesign = viewMenu->addAction(designText);
         inDesign->setCheckable(true);
         inDesign->setChecked(place == 1);
@@ -1444,9 +1414,6 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
     connect(viewMenu->addAction(tr("Show Validation Results")), &QAction::triggered
           , this, [this]() { emit signalShowValidation(0); });
 
-    // Refresh the shared actions' enabled state against the (possibly just changed) selection
-    // and current level so entries like Add Transition / Add Internal Transition open correctly
-    // enabled or greyed (issue #516 bugs 2 and 5).
     updateNavActions();
 
     menu.exec(mView->viewport()->mapToGlobal(pos));
@@ -1492,6 +1459,213 @@ void SMDesign::openTransitionOperationsDialog(uint32_t transitionId)
     // The transition is its own Param scope: a transition operation may map stimulus params.
     SMOperationsDialog dialog(mModel, tr("Operations: %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
     dialog.exec();
+}
+
+int SMDesign::scrollExtent(void) const
+{
+    return mView->verticalScrollBar()->sizeHint().width();
+}
+
+QToolButton* SMDesign::createScrollStep(QScrollBar* bar, Qt::ArrowType arrow, const QString& name, const QString& tip, QAbstractSlider::SliderAction action)
+{
+    const int extent = scrollExtent();
+    QToolButton* button = new QToolButton(bar->parentWidget());
+    button->setObjectName(name);
+    // The style's own arrow, not an icon: an icon theme is free to answer a left arrow with
+    // whatever it likes, and here it would sit next to a scrollbar looking nothing like one.
+    button->setArrowType(arrow);
+    button->setToolTip(tip);
+    button->setAutoRaise(true);
+    button->setAutoRepeat(true);
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setFixedSize(extent, extent);
+    connect(button, &QToolButton::clicked, this, [bar, action]() { bar->triggerAction(action); });
+    return button;
+}
+
+void SMDesign::mirrorScrollBar(QScrollBar* source, QScrollBar* shown)
+{
+    shown->setRange(source->minimum(), source->maximum());
+    shown->setPageStep(source->pageStep());
+    shown->setSingleStep(source->singleStep());
+    shown->setValue(source->value());
+
+    connect(source, &QScrollBar::rangeChanged, this, [source, shown](int minimum, int maximum)
+    {
+        shown->setRange(minimum, maximum);
+        shown->setPageStep(source->pageStep());
+        shown->setSingleStep(source->singleStep());
+    });
+    connect(source, &QScrollBar::valueChanged, this, [shown](int value) { shown->setValue(value); });
+    connect(shown , &QScrollBar::valueChanged, this, [source](int value) { source->setValue(value); });
+}
+
+QWidget* SMDesign::buildRightBar()
+{
+    const int extent = scrollExtent();
+    QWidget* bar = new QWidget(this);
+    bar->setFixedWidth(extent);
+    QVBoxLayout* barLayout = new QVBoxLayout(bar);
+    barLayout->setContentsMargins(0, 0, 0, 0);
+    barLayout->setSpacing(0);
+
+    mVScroll = new QScrollBar(Qt::Vertical, bar);
+    mVScroll->setFixedWidth(extent);
+    mView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    barLayout->addWidget(createScrollStep(mVScroll, Qt::UpArrow, QStringLiteral("smCanvasStepUp"), tr("Scroll up"), QAbstractSlider::SliderSingleStepSub));
+    barLayout->addWidget(mVScroll, 1);
+    barLayout->addWidget(createScrollStep(mVScroll, Qt::DownArrow, QStringLiteral("smCanvasStepDown"), tr("Scroll down"), QAbstractSlider::SliderSingleStepAdd));
+
+    mirrorScrollBar(mView->verticalScrollBar(), mVScroll);
+    return bar;
+}
+
+QWidget* SMDesign::buildBottomBar()
+{
+    const int extent = scrollExtent();
+    QWidget* bar = new QWidget(this);
+    bar->setFixedHeight(extent);
+    QHBoxLayout* barLayout = new QHBoxLayout(bar);
+    // The box starts clear of the canvas corner, which the frame rounds off.
+    barLayout->setContentsMargins(NESMDesign::ZoomBoxIndent, 0, 0, 0);
+    barLayout->setSpacing(4);
+
+    mZoomBox = new QComboBox(bar);
+    mZoomBox->setObjectName(QStringLiteral("smCanvasZoom"));
+    mZoomBox->setEditable(true);
+    mZoomBox->setToolTip(tr("Zoom (Ctrl+wheel, Ctrl+ +/-)"));
+    mZoomBox->setFocusPolicy(Qt::ClickFocus);
+    mZoomBox->setInsertPolicy(QComboBox::NoInsert);
+    mZoomBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    mZoomBox->setMinimumContentsLength(NESMDesign::ZoomBoxChars);
+    for (int percent : { 25, 50, 75, 100, 125, 150, 200, 400, 800 })
+    {
+        mZoomBox->addItem(QStringLiteral("%1%").arg(percent), percent);
+    }
+
+    mZoomBox->insertSeparator(mZoomBox->count());
+    mZoomBox->addItem(tr("Fit"), 0);
+    mZoomBox->installEventFilter(this);
+
+    QLineEdit* zoomEdit = mZoomBox->lineEdit();
+    zoomEdit->setAlignment(Qt::AlignCenter);
+    zoomEdit->setValidator(new QRegularExpressionValidator(QRegularExpression(QStringLiteral("\\d{0,4}\\s*%?")), zoomEdit));
+
+    mHScroll = new QScrollBar(Qt::Horizontal, bar);
+    mView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    mHScroll->setFixedHeight(extent);
+    mZoomBox->setFixedHeight(extent);
+
+    QFont boxFont{ mZoomBox->font() };
+    boxFont.setPixelSize(NESMDesign::ZoomTextSize);
+    mZoomBox->setFont(boxFont);
+    zoomEdit->setFont(boxFont);
+    mZoomBox->view()->setFont(boxFont);
+
+    barLayout->addWidget(mZoomBox);
+    barLayout->addWidget(createScrollStep(mHScroll, Qt::LeftArrow , QStringLiteral("smCanvasStepLeft") , tr("Scroll left") , QAbstractSlider::SliderSingleStepSub));
+    barLayout->addWidget(mHScroll, 1);
+    barLayout->addWidget(createScrollStep(mHScroll, Qt::RightArrow, QStringLiteral("smCanvasStepRight"), tr("Scroll right"), QAbstractSlider::SliderSingleStepAdd));
+
+    mirrorScrollBar(mView->horizontalScrollBar(), mHScroll);
+
+    // The box reports whatever moved the zoom: the menu, the toolbar, Ctrl+wheel or itself.
+    connect(mView, &SMGraphicsView::signalZoomChanged, this, [this](int percent)
+    {
+        const QSignalBlocker blocker(*mZoomBox);
+        mZoomBox->setCurrentText(QStringLiteral("%1%").arg(percent));
+    });
+    connect(mZoomBox, &QComboBox::activated, this, [this](int index) { applyZoom(mZoomBox->itemData(index).toInt()); });
+    connect(zoomEdit, &QLineEdit::editingFinished, this, [this]() { applyZoomText(mZoomBox->currentText()); });
+
+    applyZoom(mView->getZoom());
+    return bar;
+}
+
+void SMDesign::applyZoom(int percent)
+{
+    if (percent > 0)
+    {
+        mView->setZoom(percent);
+    }
+    else
+    {
+        mView->zoomToFit();
+    }
+
+    const QSignalBlocker blocker(*mZoomBox);
+    mZoomBox->setCurrentText(QStringLiteral("%1%").arg(mView->getZoom()));
+}
+
+void SMDesign::applyZoomText(const QString& text)
+{
+    static const QRegularExpression _digits(QStringLiteral("\\d+"));
+    const QRegularExpressionMatch match = _digits.match(text);
+    applyZoom(match.hasMatch() ? match.captured().toInt() : mView->getZoom());
+}
+
+bool SMDesign::revealProperties()
+{
+    if (mProperties == nullptr)
+    {
+        return false;
+    }
+
+    if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
+    {
+        mPropertiesDock->show();
+        mPropertiesDock->raise();
+    }
+
+    return true;
+}
+
+void SMDesign::editSelection()
+{
+    SMScene& scene = getScene();
+    if (scene.startRenameOfSelection())
+    {
+        return;
+    }
+
+    // A transition carries no name of its own: the stimulus is what tells one apart from the
+    // next, and it is picked in the Properties panel rather than on the line.
+    const QList<SMEdgeItem*> edges{ scene.selectedEdgeItems() };
+    if ((edges.size() == 1) && revealProperties())
+    {
+        mProperties->focusStimulus(edges.first()->getElementId());
+    }
+}
+
+void SMDesign::insertIntoSelection()
+{
+    SMScene& scene = getScene();
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    if (selection.isEmpty())
+    {
+        // Nothing to insert into: drop a state where the user is looking. Unlike the Add State
+        // tool this needs no aiming click, which is what makes the key worth having.
+        const QSizeF size(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight);
+        const QPointF center = mView->mapToScene(mView->viewport()->rect().center());
+        const QPointF topLeft = scene.snappedPosition(center - QPointF(size.width() / 2.0, size.height() / 2.0));
+        if (scene.placeNewState(SMStateEntry::eStateKind::Normal, QRectF(topLeft, size)) != 0u)
+        {
+            scene.startRenameOfSelection();
+        }
+
+        return;
+    }
+
+    if (selection.size() == 1)
+    {
+        const SMStateEntry* state = mModel.getData().findStateById(selection.first());
+        if ((state != nullptr) && (state->getKind() == SMStateEntry::eStateKind::Normal))
+        {
+            scene.requestSubstate(state->getId());
+        }
+    }
 }
 
 void SMDesign::deleteSelection()
@@ -1790,9 +1964,6 @@ void SMDesign::pushPaste(std::unique_ptr<SMClipboardContent> content, const QStr
         return;
     }
 
-    // No ensureVisible here: scrolling would push a viewport command on top of the
-    // paste and Ctrl+Z would undo the scroll instead of the paste. The offset keeps
-    // the copy next to its (visible) original anyway.
     mModel.getUndoStack().push(command);
     mModel.getSelectionModel().setSelection(command->getPastedIds());
 }
@@ -1821,13 +1992,6 @@ void SMDesign::reorderSelectedTransition(bool raise)
         return;
     }
 
-    // `SMMoveTransitionCommand`, not the generic `TDocReorderCommand`. The generic one swaps through
-    // `TEDataContainer::swapElements`, which exchanges the two entries' IDs as well as their
-    // positions -- and the layout `Edge` that carries this transition's waypoints and label position
-    // is keyed by that ID, so a raise silently traded the two edges' geometry. Re-selecting the
-    // other slot's ID used to paper over the visible half of that (the selection); the geometry was
-    // never put right. A move keeps every ID with its own transition, so the selection needs no
-    // fixing up either.
     const QString text = raise ? tr("Raise transition priority") : tr("Lower transition priority");
     mModel.getUndoStack().push(new SMMoveTransitionCommand(data, mModel.getNotifier(), *owner
                                                           , transitionId, other, text));
@@ -1922,9 +2086,6 @@ void SMDesign::addInternalToSelection()
 
 void SMDesign::addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge)
 {
-    // ONE flat entry that names what it will do, not a submenu of shapes to compare: the shape a
-    // transition already has is visible on the canvas, so the only thing worth saying is the other
-    // one. A nested "Shape >" was shipped first and went unfound.
     menu.addAction(shapeToggleAction(&edge));
 }
 
@@ -1932,8 +2093,6 @@ QAction* SMDesign::shapeToggleAction(SMEdgeItem* edge)
 {
     const bool isArc = (edge != nullptr) && (edge->getShape() == SMLayoutEdge::eShape::Arc);
     mActEdgeShape->setText(isArc ? tr("Make Polyline") : tr("Make Arc"));
-    // Every transition can take either shape, a self-loop included: the only thing that disables
-    // the entry is having no single transition to apply it to.
     mActEdgeShape->setEnabled(edge != nullptr);
     mActEdgeShape->setData(edge != nullptr ? edge->getElementId() : 0u);
     return mActEdgeShape;
@@ -1952,8 +2111,6 @@ SMEdgeItem* SMDesign::selectedEdge() const
 
 void SMDesign::onToggleEdgeShape()
 {
-    // Re-resolve from the id the menu was built with: the action outlives the press, and a
-    // rebuild between the two would leave a dangling item pointer.
     const uint32_t edgeId = mActEdgeShape->data().toUInt();
     SMEdgeItem* edge = (edgeId != 0u) ? dynamic_cast<SMEdgeItem*>(getScene().findCanvasItem(edgeId)) : selectedEdge();
     if (edge != nullptr)
@@ -1969,8 +2126,6 @@ void SMDesign::addHistoryMenu(QMenu& menu, uint32_t stateId)
     const SMStateEntry* state = (stateId != 0u) ? mModel.getData().findStateById(stateId) : nullptr;
     const bool composite = (state != nullptr) && state->isComposite();
 
-    // A greyed entry with no reason is a dead end, and menu tooltips are off everywhere in this
-    // app, so the reason goes into the title where it is always readable.
     QMenu* history = menu.addMenu(composite ? tr("History") : tr("History (needs a submachine)"));
     history->setEnabled(composite);
     history->setToolTipsVisible(true);
@@ -2328,8 +2483,6 @@ void SMDesign::onLevelChanged(uint32_t levelId)
     }
 
     {
-        // The dot size is an app-level preference; a freshly created scene starts at the
-        // default, so re-apply the stored value on every level switch.
         QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
         mScene->setGridDotSize(settings.value(QStringLiteral("smDesign/gridDotSize"), NESMDesign::GridDotSizeDefault).toInt());
     }
@@ -2395,9 +2548,6 @@ void SMDesign::restoreViewport(uint32_t levelId, bool applyDefault)
         const QRectF bounds = (mScene != nullptr ? mScene->contentBounds() : QRectF());
         if (bounds.isValid() && (bounds.isEmpty() == false))
         {
-            // Anchor the content's top-left near the viewport's top-left corner (a small
-            // margin in) rather than centering it: a level with a single Start state must
-            // show that state as the top-left entry point, not floating in the middle.
             const QRectF viewRect = mView->mapToScene(mView->viewport()->rect()).boundingRect();
             const double margin   = 48.0;
             mView->centerOn(  bounds.left() - margin + viewRect.width()  / 2.0
@@ -2440,9 +2590,7 @@ void SMDesign::onViewportChanged()
 
 void SMDesign::onModelLayoutChanged(const QList<uint32_t>& ownerIds)
 {
-    // Grid settings are document-wide (not owned by any element), so re-sync on every
-    // layout change regardless of ownerIds - this is what makes undo/redo of a grid
-    // change (and reopening the document) keep the canvas and the checked action correct.
+    // Grid settings are document-wide
     const SMLayoutData& layout = mModel.getData().getLayout();
     if ((mScene != nullptr) && (mScene->isGridVisible() != layout.isGridVisible()))
     {
@@ -2562,8 +2710,6 @@ void SMDesign::beginSearch(const QString& text, SMReferences::eTarget target, ui
     mSeedId     = id;
     mSeedName   = text;
 
-    // Setting the text drives onSearchTextChanged, which lists the seeded entry's usages while
-    // the seed is active; if the text is unchanged, no signal fires, so recompute directly.
     if (mSearchEdit->text() == text)
         onSearchTextChanged();
     else
@@ -2614,8 +2760,6 @@ void SMDesign::gotoDefinitionForSelection()
     const bool isState = (mModel.getData().findStateById(id) != nullptr);
     if ((isState == false) && (mModel.getData().findTransitionById(id) == nullptr))
     {
-        // A note (or nothing navigable) is selected: go-to-declaration applies to states and
-        // transitions, whose stimulus / operations / guards reference registry declarations.
         QMessageBox::information(this, tr("Go to Declaration"),
             tr("Select a state or transition to go to the declarations it uses."));
         return;
@@ -2748,9 +2892,6 @@ void SMDesign::onSearchTextChanged()
 
     if (mSeedActive && (query == mSeedName))
     {
-        // Seeded from a selected entry: list exactly its usage sites, keyed by id and kind, so a
-        // same-named entry of another kind is ignored (issue #538). Options do not apply here -
-        // the query is the entry's own name, not a free-text pattern.
         const QList<SMReferences::Use> uses = SMWhereUsed::collect(mModel.getData(), mSeedTarget, mSeedName, mSeedId);
         for (const SMReferences::Use& use : uses)
         {
@@ -2805,10 +2946,6 @@ void SMDesign::focusSearchHit(int index)
     }
 
     const SearchHit hit = mSearchHits.at(index);
-
-    // navigateTo swaps the shown scene and sets the active level (which clears the
-    // selection), so select the element afterwards; the scene highlights it through the
-    // shared selection path (SMCanvasItem/SMEdgeItem).
     mSceneManager->navigateTo(hit.level);
     mModel.getSelectionModel().setSelection(QList<uint32_t>{ hit.elementId });
 
@@ -2939,13 +3076,8 @@ void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rul
         if (transitionId != 0)
         {
             revealOnCanvas(levelId, transitionId);
-            if (mProperties != nullptr)
+            if (revealProperties())
             {
-                if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
-                {
-                    mPropertiesDock->show();
-                    mPropertiesDock->raise();
-                }
                 mProperties->focusConditions(transitionId);
             }
         }
@@ -2974,8 +3106,7 @@ void SMDesign::updateSearchStatus()
 
 void SMDesign::collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const
 {
-    // A purely numeric query additionally matches an element by its exact ID (spec 11:
-    // find by name or ID); a name substring match still applies to the same digits.
+    // A purely numeric query additionally matches an element by its exact ID
     bool numeric = false;
     const uint32_t queryId = query.toUInt(&numeric);
 

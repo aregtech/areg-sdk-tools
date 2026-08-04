@@ -31,10 +31,6 @@ bool NEGuardStyle::isDark()
 
 QColor NEGuardStyle::ownerColor(eOwner owner)
 {
-    // Dark hues are tuned to clear WCAG AA (>= 4.5:1) against the LIGHTEST dark editor surface
-    // (Nord base #3b4252); they then exceed AA on the darker dark surfaces (ModernDark, Midnight).
-    // The owner glyph (ownerGlyph) is the load-bearing color-blind/grayscale channel in both modes.
-    // Light hues are unchanged (any AA gaps there are a separate task).
     const bool dark = isDark();
     switch (owner)
     {

@@ -28,6 +28,7 @@
 #include "lusan/model/sm/SMGoToDef.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 
+#include <QAbstractSlider>
 #include <QHash>
 #include <QList>
 #include <QPoint>
@@ -38,12 +39,14 @@
  * Dependencies
  ************************************************************************/
 class QAction;
+class QComboBox;
 class QDockWidget;
 class QHBoxLayout;
 class QKeyEvent;
 class QLabel;
 class QLineEdit;
 class QMenu;
+class QScrollBar;
 class QToolBar;
 class QToolButton;
 class SMClipboardContent;
@@ -360,10 +363,7 @@ public:
 
     /**
      * \brief   Fills \p menu with the page's commands in menu order. The page owns this list
-     *          so the main window's Design menu cannot drift away from the drawing toolbar:
-     *          every toolGroups() command reachable nowhere else must appear here (spec 9.3 --
-     *          hiding the toolbar loses nothing). Undo/Redo/Cut/Copy/Paste stay with the Edit
-     *          menu, and "Set Color..." is presented as its three explicit variants.
+     *          so the main window's Design menu cannot drift away from the drawing toolbar.
      **/
     void populateDesignMenu(QMenu& menu);
 
@@ -541,6 +541,79 @@ private:
      * \brief   Descends into the single selected composite state's submachine.
      **/
     void enterSelectedSubmachine();
+
+    /**
+     * \brief   The Insert key. With nothing selected it drops a new state in the middle of the
+     *          view and starts its rename; with a single Normal state selected it opens that
+     *          state's submachine, creating it first when the state has none. Other selections
+     *          are left alone.
+     **/
+    void insertIntoSelection();
+
+    /**
+     * \brief   The F2 key. Opens the in-place editor of the selected state or note; for a
+     *          transition, brings the Properties panel forward on its guard field.
+     **/
+    void editSelection();
+
+    /**
+     * \brief   Shows and raises the Properties panel if it is hidden.
+     * \return  True if the panel exists and can take the focus.
+     **/
+    bool revealProperties();
+
+    /**
+     * \brief   Builds the row under the canvas: the zoom box and the horizontal scrollbar,
+     *          which share one line. The view's own scrollbar is switched off and mirrored
+     *          into the row's bar, so no space is spent on a strip of its own.
+     * \return  The finished row.
+     **/
+    QWidget* buildBottomBar();
+
+    /**
+     * \brief   Builds the column right of the canvas: the vertical scrollbar between its two
+     *          step arrows, matching the row under the canvas.
+     * \return  The finished column.
+     **/
+    QWidget* buildRightBar();
+
+    /**
+     * \brief   Creates one scrollbar step arrow. The theme draws scrollbars without their own
+     *          step buttons, so the row and the column carry a pair each.
+     * \param   bar     The scrollbar the arrow steps.
+     * \param   arrow   The direction the arrow points.
+     * \param   name    The object name the theme styles the arrow by.
+     * \param   tip     The tool tip.
+     * \param   action  The slider action one click triggers.
+     * \return  The finished button.
+     **/
+    QToolButton* createScrollStep(QScrollBar* bar, Qt::ArrowType arrow, const QString& name, const QString& tip, QAbstractSlider::SliderAction action);
+
+    /**
+     * \brief   Ties a shown scrollbar to the hidden one the view scrolls by: range, steps and
+     *          value follow the view, and dragging the shown bar scrolls the view.
+     * \param   source  The view's own scrollbar, which stays the scroll source.
+     * \param   shown   The bar the user sees and drags.
+     **/
+    void mirrorScrollBar(QScrollBar* source, QScrollBar* shown);
+
+    /**
+     * \brief   Returns the thickness of a scrollbar, which is the height of the row under the
+     *          canvas and the width of the column right of it.
+     **/
+    int scrollExtent(void) const;
+
+    /**
+     * \brief   Zooms the view and writes the reached percentage back into the zoom box.
+     * \param   percent     The wanted zoom, or 0 to fit the machine into the view.
+     **/
+    void applyZoom(int percent);
+
+    /**
+     * \brief   Reads a percentage out of what was typed into the zoom box ("150", "150 %")
+     *          and applies it. Text without digits restores the current zoom.
+     **/
+    void applyZoomText(const QString& text);
 
     /**
      * \brief   Asks the window for another machine, naming the state that should host it.
@@ -829,6 +902,13 @@ private:
     QToolButton*        mSearchWord;    //!< Match-whole-word option toggle.
     QToolButton*        mSearchRegex;   //!< Regular-expression option toggle.
     QLabel*             mSearchStatus;  //!< The "current / total" match counter (or "No match").
+    QComboBox*          mZoomBox;       //!< Zoom readout and picker, left of the scrollbar.
+    QScrollBar*         mHScroll;       //!< The canvas horizontal scrollbar, owned by the bottom
+                                        //!< row so the zoom box can share its line. The view's
+                                        //!< own bar stays hidden and remains the scroll source.
+    QScrollBar*         mVScroll;       //!< The canvas vertical scrollbar, owned by the column
+                                        //!< right of the canvas so it carries the same step
+                                        //!< arrows as the row below.
     QList<SearchHit>    mSearchHits;    //!< The current query's matches, in document order.
     int                 mSearchIndex;   //!< The focused match index, or -1.
     bool                mSeedActive;    //!< True while the box holds an entry-seeded query (usage list).
@@ -857,7 +937,8 @@ private:
     QAction*            mActAddTransition; //!< Activate the Add Transition tool.
     QAction*            mActAddNote;    //!< Activate the Add Note tool.
     QAction*            mActDelete;     //!< Delete the selection with confirmation.
-    QAction*            mActRename;     //!< Rename the selected state in place.
+    QAction*            mActRename;     //!< Edit the selected element in place.
+    QAction*            mActInsert;     //!< Add a state, or open the selected state's submachine.
     QAction*            mActCut;        //!< Cut the selection to the clipboard.
     QAction*            mActCopy;       //!< Copy the selection to the clipboard.
     QAction*            mActPaste;      //!< Paste the clipboard into the shown level.

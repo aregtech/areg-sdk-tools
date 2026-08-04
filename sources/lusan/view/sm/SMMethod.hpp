@@ -220,6 +220,10 @@ private:
     QString genMethodName();
     QString genParamName(const SMMethodEntry* method) const;
 
+    //!< Puts the caret in the Name field of the selected row, method or parameter, with its
+    //!< text selected.
+    void focusNameField();
+
     //!< The `used by N guards` popup: pick a guard, select its transition.
     void showMethodWhereUsed(uint32_t methodId);
 

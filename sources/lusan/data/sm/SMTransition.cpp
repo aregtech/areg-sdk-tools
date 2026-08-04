@@ -244,9 +244,6 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
     setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
     mStimulusKind = fromKindString(attributes.value(XmlSM::xmlSMAttributeStimulusKind).toString());
     mStimulus     = attributes.value(XmlSM::xmlSMAttributeStimulus).toString();
-    // Targets became IDs in SM-26. A document written before that -- or hand-authored from the
-    // older spec examples -- names the target state; keep the name for the document root to
-    // resolve once the whole tree is in memory, or the transition silently becomes internal.
     const QStringView to = attributes.value(XmlSM::xmlSMAttributeTo);
     bool numeric = false;
     const uint32_t toId = to.toUInt(&numeric);
@@ -254,12 +251,6 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
     mToName = (numeric || to.isEmpty()) ? QString() : to.toString();
     mDescription.clear();
 
-    // `Kind` says what the transition IS. A document written before it said nothing, and the
-    // meaning had to be inferred from which attributes were missing -- which is precisely the
-    // ambiguity the attribute removes, so the inference survives here as a READ SHIM and nowhere
-    // else. What the attribute states is taken as written, faults included: a `Kind="Internal"`
-    // that still names a target, or a `Kind="Initial"` that still names a stimulus, is kept and
-    // reported rather than quietly repaired, because only the author knows which half was meant.
     const QStringView kindText = attributes.value(XmlSM::xmlSMAttributeKind);
     if (kindText.isEmpty() == false)
     {
@@ -267,10 +258,6 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
     }
     else
     {
-        // The stimulus test is what keeps this composable with the `Kind="Start"` read shim: a
-        // Start-owned transition that names a stimulus belongs to a legacy MERGED start, whose
-        // state is demoted to Normal on load -- so it is an ordinary external transition, and its
-        // stimulus is real content, not the placeholder an initial transition used to carry.
         const SMStateEntry* owner = owningState();
         const bool initial = (owner != nullptr) && (owner->getKind() == SMStateEntry::eStateKind::Start)
                           && mStimulus.isEmpty();

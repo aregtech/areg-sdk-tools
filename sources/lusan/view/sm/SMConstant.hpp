@@ -154,6 +154,9 @@ private:
     uint32_t currentConstantId() const;
     QString genName();
 
+    //!< Puts the caret in the selected constant's Name field with its text selected.
+    void focusNameField();
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

@@ -254,10 +254,6 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     setFlag(QGraphicsItem::ItemIsMovable, true);
     setFlag(QGraphicsItem::ItemIsFocusable, true);
     setAcceptHoverEvents(true);
-    // Deliberately NOT DeviceCoordinateCache: measured on the SM-27 responsiveness gate it made
-    // a 200-node level slower (first paint 499 -> 877 ms), because a state box repaints rarely
-    // but is invalidated by every move, resize and selection change, so the per-item pixmap is
-    // rebuilt more often than it is reused.
 }
 
 SMStateItem::~SMStateItem()
@@ -1719,8 +1715,6 @@ void SMStateItem::startNoteEdit()
     const uint32_t noteId = note->id;
 
     // The editor is shown on top of the state box so the note text is edited over its owner
-    // (spec: "display the note on top of the State"); focus-out commits and collapses to the
-    // corner badge again.
     const QRectF area{ 2.0, 2.0, mSize.width() - 4.0, std::max(visibleHeight() - 4.0, 40.0) };
     mNoteEditor.open(this, area, note->text, [this, noteId](const QString& text) {
         SMScene* c = getCanvas();

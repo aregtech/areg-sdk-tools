@@ -46,6 +46,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPlainTextEdit>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QToolButton>
 #include <QTreeWidget>
@@ -127,6 +128,19 @@ void SMAttribute::setupSignals()
     connect(mList->ctrlButtonRemove()  , &QToolButton::clicked           , this, &SMAttribute::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMAttribute::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMAttribute::onMoveDownClicked);
+
+    // List keys, each doing what the matching toolbar button does: Delete removes the selected
+    // attribute, Insert adds one, F2 puts the caret in its name.
+    QTreeWidget* table = mList->ctrlTableList();
+    QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
+    QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
+    QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
+    scRemove->setContext(Qt::WidgetWithChildrenShortcut);
+    scAdd->setContext(Qt::WidgetWithChildrenShortcut);
+    scRename->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(scRemove, &QShortcut::activated, this, &SMAttribute::onRemoveClicked);
+    connect(scAdd   , &QShortcut::activated, this, &SMAttribute::onAddClicked);
+    connect(scRename, &QShortcut::activated, this, &SMAttribute::focusNameField);
 
     // The shared AttributeDetailsView already installs the C++ identifier validator on the Name
     // field, so the controller only wires the commit/preview signals here.
@@ -504,6 +518,15 @@ QString SMAttribute::genName()
     return name;
 }
 
+void SMAttribute::focusNameField()
+{
+    if (currentAttributeId() != 0)
+    {
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+    }
+}
+
 void SMAttribute::onAddClicked()
 {
     const QString name = genName();
@@ -536,9 +559,6 @@ void SMAttribute::onRemoveClicked()
     if (id == 0)
         return;
 
-    // Deleting a referenced attribute shows every place it is used (name-based operations
-    // and mappings plus ID-bound guards); `Delete anyway` breaks the references VISIBLY --
-    // each becomes an unresolved-reference validation error (spec 9.4).
     StateMachineData& data = mModel.getFacade().getData();
     const SMAttributeEntry* attr = data.getAttributes().findElement(id);
     const QString name = (attr != nullptr) ? attr->getName() : QString();
