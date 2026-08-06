@@ -39,6 +39,7 @@ QColor NEGuardStyle::ownerColor(eOwner owner)
     case eOwner::Handler:   return dark ? QColor(0xE6, 0xA0, 0x70) : QColor(0xC0, 0x5A, 0x1F);
     case eOwner::Literal:   return dark ? QColor(0xB0, 0xB0, 0xB0) : QColor(0x6A, 0x6A, 0x6A);
     case eOwner::Raw:       return dark ? QColor(0xB0, 0xB0, 0xB0) : QColor(0x6A, 0x6A, 0x6A);
+    case eOwner::Invalid:   return severityColor(eSeverity::Err);
     case eOwner::Operator:
     default:                return QApplication::palette().color(QPalette::WindowText);
     }
@@ -79,6 +80,7 @@ QString NEGuardStyle::ownerGlyph(eOwner owner)
     case eOwner::Handler:   return QStringLiteral("h");
     case eOwner::Raw:       return QStringLiteral("r");
     case eOwner::Literal:   return QStringLiteral("=");
+    case eOwner::Invalid:   return QStringLiteral("!");
     case eOwner::Operator:
     default:                return QString();
     }
@@ -98,6 +100,8 @@ QString NEGuardStyle::ownerMeaning(eOwner owner)
         return QCoreApplication::translate("NEGuardStyle", "verbatim C++: Lusan never parses it, so nothing inside is checked");
     case eOwner::Literal:
         return QCoreApplication::translate("NEGuardStyle", "a literal value written in place");
+    case eOwner::Invalid:
+        return QCoreApplication::translate("NEGuardStyle", "a reference whose target no longer exists: bind it to a symbol, or remove it");
     case eOwner::Operator:
     default:
         return QString();

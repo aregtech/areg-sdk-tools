@@ -887,28 +887,23 @@ namespace
                 return SMGuardNode::makeVerbatim(eKind::Lit, name);
             }
 
-            const uint32_t pid = SMGuardSymbols::paramId(mData, mTransId, name);
-            const uint32_t aid = SMGuardSymbols::attributeId(mData, name);
-            const uint32_t cid = SMGuardSymbols::constantId(mData, name);
-
-            if (pid != 0u)
+            // The one silent-default resolver, shared with the completer: a stimulus parameter
+            // wins, then a zero-argument condition, then an attribute, then a constant.
+            const SMGuardSymbols::BareResult bound
+                = SMGuardSymbols::bindBare(mData, mTransId, name, SMGuardSymbols::eSurface::Guard);
+            switch (bound.bind)
             {
-                // A stimulus parameter shadows an FSM attribute/constant of the same name
-                // (parameter wins) -- quiet warning with a one-click fix in the UI.
-                if ((aid != 0u) || (cid != 0u))
-                {
-                    warn(idTok.start, idTok.len
-                       , QStringLiteral("'%1' is the stimulus parameter and hides an FSM symbol of the same name").arg(name));
-                }
-                return SMGuardNode::makeRef(eKind::Param, pid);
+            case SMGuardSymbols::eBind::Param:      return SMGuardNode::makeRef(eKind::Param, bound.id);
+            case SMGuardSymbols::eBind::Condition:  return SMGuardNode::makeCall(bound.id, QList<SMGuardNode*>());
+            case SMGuardSymbols::eBind::Attribute:  return SMGuardNode::makeRef(eKind::Attr, bound.id);
+            case SMGuardSymbols::eBind::Constant:   return SMGuardNode::makeRef(eKind::Const, bound.id);
+            default:                                break;
             }
-            if (aid != 0u) { return SMGuardNode::makeRef(eKind::Attr, aid); }
-            if (cid != 0u) { return SMGuardNode::makeRef(eKind::Const, cid); }
 
-            // A bare name must resolve to a declared parameter, attribute or constant. In raw
-            // mode the user owns correctness, so the text is kept verbatim without an error.
+            // A bare name must resolve to a declared parameter, condition, attribute or constant.
+            // In raw mode the user owns correctness, so the text is kept verbatim without an error.
             return unresolved(name, idTok.start, idTok.len
-                            , QStringLiteral("unknown symbol '%1': it is not a defined parameter, attribute, or constant").arg(name));
+                            , QStringLiteral("unknown symbol '%1': it is not a defined parameter, condition, attribute, or constant").arg(name));
         }
 
         static bool cmpOp(eTok t, eCmpOp& op)

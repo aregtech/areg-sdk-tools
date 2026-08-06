@@ -49,6 +49,32 @@ namespace
         }
     }
 
+    //!< True when \p text is a single plain identifier (a name the user meant as a reference).
+    bool isBareWord(const QString& text)
+    {
+        if (text.isEmpty())
+        {
+            return false;
+        }
+
+        const QChar first = text.at(0);
+        if ((first.isLetter() == false) && (first != QLatin1Char('_')))
+        {
+            return false;
+        }
+
+        for (int i = 1; i < text.size(); ++i)
+        {
+            const QChar ch = text.at(i);
+            if ((ch.isLetterOrNumber() == false) && (ch != QLatin1Char('_')))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     const char* cmpText(SMGuardNode::eCmpOp op)
     {
         switch (op)
@@ -94,17 +120,20 @@ namespace
 
         //!< Appends a reference token (its rendered text \p shown, which may carry a `@kind:`
         //!< disambiguation prefix) and records a Chip over that span so the field can fold it.
-        void appendChip(const QString& shown, eRole role, const QString& kind, const QString& name)
+        //!< An \p invalid reference is drawn in the error color and carries no kind prefix.
+        void appendChip(const QString& shown, eRole role, const QString& kind, const QString& name, bool invalid = false)
         {
             SMGuardRender::Chip chip;
-            chip.start  = static_cast<int>(mOut.size());
-            chip.length = static_cast<int>(shown.size());
-            chip.role   = role;
-            chip.kind   = kind;
-            chip.name   = name;
-            chip.reveal = mCollisions.contains(name);
+            chip.start   = static_cast<int>(mOut.size());
+            chip.length  = static_cast<int>(shown.size());
+            chip.role    = invalid ? eRole::Invalid : role;
+            chip.kind    = kind;
+            chip.name    = name;
+            chip.reveal  = (invalid == false) && mCollisions.contains(name);
+            chip.invalid = invalid;
+            chip.path    = mPath;
             mChips.append(chip);
-            appendRole(shown, role);
+            appendRole(shown, chip.role);
         }
 
         //!< Renders \p node, wrapping it in parentheses when its precedence is below \p ctx.
@@ -194,6 +223,14 @@ namespace
             }
         }
 
+        //!< The last known name of a reference whose target is gone -- the advisory name cached on
+        //!< the node -- so an invalid reference reads by name, not by a dead id. A `?` when even
+        //!< that is absent, so the chip is never zero width.
+        QString brokenName(const SMGuardNode& node) const
+        {
+            return node.getCacheName().isEmpty() ? QStringLiteral("?") : node.getCacheName();
+        }
+
         void renderBare(const SMGuardNode& node)
         {
             switch (node.getKind())
@@ -206,24 +243,64 @@ namespace
             case eKind::Attr:
                 {
                     const QString name = SMGuardSymbols::attributeName(mData, node.getSymbolId());
-                    appendChip(kindPrefix(eKind::Attr, name) + name, eRole::Fsm, QStringLiteral("attr"), name);
+                    if (name.isEmpty())
+                    {
+                        const QString shown = brokenName(node);
+                        appendChip(shown, eRole::Fsm, QStringLiteral("attr"), shown, true);
+                    }
+                    else
+                    {
+                        appendChip(kindPrefix(eKind::Attr, name) + name, eRole::Fsm, QStringLiteral("attr"), name);
+                    }
                 }
                 break;
             case eKind::Const:
                 {
                     const QString name = SMGuardSymbols::constantName(mData, node.getSymbolId());
-                    appendChip(kindPrefix(eKind::Const, name) + name, eRole::Fsm, QStringLiteral("const"), name);
+                    if (name.isEmpty())
+                    {
+                        const QString shown = brokenName(node);
+                        appendChip(shown, eRole::Fsm, QStringLiteral("const"), shown, true);
+                    }
+                    else
+                    {
+                        appendChip(kindPrefix(eKind::Const, name) + name, eRole::Fsm, QStringLiteral("const"), name);
+                    }
                 }
                 break;
             case eKind::Param:
                 {
                     const QString name = SMGuardSymbols::paramName(mData, mTransId, node.getSymbolId());
-                    appendChip(name, eRole::Stim, QStringLiteral("param"), name);
+                    if (name.isEmpty())
+                    {
+                        const QString shown = brokenName(node);
+                        appendChip(shown, eRole::Stim, QStringLiteral("param"), shown, true);
+                    }
+                    else
+                    {
+                        appendChip(name, eRole::Stim, QStringLiteral("param"), name);
+                    }
                 }
                 break;
             case eKind::Lit:    appendRole(node.getText(), eRole::Literal); break;
             case eKind::Lambda: appendRole(QStringLiteral("{") + node.getText() + QStringLiteral("}"), eRole::Lambda); break;
-            case eKind::Raw:    appendRole(node.getText(), eRole::Raw); break;
+            case eKind::Raw:
+                {
+                    // A bare name that resolves to nothing reads as a reference the user meant, not
+                    // as a deliberate verbatim fragment, so it shows as an invalid reference. Any
+                    // fragment that is not a plain identifier stays a raw escape hatch.
+                    const QString text = node.getText();
+                    if (isBareWord(text)
+                        && (SMGuardSymbols::bindBare(mData, mTransId, text, SMGuardSymbols::eSurface::Guard).bind == SMGuardSymbols::eBind::None))
+                    {
+                        appendChip(text, eRole::Invalid, QString(), text, true);
+                    }
+                    else
+                    {
+                        appendRole(text, eRole::Raw);
+                    }
+                }
+                break;
             default:            break;
             }
         }
@@ -295,11 +372,13 @@ namespace
         void renderCall(const SMGuardNode& node)
         {
             const SMMethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
-            const QString name = (method != nullptr) ? method->getName() : QString();
+            const bool broken = (method == nullptr);
+            const QString name = broken ? brokenName(node) : method->getName();
             // A named-lambda call is an FSM symbol (teal); a handler condition is a handler (orange).
-            const eRole role = ((method != nullptr) && method->isLambdaCondition()) ? eRole::Fsm : eRole::Handler;
+            const eRole role = ((broken == false) && method->isLambdaCondition()) ? eRole::Fsm : eRole::Handler;
             // The callee name is a chip (kind "cond"); its argument list follows as ordinary text.
-            appendChip(name, role, QStringLiteral("cond"), name);
+            // A callee whose method is gone is an invalid reference (error color), its args kept.
+            appendChip(name, role, QStringLiteral("cond"), name, broken);
             append(QStringLiteral("("));
 
             const QList<SMGuardNode*>& args = node.getChildren();

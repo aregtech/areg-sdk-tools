@@ -40,11 +40,13 @@ namespace
     //!< The island token keeps its pill; a chip has no outer border at all.
     constexpr qreal ISLAND_PAD_X{ 6.0 };
 
-    //!< The chip's kind badge letter ("h", "a", "f", ...); empty when the owner has no glyph.
-    QString chipGlyph(const QTextFormat& format)
+    //!< The badge text drawn in the chip: an invalid reference spells the word, every other kind
+    //!< keeps its one-letter owner glyph. The field is wide, so the word fits; a narrow surface
+    //!< that cannot spare the room falls back to the glyph on its own.
+    QString badgeText(const QTextFormat& format)
     {
         const auto owner = static_cast<NEGuardStyle::eOwner>(format.property(SMInlineToken::PropOwner).toInt());
-        return NEGuardStyle::ownerGlyph(owner);
+        return (owner == NEGuardStyle::eOwner::Invalid) ? QStringLiteral("invalid") : NEGuardStyle::ownerGlyph(owner);
     }
 
     //!< The chip's mention text: the reference sigil + the shown name (`#Name`, or `#kind:Name`).
@@ -59,8 +61,8 @@ namespace
     //!< The width of the badge box (0 when the owner has no glyph).
     qreal badgeWidth(const QTextFormat& format, const QFontMetricsF& metrics)
     {
-        const QString glyph = chipGlyph(format);
-        return glyph.isEmpty() ? 0.0 : (metrics.horizontalAdvance(glyph) + (2.0 * BADGE_PAD_X));
+        const QString text = badgeText(format);
+        return text.isEmpty() ? 0.0 : (metrics.horizontalAdvance(text) + (2.0 * BADGE_PAD_X));
     }
 
     //!< The font a chip paints with: the char format's own font, falling back to the document's.
@@ -145,8 +147,8 @@ void SMInlineToken::drawObject(QPainter* painter, const QRectF& rect, QTextDocum
     painter->drawRoundedRect(band, RADIUS, RADIUS);
 
     qreal x = rect.left() + EDGE_PAD;
-    const QString glyph = chipGlyph(format);
-    if (glyph.isEmpty() == false)
+    const QString badgeLabel = badgeText(format);
+    if (badgeLabel.isEmpty() == false)
     {
         QColor badgeBorder(hue);
         badgeBorder.setAlphaF(0.65);
@@ -159,7 +161,7 @@ void SMInlineToken::drawObject(QPainter* painter, const QRectF& rect, QTextDocum
         painter->setBrush(badgeFill);
         painter->drawRoundedRect(badge, RADIUS, RADIUS);
         painter->setPen(hue);
-        painter->drawText(QPointF(x + BADGE_PAD_X, baseline), glyph);
+        painter->drawText(QPointF(x + BADGE_PAD_X, baseline), badgeLabel);
         x += width + BADGE_GAP;
     }
 
@@ -206,9 +208,9 @@ bool SMInlineToken::isChip(const QTextFormat& format)
 
 QString SMInlineToken::chipLabel(const QTextFormat& format)
 {
-    const QString glyph = chipGlyph(format);
+    const QString badge = badgeText(format);
     const QString mention = chipMention(format);
-    return glyph.isEmpty() ? mention : (glyph + QLatin1Char(' ') + mention);
+    return badge.isEmpty() ? mention : (badge + QLatin1Char(' ') + mention);
 }
 
 qreal SMInlineToken::chipGlyphWidth(const QTextFormat& format, const QFont& font)

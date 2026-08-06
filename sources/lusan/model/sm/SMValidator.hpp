@@ -142,11 +142,10 @@ public:
      **/
     static constexpr int RULE_DO_ACTIVITY { 29 };
 
-    /**
-     * \brief   The rule a transition that can never fire is filed under: a descendant reacting to a
-     *          stimulus one of its ancestors already reacts to with no guard.
-     **/
-    static constexpr int RULE_ANCESTOR_SHADOW { 30 };
+    // Rule 30 was retired before it was ever correct and its number is not reused. A composite and
+    // one of its descendants may react to the same stimulus: the search starts at the active leaf
+    // and walks up, so the descendant wins where it applies and the composite still answers from
+    // everywhere else. Neither hides the other, and nothing is reported.
 
 //////////////////////////////////////////////////////////////////////////
 // Operations

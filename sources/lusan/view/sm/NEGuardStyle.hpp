@@ -47,6 +47,7 @@ namespace NEGuardStyle
         , Handler   //!< guard.owner.handler-- a handler condition.
         , Literal   //!< guard.literal     -- a verbatim literal.
         , Raw       //!< guard.raw         -- a raw-C++ fragment (dotted underline).
+        , Invalid   //!< guard.invalid     -- a reference whose target no longer exists (error color).
         , Operator  //!< an operator / punctuation (uses the default text color).
     };
 

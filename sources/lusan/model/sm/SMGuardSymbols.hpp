@@ -56,6 +56,57 @@ namespace SMGuardSymbols
         , Ok        //!< The member is declared by the type.
     };
 
+    /**
+     * \enum    eSurface
+     * \brief   The editing surface a bare name resolves on. The two surfaces differ in their
+     *          weight order, and a condition is a candidate only on a guard.
+     **/
+    enum class eSurface
+    {
+          Guard     //!< A guard/condition expression: param, then condition, then attribute, then constant.
+        , Mapping   //!< An argument-mapping cell: param, then attribute, then constant (no condition).
+    };
+
+    /**
+     * \enum    eBind
+     * \brief   What a bare name bound to, or \ref None when nothing in scope carries the name.
+     **/
+    enum class eBind
+    {
+          None      //!< Nothing in scope carries the name.
+        , Param     //!< A stimulus parameter.
+        , Condition //!< A zero-argument (or all-defaulted) condition method.
+        , Attribute //!< A machine attribute.
+        , Constant  //!< A declared constant.
+    };
+
+    /**
+     * \struct  BareResult
+     * \brief   The outcome of resolving a bare name by surface weight: which kind won and the
+     *          document id it bound to (a symbol id for Param/Attribute/Constant, the method id
+     *          for Condition).
+     **/
+    struct BareResult
+    {
+        eBind    bind { eBind::None };
+        uint32_t id   { 0u };
+    };
+
+    /**
+     * \brief   True when the condition method can bind from a bare name: it declares no
+     *          argument, or every argument it declares is defaulted. A condition with at least
+     *          one non-defaulted argument is offered only through the popup, which inserts the
+     *          whole call.
+     **/
+    bool conditionBindsBare(const SMMethodEntry& method);
+
+    /**
+     * \brief   Resolves \p name by the fixed weight of \p surface -- the one silent-default
+     *          resolver, shared by the parser and the completer so the popup's first candidate
+     *          and the silently chosen binding never differ.
+     **/
+    BareResult bindBare(const StateMachineData& data, uint32_t transitionId, const QString& name, eSurface surface);
+
     // ---- Forward lookups (name -> ID), used by the parser -----------------
 
     /**

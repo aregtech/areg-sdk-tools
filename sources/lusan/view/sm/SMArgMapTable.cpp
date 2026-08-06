@@ -72,6 +72,7 @@ namespace
         case eSource::Constant:     return QStringLiteral("K");
         case eSource::Condition:    return QStringLiteral("h");
         case eSource::Expression:   return QStringLiteral("{}");
+        case eSource::Invalid:      return QStringLiteral("!");
         default:                    return QString();
         }
     }
@@ -132,6 +133,7 @@ namespace
         case eSource::Attribute:    return SMArgMapTable::tr("A state-machine attribute");
         case eSource::Constant:     return SMArgMapTable::tr("A state-machine constant");
         case eSource::Condition:    return SMArgMapTable::tr("A declared condition");
+        case eSource::Invalid:      return SMArgMapTable::tr("This value source is no longer supported -- re-map this argument");
         default:                    return SMArgMapTable::tr("A fixed value typed here");
         }
     }
@@ -616,7 +618,9 @@ void SMArgMapTable::buildDetailedRow(int index)
     // The kind a stored mapping already uses is always offered, so a host source filter can
     // never hide an existing value (it would otherwise fall back to "(not mapped)").
     const SMArgumentEntry* curKind = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
-    const eSource offered[] = { eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant, eSource::Condition, eSource::Expression };
+    // A condition is not a mapping value source: a mapping cell binds a parameter, an attribute,
+    // a constant or a typed value, never a condition call.
+    const eSource offered[] = { eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant, eSource::Expression };
     for (eSource kind : offered)
     {
         if ((kind == eSource::Param) && ((mAllowParam == false) || (SMMappingSources::isKindLegal(mModel.getData(), mTransId, kind) == false)))
@@ -633,6 +637,15 @@ void SMArgMapTable::buildDetailedRow(int index)
         }
 
         row.source->addItem(glyphFor(kind) + QStringLiteral("  ") + labelFor(kind), static_cast<int>(kind));
+    }
+
+    // A stored value whose source is no longer offered (a legacy condition, or one marked invalid
+    // when an older document loaded) is still shown, so committing the row never drops it silently.
+    if ((curKind != nullptr)
+        && ((curKind->getSource() == eSource::Condition) || (curKind->getSource() == eSource::Invalid)))
+    {
+        row.source->addItem(glyphFor(curKind->getSource()) + QStringLiteral("  ") + labelFor(curKind->getSource())
+                           , static_cast<int>(curKind->getSource()));
     }
 
     row.value   = new QStackedWidget(mHost);
@@ -670,6 +683,14 @@ void SMArgMapTable::buildDetailedRow(int index)
             row.source->setCurrentIndex(0);
             row.value->setCurrentIndex(PageLiteral);
             row.value->setEnabled(false);
+            if (param.hasDefault)
+            {
+                // An unmapped slot that has a declared default is not empty: it passes that
+                // default. Show it in the disabled value cell (rendered dimmed) so the row reads
+                // what it sends rather than a blank editor.
+                row.literal->setText(QString());
+                row.literal->setPlaceholderText(param.defaultText);
+            }
         }
         else
         {
