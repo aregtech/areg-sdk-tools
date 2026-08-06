@@ -25,6 +25,7 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
 
@@ -97,6 +98,61 @@ QStringList SMGuardSymbols::scopedMembers(const StateMachineData& data, const QS
     }
 
     return members;
+}
+
+bool SMGuardSymbols::conditionBindsBare(const SMMethodEntry& method)
+{
+    for (const MethodParameter& param : method.getElements())
+    {
+        if (param.hasDefault() == false)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+SMGuardSymbols::BareResult SMGuardSymbols::bindBare(const StateMachineData& data, uint32_t transitionId, const QString& name, eSurface surface)
+{
+    BareResult result;
+
+    const uint32_t pid = paramId(data, transitionId, name);
+    if (pid != 0u)
+    {
+        result.bind = eBind::Param;
+        result.id   = pid;
+        return result;
+    }
+
+    if (surface == eSurface::Guard)
+    {
+        const SMMethodEntry* cond = conditionMethod(data, name);
+        if ((cond != nullptr) && conditionBindsBare(*cond))
+        {
+            result.bind = eBind::Condition;
+            result.id   = cond->getId();
+            return result;
+        }
+    }
+
+    const uint32_t aid = attributeId(data, name);
+    if (aid != 0u)
+    {
+        result.bind = eBind::Attribute;
+        result.id   = aid;
+        return result;
+    }
+
+    const uint32_t cid = constantId(data, name);
+    if (cid != 0u)
+    {
+        result.bind = eBind::Constant;
+        result.id   = cid;
+        return result;
+    }
+
+    return result;
 }
 
 uint32_t SMGuardSymbols::attributeId(const StateMachineData& data, const QString& name)

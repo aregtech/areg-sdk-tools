@@ -40,6 +40,7 @@
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/common/ParamBase.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
@@ -196,7 +197,6 @@ namespace
         void checkRegistryNames();
 
         void validateLevel(const LevelInfo& info);
-        void checkAncestorShadowing(const SMStateData& level, QList<const SMStateEntry*>& ancestors);
         void validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel);
         void validatePseudoStart(const SMStateEntry& state, bool isRootLevel);
         void validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr);
@@ -225,6 +225,8 @@ namespace
 
         // Import rules.
         void checkImports(const QList<LevelInfo>& levels);
+        void checkHostedHandlerNames();
+        void checkNameCollisions(const QList<LevelInfo>& levels);
 
     private:
         const StateMachineData& mData;
@@ -554,61 +556,6 @@ namespace
         {
             if (state != nullptr)
                 validateState(*state, *info.level, info.isRoot);
-        }
-    }
-
-    void Ctx::checkAncestorShadowing(const SMStateData& level, QList<const SMStateEntry*>& ancestors)
-    {
-        for (SMStateEntry* state : level.getElements())
-        {
-            if (state == nullptr)
-                continue;
-
-            for (const SMTransitionEntry* tr : state->getTransitions().getElements())
-            {
-                // An initial transition reacts to nothing, so nothing can shadow it -- and every one
-                // of them would compare equal on the empty stimulus they all share.
-                if ((tr == nullptr) || tr->isInitial() || tr->getStimulus().isEmpty())
-                    continue;
-
-                // Outermost ancestor first: that is the order the candidates are tried in, so the
-                // first unguarded match is the one that actually wins and the one worth naming.
-                const SMStateEntry* winner = nullptr;
-                for (const SMStateEntry* ancestor : ancestors)
-                {
-                    for (const SMTransitionEntry* other : ancestor->getTransitions().getElements())
-                    {
-                        if ((other == nullptr) || other->isInitial() || other->hasCondition())
-                            continue;
-
-                        if ((other->getStimulusKind() == tr->getStimulusKind()) && (other->getStimulus() == tr->getStimulus()))
-                        {
-                            winner = ancestor;
-                            break;
-                        }
-                    }
-
-                    if (winner != nullptr)
-                        break;
-                }
-
-                if (winner != nullptr)
-                {
-                    add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_ANCESTOR_SHADOW
-                       , vtr("The transition of '%1' on '%2' can never fire: its ancestor '%3' reacts to the same stimulus with no guard")
-                            .arg(state->getName(), tr->getStimulus(), winner->getName())
-                       , vtr("A composite's transition is eligible while any of its descendants is active and is tried before the descendant's own. "
-                             "The first candidate with no guard always wins, so this one is dead code. Guard the transition on '%1', or remove this one.")
-                            .arg(winner->getName()));
-                }
-            }
-
-            if (state->hasNestedStates())
-            {
-                ancestors.append(state);
-                checkAncestorShadowing(*state->getNestedStates(), ancestors);
-                ancestors.removeLast();
-            }
         }
     }
 
@@ -1005,6 +952,9 @@ namespace
             break;
         case eValueSource::Lambda:
             break;      // A lambda is only valid as a condition left operand; degenerate as a value source.
+        case eValueSource::Invalid:
+            add(ownerId, kind, eSeverity::Error, 6, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
+            break;
         }
     }
 
@@ -1299,9 +1249,6 @@ namespace
         for (const LevelInfo& info : levels)
             validateLevel(info);
 
-        QList<const SMStateEntry*> ancestors;
-        checkAncestorShadowing(mData.getStates(), ancestors);
-
         checkDuplicateIds();
         checkDuplicateStateNames(levels);
         checkRegistryNames();
@@ -1351,9 +1298,30 @@ namespace
                 checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias());
         }
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
-            if (d != nullptr) checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
+        {
+            if (d == nullptr)
+                continue;
+
+            checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
+            // A composed type declares types of its own. Without this a structure field or a
+            // container element could name a type nothing in the document defines, and the fault
+            // only surfaced later, at whatever used the composed type.
+            if (d->isStructure())
+            {
+                for (const FieldEntry& f : static_cast<const DataTypeStructure*>(d)->getElements())
+                    checkDataType(f.getId(), eDocElementKind::DataType, f.getType());
+            }
+            else if (d->isContainer())
+            {
+                const DataTypeContainer* c = static_cast<const DataTypeContainer*>(d);
+                checkDataType(c->getId(), eDocElementKind::DataType, c->getValue());
+                checkDataType(c->getId(), eDocElementKind::DataType, c->getKey());
+            }
+        }
 
         checkImports(levels);
+        checkHostedHandlerNames();
+        checkNameCollisions(levels);
         checkWarnings(levels);
         checkGuards();
         checkDescriptions();
@@ -1437,19 +1405,11 @@ namespace
                         .arg(name, pinned.toString(), actual.toString()));
             }
 
-            // Each document is generated by its own `Threading`
-            const SMOverviewData::eThreading hostMode = mData.getOverview().getThreading();
-            const SMOverviewData::eThreading impMode  = resolution.document->getOverview().getThreading();
-            if ((hostMode == SMOverviewData::eThreading::Shared) && (impMode == SMOverviewData::eThreading::Local))
-            {
-                add(id, eDocElementKind::Import, eSeverity::Error, 26
-                    , vtr("Import '%1' is a Local machine but this machine is Shared: the import would be reachable from several threads without locking").arg(name));
-            }
-            else if ((hostMode == SMOverviewData::eThreading::Local) && (impMode == SMOverviewData::eThreading::Shared))
-            {
-                add(id, eDocElementKind::Import, eSeverity::Warning, 13
-                    , vtr("Import '%1' is a Shared machine but this machine is Local: the import pays for locking it cannot need").arg(name));
-            }
+            // The two Threading values an import brings together are not compared any more. A hosted
+            // machine takes the synchronization object of the machine that hosts it, so the host
+            // decides for the whole import tree and an imported document's own value applies only
+            // when that document is instantiated on its own. Rules 26 and warning 13 are retired and
+            // their numbers are not reused.
         }
 
         if (brokenAliases.isEmpty())
@@ -1470,21 +1430,169 @@ namespace
         }
     }
 
+    /**
+     * \brief   One machine instantiated somewhere below this document: the chain of hosting
+     *          states that reaches it, and the machine standing at the end of the chain.
+     **/
+    struct HostedMachine
+    {
+        uint32_t    rootId  { 0 };  //!< The state of THIS document the chain starts at.
+        QStringList chain;          //!< Hosting state names, outermost first.
+        QString     machine;        //!< The machine the chain instantiates.
+    };
+
+    //!< The action handler parameter the generator writes for a chain: the names joined by '_',
+    //!< the first letter lowered.
+    QString handlerParam(const QStringList& chain)
+    {
+        QString name = chain.join(QChar('_'));
+        if (name.isEmpty() == false)
+            name[0] = name[0].toLower();
+
+        return name;
+    }
+
+    //!< Walks one document level and everything it hosts, appending a chain per hosted machine.
+    void collectHosted(const StateMachineData& doc, const SMStateData& level, uint32_t rootId
+                      , const QStringList& chain, int depth, QList<HostedMachine>& out)
+    {
+        for (const SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+                continue;
+
+            if (state->hasNestedStates())
+            {
+                collectHosted(doc, *state->getNestedStates(), rootId, chain, depth, out);
+                continue;
+            }
+
+            if (state->isImportedSubmachine() == false)
+                continue;
+
+            const IncludeEntry* entry = doc.findImportByAlias(state->getSubmachine());
+            if (entry == nullptr)
+                continue;
+
+            const SMImportResolver::Resolution resolution = SMImportResolver::resolve(doc, *entry);
+            if (resolution.isResolved() == false)
+                continue;
+
+            QStringList reached = chain;
+            reached.append(state->getName());
+            const uint32_t owner = (rootId != 0) ? rootId : state->getId();
+            out.append(HostedMachine{ owner, reached, resolution.document->getOverview().getName() });
+
+            // The depth bound is what terminates this: a cycle is reported elsewhere, and one
+            // reported here as an endless walk would never be read.
+            if (depth < SMImportResolver::MAX_IMPORT_DEPTH)
+            {
+                collectHosted(*resolution.document, resolution.document->getStates()
+                             , owner, reached, depth + 1, out);
+            }
+        }
+    }
+
+    void Ctx::checkNameCollisions(const QList<LevelInfo>& levels)
+    {
+        // An attribute and a trigger of the same name both become members of the machine class and
+        // collide there, whatever their parameter lists are. Always an error.
+        for (SMMethodEntry* m : mData.getMethods().getElements())
+        {
+            if ((m == nullptr) || (m->isTrigger() == false))
+                continue;
+            if (mData.getAttributes().findElement(m->getName()) != nullptr)
+                add(m->getId(), eDocElementKind::Method, eSeverity::Error, 32
+                  , vtr("Trigger '%1' has the same name as an attribute. An attribute and a trigger must have different names, because both become members of the machine class.").arg(m->getName()));
+        }
+
+        // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr'
+        // plus its name and an embedded condition 'mCond' plus its name. A state name that starts
+        // with 'Attr' or 'Cond' therefore lands on a member that belongs to another kind. An
+        // attribute or a condition starting with those words is fine: it keeps its own prefix.
+        for (const LevelInfo& info : levels)
+        {
+            for (SMStateEntry* state : info.level->getElements())
+            {
+                if (state == nullptr)
+                    continue;
+
+                const QString& name = state->getName();
+                if (name.startsWith(QStringLiteral("Attr")))
+                {
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                      , vtr("State '%1' generates a member named 'm%1', and the prefix 'mAttr' is reserved for attribute members. Rename the state so that it does not begin with 'Attr'.").arg(name));
+                }
+                else if (name.startsWith(QStringLiteral("Cond")))
+                {
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                      , vtr("State '%1' generates a member named 'm%1', and the prefix 'mCond' is reserved for embedded condition members. Rename the state so that it does not begin with 'Cond'.").arg(name));
+                }
+            }
+        }
+
+        // A trigger or condition whose parameter carries the method's own name: inside the body the
+        // parameter hides the method and its attribute getter. An action is generated with a name
+        // prefix, so the same parameter name is harmless there.
+        for (SMMethodEntry* m : mData.getMethods().getElements())
+        {
+            if ((m == nullptr) || ((m->isTrigger() == false) && (m->isCondition() == false)))
+                continue;
+            for (const MethodParameter& p : m->getElements())
+            {
+                if (p.getName() == m->getName())
+                {
+                    add(p.getId(), eDocElementKind::Method, eSeverity::Warning, 34
+                      , vtr("Parameter '%1' has the same name as its %2, and hides the method and its attribute getter inside the body. Rename the parameter.")
+                            .arg(m->getName(), m->isTrigger() ? QStringLiteral("trigger") : QStringLiteral("condition")));
+                    break;
+                }
+            }
+        }
+    }
+
+    void Ctx::checkHostedHandlerNames()
+    {
+        if (mData.machineImports().isEmpty())
+            return;
+
+        QList<HostedMachine> hosted;
+        collectHosted(mData, mData.getStates(), 0, QStringList(), 1, hosted);
+
+        QHash<QString, int> taken;
+        for (int i = 0; i < hosted.size(); ++i)
+        {
+            const QString param = handlerParam(hosted.at(i).chain);
+            const QHash<QString, int>::const_iterator found = taken.constFind(param);
+            if (found == taken.constEnd())
+            {
+                taken.insert(param, i);
+                continue;
+            }
+
+            const HostedMachine& first = hosted.at(found.value());
+            const HostedMachine& clash = hosted.at(i);
+            add(clash.rootId, eDocElementKind::State, eSeverity::Error, 31
+              , vtr("Hosting states '%1' running '%2' and '%3' running '%4' both name the action handler '%5'")
+                    .arg(first.chain.join(QStringLiteral(" -> ")), first.machine
+                       , clash.chain.join(QStringLiteral(" -> ")), clash.machine)
+                    .arg(param)
+              , vtr("The generated constructor takes one action handler per machine below this one, named after the chain of hosting states. Two chains that join to the same name cannot both be declared, so rename one of the hosting states."));
+        }
+    }
+
     void Ctx::checkGuards()
     {
         for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
         {
-            SMIssue issue;
-            issue.elementId = finding.target.getId();
-            issue.kind      = (finding.target.getOwner() == SMGuardRef::eOwner::DoActivity)
+            const eDocElementKind kind = (finding.target.getOwner() == SMGuardRef::eOwner::DoActivity)
                                     ? eDocElementKind::State
                                     : eDocElementKind::Transition;
-            issue.severity  = finding.severity;
-            issue.rule      = SMValidator::RULE_GUARD;
-            issue.message   = finding.message;
-            issue.location  = finding.location;
-            issue.detail    = SMGuardValidation::describe(finding.kind);
-            mIssues.append(issue);
+            // Through add(), so a non-error guard finding carries the same offset number the
+            // generator uses instead of the bare rule id.
+            add(finding.target.getId(), kind, finding.severity, SMValidator::RULE_GUARD
+               , finding.message, SMGuardValidation::describe(finding.kind));
+            mIssues.last().location = finding.location;
         }
     }
 
@@ -1819,7 +1927,9 @@ namespace
         for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
 
         // Severity is decided per element kind. An unused method, event, timer, data type or
-        // import is a warning; an unused attribute or constant is only information.
+        // import is a warning; an unused constant is only information. An unused attribute is not
+        // reported at all -- an attribute is public state and being read only by generated code
+        // outside the machine is normal.
         for (SMMethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)
@@ -1842,11 +1952,6 @@ namespace
         {
             if ((timersStarted.contains(t.getName()) == false) && (timersStopped.contains(t.getName()) == false) && (timersReacted.contains(t.getName()) == false))
                 add(t.getId(), eDocElementKind::Timer, eSeverity::Warning, 4, vtr("Timer '%1' is never referenced").arg(t.getName()));
-        }
-        for (const SMAttributeEntry& a : mData.getAttributes().getElements())
-        {
-            if ((attrsRead.contains(a.getName()) == false) && (attrsWritten.contains(a.getName()) == false))
-                add(a.getId(), eDocElementKind::Attribute, eSeverity::Info, 4, vtr("Attribute '%1' is never referenced").arg(a.getName()));
         }
         for (const ConstantEntry& c : mData.getConstants().getElements())
         {

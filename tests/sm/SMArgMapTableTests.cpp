@@ -80,6 +80,7 @@ namespace
 
         data.getAttributes().createAttribute(QStringLiteral("Waiting"))->setType(QStringLiteral("uint32"));
         data.getAttributes().createAttribute(QStringLiteral("IsNight"))->setType(QStringLiteral("bool"));
+        data.getAttributes().createAttribute(QStringLiteral("Label"))->setType(QStringLiteral("String"));
 
         ConstantEntry* konst = data.getConstants().createConstant(QStringLiteral("MAX_WAIT"));
         konst->setType(QStringLiteral("uint32"));
@@ -259,9 +260,9 @@ int main(int argc, char* argv[])
     check(kinds.contains(static_cast<int>(eSource::Param)),      "Param kind offered in transition scope");
     check(kinds.contains(static_cast<int>(eSource::Attribute)),  "Attribute kind offered");
     check(kinds.contains(static_cast<int>(eSource::Constant)),   "Constant kind offered");
-    check(kinds.contains(static_cast<int>(eSource::Condition)),  "Condition kind offered");
+    check(kinds.contains(static_cast<int>(eSource::Condition)) == false, "Condition is not a mapping value source");
     check(kinds.contains(static_cast<int>(eSource::Expression)), "Expression kind offered");
-    check(kinds.size() == 6, "exactly the six source kinds are offered where all are legal");
+    check(kinds.size() == 5, "exactly the five source kinds are offered where all are legal");
 
     {
         SMArgMapTable entryScope(model);
@@ -275,14 +276,17 @@ int main(int argc, char* argv[])
     checkEq(ed.statusLabel(1)->text(), QStringLiteral("default: false"),  "defaulted unmapped parameter shows its default");
 
     // --- AC2: compatibility filtering + visible widening. ---
-    // The Attribute dropdown must offer only type-compatible entries (Waiting:uint32, not IsNight:bool).
+    // The Attribute dropdown offers what the target type has a conversion from, and nothing else.
+    // IsNight:bool is offered because C++ converts bool to a number without asking -- the row then
+    // marks it as narrowing. Label:String has no conversion at all and stays out.
     selectSource(ed, 0, eSource::Attribute);
     {
         QComboBox* refs = qobject_cast<QComboBox*>(ed.valueWidget(0));
         QStringList names;
         for (int i = 0; i < refs->count(); ++i) { names << refs->itemText(i); }
         check(names.contains(QStringLiteral("Waiting")),  "compatible attribute (uint32) offered");
-        check(names.contains(QStringLiteral("IsNight")) == false, "incompatible attribute (bool) filtered out");
+        check(names.contains(QStringLiteral("IsNight")),  "bool attribute offered for a numeric parameter, as a narrowing");
+        check(names.contains(QStringLiteral("Label")) == false, "incompatible attribute (String) filtered out");
     }
 
     // waiting : uint32  <- Param count : uint16  (implicit widening, shown on the row). This is
@@ -296,18 +300,11 @@ int main(int argc, char* argv[])
     checkEq(ed.typeLabel(0)->text(),  QStringLiteral("uint16 -> uint32"), "implicit widening shown explicitly on the row");
     checkEq(ed.statusLabel(0)->text(), QStringLiteral("ok, converts"),    "widening mapping flagged as a lossless conversion");
 
-    // urgent : bool -- the Condition dropdown offers the parameterless bool condition method;
-    // then clear urgent back to its default so the file omits it (resolution via default).
-    selectSource(ed, 1, eSource::Condition);
-    {
-        QComboBox* refs = qobject_cast<QComboBox*>(ed.valueWidget(1));
-        QStringList names;
-        for (int i = 0; i < refs->count(); ++i) { names << refs->itemText(i); }
-        check(names.contains(QStringLiteral("IsReady")), "parameterless bool condition offered as a Condition source");
-    }
-    clearSource(ed, 1);
-    check(argByName(call->getArguments(), QStringLiteral("urgent")) == nullptr, "clearing a mapping removes the argument (revert to default)");
-    checkEq(ed.statusLabel(1)->text(), QStringLiteral("default: false"), "a cleared defaulted parameter shows its default again");
+    // urgent : bool -- a condition is no longer a mapping value source, so it is not offered; the
+    // parameter stays unmapped and falls back to its declared default.
+    check(sourceKinds(ed, 1).contains(static_cast<int>(eSource::Condition)) == false, "Condition is not offered on a value cell");
+    check(argByName(call->getArguments(), QStringLiteral("urgent")) == nullptr, "an unmapped parameter has no stored argument");
+    checkEq(ed.statusLabel(1)->text(), QStringLiteral("default: false"), "an unmapped defaulted parameter shows its default");
 
     // --- AC4: undoable + byte-exact round-trip (including an Expression cell). ---
     // note : String  <- Expression (verbatim C++, stored byte-exact).

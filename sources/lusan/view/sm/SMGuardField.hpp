@@ -302,6 +302,18 @@ private:
     //!< The document positions of every chip token, in text order.
     QList<int> chipPositions() const;
 
+    //!< The index (in text order) of the reference chip the caret sits on, or -1 when none.
+    int chipIndexAtCaret() const;
+
+    /**
+     * \brief   Rebinds the reference chip the caret sits on to a same-named symbol of the next
+     *          (\p direction +1) or previous (-1) kind in guard weight order (param, condition,
+     *          attribute, constant), through one undo step. Only kinds a same-named symbol
+     *          actually exists for take part. Returns false when the caret is on no chip, or the
+     *          name carries only the one kind, so the key falls through to its default.
+     **/
+    bool cycleFocusedChipKind(int direction);
+
     //!< De-renders the chip at \p docPos back to its editable `#kind:name` text (double-click).
     bool deRenderChipAt(int docPos);
 

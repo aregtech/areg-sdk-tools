@@ -226,6 +226,46 @@ static void testParserResolution()
     delete rawOn.tree;
 }
 
+static void testConditionWeight()
+{
+    std::printf("[U1] guard resolution weight: param > condition > attribute > constant\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    // A zero-argument condition binds from a bare name, as a call.
+    SMMethodEntry* ready = data.getMethods().createMethod(QStringLiteral("Ready"), SMMethodEntry::eMethodType::Condition);
+    ready->setImplement(SMMethodEntry::eImplement::Handler);
+    SMGuardParser::Result r1 = SMGuardParser::parse(data, tid, QStringLiteral("Ready"));
+    check(r1.resolved() && (r1.tree != nullptr) && (r1.tree->getKind() == eKind::Call)
+            && (r1.tree->getSymbolId() == ready->getId()), "a bare zero-argument condition binds as a call");
+    delete r1.tree;
+
+    // A condition that declares a non-defaulted argument never binds from a bare name.
+    SMMethodEntry* check2 = data.getMethods().createMethod(QStringLiteral("Check"), SMMethodEntry::eMethodType::Condition);
+    check2->setImplement(SMMethodEntry::eImplement::Handler);
+    check2->addParam(QStringLiteral("n"))->setType(QStringLiteral("uint16"));
+    SMGuardParser::Result r2 = SMGuardParser::parse(data, tid, QStringLiteral("Check"));
+    check(r2.hasError(), "a bare multi-argument condition does not bind");
+    delete r2.tree;
+
+    // A condition outranks an attribute of the same name in a guard.
+    data.getAttributes().createAttribute(QStringLiteral("Ping"))->setType(QStringLiteral("bool"));
+    SMMethodEntry* pingCond = data.getMethods().createMethod(QStringLiteral("Ping"), SMMethodEntry::eMethodType::Condition);
+    pingCond->setImplement(SMMethodEntry::eImplement::Handler);
+    SMGuardParser::Result r3 = SMGuardParser::parse(data, tid, QStringLiteral("Ping"));
+    check(r3.resolved() && (r3.tree != nullptr) && (r3.tree->getKind() == eKind::Call)
+            && (r3.tree->getSymbolId() == pingCond->getId()), "a condition outranks an attribute of the same name");
+    delete r3.tree;
+
+    // A stimulus parameter outranks a condition of the same name.
+    data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("Ping"))->setType(QStringLiteral("bool"));
+    SMGuardParser::Result r4 = SMGuardParser::parse(data, tid, QStringLiteral("Ping"));
+    check(r4.resolved() && (r4.tree != nullptr) && (r4.tree->getKind() == eKind::Param)
+          , "a stimulus parameter outranks a condition of the same name");
+    delete r4.tree;
+}
+
 static void testParamVsCall()
 {
     std::printf("[U1] param vs param() disambiguation + shadowing warning (acceptance 18)\n");
@@ -250,7 +290,8 @@ static void testParamVsCall()
     }
     delete r.tree;
 
-    // Shadowing: an attribute and a stimulus parameter share a name -> parameter wins + warning.
+    // A stimulus parameter and an attribute sharing a name: the parameter wins by weight, and the
+    // badge already says which symbol is meant, so there is no diagnostic.
     data.getAttributes().createAttribute(QStringLiteral("shadow"));
     data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("shadow"))->setType(QStringLiteral("bool"));
     SMGuardParser::Result s = SMGuardParser::parse(data, tid, QStringLiteral("shadow"));
@@ -260,7 +301,7 @@ static void testParamVsCall()
         if (d.severity == SMGuardParser::eSeverity::Warning) { warned = true; }
     }
     check((s.tree != nullptr) && (s.tree->getKind() == eKind::Param), "shadowed bare name binds the parameter");
-    check(warned, "shadowing raises a warning diagnostic");
+    check(warned == false, "a parameter hiding an attribute is silent");
     delete s.tree;
 }
 
@@ -462,6 +503,16 @@ static void testRenderChips()
             {
                 checkEq(r.text.mid(c.start, c.length), c.name, "a chip span is the bare rendered name");
             }
+
+            // Each chip's node path addresses its node in the tree (the kind-cycle relies on this):
+            // root And [ Attr, Call [ Param ] ] -> chips carry [0], [1], [1,0].
+            if (r.chips.size() == 3)
+            {
+                check(r.chips.at(0).path == QList<int>({ 0 }), "attr chip path is [0]");
+                check(r.chips.at(1).path == QList<int>({ 1 }), "call chip path is [1]");
+                check(r.chips.at(2).path == QList<int>({ 1, 0 }), "param arg chip path is [1,0]");
+                check((t->childAt(1) != nullptr) && (t->childAt(1)->getKind() == eKind::Call), "the node at [1] is the call the chip path points to");
+            }
         }
         delete t;
     }
@@ -485,6 +536,73 @@ static void testRenderChips()
             check(revealed == 2, "D-REVEAL: every colliding chip is revealed");
         }
         delete t;
+    }
+}
+
+static void testInvalidReferenceChips()
+{
+    std::printf("[SM-21-03b] invalid reference chips: broken target keeps its name, typed unknown vs raw\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+    const uint32_t deadId = 0x7FFFFFFFu;    // an id no declaration owns
+
+    // A reference whose target is gone shows as an invalid chip carrying its last known name.
+    {
+        SMGuardNode* node = SMGuardNode::makeRef(eKind::Attr, deadId);
+        node->setCacheName(QStringLiteral("GoneAttr"));
+        const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *node);
+        check(r.chips.size() == 1, "the broken reference produces one chip");
+        if (r.chips.isEmpty() == false)
+        {
+            check(r.chips.at(0).invalid, "the chip is marked invalid");
+            check(r.chips.at(0).role == SMGuardRender::eRole::Invalid, "the chip carries the invalid role");
+            checkEq(r.chips.at(0).name, QStringLiteral("GoneAttr"), "the chip keeps the last known name");
+            check(r.chips.at(0).reveal == false, "an invalid chip never reveals a kind prefix");
+            checkEq(r.text.mid(r.chips.at(0).start, r.chips.at(0).length), QStringLiteral("GoneAttr"), "the rendered span is the bare name (no #kind: prefix)");
+        }
+        delete node;
+    }
+
+    // A broken reference with no cached name never collapses to a zero-width chip.
+    {
+        SMGuardNode* node = SMGuardNode::makeRef(eKind::Const, deadId);
+        const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *node);
+        check((r.chips.size() == 1) && r.chips.at(0).invalid, "a nameless broken reference is still invalid");
+        if (r.chips.isEmpty() == false)
+        {
+            checkEq(r.chips.at(0).name, QStringLiteral("?"), "a nameless broken reference shows a placeholder");
+        }
+        delete node;
+    }
+
+    // A typed name that resolves to nothing reads as an invalid reference, not a raw fragment.
+    {
+        SMGuardNode* node = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("ghostName"));
+        const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *node);
+        check((r.chips.size() == 1) && r.chips.at(0).invalid, "a bare unknown name is an invalid reference");
+        if (r.chips.isEmpty() == false)
+        {
+            checkEq(r.chips.at(0).name, QStringLiteral("ghostName"), "the invalid chip keeps the typed name");
+        }
+        delete node;
+    }
+
+    // A deliberate verbatim fragment (not a plain identifier) stays a raw escape hatch, no chip.
+    {
+        SMGuardNode* node = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("a + b"));
+        const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *node);
+        check(r.chips.isEmpty(), "a raw C++ fragment produces no invalid chip");
+        check(r.text.contains(QStringLiteral("a + b")), "the raw fragment renders verbatim");
+        delete node;
+    }
+
+    // A raw node whose text happens to name a real symbol is not invalid (it resolves by weight).
+    {
+        SMGuardNode* node = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("WalkRequested"));
+        const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *node);
+        check(r.chips.isEmpty(), "a raw identifier that resolves is left as raw, not flagged invalid");
+        delete node;
     }
 }
 
@@ -983,10 +1101,12 @@ int main(int /*argc*/, char** /*argv*/)
     std::printf("==== SM-21 (U1) guard core tests ====\n");
 
     testParserResolution();
+    testConditionWeight();
     testParamVsCall();
     testKindGrammar();
     testCallArgGrammar();
     testRenderChips();
+    testInvalidReferenceChips();
     testRenderRoundTrip();
     testRenameByID();
     testCodegenPreview();

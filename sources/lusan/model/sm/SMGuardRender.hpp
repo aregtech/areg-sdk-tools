@@ -57,6 +57,7 @@ public:
         , Handler   //!< A handler-condition call.
         , Literal   //!< A verbatim literal.
         , Raw       //!< A raw-C++ fragment.
+        , Invalid   //!< A reference whose target no longer exists (error color).
         , Lambda    //!< An anonymous-lambda body token.
         , Operator  //!< A logical/comparison operator.
         , Punct     //!< Parentheses, commas.
@@ -89,6 +90,8 @@ public:
         QString kind;       //!< The reference kind word: "param" | "attr" | "const" | "cond".
         QString name;       //!< The bare display name shown inside the chip.
         bool    reveal;     //!< Keep the `#kind:` prefix visible (a same-name collision).
+        bool    invalid;    //!< The referenced target no longer exists (shown in the error color).
+        QList<int> path;    //!< The child-index path from the root to this chip's node (empty = root).
     };
 
     /**

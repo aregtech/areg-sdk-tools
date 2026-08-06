@@ -36,6 +36,11 @@
 #include "lusan/model/sm/SMPasteCommand.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMTransitionCommands.hpp"
+#include "lusan/model/sm/SMGuardParser.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
@@ -1255,6 +1260,53 @@ namespace
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+// Scenario: re-pointing a transition re-binds a matching guard parameter silently
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testStimulusSilentRebind()
+    {
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        // Two triggers, each declaring a 'count' : uint16 parameter.
+        SMMethodEntry* walk = doc.getMethods().createMethod("RequestWalk", SMMethodEntry::eMethodType::Trigger);
+        walk->addParam("count")->setType("uint16");
+        SMMethodEntry* run = doc.getMethods().createMethod("RequestRun", SMMethodEntry::eMethodType::Trigger);
+        run->addParam("count")->setType("uint16");
+
+        stack.push(new SMAddStateCommand(notifier, doc.getStates(), "S", SMStateEntry::eStateKind::Start, "Add S"));
+        SMStateEntry* s = doc.getStates().findState("S");
+        SMTransitionEntry* tr = s->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger
+                                                                    , "RequestWalk", 0u, SMTransitionEntry::eTransitionKind::Internal);
+        const uint32_t tid = tr->getId();
+
+        SMGuardParser::Result g = SMGuardParser::parse(doc, tid, "count > 3");
+        CHECK(g.resolved());
+        tr->getGuard().setTree(g.tree);
+
+        const uint32_t walkCount = SMGuardSymbols::paramId(doc, tid, "count");
+        const SMGuardNode* before = tr->getGuard().getTree()->childAt(0);
+        CHECK((before != nullptr) && (before->getKind() == SMGuardNode::eKind::Param) && (before->getSymbolId() == walkCount));
+
+        // Re-point the transition at the other stimulus, whose 'count' matches by name and type.
+        stack.push(new SMSetStimulusCommand(doc, notifier, tid, SMTransitionEntry::eStimulusKind::Trigger, "RequestRun", "Set stimulus"));
+
+        const uint32_t runCount = SMGuardSymbols::paramId(doc, tid, "count");
+        CHECK(walkCount != runCount);   // two different declarations
+        const SMGuardNode* after = tr->getGuard().getTree()->childAt(0);
+        CHECK((after != nullptr) && (after->getSymbolId() == runCount));   // silently re-bound
+
+        // Undo restores the original binding exactly.
+        stack.undo();
+        const SMGuardNode* undone = tr->getGuard().getTree()->childAt(0);
+        CHECK((undone != nullptr) && (undone->getSymbolId() == walkCount));
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("SM-04 command framework tests\n");
@@ -1273,6 +1325,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testImportPreChecks();
     testRemoveComposite();
     testLegacyDoUntilShim();
+    testStimulusSilentRebind();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

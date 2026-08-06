@@ -181,6 +181,25 @@ namespace
         return count;
     }
 
+    //!< The node reached from \p root by the child-index \p path (empty path = the root); null when
+    //!< the path steps outside the tree. The render's chip path and the guard commands share this
+    //!< addressing, so a chip maps straight to the node it stands for.
+    const SMGuardNode* nodeAtPath(const SMGuardNode* root, const QList<int>& path)
+    {
+        const SMGuardNode* node = root;
+        for (int index : path)
+        {
+            if (node == nullptr)
+            {
+                return nullptr;
+            }
+
+            node = node->childAt(index);
+        }
+
+        return node;
+    }
+
     //!< The chip owner hue for a render role (chips reuse the render owner roles).
     NEGuardStyle::eOwner roleToOwner(SMGuardRender::eRole role)
     {
@@ -188,6 +207,7 @@ namespace
         {
         case SMGuardRender::eRole::Stim:    return NEGuardStyle::eOwner::Stimulus;
         case SMGuardRender::eRole::Handler: return NEGuardStyle::eOwner::Handler;
+        case SMGuardRender::eRole::Invalid: return NEGuardStyle::eOwner::Invalid;
         case SMGuardRender::eRole::Fsm:
         default:                            return NEGuardStyle::eOwner::Fsm;
         }
@@ -633,7 +653,8 @@ void SMGuardField::foldChips(const QList<SMGuardRender::Chip>& chips)
     for (int c = static_cast<int>(chips.size()) - 1; c >= 0; --c)
     {
         const SMGuardRender::Chip& chip = chips.at(c);
-        const QString prefix = NEGuardText::refPrefix(chip.kind);
+        // An invalid reference carries no kind prefix (its body is the bare name it kept).
+        const QString prefix = chip.invalid ? QString() : NEGuardText::refPrefix(chip.kind);
 
         QTextCursor cursor(document());
         cursor.setPosition(chip.start);
@@ -688,7 +709,7 @@ void SMGuardField::reprojectChips()
     {
         const SMGuardRender::Chip& chip = rendered.chips.at(c);
         const QString body   = rendered.text.mid(chip.start, chip.length);
-        const QString prefix = NEGuardText::refPrefix(chip.kind);
+        const QString prefix = chip.invalid ? QString() : NEGuardText::refPrefix(chip.kind);
 
         QTextCursor cursor(document());
         cursor.setPosition(positions.at(c));
@@ -725,6 +746,148 @@ QList<int> SMGuardField::chipPositions() const
     }
 
     return positions;
+}
+
+int SMGuardField::chipIndexAtCaret() const
+{
+    const QList<int> positions = chipPositions();
+    const int caret = textCursor().position();
+    for (int i = 0; i < positions.size(); ++i)
+    {
+        if ((positions.at(i) == caret) || (positions.at(i) == (caret - 1)))
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+bool SMGuardField::cycleFocusedChipKind(int direction)
+{
+    if (mTarget.isValid() == false)
+    {
+        return false;
+    }
+
+    const int index = chipIndexAtCaret();
+    if (index < 0)
+    {
+        return false;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMGuard* bound = data.findGuard(mTarget);
+    if ((bound == nullptr) || (bound->isOk() == false) || (bound->getTree() == nullptr))
+    {
+        return false;
+    }
+
+    const uint32_t scope = mTarget.getScopeId();
+    const SMGuardRender::Rendered rendered = SMGuardRender::render(data, scope, *bound->getTree(), true);
+    // The folded chips and the rendered chips must stay in lockstep, or an index could point at the
+    // wrong node; a de-rendered chip desyncs them, so bail rather than risk a wrong rebind.
+    if ((rendered.chips.size() != chipPositions().size()) || (index >= rendered.chips.size()))
+    {
+        return false;
+    }
+
+    const QList<int> path = rendered.chips.at(index).path;
+    const QString name = rendered.chips.at(index).name;
+    if (name.isEmpty() || (name == QStringLiteral("?")))
+    {
+        return false;   // a nameless invalid reference has nothing to cycle by name
+    }
+
+    // The kinds a same-named symbol exists for, in guard weight order.
+    QList<SMGuardSymbols::eBind> kinds;
+    if (SMGuardSymbols::paramId(data, scope, name) != 0u)
+    {
+        kinds.append(SMGuardSymbols::eBind::Param);
+    }
+
+    const SMMethodEntry* cond = SMGuardSymbols::conditionMethod(data, name);
+    if ((cond != nullptr) && SMGuardSymbols::conditionBindsBare(*cond))
+    {
+        kinds.append(SMGuardSymbols::eBind::Condition);
+    }
+
+    if (SMGuardSymbols::attributeId(data, name) != 0u)
+    {
+        kinds.append(SMGuardSymbols::eBind::Attribute);
+    }
+
+    if (SMGuardSymbols::constantId(data, name) != 0u)
+    {
+        kinds.append(SMGuardSymbols::eBind::Constant);
+    }
+
+    if (kinds.size() < 2)
+    {
+        return false;   // only one kind carries this name: nothing to cycle to
+    }
+
+    // The current kind of the focused node, so the next/previous one can be chosen.
+    const SMGuardNode* node = nodeAtPath(bound->getTree(), path);
+    SMGuardSymbols::eBind current = SMGuardSymbols::eBind::None;
+    if (node != nullptr)
+    {
+        switch (node->getKind())
+        {
+        case SMGuardNode::eKind::Param: current = SMGuardSymbols::eBind::Param;     break;
+        case SMGuardNode::eKind::Call:  current = SMGuardSymbols::eBind::Condition; break;
+        case SMGuardNode::eKind::Attr:  current = SMGuardSymbols::eBind::Attribute; break;
+        case SMGuardNode::eKind::Const: current = SMGuardSymbols::eBind::Constant;  break;
+        default:                        break;
+        }
+    }
+
+    int at = static_cast<int>(kinds.indexOf(current));
+    if (at < 0)
+    {
+        at = 0;     // an invalid reference starts the cycle from the first available kind
+    }
+
+    const int count = static_cast<int>(kinds.size());
+    const SMGuardSymbols::eBind next = kinds.at((((at + direction) % count) + count) % count);
+    if (next == current)
+    {
+        return false;
+    }
+
+    SMGuardNode* replacement = nullptr;
+    switch (next)
+    {
+    case SMGuardSymbols::eBind::Param:
+        replacement = SMGuardNode::makeRef(SMGuardNode::eKind::Param, SMGuardSymbols::paramId(data, scope, name));
+        break;
+    case SMGuardSymbols::eBind::Condition:
+        replacement = SMGuardNode::makeCall((cond != nullptr) ? cond->getId() : 0u, QList<SMGuardNode*>());
+        break;
+    case SMGuardSymbols::eBind::Attribute:
+        replacement = SMGuardNode::makeRef(SMGuardNode::eKind::Attr, SMGuardSymbols::attributeId(data, name));
+        break;
+    case SMGuardSymbols::eBind::Constant:
+        replacement = SMGuardNode::makeRef(SMGuardNode::eKind::Const, SMGuardSymbols::constantId(data, name));
+        break;
+    default:
+        break;
+    }
+
+    if (replacement == nullptr)
+    {
+        return false;
+    }
+
+    SMSetGuardCommand* command = SMGuardCommands::replaceSubtree(data, mModel.getNotifier(), mTarget, path, replacement, tr("Change reference kind"));
+    if (command == nullptr)
+    {
+        return false;   // replaceSubtree freed the replacement on a bad path
+    }
+
+    mModel.getUndoStack().push(command);
+    reflowNow();
+    return true;
 }
 
 bool SMGuardField::deRenderChipAt(int docPos)
@@ -2159,6 +2322,18 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
     {
         reopenFixBar();
         return;
+    }
+
+    // Alt+Left / Alt+Right cycles the kind of the reference chip the caret sits on, when the same
+    // name is carried by more than one kind. It only acts on a chip; otherwise the key falls
+    // through to its normal caret movement.
+    if (((event->key() == Qt::Key_Left) || (event->key() == Qt::Key_Right))
+        && (event->modifiers().testFlag(Qt::AltModifier)))
+    {
+        if (cycleFocusedChipKind((event->key() == Qt::Key_Right) ? 1 : -1))
+        {
+            return;
+        }
     }
 
     if (mSlotMode && (event->key() == Qt::Key_Tab))

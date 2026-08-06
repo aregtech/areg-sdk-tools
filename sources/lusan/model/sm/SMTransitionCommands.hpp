@@ -149,6 +149,7 @@ private:
     QString                             mNewName;
     SMTransitionEntry::eStimulusKind    mOldKind { SMTransitionEntry::eStimulusKind::Trigger };
     QString                             mOldName;
+    SMGuard                             mOrigGuard; //!< The guard as it stood before the change (undo restore).
     bool                                mCaptured { false };
 };
 

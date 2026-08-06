@@ -49,9 +49,10 @@ public:
         , Param         //!< A stimulus parameter (transition scope only).
         , Attribute     //!< A machine attribute.
         , Constant      //!< A declared constant.
-        , Condition     //!< A parameterless Condition-method call.
+        , Condition     //!< A parameterless Condition-method call (legacy condition operand only).
         , Expression    //!< Verbatim C++ (the `Expression` child).
         , Lambda        //!< Verbatim multi-statement boolean body (condition LHS only; `Body` child).
+        , Invalid       //!< A source that is no longer supported for a mapping; kept so it saves and reports.
     };
 
     static constexpr const char* const  STR_SRC_VALUE       { "Value"      };
@@ -61,6 +62,7 @@ public:
     static constexpr const char* const  STR_SRC_CONDITION   { "Condition"  };
     static constexpr const char* const  STR_SRC_EXPRESSION  { "Expression" };
     static constexpr const char* const  STR_SRC_LAMBDA      { "Lambda"     };
+    static constexpr const char* const  STR_SRC_INVALID     { "Invalid"    };
 
     static SMArgumentEntry::eValueSource fromSourceString(const QString& source);
     static const char* toString(SMArgumentEntry::eValueSource source);

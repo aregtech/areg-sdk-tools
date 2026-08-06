@@ -43,42 +43,13 @@ namespace
         return (one.length() > max) ? (one.left(max - 3) + QStringLiteral("...")) : one;
     }
 
-    //!< The declaration of a stimulus parameter anywhere in the document (stale-ID lookup).
-    const MethodParameter* findParamAnywhere(const StateMachineData& data, uint32_t paramId)
+    //!< How a broken reference names its lost target: the advisory name last recorded on the node
+    //!< (which survives save and load), or the raw id when the document never recorded a name.
+    QString refDisplay(const SMGuardNode& node)
     {
-        for (const SMMethodEntry* method : data.getMethods().getElements())
-        {
-            if (method == nullptr)
-            {
-                continue;
-            }
-
-            for (const MethodParameter& param : method->getElements())
-            {
-                if (param.getId() == paramId)
-                {
-                    return &param;
-                }
-            }
-        }
-
-        for (const SMEventEntry* event : data.getEvents().getElements())
-        {
-            if (event == nullptr)
-            {
-                continue;
-            }
-
-            for (const MethodParameter& param : event->getElements())
-            {
-                if (param.getId() == paramId)
-                {
-                    return &param;
-                }
-            }
-        }
-
-        return nullptr;
+        const QString cached = node.getCacheName();
+        return cached.isEmpty() ? QStringLiteral("(id %1)").arg(node.getSymbolId())
+                                : QStringLiteral("'%1'").arg(cached);
     }
 
     //!< What the message calls the predicate being checked. A stop condition is not a guard, and
@@ -91,7 +62,7 @@ namespace
     }
 
     void checkNode(const StateMachineData& data, const SMGuardRef& target, const QString& location
-                  , const SMGuardNode& node, QStringList& shadowed, QList<Finding>& findings)
+                  , const SMGuardNode& node, QList<Finding>& findings)
     {
         // The stimulus parameter scope of the checked predicate: its own, for a transition; none
         // at all for a `do/` activity, which ticks on a timer with no stimulus in hand.
@@ -103,7 +74,7 @@ namespace
             if (SMGuardSymbols::attributeName(data, node.getSymbolId()).isEmpty())
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
-                                , QStringLiteral("%1 references a deleted attribute (id %2)").arg(what).arg(node.getSymbolId())
+                                , QStringLiteral("%1 references a deleted attribute %2").arg(what, refDisplay(node))
                                 , node.getSymbolId() });
             }
             break;
@@ -112,7 +83,7 @@ namespace
             if (SMGuardSymbols::constantName(data, node.getSymbolId()).isEmpty())
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
-                                , QStringLiteral("%1 references a deleted constant (id %2)").arg(what).arg(node.getSymbolId())
+                                , QStringLiteral("%1 references a deleted constant %2").arg(what, refDisplay(node))
                                 , node.getSymbolId() });
             }
             break;
@@ -123,58 +94,23 @@ namespace
             if ((method == nullptr) || (method->isCondition() == false))
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
-                                , QStringLiteral("%1 calls a deleted condition method (id %2)").arg(what).arg(node.getSymbolId())
+                                , QStringLiteral("%1 calls a deleted condition method %2").arg(what, refDisplay(node))
                                 , node.getSymbolId() });
             }
             break;
         }
 
         case eKind::Param:
-        {
-            const QString name = SMGuardSymbols::paramName(data, transitionId, node.getSymbolId());
-            if (name.isEmpty())
+            if (SMGuardSymbols::paramName(data, transitionId, node.getSymbolId()).isEmpty())
             {
-                // Stale after a stimulus change: a same-name-same-type parameter of the
-                // new stimulus is the auto-re-bind case -- info, not an error.
-                const MethodParameter* stale = findParamAnywhere(data, node.getSymbolId());
-                bool rebindable = false;
-                if (stale != nullptr)
-                {
-                    const QStringList names = SMGuardSymbols::paramNames(data, transitionId);
-                    const QStringList types = SMGuardSymbols::paramTypes(data, transitionId);
-                    const int index = static_cast<int>(names.indexOf(stale->getName()));
-                    rebindable = (index >= 0) && (index < types.size()) && (types.at(index) == stale->getType());
-                }
-
-                if (rebindable)
-                {
-                    findings.append({ eSeverity::Info, eFinding::ParamRebind, target, location
-                                    , QStringLiteral("parameter '%1' re-binds to the new stimulus by name and type, so commit the guard again").arg(stale->getName())
-                                    , node.getSymbolId() });
-                }
-                else
-                {
-                    findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
-                                    , QStringLiteral("%1 references a parameter the stimulus no longer has (id %2)").arg(what).arg(node.getSymbolId())
-                                    , node.getSymbolId() });
-                }
-            }
-            else
-            {
-                // Shadowing, kept quiet: one warning per shadowed name per guard.
-                const bool hidesAttr  = (SMGuardSymbols::attributeId(data, name) != 0u);
-                const bool hidesConst = (SMGuardSymbols::constantId(data, name) != 0u);
-                if ((hidesAttr || hidesConst) && (shadowed.contains(name) == false))
-                {
-                    shadowed.append(name);
-                    findings.append({ eSeverity::Warning, eFinding::Shadowing, target, location
-                                    , QStringLiteral("'%1' is the stimulus parameter and hides %2 '%1'")
-                                          .arg(name, hidesAttr ? QStringLiteral("attribute") : QStringLiteral("constant"))
-                                    , node.getSymbolId() });
-                }
+                // The stimulus no longer has this parameter. A stimulus change that leaves a
+                // same-name-same-type parameter re-binds at the command, so anything still stale
+                // here has no match and is a broken reference.
+                findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
+                                , QStringLiteral("%1 references a parameter the stimulus no longer has %2").arg(what, refDisplay(node))
+                                , node.getSymbolId() });
             }
             break;
-        }
 
         case eKind::Raw:
             // The audit: every verbatim fragment is listed -- never silent.
@@ -189,7 +125,7 @@ namespace
 
         for (const SMGuardNode* child : node.getChildren())
         {
-            checkNode(data, target, location, *child, shadowed, findings);
+            checkNode(data, target, location, *child, findings);
         }
     }
 
@@ -212,8 +148,7 @@ namespace
 
         if (guard.getTree() != nullptr)
         {
-            QStringList shadowed;
-            checkNode(data, target, location, *guard.getTree(), shadowed, findings);
+            checkNode(data, target, location, *guard.getTree(), findings);
         }
     }
 
@@ -289,14 +224,10 @@ QString SMGuardValidation::describe(SMGuardValidation::eKind kind)
     {
     case eKind::Draft:
         return QObject::tr("The guard text was never committed, so there is no parsed condition to generate. Commit it or clear it.");
-    case eKind::Shadowing:
-        return QObject::tr("A stimulus parameter has the same name as an attribute or constant, and hides it inside this guard. Rename one of them to say which is meant.");
     case eKind::RawFragment:
         return QObject::tr("A verbatim C++ fragment is emitted as written and is never parsed or checked. Listed so every unchecked fragment in the document is accounted for.");
     case eKind::BrokenRef:
         return QObject::tr("The guard references a declaration that no longer exists or has left its scope. Re-bind the reference or remove it.");
-    case eKind::ParamRebind:
-        return QObject::tr("The stimulus changed, but a parameter of the same name and type exists on the new one, so the reference can be re-bound as it stands.");
     default:
         return QString();
     }
