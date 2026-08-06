@@ -40,7 +40,10 @@
 #include "lusan/data/sm/SMDocumentCache.hpp"
 #include "lusan/data/sm/SMDataTypeData.hpp"
 
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 
 #include <QDir>
 #include <QFile>
@@ -95,6 +98,16 @@ namespace
     bool hasRule(const QList<SMIssue>& issues, int rule)
     {
         return countRule(issues, rule) > 0;
+    }
+
+    //!< For the cases that assert a document is accepted: any error at all is the failure, whichever
+    //!< rule raised it, so a rule added later cannot start refusing a document these cases call legal.
+    int countSeverity(const QList<SMIssue>& issues, SMIssue::eSeverity severity)
+    {
+        int n = 0;
+        for (const SMIssue& i : issues)
+            if (i.severity == severity) ++n;
+        return n;
     }
 
     //!< A 10.2 warning is stored with the offset rule id; these target it by its 10.2 number.
@@ -277,6 +290,105 @@ namespace
             doc.getEvents().createEvent("done");
             doc.getTimers().createTimer("tick");
             CHECK(countRule(SMValidator::validate(doc), 4) == 0);
+        }
+    }
+
+    void testDeclarationCollisions()
+    {
+        std::printf("- declaration collisions (trigger/attribute, reserved member prefix, self-named param, invalid source)\n");
+        {   // A trigger and an attribute of the same name both become members of the machine class.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("Ready", eMethod::Trigger);
+            doc.getAttributes().createAttribute("Ready")->setType("bool");
+            CHECK(hasRule(SMValidator::validate(doc), 32));
+        }
+        {   // Different names: no collision.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("Ready", eMethod::Trigger);
+            doc.getAttributes().createAttribute("IsReady")->setType("bool");
+            CHECK(countRule(SMValidator::validate(doc), 32) == 0);
+        }
+        {   // A condition and an attribute of the same name land on different classes: no collision.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("Ready", eMethod::Condition);
+            doc.getAttributes().createAttribute("Ready")->setType("bool");
+            CHECK(countRule(SMValidator::validate(doc), 32) == 0);
+        }
+        {   // A state named 'Attr...' becomes a member that reads as a generated attribute member.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("AttrReady", eKind::Normal);
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // The same for 'Cond...', which belongs to an embedded condition member.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("CondReady", eKind::Normal);
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // A substate is a member too, so the check reaches every level.
+            StateMachineData doc;
+            addStart(doc);
+            SMStateEntry* parent = doc.getStates().createState("Work", eKind::Normal);
+            parent->getOrCreateNestedStates()->createState("AttrInner", eKind::Normal);
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // A state name that owns no reserved prefix is silent.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("Ready", eKind::Normal);
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+        }
+        {   // An attribute or a condition keeps its own prefix, so those names are legal: an
+            // attribute 'AttrReady' becomes 'mAttrAttrReady', a condition 'CondReady' 'mCondCondReady'.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute("AttrReady")->setType("bool");
+            SMMethodEntry* c = doc.getMethods().createMethod("CondReady", eMethod::Condition);
+            c->setImplement(SMMethodEntry::eImplement::Embedded);
+            c->setBody("return true;");
+            c->setReturn("bool");
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+        }
+        {   // An attribute and an embedded condition of the same name land on two different members,
+            // so the pair is legal and files nothing.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute("Ready")->setType("bool");
+            SMMethodEntry* c = doc.getMethods().createMethod("Ready", eMethod::Condition);
+            c->setImplement(SMMethodEntry::eImplement::Embedded);
+            c->setBody("return true;");
+            c->setReturn("bool");
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK((countRule(issues, 32) == 0) && (countRule(issues, 33) == 0) && (countRule(issues, 4) == 0));
+        }
+        {   // A trigger whose parameter carries the method's own name hides the method in the body.
+            StateMachineData doc;
+            addStart(doc);
+            SMMethodEntry* m = doc.getMethods().createMethod("Ready", eMethod::Trigger);
+            m->addParam("Ready");
+            CHECK(hasWarn(SMValidator::validate(doc), 34));
+        }
+        {   // The same shape on an action is generated with a name prefix, so it is silent.
+            StateMachineData doc;
+            addStart(doc);
+            SMMethodEntry* m = doc.getMethods().createMethod("Ready", eMethod::Action);
+            m->addParam("Ready");
+            CHECK(countWarn(SMValidator::validate(doc), 34) == 0);
+        }
+        {   // An argument whose source no longer resolves (a condition source migrated on load) is
+            // an error until it is re-mapped.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            SMMethodEntry* act = doc.getMethods().createMethod("act", eMethod::Action);
+            act->addParam("x")->setType("bool");
+            SMActionCall* call = new SMActionCall(0, "act");
+            call->addArgument("x", eSource::Invalid, "IsReady");
+            s->getEntryList().addOperation(call);
+            CHECK(hasRule(SMValidator::validate(doc), 6));
         }
     }
 }
@@ -652,16 +764,16 @@ namespace
         }
     }
 
-    //!< The four reachability rules of L8. Rules 3 and 4 (a Start that targets itself, a Start
+    //!< The reachability rules of L8. Rules 3 and 4 (a Start that targets itself, a Start
     //!< nothing leaves) are rule 27's and were implemented with the pseudo-state; they are
     //!< re-checked here under their L8 numbering so a change to either is caught by both names.
     void testReachabilityRules()
     {
-        std::printf("- L8: reachability (rules 30, W1, 27)\n");
-        const int shadow = SMValidator::RULE_ANCESTOR_SHADOW;
+        std::printf("- L8: reachability (override, W1, 27)\n");
 
-        //!< A composite `Session` holding `Step1`, both reacting to the trigger `poke`. The
-        //!< ancestor's transition is returned so a test can guard it.
+        //!< A composite `Session` holding `Step1`, both reacting to the trigger `poke` -- the
+        //!< plain hierarchical override, and a legal document. The composite's transition is
+        //!< returned so a case can guard it.
         auto shadowDoc = [](StateMachineData& doc) -> SMTransitionEntry*
         {
             SMStateEntry* start   = addStart(doc);
@@ -679,47 +791,29 @@ namespace
             return session->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
         };
 
-        {   // Rule 1: the ancestor's candidate carries no guard, so the descendant's is dead code.
+        {   // The override is legal and nothing reports it. A stimulus is searched from the active
+            // leaf upwards, so `Step1` answers `poke` while it is active and `Session` answers it
+            // from everywhere else. Both are reachable, neither is dead, and no error is raised --
+            // guarded or not, which the following two cases pin down.
             StateMachineData doc;
             shadowDoc(doc);
-
-            const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(countRule(issues, shadow) == 1);
-            bool named = false;
-            for (const SMIssue& i : issues)
-            {
-                named = named || ((i.rule == shadow)
-                                  && i.message.contains(QStringLiteral("'Step1'"))
-                                  && i.message.contains(QStringLiteral("'Session'")));
-            }
-            CHECK(named);
-            // It is an error, not an advisory: the transition generates and can never run.
-            for (const SMIssue& i : issues)
-                if (i.rule == shadow) CHECK(i.severity == SMIssue::eSeverity::Error);
+            CHECK(countSeverity(SMValidator::validate(doc), SMIssue::eSeverity::Error) == 0);
         }
-        {   // Rule 1, negative: guarding the ancestor clears it. The descendant then fires whenever
-            // the ancestor's guard is false, which is the normal way to write a fallback.
+        {   // The same document with the composite guarded: still clean.
             StateMachineData doc;
             SMTransitionEntry* ancestor = shadowDoc(doc);
             guardIt(doc, *ancestor, QStringLiteral("IsBusy"));
-            CHECK(countRule(SMValidator::validate(doc), shadow) == 0);
+            CHECK(countSeverity(SMValidator::validate(doc), SMIssue::eSeverity::Error) == 0);
         }
-        {   // Rule 1, negative: a different stimulus is a different question, guard or no guard.
-            StateMachineData doc;
-            SMTransitionEntry* ancestor = shadowDoc(doc);
-            doc.getMethods().createMethod(QStringLiteral("prod"), eMethod::Trigger);
-            ancestor->setStimulus(QStringLiteral("prod"));
-            CHECK(countRule(SMValidator::validate(doc), shadow) == 0);
-        }
-        {   // Rule 1, negative: a SIBLING reacting to the same stimulus shadows nothing -- the two
-            // are never eligible at the same time. That case is 10.2 warning 3's, same owner only.
+        {   // Two SIBLINGS reacting to the same stimulus: never eligible at the same time, so there
+            // is nothing to compare. The same-owner case is 10.2 warning 3's.
             StateMachineData doc;
             SMStateEntry* work  = addWorkingState(doc);
             SMStateEntry* other = doc.getStates().createState(QStringLiteral("Other"), eKind::Normal);
             doc.getMethods().createMethod(QStringLiteral("poke"), eMethod::Trigger);
             work->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
             other->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), work->getId());
-            CHECK(countRule(SMValidator::validate(doc), shadow) == 0);
+            CHECK(countSeverity(SMValidator::validate(doc), SMIssue::eSeverity::Error) == 0);
         }
         {   // Rule 2: an unreachable state is a WARNING and one finding, and the document still
             // saves -- a half-drawn machine is the normal intermediate state of an editor.
@@ -1139,6 +1233,15 @@ namespace
         return false;
     }
 
+    // The other half of the oracle: bool and a number convert into each other without a cast, in
+    // both directions, and both directions lose something. char is deliberately not in this.
+    bool boolAndNumber(const QString& a, const QString& b)
+    {
+        const QStringList numbers = { "int8", "int16", "int32", "int64"
+                                    , "uint8", "uint16", "uint32", "uint64", "float", "double" };
+        return ((a == "bool") && numbers.contains(b)) || ((b == "bool") && numbers.contains(a));
+    }
+
     void testWideningTable()
     {
         std::printf("- widening table (all primitive pairs)\n");
@@ -1153,7 +1256,7 @@ namespace
                     expected = SMTypeCompat::eRank::Exact;
                 else if (widensOracle(from, to))
                     expected = SMTypeCompat::eRank::Converts;
-                else if (widensOracle(to, from))
+                else if (widensOracle(to, from) || boolAndNumber(from, to))
                     expected = SMTypeCompat::eRank::Narrows;
                 else
                     expected = SMTypeCompat::eRank::Mismatch;
@@ -1355,6 +1458,39 @@ namespace
             CHECK(countWarn(issues, 17) == 1);
             CHECK(warnSeverityIs(issues, 17, SMIssue::eSeverity::Warning));
             CHECK(countRule(issues, 17) == 0);
+        }
+        {   // bool and a number convert into each other in C++ without a cast, in both directions,
+            // so neither pairing is a refusal. Both warn, and the code generator agrees.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint32");
+            doc.getAttributes().createAttribute("flag")->setType("bool");
+            SMActionCall* call = new SMActionCall(0, "act");
+            s->getEntryList().addOperation(call);
+            call->addArgument("p", eSource::Attribute, "flag");
+
+            doc.getAttributes().createAttribute("ready")->setType("bool");
+            doc.getAttributes().createAttribute("count")->setType("uint32");
+            SMAttributeSet* set = new SMAttributeSet(0, "ready");
+            s->getEntryList().addOperation(set);
+            set->setSource(eSource::Attribute); set->setValue("count");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, 13) == 0);
+            CHECK(countWarn(issues, 13) == 1);
+            CHECK(countRule(issues, 17) == 0);
+            CHECK(countWarn(issues, 17) == 1);
+        }
+        {   // char is deliberately not part of that: it stays a mismatch against a number.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint32");
+            doc.getAttributes().createAttribute("letter")->setType("char");
+            SMActionCall* call = new SMActionCall(0, "act");
+            s->getEntryList().addOperation(call);
+            call->addArgument("p", eSource::Attribute, "letter");
+
+            CHECK(countRule(SMValidator::validate(doc), 13) == 1);
         }
         {   // A mismatch is still an error, and says so in words a narrowing never uses.
             StateMachineData doc;
@@ -1614,10 +1750,10 @@ namespace
             CHECK(countWarn(SMValidator::validate(doc), 8) == 0);
             CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
 
-            // Only a declaration nothing touches at all is still reported, and only as information.
+            // An unused attribute is not reported at all: it is public state, and being read only by
+            // generated code outside the machine is normal. (An unused constant is still information.)
             doc.getAttributes().createAttribute("idle")->setType("int32");
-            CHECK(countWarn(SMValidator::validate(doc), 4) == 1);
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
         }
         {   // W9: a comparison of two design-time constants; negative once one side is live.
             StateMachineData doc;
@@ -1901,6 +2037,30 @@ namespace
         SMDocumentCache::getInstance().clear();
     }
 
+    //!< One import of a written machine: the alias, the file it points at, and the single state
+    //!< that hosts it.
+    struct HostedAt { const char* alias; const char* location; const char* state; };
+
+    //!< Writes a machine that hosts each of \p hosts at its own named state, so a chain of
+    //!< hosting states can be built out of real documents on disk.
+    void writeHostingMachine(const QString& path, const QString& name, const QList<HostedAt>& hosts)
+    {
+        std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument(name);
+        doc->getOverview().setVersion(QStringLiteral("1.0.0"));
+        finishStart(*doc);
+        for (const HostedAt& one : hosts)
+        {
+            IncludeEntry* entry = doc->getIncludes().createInclude(QString::fromLatin1(one.location));
+            entry->setAlias(QString::fromLatin1(one.alias));
+            entry->setVersion(VersionNumber(QStringLiteral("1.0.0")));
+            SMStateEntry* state = doc->getStates().createState(QString::fromLatin1(one.state), eKind::Normal);
+            state->setSubmachine(QString::fromLatin1(one.alias));
+        }
+
+        doc->writeToFile(path);
+        SMDocumentCache::getInstance().clear();
+    }
+
     //!< A host document at \p path with one registered import hosted by \p hostCount states.
     std::unique_ptr<StateMachineData> hostMachine(const QString& path, const QString& alias
                                                  , const QString& location, const QString& pinned
@@ -1933,11 +2093,9 @@ namespace
         const QList<Expect> expected =
         {
               { "TrafficLight.fsml"     , {}          , "the golden machine: must be clean" }
-            , { "FullFeature.fsml"      , {18, 19, 25, 30}, "deliberate: History on a non-composite, an unresolved import, a draft guard."
-                                                           " Rule 30 is a REAL fault of the fixture, not a deliberate one: 'Operational' reacts to"
-                                                           " Dispensed unguarded, so 'Dispensing' never reaches the Final state 'Complete' and the"
-                                                           " OnFinal it exists to raise cannot fire. Pinned rather than silently absorbed --"
-                                                           " the fixture is shared with the generator's refusal gate and is corrected there" }
+            , { "FullFeature.fsml"      , {18, 19, 25}, "deliberate: History on a non-composite, an unresolved import, a draft guard."
+                                                           " 'Operational' and its descendants both reacting to Dispensed is the plain"
+                                                           " hierarchical override and is reported by nothing" }
             , { "GuardDemo.fsml"        , {}          , "every guard node kind, all resolved" }
             , { "SubmachineDemo.fsml"   , {}          , "one import hosted twice: the fixture that must GENERATE" }
             , { "UnresolvedImport.fsml" , {19}        , "deliberate: the import file does not exist" }
@@ -1945,7 +2103,7 @@ namespace
             , { "LegacyImports.fsml"    , {}          , "1.0.0 migration path" }
             , { "LegacyStart.fsml"      , {}          , "the merged Kind=\"Start\": converts on load, then clean" }
             , { "LegacyKind.fsml"       , {}          , "no Transition Kind: the read shim recovers all three" }
-            , { "ThreadingMismatch.fsml", {26}        , "deliberate: Shared host, Local import" }
+            , { "ThreadingMismatch.fsml", {}          , "a Shared host with a Local import: legal, and the host decides for the tree" }
         };
 
         for (const Expect& one : expected)
@@ -2116,43 +2274,42 @@ namespace
             CHECK(countRule(exactIssues, 22) == 0);
         }
 
-        {   // Threading pairing (10.1 rule 26, 10.2 rule 13). Each document is generated by its own
-            // Threading, so the two settings an import brings together have to be compatible.
+        {   // Threading pairing is not validated. A hosted machine runs under the synchronization
+            // object of the machine that hosts it, so the host decides for the whole import tree and
+            // no combination of the two values is worth a message. All four combinations are clean;
+            // the two retired numbers, 26 and warning 13, must never come back.
             writeMachine(at("local.fsml"), QStringLiteral("LocalMachine"), QStringLiteral("1.0.0")
                         , QList<QPair<QString, QString> >(), SMOverviewData::eThreading::Local);
             writeMachine(at("shared.fsml"), QStringLiteral("SharedMachine"), QStringLiteral("1.0.0")
                         , QList<QPair<QString, QString> >(), SMOverviewData::eThreading::Shared);
 
-            // Shared host + Local import: the import would be reachable from several threads with
-            // no locking generated anywhere in it.
-            std::unique_ptr<StateMachineData> bad = hostMachine(at("t1.fsml"), QStringLiteral("L"), QStringLiteral("./local.fsml"), QStringLiteral("1.0.0"), 1);
-            bad->getOverview().setThreading(SMOverviewData::eThreading::Shared);
-            SMDocumentCache::getInstance().clear();
-            CHECK(hasRule(SMValidator::validate(*bad), 26));
+            struct Pairing
+            {
+                const char*                 file;
+                const char*                 alias;
+                const char*                 import;
+                SMOverviewData::eThreading  host;
+            };
 
-            // Local host + Shared import: safe, only wasteful.
-            std::unique_ptr<StateMachineData> waste = hostMachine(at("t2.fsml"), QStringLiteral("S"), QStringLiteral("./shared.fsml"), QStringLiteral("1.0.0"), 1);
-            waste->getOverview().setThreading(SMOverviewData::eThreading::Local);
-            SMDocumentCache::getInstance().clear();
-            const QList<SMIssue> wasteIssues = SMValidator::validate(*waste);
-            CHECK(hasWarn(wasteIssues, 13));
-            CHECK(warnSeverityIs(wasteIssues, 13, SMIssue::eSeverity::Warning));
-            CHECK(countRule(wasteIssues, 26) == 0);
+            const Pairing pairings[] =
+            {
+                  { "t1.fsml", "L", "./local.fsml" , SMOverviewData::eThreading::Shared }
+                , { "t2.fsml", "S", "./shared.fsml", SMOverviewData::eThreading::Local  }
+                , { "t3.fsml", "L", "./local.fsml" , SMOverviewData::eThreading::Local  }
+                , { "t4.fsml", "S", "./shared.fsml", SMOverviewData::eThreading::Shared }
+            };
 
-            // Matching modes are silent, in both directions.
-            std::unique_ptr<StateMachineData> same = hostMachine(at("t3.fsml"), QStringLiteral("L"), QStringLiteral("./local.fsml"), QStringLiteral("1.0.0"), 1);
-            same->getOverview().setThreading(SMOverviewData::eThreading::Local);
-            SMDocumentCache::getInstance().clear();
-            const QList<SMIssue> sameIssues = SMValidator::validate(*same);
-            CHECK(countRule(sameIssues, 26) == 0);
-            CHECK(countWarn(sameIssues, 13) == 0);
-
-            std::unique_ptr<StateMachineData> both = hostMachine(at("t4.fsml"), QStringLiteral("S"), QStringLiteral("./shared.fsml"), QStringLiteral("1.0.0"), 1);
-            both->getOverview().setThreading(SMOverviewData::eThreading::Shared);
-            SMDocumentCache::getInstance().clear();
-            const QList<SMIssue> bothIssues = SMValidator::validate(*both);
-            CHECK(countRule(bothIssues, 26) == 0);
-            CHECK(countWarn(bothIssues, 13) == 0);
+            for (const Pairing& p : pairings)
+            {
+                std::unique_ptr<StateMachineData> doc = hostMachine(at(p.file), QString::fromLatin1(p.alias)
+                                                                   , QString::fromLatin1(p.import), QStringLiteral("1.0.0"), 1);
+                doc->getOverview().setThreading(p.host);
+                SMDocumentCache::getInstance().clear();
+                const QList<SMIssue> issues = SMValidator::validate(*doc);
+                CHECK(countRule(issues, 26) == 0);
+                CHECK(countWarn(issues, 13) == 0);
+                CHECK(countSeverity(issues, SMIssue::eSeverity::Error) == 0);
+            }
         }
 
         {   // L7 Part 2: an imported document is validated when it is OPENED, not through its host.
@@ -2186,6 +2343,53 @@ namespace
             SMDocumentCache::getInstance().clear();
             CHECK(countRule(SMValidator::validate(*host), 19) == 0);
             CHECK(SMImportResolver::storableLocation(*host, at("abs.fsml")) == QStringLiteral("./abs.fsml"));
+        }
+
+        {   // Rule 31. The generated constructor names one action handler per machine below this
+            // one, after the chain of hosting states joined by '_'. '_' is legal inside a state
+            // name, so two different chains can join to one name -- and then neither can be
+            // declared. `Crossing_Timer` hosting the leaf directly meets `Crossing` hosting a
+            // machine that hosts the same leaf at `Timer`.
+            writeMachine(at("clashleaf.fsml"), QStringLiteral("NameClashLeaf"), QStringLiteral("1.0.0"));
+            writeHostingMachine(at("clashmid.fsml"), QStringLiteral("ClashMid")
+                               , { { "Leaf", "./clashleaf.fsml", "Timer" } });
+
+            writeHostingMachine(at("clashtop.fsml"), QStringLiteral("ClashTop")
+                               , { { "Mid" , "./clashmid.fsml" , "Crossing"       }
+                                 , { "Leaf", "./clashleaf.fsml", "Crossing_Timer" } });
+            StateMachineData clash;
+            CHECK(clash.readFromFile(at("clashtop.fsml")));
+            SMDocumentCache::getInstance().clear();
+            const QList<SMIssue> clashIssues = SMValidator::validate(clash);
+            CHECK(countRule(clashIssues, 31) == 1);
+
+            // The finding is only useful if it says which two chains met and what to rename.
+            bool named = false;
+            for (const SMIssue& i : clashIssues)
+            {
+                named = named || ((i.rule == 31)
+                                  && i.message.contains(QStringLiteral("Crossing -> Timer"))
+                                  && i.message.contains(QStringLiteral("Crossing_Timer"))
+                                  && i.message.contains(QStringLiteral("crossing_Timer")));
+            }
+            CHECK(named);
+
+            // One character apart, and nothing collides.
+            writeHostingMachine(at("cleartop.fsml"), QStringLiteral("ClearTop")
+                               , { { "Mid" , "./clashmid.fsml" , "Crossing"      }
+                                 , { "Leaf", "./clashleaf.fsml", "CrossingTimer" } });
+            StateMachineData clear;
+            CHECK(clear.readFromFile(at("cleartop.fsml")));
+            SMDocumentCache::getInstance().clear();
+            CHECK(countRule(SMValidator::validate(clear), 31) == 0);
+
+            // Two states hosting the SAME machine is the shape SubmachineDemo.fsml ships, and it
+            // must stay clean at every level: the two chains differ from their first name on, so
+            // the grandchild each of them carries differs too.
+            std::unique_ptr<StateMachineData> twice = hostMachine(at("twicetop.fsml"), QStringLiteral("Mid")
+                                                                 , QStringLiteral("./clashmid.fsml"), QStringLiteral("1.0.0"), 2);
+            SMDocumentCache::getInstance().clear();
+            CHECK(countRule(SMValidator::validate(*twice), 31) == 0);
         }
     }
 }
@@ -2427,6 +2631,53 @@ namespace
 
             CHECK(namesFragment);
         }
+
+        {   // A structure field declares a type, so it is checked like any other declaration. The
+            // second field resolves, which keeps the case honest about counting only the broken one.
+            StateMachineData doc;
+            addStart(doc);
+            DataTypeStructure* rec = static_cast<DataTypeStructure*>(doc.getDataTypes().addStructure(QStringLiteral("Record")));
+            CHECK(rec != nullptr);
+            rec->addField(QStringLiteral("id"))->setType(QStringLiteral("uint32"));
+            rec->addField(QStringLiteral("payload"))->setType(QStringLiteral("Blob"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, 6) == 1);
+            bool namesField = false;
+            for (const SMIssue& issue : issues)
+            {
+                namesField = namesField || ((issue.rule == 6) && issue.message.contains(QStringLiteral("'Blob'")));
+            }
+
+            CHECK(namesField);
+        }
+
+        {   // Both element types of a container are declarations too, and each is reported on its own.
+            StateMachineData doc;
+            addStart(doc);
+            DataTypeContainer* map = static_cast<DataTypeContainer*>(
+                    doc.getDataTypes().addCustomDataType(QStringLiteral("Lookup"), DataTypeBase::eCategory::Container));
+            CHECK(map != nullptr);
+            map->setContainer(QStringLiteral("HashMap"));
+            map->setKey(QStringLiteral("KeyKind"));
+            map->setValue(QStringLiteral("ValueKind"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, 6) == 2);
+        }
+
+        {   // The same container with types that exist reports nothing, so the check is not simply
+            // refusing every container.
+            StateMachineData doc;
+            addStart(doc);
+            DataTypeContainer* map = static_cast<DataTypeContainer*>(
+                    doc.getDataTypes().addCustomDataType(QStringLiteral("Lookup"), DataTypeBase::eCategory::Container));
+            CHECK(map != nullptr);
+            map->setContainer(QStringLiteral("HashMap"));
+            map->setKey(QStringLiteral("String"));
+            map->setValue(QStringLiteral("uint32"));
+            CHECK(countRule(SMValidator::validate(doc), 6) == 0);
+        }
     }
 }
 
@@ -2437,6 +2688,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testStartState();
     testDuplicates();
     testNameCollisions();
+    testDeclarationCollisions();
     testIdentifiers();
     testReferences();
     testFinalStart();

@@ -353,7 +353,8 @@ static void testValidationFindings()
     }
     check(rawCount >= 1, "every raw fragment is listed");
 
-    // Shadowing -> WARN: a stimulus parameter named like an attribute, referenced by the guard.
+    // A stimulus parameter that shares a name with an attribute binds the parameter by weight and
+    // is silent: the badge already says which symbol is meant, so there is nothing to report.
     data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("IsNightMode"))->setType(QStringLiteral("bool"));
     SMGuardParser::Result shadow = SMGuardParser::parse(data, tid, QStringLiteral("IsNightMode"));
     check(shadow.tree != nullptr, "shadowed name parses");
@@ -362,12 +363,12 @@ static void testValidationFindings()
     bool warned = false;
     for (const SMGuardValidation::Finding& finding : findings)
     {
-        if ((finding.kind == VKind::Shadowing) && (finding.severity == VSev::Warning))
+        if (finding.severity == VSev::Warning)
         {
             warned = true;
         }
     }
-    check(warned, "a referenced shadowing parameter yields a WARN");
+    check(warned == false, "a parameter hiding an attribute produces no finding");
 
     // Broken reference -> ERR: guard references a deleted attribute (forced delete).
     SMGuardParser::Result night = SMGuardParser::parse(data, tid, QStringLiteral("WalkRequested"));
@@ -385,8 +386,9 @@ static void testValidationFindings()
     }
     check(broken, "a forced delete leaves an ERR broken-reference finding");
 
-    // Re-bind info (v6 3.3): the guard holds a Param of the OLD stimulus; the new stimulus
-    // declares a parameter with the same name and type -> INFO, not ERR.
+    // A guard holds a Param of the old stimulus; a direct model change to a stimulus with no
+    // matching parameter leaves the id stale, which is a broken reference. (The stimulus command
+    // re-binds a same-name-same-type parameter silently -- the command tests cover that path.)
     StateMachineData data2;
     const uint32_t tid2 = buildDoc(data2);
     SMTransitionEntry* trans2 = data2.findTransitionById(tid2);
@@ -394,22 +396,6 @@ static void testValidationFindings()
     check(guard2.resolved(), "param guard resolves");
     trans2->getGuard().setTree(guard2.tree);
 
-    SMMethodEntry* other = data2.getMethods().createMethod(QStringLiteral("RequestRun"), SMMethodEntry::eMethodType::Trigger);
-    other->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
-    trans2->setStimulus(QStringLiteral("RequestRun"));
-
-    findings = SMGuardValidation::validateTransition(data2, tid2);
-    bool rebind = false;
-    for (const SMGuardValidation::Finding& finding : findings)
-    {
-        if ((finding.kind == VKind::ParamRebind) && (finding.severity == VSev::Info))
-        {
-            rebind = true;
-        }
-    }
-    check(rebind, "a same-name-same-type stimulus change reports the re-bind INFO");
-
-    // A stimulus change with NO matching parameter is an ERR.
     SMMethodEntry* bare = data2.getMethods().createMethod(QStringLiteral("RequestStop"), SMMethodEntry::eMethodType::Trigger);
     (void)bare;
     trans2->setStimulus(QStringLiteral("RequestStop"));
@@ -422,7 +408,7 @@ static void testValidationFindings()
             stale = true;
         }
     }
-    check(stale, "a stimulus change without a match is an ERR stale reference");
+    check(stale, "a stimulus change without a matching parameter is an ERR stale reference");
 }
 
 //////////////////////////////////////////////////////////////////////////

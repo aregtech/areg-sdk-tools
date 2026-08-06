@@ -21,8 +21,46 @@
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/model/sm/SMTypeCompat.hpp"
+
+namespace
+{
+    //!< A stimulus-parameter reference node paired with the name and type it currently binds to,
+    //!< captured before the stimulus changes so the new stimulus can be matched by name and type.
+    struct ParamRef
+    {
+        SMGuardNode*    node;
+        QString         name;
+        QString         type;
+    };
+
+    //!< Collects the parameter references of a guard sub-tree that still resolve in the current scope.
+    void collectParamRefs(SMGuardNode* node, const StateMachineData& data, uint32_t transitionId, QList<ParamRef>& out)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        if (node->getKind() == SMGuardNode::eKind::Param)
+        {
+            const QString name = SMGuardSymbols::paramName(data, transitionId, node->getSymbolId());
+            if (name.isEmpty() == false)
+            {
+                out.append(ParamRef{ node, name, SMGuardSymbols::paramType(data, transitionId, node->getSymbolId()) });
+            }
+        }
+
+        for (SMGuardNode* child : node->getChildren())
+        {
+            collectParamRefs(child, data, transitionId, out);
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // SMCreateTransitionCommand
@@ -197,24 +235,58 @@ void SMSetStimulusCommand::apply(SMTransitionEntry::eStimulusKind kind, const QS
 
 void SMSetStimulusCommand::redo()
 {
+    SMTransitionEntry* transition = data().findTransitionById(mId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
     if (mCaptured == false)
     {
-        const SMTransitionEntry* transition = data().findTransitionById(mId);
-        if (transition != nullptr)
-        {
-            mOldKind = transition->getStimulusKind();
-            mOldName = transition->getStimulus();
-        }
+        mOldKind   = transition->getStimulusKind();
+        mOldName   = transition->getStimulus();
+        mOrigGuard = transition->getGuard();    // a pristine copy so undo restores the original ids
+        mCaptured  = true;
+    }
 
-        mCaptured = true;
+    // Capture the parameter references the old stimulus still resolves, before the stimulus changes.
+    QList<ParamRef> refs;
+    SMGuard& guard = transition->getGuard();
+    if (guard.isOk() && (guard.getTree() != nullptr))
+    {
+        collectParamRefs(guard.getTree(), data(), mId, refs);
     }
 
     apply(mNewKind, mNewName);
+
+    // Re-bind each reference onto a parameter of the new stimulus that carries the same name and a
+    // compatible type. One with no match keeps its stale id and reads as a broken reference.
+    for (const ParamRef& ref : refs)
+    {
+        const uint32_t newId = SMGuardSymbols::paramId(data(), mId, ref.name);
+        if (newId == 0u)
+        {
+            continue;
+        }
+
+        const SMTypeCompat::eRank fit = SMTypeCompat::rank(SMGuardSymbols::paramType(data(), mId, newId), ref.type);
+        if ((fit == SMTypeCompat::eRank::Exact) || (fit == SMTypeCompat::eRank::Converts) || (fit == SMTypeCompat::eRank::Unknown))
+        {
+            ref.node->setSymbolId(newId);
+        }
+    }
 }
 
 void SMSetStimulusCommand::undo()
 {
+    SMTransitionEntry* transition = data().findTransitionById(mId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
     apply(mOldKind, mOldName);
+    transition->getGuard() = mOrigGuard;    // the pristine tree, so every re-bound id returns to its original
 }
 
 //////////////////////////////////////////////////////////////////////////

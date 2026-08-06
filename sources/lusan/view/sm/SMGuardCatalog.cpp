@@ -123,7 +123,28 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         result.append(sym);
     }
 
-    // FSM -- attributes (#), constants (K), named lambdas ({}), all teal.
+    // Condition methods come next in guard weight order (a bare name reaches a condition before
+    // it reaches an attribute or a constant): lambdas keep the FSM hue, handlers their own.
+    for (const SMMethodEntry* method : index.methodsOf(SMMethodEntry::eMethodType::Condition))
+    {
+        SMGuardSymbol sym;
+        sym.name        = method->getName();
+        sym.owner       = method->isLambdaCondition() ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
+        sym.refkind     = SMGuardSymbol::eRefKind::Cond;
+        sym.glyph       = method->isLambdaCondition() ? QStringLiteral("{}") : QStringLiteral("h");
+        sym.typeText    = method->getReturn();
+        sym.provenance  = method->isLambdaCondition() ? QStringLiteral("lambda") : QStringLiteral("handler()");
+        sym.symbolId    = method->getId();
+        for (const MethodParameter& param : method->getElements())
+        {
+            sym.paramNames.append(param.getName());
+            sym.paramTypes.append(param.getType());
+        }
+        sym.isCall = (sym.paramNames.isEmpty() == false);
+        result.append(sym);
+    }
+
+    // FSM -- attributes (#), constants (K), all teal.
     for (const SMAttributeEntry& attr : data.getAttributes().getElements())
     {
         SMGuardSymbol sym;
@@ -151,36 +172,6 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         result.append(sym);
     }
 
-    // Condition methods: lambdas stay in the FSM group, handlers in their own.
-    QList<SMGuardSymbol> handlers;
-    for (const SMMethodEntry* method : index.methodsOf(SMMethodEntry::eMethodType::Condition))
-    {
-        SMGuardSymbol sym;
-        sym.name        = method->getName();
-        sym.owner       = method->isLambdaCondition() ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
-        sym.refkind     = SMGuardSymbol::eRefKind::Cond;
-        sym.glyph       = method->isLambdaCondition() ? QStringLiteral("{}") : QStringLiteral("h");
-        sym.typeText    = method->getReturn();
-        sym.provenance  = method->isLambdaCondition() ? QStringLiteral("lambda") : QStringLiteral("handler()");
-        sym.symbolId    = method->getId();
-        for (const MethodParameter& param : method->getElements())
-        {
-            sym.paramNames.append(param.getName());
-            sym.paramTypes.append(param.getType());
-        }
-        sym.isCall = (sym.paramNames.isEmpty() == false);
-
-        if (method->isLambdaCondition())
-        {
-            result.append(sym);
-        }
-        else
-        {
-            handlers.append(sym);
-        }
-    }
-
-    result.append(handlers);
     return result;
 }
 

@@ -71,6 +71,8 @@ SMArgumentEntry::eValueSource SMArgumentEntry::fromSourceString(const QString& s
         return eValueSource::Expression;
     else if (source.compare(STR_SRC_LAMBDA, Qt::CaseInsensitive) == 0)
         return eValueSource::Lambda;
+    else if (source.compare(STR_SRC_INVALID, Qt::CaseInsensitive) == 0)
+        return eValueSource::Invalid;
     else
         return eValueSource::Value;
 }
@@ -85,6 +87,7 @@ const char* SMArgumentEntry::toString(SMArgumentEntry::eValueSource source)
     case eValueSource::Condition:   return STR_SRC_CONDITION;
     case eValueSource::Expression:  return STR_SRC_EXPRESSION;
     case eValueSource::Lambda:      return STR_SRC_LAMBDA;
+    case eValueSource::Invalid:     return STR_SRC_INVALID;
     case eValueSource::Value:
     default:                        return STR_SRC_VALUE;
     }
@@ -172,6 +175,11 @@ bool SMArgumentEntry::readFromXml(QXmlStreamReader& xml)
     setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
     mName   = attributes.value(XmlSM::xmlSMAttributeName).toString();
     mSource = fromSourceString(attributes.value(XmlSM::xmlSMAttributeSource).toString());
+    // A condition is no longer a mapping value source.
+    if (mSource == eValueSource::Condition)
+    {
+        mSource = eValueSource::Invalid;
+    }
     mValue  = attributes.value(XmlSM::xmlSMAttributeValue).toString();
     mExpression.clear();
 
@@ -329,7 +337,13 @@ bool SMOperationBase::readFromXml(QXmlStreamReader& xml)
     {
         SMAttributeSet* set = static_cast<SMAttributeSet*>(this);
         set->setAttribute(attributes.value(XmlSM::xmlSMAttributeAttribute).toString());
-        set->setSource(SMArgumentEntry::fromSourceString(attributes.value(XmlSM::xmlSMAttributeSource).toString()));
+        SMArgumentEntry::eValueSource attrSrc = SMArgumentEntry::fromSourceString(attributes.value(XmlSM::xmlSMAttributeSource).toString());
+        // A condition is no longer an attribute-set value source: mark it invalid rather than convert.
+        if (attrSrc == SMArgumentEntry::eValueSource::Condition)
+        {
+            attrSrc = SMArgumentEntry::eValueSource::Invalid;
+        }
+        set->setSource(attrSrc);
         set->setValue(attributes.value(XmlSM::xmlSMAttributeValue).toString());
         break;
     }

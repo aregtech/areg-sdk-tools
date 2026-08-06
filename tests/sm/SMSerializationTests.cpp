@@ -1352,6 +1352,31 @@ namespace
             CHECK(readAllBytes(twicePath) == written);
         }
     }
+
+    void testConditionSourceMigration()
+    {
+        std::printf("- argument Source=\"Condition\" migrates to an invalid mapping\n");
+
+        // An older document that still names a condition as an argument value source loads with the
+        // argument marked invalid; the bound value is kept, and nothing is silently converted.
+        QString in = QStringLiteral("<Argument ID=\"7\" Name=\"x\" Source=\"Condition\" Value=\"IsReady\"/>");
+        QXmlStreamReader reader(in);
+        reader.readNextStartElement();
+        SMArgumentEntry arg;
+        CHECK(arg.readFromXml(reader));
+        CHECK(arg.getSource() == SMArgumentEntry::eValueSource::Invalid);
+        CHECK(arg.getValue() == QStringLiteral("IsReady"));
+
+        // It saves with its marker and reopens invalid, so the error survives a save/load cycle.
+        QString out;
+        QXmlStreamWriter writer(&out);
+        arg.writeToXml(writer);
+        QXmlStreamReader back(out);
+        back.readNextStartElement();
+        SMArgumentEntry reloaded;
+        CHECK(reloaded.readFromXml(back));
+        CHECK(reloaded.getSource() == SMArgumentEntry::eValueSource::Invalid);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1383,6 +1408,7 @@ int main(int /*argc*/, char** /*argv*/)
     testHistoryModes();
     testLegacyMergedStart();
     testTransitionKind();
+    testConditionSourceMigration();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

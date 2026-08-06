@@ -175,6 +175,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMDataTypeModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp

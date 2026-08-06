@@ -135,7 +135,9 @@ static void testTypeRank()
     check(SMTypeCompat::rank(QStringLiteral("uint32"), QStringLiteral("uint16")) == eRank::Narrows, "uint32 -> uint16 Narrows");
     check(SMTypeCompat::rank(QStringLiteral("uint16"), QStringLiteral("double")) == eRank::Converts, "int<=32 -> double Converts");
     check(SMTypeCompat::rank(QStringLiteral("double"), QStringLiteral("uint16")) == eRank::Narrows, "double -> uint16 Narrows");
-    check(SMTypeCompat::rank(QStringLiteral("bool"), QStringLiteral("uint16")) == eRank::Mismatch, "bool vs uint16 Mismatch");
+    check(SMTypeCompat::rank(QStringLiteral("bool"), QStringLiteral("uint16")) == eRank::Narrows, "bool -> uint16 Narrows");
+    check(SMTypeCompat::rank(QStringLiteral("uint16"), QStringLiteral("bool")) == eRank::Narrows, "uint16 -> bool Narrows");
+    check(SMTypeCompat::rank(QStringLiteral("char"), QStringLiteral("uint16")) == eRank::Mismatch, "char vs uint16 Mismatch");
     check(SMTypeCompat::rank(QString(), QStringLiteral("uint16")) == eRank::Unknown, "empty type is Unknown");
     check(SMTypeCompat::rank(QStringLiteral("MyEnum"), QStringLiteral("MyEnum")) == eRank::Exact, "declared type by exact name");
     check(SMTypeCompat::rank(QStringLiteral("MyEnum"), QStringLiteral("uint16")) == eRank::Mismatch, "declared vs primitive Mismatch");

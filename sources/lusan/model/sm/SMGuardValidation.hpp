@@ -39,10 +39,10 @@ class SMGuardNode;
  * \class   SMGuardValidation
  * \brief   The guard rows of the document validation results -- the complete
  *          honesty surface of a document's guards: draft guards (ERR, the
- *          generator refuses them), shadowing (WARN), the raw-C++ fragment audit (INFO,
- *          the complete list of verbatim fragments), and broken/stale references (ERR;
- *          a stale stimulus parameter that matches the new stimulus by name and type is
- *          the re-bind case, reported as INFO). Validation covers `.fsml` content
+ *          generator refuses them), the raw-C++ fragment audit (INFO, the complete list
+ *          of verbatim fragments), and broken references (ERR). A stimulus change that
+ *          leaves a parameter matching by name and type re-binds silently at the command,
+ *          so it is not a finding at all. Validation covers `.fsml` content
  *          only -- raw C++ bodies are never parsed. View-free and headless-testable.
  *
  *          Every predicate in the format is checked here, which since L3 means a state
@@ -56,8 +56,7 @@ public:
     /**
      * \brief   Guard findings are document findings: one severity ladder for every checker
      *          (\ref DocIssue), so nothing has to translate between vocabularies.
-     *          Info = the raw-fragment audit / the re-bind notice; Warning = shadowing;
-     *          Error = drafts and broken references.
+     *          Info = the raw-fragment audit; Error = drafts and broken references.
      **/
     using eSeverity = DocIssue::eSeverity;
 
@@ -68,10 +67,8 @@ public:
     enum class eKind
     {
           Draft         //!< The guard is a draft -- generation refuses.
-        , Shadowing     //!< A referenced stimulus parameter hides an attribute/constant.
         , RawFragment   //!< One verbatim raw-C++ fragment (the audit).
         , BrokenRef     //!< A referenced symbol no longer exists / left the scope.
-        , ParamRebind   //!< A stale parameter matches the new stimulus (info).
     };
 
     /**
