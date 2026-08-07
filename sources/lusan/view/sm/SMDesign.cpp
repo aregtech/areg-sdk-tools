@@ -3016,13 +3016,12 @@ namespace
 
 void SMDesign::revealOnCanvas(uint32_t levelId, uint32_t canvasElementId)
 {
-    // The same reveal path the canvas search uses: navigate the level, select through the
-    // shared selection model, and center the viewport on the resulting item.
     mSceneManager->navigateTo(levelId);
     mModel.getSelectionModel().setSelection(QList<uint32_t>{ canvasElementId });
+    mView->setFocus(Qt::OtherFocusReason);
     if (SMCanvasItem* item = getScene().findCanvasItem(canvasElementId))
     {
-        mView->centerOn(item);
+        mView->ensureVisible(item);
     }
 }
 
