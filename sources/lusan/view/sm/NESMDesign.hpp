@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/common/NELusanCommon.hpp"
+
 #include <QColor>
 #include <QFont>
 #include <QList>
@@ -135,8 +137,9 @@ namespace NESMDesign
     //!< The width the Design page's Properties dock is given when the page is built. A dock that
     //!< was never assigned a width follows its widget's size hint, so the first selection that
     //!< fills the panel would push the canvas edge aside; handing it this width once makes the
-    //!< width the user's from the start. Wide enough for the panel's own pages at the default font.
-    constexpr int       PanelDefaultWidth   { 380 };
+    //!< width the user's from the start. Shares NELusanCommon::MIN_NAVI_WIDTH with the Navigation
+    //!< Window so the Design page opens with the left and right docks the same width.
+    constexpr int       PanelDefaultWidth   { static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH) };
 
     //!< The fixed canvas working area of one machine level.
     constexpr double    SceneExtent     { 10000.0 };
@@ -160,7 +163,7 @@ namespace NESMDesign
     //!< The header band height (name and badges).
     constexpr double    StateHeaderHeight   { 24.0 };
     //!< One behavior row's height in the state body. Kept tight so the action, event and timer rows
-    //!< of one Enter/Do/Exit group read as a single compact cluster (the zone glyph and continuation
+    //!< of one Enter/Internal/Exit group read as a single compact cluster (the zone glyph and continuation
     //!< cue still separate one group from the next); the extra slack falls between the zone bands.
     constexpr double    StateRowHeight      { 14.0 };
     //!< The horizontal text padding inside the state box.

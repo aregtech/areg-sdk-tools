@@ -135,18 +135,6 @@ public:
      **/
     static constexpr int RULE_TRANSITION_KIND { 28 };
 
-    /**
-     * \brief   The `DoList` contract: A `Do` activity is a timer loop and nothing else.
-     *          It must say how often it ticks: `Interval="0"` (the removed trigger-driven mode) and
-     *          an absent `Interval` are both refused, naming the state.
-     **/
-    static constexpr int RULE_DO_ACTIVITY { 29 };
-
-    // Rule 30 was retired before it was ever correct and its number is not reused. A composite and
-    // one of its descendants may react to the same stimulus: the search starts at the active leaf
-    // and walks up, so the descendant wins where it applies and the composite still answers from
-    // everywhere else. Neither hides the other, and nothing is reported.
-
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

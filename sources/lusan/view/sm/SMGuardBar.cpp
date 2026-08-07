@@ -731,8 +731,6 @@ void SMGuardBar::showWhereUsed(uint32_t symbolId)
     for (const SMGuardWhereUsed::Use& use : uses)
     {
         QAction* action = menu.addAction(use.location);
-        // Selecting by the OWNING element's id: a Do stop condition lives on its state page,
-        // and selecting a transition id that is really a state id would land nowhere.
         const uint32_t ownerId = use.target.getId();
         connect(action, &QAction::triggered, this, [this, ownerId]()
         {

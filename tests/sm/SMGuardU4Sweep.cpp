@@ -422,8 +422,8 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
         grab(&props, grabDir, "u4-properties-conditions.png");
     }
 
-    // The state page: [General|Enter|Do|Exit], with the General tab OPEN on arrival and stable in
-    // width however its sections are toggled (the two Properties-panel bugs of 2026-07-22).
+    // The state page: [General|Enter|Exit|Internal], with the General tab OPEN on arrival and stable
+    // in width however its sections are toggled (the two Properties-panel bugs of 2026-07-22).
     uint32_t stateId = 0u;
     for (const SMStateEntry* state : model.getData().getStates().getElements())
     {

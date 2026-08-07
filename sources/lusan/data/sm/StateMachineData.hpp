@@ -277,11 +277,10 @@ public:
     SMTransitionEntry* findTransitionById(uint32_t transitionId) const;
 
     /**
-     * \brief   Resolves a guard address to the guard itself: a transition's `<Guard>`, or the
-     *          `<Until>` stop condition of a state's `DoList`. THE one resolver, so the editing
-     *          surface, the undo commands and the validators can never disagree about which
-     *          value an address names. Returns nullptr when the ref addresses nothing or its
-     *          owning element no longer exists.
+     * \brief   Resolves a guard address to the guard itself: a transition's `<Guard>`. THE one
+     *          resolver, so the editing surface, the undo commands and the validators can never
+     *          disagree about which value an address names. Returns nullptr when the ref
+     *          addresses nothing or its owning element no longer exists.
      **/
     SMGuard* findGuard(const SMGuardRef& ref) const;
 

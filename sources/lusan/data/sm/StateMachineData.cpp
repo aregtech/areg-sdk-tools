@@ -885,12 +885,6 @@ SMGuard* StateMachineData::findGuard(const SMGuardRef& ref) const
         return (transition != nullptr) ? &transition->getGuard() : nullptr;
     }
 
-    case SMGuardRef::eOwner::DoActivity:
-    {
-        SMStateEntry* state = findStateById(ref.getId());
-        return (state != nullptr) ? &state->getDoUntil() : nullptr;
-    }
-
     case SMGuardRef::eOwner::None:
     default:
         return nullptr;

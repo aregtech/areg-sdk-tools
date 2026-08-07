@@ -48,8 +48,8 @@ namespace SMGuardWhereUsed
      **/
     struct Use
     {
-        SMGuardRef  target;         //!< The referencing guard (transition guard / Do stop condition).
-        QString     location;       //!< Human-readable place: `State : stimulus -> target`, or `State : do/`.
+        SMGuardRef  target;         //!< The referencing guard (a transition's `<Guard>`).
+        QString     location;       //!< Human-readable place: `State : stimulus -> target`.
     };
 
     //!< Every guard (ok tree or draft last-good tree) referencing the symbol \p symbolId.

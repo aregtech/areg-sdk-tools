@@ -723,7 +723,7 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         }
 
         // A ` \` continuation cue at the right edge says "the next row belongs to this same
-        // Enter/Do/Exit group"; reserve its width so it never overlaps the row text.
+        // Enter/Exit group"; reserve its width so it never overlaps the row text.
         const double cueW = (continues ? (metrics.horizontalAdvance(QStringLiteral("\\")) + 4.0) : 0.0);
         // A second mark takes a second gutter slot, so that row's text starts one mark further in.
         // Only the `on <stimulus>` header of an internal transition has one.
@@ -1028,7 +1028,7 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         return SMKindGlyph::prefix(SMKindGlyph::operationGlyph(op)) + withoutRowVerb(op, summary);
     };
 
-    // The band mark of an Enter/Do/Exit group, so the reader sees which activity a row belongs to.
+    // The band mark of an Enter/Exit group, so the reader sees which activity a row belongs to.
     // An internal transition is not a zone but a construct, and brings its own mark below.
     const auto zoneGlyph = [](eRowZone zone) -> SMKindGlyph::eGlyph
     {
@@ -1036,11 +1036,11 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         {
         case eRowZone::Enter:   return SMKindGlyph::eGlyph::Entry;
         case eRowZone::Exit:    return SMKindGlyph::exitGlyph();
-        default:                return SMKindGlyph::eGlyph::Do;
+        default:                return SMKindGlyph::eGlyph::None;    // Middle rows carry their own mark.
         }
     };
 
-    // One Enter/Do/Exit group, ordered action, event, then all timers on one row. The first row
+    // One Enter/Exit group, ordered action, event, then all timers on one row. The first row
     // always carries the band mark, except for an internal transition whose header already has it.
     const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone, bool bandRow = true)
     {
@@ -1117,7 +1117,6 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     // Zone by zone -- Enter at the top, everything that runs WHILE in the state in the middle, Exit
     // anchored to the bottom -- so the box reads in the order the state actually executes.
     appendGroup(state.getEntryList(), eRowZone::Enter);
-    appendGroup(state.getDoList(), eRowZone::Middle);
 
     // A transition with a target shows its operations on its edge, one without reads here as its
     // own group whose header separates an internal from an unconnected external transition.

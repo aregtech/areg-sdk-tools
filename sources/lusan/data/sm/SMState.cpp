@@ -83,10 +83,6 @@ SMStateEntry::SMStateEntry(ElementBase* parent /*= nullptr*/)
     , mDescription  ( )
     , mEntryList    (this)
     , mExitList     (this)
-    , mDoList       (this)
-    , mDoInterval   (SMStateEntry::DEFAULT_DO_INTERVAL)
-    , mDoUntil      ( )
-    , mDoUntilLegacy( )
     , mTransitions  (this)
     , mNested       (nullptr)
 {
@@ -102,10 +98,6 @@ SMStateEntry::SMStateEntry(uint32_t id, const QString& name, eStateKind kind, El
     , mDescription  ( )
     , mEntryList    (this)
     , mExitList     (this)
-    , mDoList       (this)
-    , mDoInterval   (SMStateEntry::DEFAULT_DO_INTERVAL)
-    , mDoUntil      ( )
-    , mDoUntilLegacy( )
     , mTransitions  (this)
     , mNested       (nullptr)
 {
@@ -121,16 +113,11 @@ SMStateEntry::SMStateEntry(const SMStateEntry& src)
     , mDescription  (src.mDescription)
     , mEntryList    (src.mEntryList)
     , mExitList     (src.mExitList)
-    , mDoList       (src.mDoList)
-    , mDoInterval   (src.mDoInterval)
-    , mDoUntil      (src.mDoUntil)
-    , mDoUntilLegacy(src.mDoUntilLegacy)
     , mTransitions  (src.mTransitions)
     , mNested       (src.mNested != nullptr ? new SMStateData(*src.mNested) : nullptr)
 {
     mEntryList.setParent(this);
     mExitList.setParent(this);
-    mDoList.setParent(this);
     mTransitions.setParent(this);
     if (mNested != nullptr)
     {
@@ -148,17 +135,12 @@ SMStateEntry::SMStateEntry(SMStateEntry&& src) noexcept
     , mDescription  (std::move(src.mDescription))
     , mEntryList    (std::move(src.mEntryList))
     , mExitList     (std::move(src.mExitList))
-    , mDoList       (std::move(src.mDoList))
-    , mDoInterval   (src.mDoInterval)
-    , mDoUntil      (std::move(src.mDoUntil))
-    , mDoUntilLegacy(std::move(src.mDoUntilLegacy))
     , mTransitions  (std::move(src.mTransitions))
     , mNested       (src.mNested)
 {
     src.mNested = nullptr;
     mEntryList.setParent(this);
     mExitList.setParent(this);
-    mDoList.setParent(this);
     mTransitions.setParent(this);
     if (mNested != nullptr)
     {
@@ -185,10 +167,6 @@ SMStateEntry& SMStateEntry::operator = (const SMStateEntry& other)
         mDescription = other.mDescription;
         mEntryList   = other.mEntryList;
         mExitList    = other.mExitList;
-        mDoList      = other.mDoList;
-        mDoInterval  = other.mDoInterval;
-        mDoUntil     = other.mDoUntil;
-        mDoUntilLegacy = other.mDoUntilLegacy;
         mTransitions = other.mTransitions;
 
         delete mNested;
@@ -196,7 +174,6 @@ SMStateEntry& SMStateEntry::operator = (const SMStateEntry& other)
 
         mEntryList.setParent(this);
         mExitList.setParent(this);
-        mDoList.setParent(this);
         mTransitions.setParent(this);
         if (mNested != nullptr)
         {
@@ -220,10 +197,6 @@ SMStateEntry& SMStateEntry::operator = (SMStateEntry&& other) noexcept
         mDescription = std::move(other.mDescription);
         mEntryList   = std::move(other.mEntryList);
         mExitList    = std::move(other.mExitList);
-        mDoList      = std::move(other.mDoList);
-        mDoInterval  = other.mDoInterval;
-        mDoUntil     = std::move(other.mDoUntil);
-        mDoUntilLegacy = std::move(other.mDoUntilLegacy);
         mTransitions = std::move(other.mTransitions);
 
         delete mNested;
@@ -232,7 +205,6 @@ SMStateEntry& SMStateEntry::operator = (SMStateEntry&& other) noexcept
 
         mEntryList.setParent(this);
         mExitList.setParent(this);
-        mDoList.setParent(this);
         mTransitions.setParent(this);
         if (mNested != nullptr)
         {
@@ -337,11 +309,6 @@ bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
         setOnFinal(attributes.value(XmlSM::xmlSMAttributeOnFinal).toString());
     }
     mDescription.clear();
-    // 0, not the editor default: a document that names no interval must read back as one that
-    // names no interval, so validation can say so. Inventing a period here would hide the fault.
-    mDoInterval = 0u;
-    mDoUntil.clear();
-    mDoUntilLegacy.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementState))
     {
@@ -358,22 +325,6 @@ bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
             else if (xml.name() == XmlSM::xmlSMElementExitList)
             {
                 mExitList.readFromXml(xml, XmlSM::xmlSMElementExitList);
-            }
-            else if (xml.name() == XmlSM::xmlSMElementDoList)
-            {
-                // The tick period rides on the wrapper element, so capture it before delegating the
-                // child operations. The legacy `Until` text is kept byte-for-byte for the load shim.
-                const QXmlStreamAttributes doAttributes = xml.attributes();
-                mDoInterval    = doAttributes.value(XmlSM::xmlSMAttributeInterval).toUInt();
-                mDoUntilLegacy = doAttributes.value(XmlSM::xmlSMAttributeUntil).toString();
-                // The stop condition is a tree, so it is a child element. It is the one child of an
-                // operation-list wrapper that is not an operation, so the reader hands it back here.
-                mDoList.readFromXml(xml, XmlSM::xmlSMElementDoList, [this](QXmlStreamReader& reader) -> bool
-                {
-                    return (reader.name() == XmlSM::xmlSMElementUntil)
-                            ? mDoUntil.readFromXml(reader, XmlSM::xmlSMElementUntil)
-                            : false;
-                });
             }
             else if (xml.name() == XmlSM::xmlSMElementTransitionList)
             {
@@ -416,21 +367,6 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
     mEntryList.writeToXml(xml, XmlSM::xmlSMElementEntryList);
     mExitList.writeToXml(xml, XmlSM::xmlSMElementExitList);
-    // The Do list carries a repeat policy, so it is written by hand: the tick period, the stop
-    // condition, then the operations. Nothing is written when the list is empty.
-    if (mDoList.isEmpty() == false)
-    {
-        xml.writeStartElement(XmlSM::xmlSMElementDoList);
-        // Always written, including a 0 that no document should contain: a Do is a timer loop, so
-        // the period is what makes it one, and writing the 0 back keeps the fault visible.
-        xml.writeAttribute(XmlSM::xmlSMAttributeInterval, QString::number(mDoInterval));
-        mDoUntil.writeToXml(xml, XmlSM::xmlSMElementUntil);
-        for (const SMOperationBase* op : mDoList.getOperations())
-        {
-            op->writeToXml(xml);
-        }
-        xml.writeEndElement();
-    }
     mTransitions.writeToXml(xml);
     // A submachine is persisted only when it owns at least one Normal state. Otherwise the state
     // serializes as a plain leaf and its layout is dropped with it.

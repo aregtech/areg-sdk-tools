@@ -2844,7 +2844,6 @@ int main(int argc, char* argv[])
             };
 
             clear(host->getEntryList());
-            clear(host->getDoList());
             clear(host->getExitList());
             host->getEntryList().addOperation(new SMEventSend(0, QStringLiteral("NewEvent")));
             host->getExitList().addOperation(new SMTimerStart(0, QStringLiteral("NewTimer")));
@@ -3725,15 +3724,15 @@ int main(int argc, char* argv[])
         CHECK(stateTabs != nullptr);
         if ((lpanel != nullptr) && (stateTabs != nullptr) && (start != nullptr) && (plain != nullptr))
         {
-            // An ordinary state offers all five tabs: General, Enter, Do, Exit, Internal. The four
-            // after General are the four things a state does without leaving itself, and Internal
+            // An ordinary state offers all four tabs: General, Enter, Exit, Internal. The three
+            // after General are the three things a state does without leaving itself, and Internal
             // used to be missing from that set -- reachable only by double-clicking a row in a
             // collapsible list on the General tab.
             lmodel.getSelectionModel().setSelection(QList<uint32_t>{ plain->getId() });
             QApplication::processEvents();
-            CHECK(stateTabs->count() == 5);
-            CHECK(stateTabs->isTabVisible(1) && stateTabs->isTabVisible(2) && stateTabs->isTabVisible(3));
-            CHECK(stateTabs->isTabVisible(4));
+            CHECK(stateTabs->count() == 4);
+            CHECK(stateTabs->isTabVisible(1) && stateTabs->isTabVisible(2));
+            CHECK(stateTabs->isTabVisible(3));
 
             // The Start offers only General: a pseudo-state performs nothing, so the editor must
             // not present a place to put operations, and there is no behaviour to describe.
@@ -3741,8 +3740,7 @@ int main(int argc, char* argv[])
             QApplication::processEvents();
             CHECK(stateTabs->isTabVisible(1) == false);
             CHECK(stateTabs->isTabVisible(2) == false);
-            CHECK(stateTabs->isTabVisible(3) == false);
-            CHECK(stateTabs->isTabVisible(4) == false);     // everything a Start owns is initial
+            CHECK(stateTabs->isTabVisible(3) == false);     // everything a Start owns is initial
             CHECK(stateTabs->currentIndex() == 0);
             QPlainTextEdit* desc = lpanel->findChild<QPlainTextEdit*>(QStringLiteral("smStateDescription"));
             CHECK(desc != nullptr);
@@ -3880,13 +3878,13 @@ int main(int argc, char* argv[])
         SMPropertiesPanel* ipanel = (idock != nullptr ? qobject_cast<SMPropertiesPanel*>(idock->widget()) : nullptr);
         CHECK(ipanel != nullptr);
 
-        // No two constructs share a mark. This is the whole of defects 1, 2 and 4: `Internal` used
-        // to stand for BOTH the do band and an internal transition, and `Trigger` drew nothing at
-        // all, so `on <timer>` and `<action>()` were one and the same row to a reader.
+        // No two constructs share a mark. This is the whole of defects 1, 2 and 4: `Trigger` used
+        // to draw nothing at all, so `on <timer>` and `<action>()` were one and the same row to a
+        // reader.
         const QList<SMKindGlyph::eGlyph> vocabulary
         {
               SMKindGlyph::eGlyph::Entry,   SMKindGlyph::eGlyph::Exit
-            , SMKindGlyph::eGlyph::Do,      SMKindGlyph::eGlyph::Internal
+            , SMKindGlyph::eGlyph::Internal
             , SMKindGlyph::eGlyph::Action,  SMKindGlyph::eGlyph::Trigger
             , SMKindGlyph::eGlyph::Event,   SMKindGlyph::eGlyph::TimerStart
             , SMKindGlyph::eGlyph::TimerStop
@@ -3896,7 +3894,6 @@ int main(int argc, char* argv[])
             CHECK(SMKindGlyph::isDrawn(glyph));     // every one of them is actually drawn
         }
 
-        CHECK(SMKindGlyph::eGlyph::Do != SMKindGlyph::eGlyph::Internal);
         CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Trigger, QColor(Qt::black)).isNull() == false);
         CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Action, QColor(Qt::black)).isNull() == false);
 

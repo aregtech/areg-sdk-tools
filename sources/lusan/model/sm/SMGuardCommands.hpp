@@ -29,7 +29,7 @@
 #include <QList>
 
 /**
- * The undoable edits of a guard -- a transition's `<Guard>` or a state `DoList`'s `<Until>`
+ * The undoable edits of a guard -- a transition's `<Guard>`
  * stop condition, addressed by \ref SMGuardRef (a bare transition id still converts, so every
  * existing call reads the same). Every command resolves its target by that address each
  * redo/undo (history never dangles a captured pointer) and emits a single `elementChanged`
@@ -60,7 +60,7 @@ private:
     void apply(const SMGuard& guard);
 
 private:
-    SMGuardRef  mTarget;    //!< The addressed guard (transition guard / Do stop condition).
+    SMGuardRef  mTarget;    //!< The addressed guard (a transition's `<Guard>`).
     SMGuard     mNew;       //!< The guard to install.
     SMGuard     mOld;       //!< The captured previous guard.
     bool        mCaptured;  //!< True after the previous guard has been captured.

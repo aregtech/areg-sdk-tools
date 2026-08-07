@@ -90,14 +90,6 @@ namespace
                 }
             }
 
-            // The Do stop condition is searched for the same reason the guards are: it binds by
-            // ID, so it follows a rename -- and a delete that ignored it would leave it dangling.
-            if ((state->getDoList().isEmpty() == false) && treeReferences(state->getDoUntil().getTree(), symbolId))
-            {
-                out.append({ SMGuardRef::doActivity(state->getId())
-                           , state->getName() + QStringLiteral(" : do/") });
-            }
-
             if (state->hasNestedStates())
             {
                 collectFromLevel(*state->getNestedStates(), symbolId, out);

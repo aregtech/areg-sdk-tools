@@ -244,11 +244,11 @@ private:
  * \class   SMGuard
  * \brief   A resolved boolean predicate: `empty` (none), `ok` (a fully resolved expression
  *          tree), or `draft` (the user's raw text kept losslessly, plus an optional last-good
- *          tree). Two things in a document are one of these: a transition's guard, persisted
- *          under `<Guard>`, and a `DoList`'s stop condition, persisted under `<Until>` -- which
- *          is why the XML element name is a parameter rather than a constant. The absence of
- *          the element means empty. `<Rendered>` is a human-readable cache written on save and
- *          ignored (semantically) on load -- the tree is the truth.
+ *          tree). One thing in a document is one of these: a transition's guard, persisted
+ *          under `<Guard>`. The XML element name stays a parameter rather than a constant so a
+ *          second predicate can be persisted under its own name without touching this class. The
+ *          absence of the element means empty. `<Rendered>` is a human-readable cache written on
+ *          save and ignored (semantically) on load -- the tree is the truth.
  **/
 class SMGuard
 {
@@ -328,9 +328,8 @@ public:
     void writeToXml(QXmlStreamWriter& xml) const;
 
     /**
-     * \brief   The same, under the element name \p element. A `DoList`'s stop condition is
-     *          the very same value written as `<Until>`, so it gets the very same writer
-     *          rather than a second one that could drift from it.
+     * \brief   The same, under the element name \p element, so a predicate persisted under
+     *          another name gets this writer rather than a second one that could drift.
      **/
     void writeToXml(QXmlStreamWriter& xml, QLatin1StringView element) const;
 
@@ -340,7 +339,7 @@ public:
      **/
     bool readFromXml(QXmlStreamReader& xml);
 
-    //!< The same, expecting the element name \p element (`<Until>` for a `DoList`).
+    //!< The same, expecting the element name \p element.
     bool readFromXml(QXmlStreamReader& xml, QLatin1StringView element);
 
 //////////////////////////////////////////////////////////////////////////
@@ -359,19 +358,13 @@ private:
 
 /**
  * \class   SMGuardRef
- * \brief   Which guard of the document an editor or an undo command is talking about. A
- *          document holds two kinds: a transition's `<Guard>`, and a state `DoList`'s
- *          `<Until>` stop condition. Both are an \ref SMGuard, both are edited on the same
- *          surface and both are changed by the same command, so what they need is not two
- *          implementations but one address that says which of them is meant.
+ * \brief   Which guard of the document an editor or an undo command is talking about. The
+ *          document holds one kind, a transition's `<Guard>`, and the address stays a type of
+ *          its own so the editing surface and the undo command keep addressing a guard rather
+ *          than assuming which one.
  *
  *          A bare transition id converts implicitly, which is the spelling every existing
  *          call site already uses -- the ref is what that id always meant.
- *
- *          \ref getScopeId is the difference that matters to the parser and the renderer:
- *          a transition resolves stimulus parameters (its own), a `DoList` resolves none.
- *          A `do/` activity runs on a timer with no stimulus in hand, so a parameter name
- *          simply has nothing to bind to there, and scope 0 says exactly that.
  **/
 class SMGuardRef
 {
@@ -384,11 +377,7 @@ public:
     {
           None          //!< Addresses nothing (the cleared editor).
         , Transition    //!< A transition's `<Guard>`.
-        , DoActivity    //!< A state `DoList`'s `<Until>` stop condition.
     };
-
-    //!< Addresses the `<Until>` of the `DoList` owned by the state \p stateId.
-    static inline SMGuardRef doActivity(uint32_t stateId);
 
 public:
     inline SMGuardRef();
@@ -400,10 +389,9 @@ public:
     inline bool isValid() const;
 
     /**
-     * \brief   The transition id that names the stimulus parameter scope of this guard: the
-     *          transition itself, or 0 for a `DoList` (which has no stimulus, so no parameter
-     *          is in scope). Pass it wherever \ref SMGuardParser / \ref SMGuardRender ask for
-     *          a transition id.
+     * \brief   The transition id that names the stimulus parameter scope of this guard, or 0
+     *          when the ref addresses nothing. Pass it wherever \ref SMGuardParser /
+     *          \ref SMGuardRender ask for a transition id.
      **/
     inline uint32_t getScopeId() const;
 
@@ -616,11 +604,6 @@ inline SMGuardRef::SMGuardRef(eOwner owner, uint32_t id)
     : mOwner(id != 0u ? owner : eOwner::None)
     , mId   (id)
 {
-}
-
-inline SMGuardRef SMGuardRef::doActivity(uint32_t stateId)
-{
-    return SMGuardRef(eOwner::DoActivity, stateId);
 }
 
 inline SMGuardRef::eOwner SMGuardRef::getOwner() const

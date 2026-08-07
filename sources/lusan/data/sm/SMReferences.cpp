@@ -163,7 +163,6 @@ namespace
             // State-owned operation lists.
             collectStateList(*state, state->getEntryList(), QStringLiteral("entry"), out);
             collectStateList(*state, state->getExitList(),  QStringLiteral("exit"),  out);
-            collectStateList(*state, state->getDoList(),    QStringLiteral("do"),    out);
 
             // The hosted submachine: the state names an entry of the ImportList by alias.
             if (state->getSubmachine().isEmpty() == false)

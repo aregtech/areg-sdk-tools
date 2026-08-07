@@ -311,9 +311,8 @@ bool MdiChild::maybeSave()
         return true;
 
     const QMessageBox::StandardButton ret
-        = QMessageBox::warning(this, tr("MDI"),
-            tr("'%1' has been modified.\n"
-               "Do you want to save your changes?")
+        = QMessageBox::warning(this, tr("lusan"),
+            tr("'%1' has been modified.\nDo you want to save your changes?")
             .arg(userFriendlyCurrentFile()),
             QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
     switch (ret)

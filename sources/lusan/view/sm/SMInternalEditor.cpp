@@ -164,7 +164,7 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     // transition is a transition, and a second, lesser editor for it would drift from the first.
     mOperations = new SMOperationsEditor(mModel, this);
     // Here the editor shares its height with a picker, a stimulus row and a tab bar, so only one
-    // section opens at a time. On the Enter/Do/Exit tabs it owns the tab and keeps all three open.
+    // section opens at a time. On the Enter/Internal/Exit tabs it owns the tab and keeps all three open.
     mOperations->setSectionsCompact(true);
 
     mGuard = new SMGuardBar(mModel, this);

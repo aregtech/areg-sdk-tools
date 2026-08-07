@@ -1203,63 +1203,6 @@ namespace
 // L3: loading a pre-L3 document resolves its free-text `Until` into a tree
 //////////////////////////////////////////////////////////////////////////
 
-namespace
-{
-    /**
-     * \brief   The L3 load shim, driven through the REAL model. The rule itself is proved in
-     *          SML3ProofTests; what is proved here is that `loadFromFile` actually applies it --
-     *          the shim runs once, on load, and nothing downstream has to remember to.
-     **/
-    void testLegacyDoUntilShim()
-    {
-        std::printf("[L3] loadFromFile resolves a legacy DoList@Until into a guard tree\n");
-
-        QTemporaryDir dir;
-        CHECK(dir.isValid());
-        const QString path = QDir(dir.path()).absoluteFilePath(QStringLiteral("legacy_until.fsml"));
-
-        QFile file(path);
-        CHECK(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
-        file.write(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
-            "<StateMachine FormatVersion=\"1.1.0\">\n"
-            "  <Overview ID=\"1\" Name=\"LegacyUntil\" Version=\"1.0.0\"/>\n"
-            "  <AttributeList>\n"
-            "    <Attribute ID=\"10\" Name=\"Maintenance\" DataType=\"bool\" Value=\"false\"/>\n"
-            "  </AttributeList>\n"
-            "  <StateList>\n"
-            "    <State ID=\"2\" Name=\"Begin\" Kind=\"Start\">\n"
-            "      <TransitionList><Transition ID=\"3\" Kind=\"Initial\" To=\"4\"/></TransitionList>\n"
-            "    </State>\n"
-            "    <State ID=\"4\" Name=\"Running\" Kind=\"Normal\">\n"
-            "      <DoList Interval=\"2000\" Until=\"Maintenance\">\n"
-            "        <InlineCode ID=\"5\"><Body><![CDATA[poll();]]></Body></InlineCode>\n"
-            "      </DoList>\n"
-            "    </State>\n"
-            "  </StateList>\n"
-            "</StateMachine>\n");
-        file.close();
-
-        SMDocumentCache::getInstance().clear();
-        StateMachineModel model;
-        CHECK(model.loadFromFile(path));
-
-        const SMStateEntry* running = model.getData().findState(QStringLiteral("Running"));
-        CHECK(running != nullptr);
-        if (running != nullptr)
-        {
-            // The string is consumed, not merely carried: the shim is one-shot by design.
-            CHECK(running->getDoUntilLegacy().isEmpty());
-            CHECK(running->getDoUntil().isOk());
-            const SMGuardNode* tree = running->getDoUntil().getTree();
-            CHECK(tree != nullptr);
-            CHECK((tree != nullptr) && (tree->getKind() == SMGuardNode::eKind::Attr));
-            CHECK((tree != nullptr) && (tree->getSymbolId() == 10u));
-            CHECK(running->getDoInterval() == 2000u);
-        }
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////
 // Scenario: re-pointing a transition re-binds a matching guard parameter silently
 //////////////////////////////////////////////////////////////////////////
@@ -1324,7 +1267,6 @@ int main(int /*argc*/, char* /*argv*/[])
     testSubmachineHosting();
     testImportPreChecks();
     testRemoveComposite();
-    testLegacyDoUntilShim();
     testStimulusSilentRebind();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

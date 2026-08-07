@@ -112,7 +112,6 @@ namespace
         const Row rows[]
         {
               { SMKindGlyph::eGlyph::Entry,      "Entry -- an entry operation" }
-            , { SMKindGlyph::eGlyph::Do,         "Do -- the repeated activity" }
             , { SMKindGlyph::eGlyph::Internal,   "Internal -- an internal transition" }
             , { SMKindGlyph::exitGlyph(),        "Exit -- an exit operation" }
             , { SMKindGlyph::eGlyph::Trigger,    "Trigger -- a trigger stimulus" }
