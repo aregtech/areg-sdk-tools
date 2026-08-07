@@ -76,7 +76,7 @@ SMTypeCompat::eRank SMTypeCompat::rank(const QString& fromType, const QString& t
     // C++ converts between bool and a number in either direction without being asked, so a
     // mapping that pairs them builds. It is lossy -- a number collapses to a zero test, a bool
     // arrives as 0 or 1 -- which is what the narrowing status says. char stays out of this.
-    if (((fromType == "bool") && isNumeric(toType)) || ((toType == "bool") && isNumeric(fromType)))
+    if (isBoolNumberComparison(fromType, toType))
         return eRank::Narrows;
 
     return eRank::Mismatch;
@@ -100,6 +100,11 @@ bool SMTypeCompat::isNumeric(const QString& typeName)
 bool SMTypeCompat::isPrimitive(const QString& typeName)
 {
     return isBoolOrString(typeName) || isChar(typeName) || isNumeric(typeName);
+}
+
+bool SMTypeCompat::isBoolNumberComparison(const QString& lhsType, const QString& rhsType)
+{
+    return ((lhsType == "bool") && isNumeric(rhsType)) || ((rhsType == "bool") && isNumeric(lhsType));
 }
 
 bool SMTypeCompat::widensTo(const QString& fromType, const QString& toType)

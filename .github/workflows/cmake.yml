@@ -1,7 +1,8 @@
-# Builds the Lusan application on three targets:
+# Builds the Lusan application on four targets:
 #   1. Windows  -- MSVC 2022 + Qt 6.8 (aqt)          -> proves the modern Windows/MSVC path
 #   2. Linux    -- Ubuntu + Qt 6.8 (aqt)             -> proves the modern Linux path
 #   3. Linux    -- Ubuntu 24.04 + Qt 6.4.2 (apt)     -> proves the Qt 6.4 support
+#   4. macOS    -- Apple Clang + Qt 6.8 (aqt)        -> proves the macOS path, including the POST_BUILD macdeployqt step
 #
 # Lusan fetches the Areg SDK and the Qt Advanced Docking System via CMake FetchContent,
 # so every job needs network access and a compiler toolchain; the SDK is compiled once
@@ -13,14 +14,11 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main, "feature/**", "bugfix/**" ]
-    # branches: [ main ]
+    # branches: [ main, "feature/**", "bugfix/**" ]
+    branches: [ main ]
   workflow_dispatch:
 
-# Least-privilege GITHUB_TOKEN: every job only checks out the repo and uploads build
-# artifacts (artifact upload uses ACTIONS_RUNTIME_TOKEN, not GITHUB_TOKEN), so read-only
-# access to repository contents is all that is required. Applied at the workflow root, it
-# covers all jobs that do not define their own permissions block.
+# Least-privilege GITHUB_TOKEN
 permissions:
   contents: read
 
@@ -159,4 +157,42 @@ jobs:
           path: |
             build/**/lusan
             build/**/lusan.elf
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # 4. macOS -- Apple Clang + Qt 6.8 (aqt)
+  #    Also the regression guard for the POST_BUILD macdeployqt step, which has
+  #    no Windows/Linux equivalent to catch a mistake in.
+  # ---------------------------------------------------------------------------
+  macos-qt68:
+    name: macOS (Apple Clang, Qt 6.8)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Install Qt (aqt)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_MODERN_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          cache: true
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j12
+
+      - name: Upload lusan.app
+        uses: actions/upload-artifact@v7
+        with:
+          name: lusan-macos-qt68
+          path: |
+            build/**/lusan.app/**
           if-no-files-found: warn

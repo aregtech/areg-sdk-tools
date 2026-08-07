@@ -102,7 +102,7 @@ if (WIN32)
     )
 elseif (APPLE)
     add_custom_command(TARGET lusan POST_BUILD
-        COMMAND "${_qt_bin_dir}/macdeployqt .exe"
+        COMMAND "${_qt_bin_dir}/macdeployqt"
             --no-opengl-sw
             --no-compiler-runtime
             --no-translations

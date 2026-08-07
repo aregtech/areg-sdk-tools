@@ -81,6 +81,13 @@ public:
      **/
     static bool isPrimitive(const QString& typeName);
 
+    /**
+     * \brief   True when the two types are exactly the bool-against-a-number case: C++
+     *          converts bool to 0 or 1 for the comparison, so it builds -- lossy, not illegal.
+     *          Matches the same pairing \ref rank reports as \ref eRank::Narrows.
+     **/
+    static bool isBoolNumberComparison(const QString& lhsType, const QString& rhsType);
+
 private:
     static bool isBoolOrString(const QString& typeName);
     static bool isChar(const QString& typeName);

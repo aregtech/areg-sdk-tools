@@ -1217,7 +1217,14 @@ namespace
         {
             const QString reason = SMTypeCompat::areComparable(lhsType, op, rhsType);
             if (reason.isEmpty() == false)
-                add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
+            {
+                // bool against a number is a comparison C++ builds -- lossy, not illegal --
+                // so it warns like every other narrowing conversion instead of refusing.
+                if (SMTypeCompat::isBoolNumberComparison(lhsType, rhsType))
+                    add(id, eDocElementKind::Condition, eSeverity::Warning, 13, vtr("Comparing '%1' with '%2' narrows: bool converts to 0 or 1 before the comparison").arg(lhsType, rhsType));
+                else
+                    add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
+            }
         }
 
         // a comparison of two design-time constants (literals or Constant sources).
@@ -1384,6 +1391,14 @@ namespace
                     , vtr("Import '%1' is pinned to version %2, the file is %3; updating is recommended")
                         .arg(name, pinned.toString(), actual.toString()));
             }
+            else if (entry.consumeVersionPatchAutoFixed())
+            {
+                // A patch-only drift is fixed silently on load (see StateMachineModel::loadFromFile);
+                // this is the one-time notice that it happened, not a finding to act on.
+                add(id, eDocElementKind::Import, eSeverity::Info, 12
+                    , vtr("Import '%1' pin was updated to %2 to match the file's patch level")
+                        .arg(name, pinned.toString()));
+            }
             else if (pinned.getPatch() != actual.getPatch())
             {
                 add(id, eDocElementKind::Import, eSeverity::Info, 12
@@ -1528,6 +1543,69 @@ namespace
                         break;
                     }
                 }
+            }
+        }
+
+        // A state that hosts an import owns a member named 'm' plus its own name; a declared
+        // timer owns 'mTimer' plus its own name. Either can land on a member the machine class
+        // already has for itself -- not a prefix reserved for another kind (checked above), but
+        // a name the generator picked for its own bookkeeping. 'OwnLock' and 'Epoch' only exist
+        // on a Shared machine; the rest exist on every machine.
+        static constexpr QLatin1StringView fixedMembers[]
+        {
+              QLatin1StringView("ActionHandler"), QLatin1StringView("InstanceName")
+            , QLatin1StringView("Lock"),          QLatin1StringView("MasterThread")
+            , QLatin1StringView("OwnProcessing"), QLatin1StringView("Processing")
+            , QLatin1StringView("State"),         QLatin1StringView("EventConsumer")
+            , QLatin1StringView("TimerConsumer"), QLatin1StringView("FinalObserver")
+        };
+        static constexpr QLatin1StringView sharedFixedMembers[]
+        {
+              QLatin1StringView("OwnLock"), QLatin1StringView("Epoch")
+        };
+
+        const bool isShared = (mData.getOverview().getThreading() == SMOverviewData::eThreading::Shared);
+        auto collidesWithFixedMember = [&](const QString& word) -> bool
+        {
+            for (const QLatin1StringView& fixed : fixedMembers)
+            {
+                if (word == QString(fixed))
+                    return true;
+            }
+            if (isShared)
+            {
+                for (const QLatin1StringView& fixed : sharedFixedMembers)
+                {
+                    if (word == QString(fixed))
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        for (const LevelInfo& info : levels)
+        {
+            for (SMStateEntry* state : info.level->getElements())
+            {
+                if ((state == nullptr) || (state->isImportedSubmachine() == false))
+                    continue;
+
+                const QString& name = state->getName();
+                if (collidesWithFixedMember(name))
+                {
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                      , vtr("Hosting state '%1' generates a member named 'm%1', which the machine class already uses for itself. Rename the state.").arg(name));
+                }
+            }
+        }
+
+        for (const SMTimerEntry& timer : mData.getTimers().getElements())
+        {
+            const QString member = QStringLiteral("Timer") + timer.getName();
+            if (collidesWithFixedMember(member))
+            {
+                add(timer.getId(), eDocElementKind::Timer, eSeverity::Error, 33
+                  , vtr("Timer '%1' generates a member named 'm%2', which the machine class already uses for itself. Rename the timer.").arg(timer.getName(), member));
             }
         }
 

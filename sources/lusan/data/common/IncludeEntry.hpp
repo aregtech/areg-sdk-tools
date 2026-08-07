@@ -224,6 +224,20 @@ public:
     void setVersion(const VersionNumber& version);
 
     /**
+     * \brief   Marks that the pin was just silently corrected to the imported file's PATCH
+     *          level (never MAJOR or MINOR, which stay a finding the author acts on). Not
+     *          persisted -- it exists only so the very next validation pass can tell the author
+     *          once, then goes quiet again.
+     **/
+    void markVersionPatchAutoFixed();
+
+    /**
+     * \brief   Reads and clears the flag \ref markVersionPatchAutoFixed set, so it is reported
+     *          exactly once per correction.
+     **/
+    bool consumeVersionPatchAutoFixed() const;
+
+    /**
      * \brief   Gets the description.
      * \return  The description.
      **/
@@ -275,6 +289,7 @@ private:
     QString         mDeprecateHint; //!< The deprecation hint.
     QString         mAlias;         //!< The alias of an imported state machine; empty otherwise.
     VersionNumber   mVersion;       //!< The version pinned for an imported state machine.
+    mutable bool    mVersionPatchAutoFixed { false };  //!< One-shot, not persisted; see the accessors.
 };
 
 //////////////////////////////////////////////////////////////////////////

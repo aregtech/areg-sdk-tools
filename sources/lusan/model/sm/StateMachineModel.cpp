@@ -19,6 +19,8 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 
+#include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
@@ -157,12 +159,41 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
     mData = std::move(loaded);
     mOpenSuccess = true;
 
+    // A pin that only drifted at the PATCH level is corrected silently: nothing an import
+    // provides can change at that level, so there is nothing for the author to decide. MAJOR
+    // and MINOR drift are untouched and stay findings. The one-shot Info the correction leaves
+    // behind (SMValidator, checkImports) tells the author it happened, once.
+    bool anyPatchAutoFixed = false;
+    for (IncludeEntry& entry : mData->getIncludes().getElements())
+    {
+        if (includeKindOf(entry.getLocation(), QStringLiteral("fsml")) != eIncludeKind::Document)
+        {
+            continue;
+        }
+
+        const SMImportResolver::Resolution resolution = SMImportResolver::resolve(*mData, entry);
+        if (resolution.isResolved() == false)
+        {
+            continue;
+        }
+
+        const VersionNumber& pinned = entry.getVersion();
+        const VersionNumber& actual = resolution.actualVersion;
+        if ((pinned.getMajor() == actual.getMajor()) && (pinned.getMinor() == actual.getMinor())
+            && (pinned.getPatch() != actual.getPatch()))
+        {
+            entry.setVersion(actual);
+            entry.markVersionPatchAutoFixed();
+            anyPatchAutoFixed = true;
+        }
+    }
+
     mValidationController.setDocument(*mData);
     mUndoStack.clear();
     mUndoStack.setClean();
     mSelectionModel.reset();
     mNotifier.notifyDocumentReloaded();
-    if (sourcePath.isEmpty() == false)
+    if ((sourcePath.isEmpty() == false) || anyPatchAutoFixed)
     {
         markDirty();
     }
