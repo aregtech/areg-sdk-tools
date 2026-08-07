@@ -111,8 +111,8 @@ SMInclude::SMInclude(SMIncludeModel& model, QWidget* parent /*= nullptr*/)
     , mMachineDescription(nullptr)
     , mMachineStatus    (nullptr)
     , mMachineUpdate    (nullptr)
-    , mTableCell        (nullptr)
     , mNameCounter      (0)
+    , mTableCell        (nullptr)
 {
     buildUi();
     setupSignals();

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21.1)
 
 set(PROJECT_NAME    lusan)
 set(PROJECT_VERSION_MAJOR 1)

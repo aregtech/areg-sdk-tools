@@ -539,7 +539,7 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
 
     QAction* actResetFilters = menu->addAction(tr("Reset Filters"));
     actResetFilters->setCheckable(false);
-    connect(actResetFilters, &QAction::triggered, this, [this, curRow]() {
+    connect(actResetFilters, &QAction::triggered, this, [this]() {
             resetFilters();
             ctrlTable()->viewport()->update();
             moveToBottom(true);
@@ -570,7 +570,7 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
 
     QAction* actResetColumns = menu->addAction(tr("Reset Columns"));
     actResetColumns->setCheckable(false);
-    connect(actResetColumns, &QAction::triggered, this, [this, curRow]() {
+    connect(actResetColumns, &QAction::triggered, this, [this]() {
             mLogModel->setActiveColumns(QList<LoggingModelBase::eColumn>());
             resetColumnOrder();
             ctrlTable()->viewport()->update();

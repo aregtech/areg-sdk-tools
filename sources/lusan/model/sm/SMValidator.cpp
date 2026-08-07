@@ -1013,17 +1013,21 @@ namespace
         case eValueSource::Expression:
         case eValueSource::Lambda:
             break;      // Literal or verbatim: not a name reference.
+
         case eValueSource::Param:
             validateParamScope(ownerId, eDocElementKind::Condition, ref, scope);
             break;
+
         case eValueSource::Attribute:
             if (mData.getAttributes().findElement(ref) == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(ref));
             break;
+
         case eValueSource::Constant:
             if (mData.getConstants().findElement(ref) == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Constant '%1' is not declared").arg(ref));
             break;
+
         case eValueSource::Condition:
         {
             SMMethodEntry* c = mData.getMethods().findCondition(ref);
@@ -1031,8 +1035,12 @@ namespace
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
-            break;
         }
+        break;
+
+        case eValueSource::Invalid:
+            add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
+            break;
         }
     }
 
@@ -1076,21 +1084,25 @@ namespace
                 }
             }
             return QString();
+        
         case eValueSource::Attribute:
         {
             const SMAttributeEntry* a = mData.getAttributes().findElement(ref);
             return (a != nullptr) ? a->getType() : QString();
         }
+        
         case eValueSource::Constant:
         {
             const ConstantEntry* c = mData.getConstants().findElement(ref);
             return (c != nullptr) ? c->getType() : QString();
         }
+        
         case eValueSource::Condition:
         {
             SMMethodEntry* m = mData.getMethods().findCondition(ref);
             return (m != nullptr) ? m->getReturn() : QString();
         }
+
         default:
             return QString();
         }
@@ -1109,21 +1121,23 @@ namespace
         case eTypeCat::Structure:
         case eTypeCat::Container:
             add(id, kind, eSeverity::Error, rule, vtr("Type '%1' has no literal form").arg(targetType));
-            return;
+            break;
+
         case eTypeCat::Enum:
         {
             const DataTypeEnum* e = dynamic_cast<const DataTypeEnum*>(customType(targetType));
             if ((e != nullptr) && (e->hasElement(literal) == false))
                 add(id, kind, eSeverity::Error, rule, vtr("'%1' is not an enumerator of '%2'").arg(literal, targetType));
-            return;
         }
+        break;
+
         default:
         {
             const QString reason = SMLiteralValidator::validate(targetType, literal);
             if (reason.isEmpty() == false)
                 add(id, kind, eSeverity::Error, rule, vtr("Invalid %1 literal '%2': %3").arg(targetType, literal, reason));
-            return;
         }
+        break;
         }
     }
 
@@ -1405,12 +1419,6 @@ namespace
                     , vtr("Import '%1' is pinned to version %2, the file is %3")
                         .arg(name, pinned.toString(), actual.toString()));
             }
-
-            // The two Threading values an import brings together are not compared any more. A hosted
-            // machine takes the synchronization object of the machine that hosts it, so the host
-            // decides for the whole import tree and an imported document's own value applies only
-            // when that document is instantiated on its own. Rules 26 and warning 13 are retired and
-            // their numbers are not reused.
         }
 
         if (brokenAliases.isEmpty())
@@ -1507,12 +1515,8 @@ namespace
                   , vtr("Trigger '%1' has the same name as an attribute. An attribute and a trigger must have different names, because both become members of the machine class.").arg(m->getName()));
         }
 
-        // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr'
-        // plus its name, an embedded condition 'mCond' plus its name and a timer 'mTimer' plus its
-        // name. A state name that starts with one of those words therefore lands on a member that
-        // belongs to another kind. An attribute, a condition or a timer starting with its own word
-        // is fine: it keeps its own prefix. A state named exactly the word is fine too, because the
-        // member it makes is the bare prefix, which no name of the owning kind can produce.
+        // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr',
+        // embedded condition 'mCond'+name, and a timer 'mTimer' its name.
         struct ReservedWord
         {
             QLatin1StringView   word;   //!< The leading word a state name may not extend.
@@ -1546,11 +1550,7 @@ namespace
             }
         }
 
-        // A state that hosts an import owns a member named 'm' plus its own name; a declared
-        // timer owns 'mTimer' plus its own name. Either can land on a member the machine class
-        // already has for itself -- not a prefix reserved for another kind (checked above), but
-        // a name the generator picked for its own bookkeeping. 'OwnLock' and 'Epoch' only exist
-        // on a Shared machine; the rest exist on every machine.
+        // Either can land on a member the machine class
         static constexpr QLatin1StringView fixedMembers[]
         {
               QLatin1StringView("ActionHandler"), QLatin1StringView("InstanceName")

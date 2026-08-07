@@ -1468,7 +1468,7 @@ void MdiMainWindow::_createActions()
     initAction(mActNewWorkspace, NELusanCommon::iconNewWorkspace(NELusanCommon::SizeBig), tr("New &Workspace"));
     mActNewWorkspace.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_W));
     mActNewWorkspace.setStatusTip(tr("Create a new workspace, restarts application"));
-    connect(&mActNewWorkspace, &QAction::triggered, this, [this](){LusanApplication::newWorkspace();});
+    connect(&mActNewWorkspace, &QAction::triggered, this, [](){LusanApplication::newWorkspace();});
     
     initAction(mActFileNewSI, NELusanCommon::iconServiceInterface(NELusanCommon::SizeBig), tr("New Service &Interface"));
     mActFileNewSI.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_I));
@@ -1840,7 +1840,7 @@ void MdiMainWindow::_createDockWindows()
 {
     // The navigation and output contents are hosted in ADS dock widgets on the shared manager
     // (issue #516), so they float, tab, and drag together with the State Machine design panels.
-    mNaviDockWidget = new ads::CDockWidget(tr("Navigation"), mDockManager);
+    mNaviDockWidget = new ads::CDockWidget(mDockManager, tr("Navigation"));
     mNaviDockWidget->setObjectName(QStringLiteral("NavigationDock"));
     // Insert the content directly: the default scroll area hides NavigationDock's size hints, so
     // ADS would size the dock generically and it would not narrow again.
@@ -1848,7 +1848,7 @@ void MdiMainWindow::_createDockWindows()
     mNaviDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
     mDockManager->addDockWidget(ads::LeftDockWidgetArea, mNaviDockWidget);
 
-    mOutputDockWidget = new ads::CDockWidget(tr("Output"), mDockManager);
+    mOutputDockWidget = new ads::CDockWidget(mDockManager, tr("Output"));
     mOutputDockWidget->setObjectName(QStringLiteral("OutputDock"));
     mOutputDockWidget->setWidget(&mOutputDock, ads::CDockWidget::ForceNoScrollArea);
     mOutputDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
@@ -1871,7 +1871,7 @@ void MdiMainWindow::_createMdiArea()
     ads::CDockManager::setConfigFlag(ads::CDockManager::FocusHighlighting, true);
     mDockManager = new ads::CDockManager(this);
 
-    mCentralDock = new ads::CDockWidget(tr("Editor"), mDockManager);
+    mCentralDock = new ads::CDockWidget(mDockManager, tr("Editor"));
     mCentralDock->setObjectName(QStringLiteral("EditorCentral"));
     mCentralDock->setWidget(&mMdiArea);
     mCentralDock->setFeature(ads::CDockWidget::NoTab, true);

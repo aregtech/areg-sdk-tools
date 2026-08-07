@@ -1,8 +1,8 @@
 # Builds the Lusan application on four targets:
-#   1. Windows  -- MSVC 2022 + Qt 6.8 (aqt)          -> proves the modern Windows/MSVC path
-#   2. Linux    -- Ubuntu + Qt 6.8 (aqt)             -> proves the modern Linux path
-#   3. Linux    -- Ubuntu 24.04 + Qt 6.4.2 (apt)     -> proves the Qt 6.4 support
-#   4. macOS    -- Apple Clang + Qt 6.8 (aqt)        -> proves the macOS path, including the POST_BUILD macdeployqt step
+#   1. Windows  -- MSVC 2022 + Qt 6.8 (aqt)         -> proves the modern Windows/MSVC path
+#   2. Linux    -- Ubuntu + Qt 6.8 (aqt)            -> proves the modern Linux path
+#   3. Linux    -- Ubuntu 24.04 + Qt 6.4.2 (apt)    -> proves the Qt 6.4 support
+#   4. macOS    -- Apple Clang + Qt 6.11 (aqt)      -> proves the macOS path, including the POST_BUILD macdeployqt step
 #
 # Lusan fetches the Areg SDK and the Qt Advanced Docking System via CMake FetchContent,
 # so every job needs network access and a compiler toolchain; the SDK is compiled once
@@ -160,12 +160,10 @@ jobs:
           if-no-files-found: warn
 
   # ---------------------------------------------------------------------------
-  # 4. macOS -- Apple Clang + Qt 6.8 (aqt)
-  #    Also the regression guard for the POST_BUILD macdeployqt step, which has
-  #    no Windows/Linux equivalent to catch a mistake in.
+  # 4. macOS -- Apple Clang + Qt 6.11 (aqt) to support macos-latest (macOS 26). 
   # ---------------------------------------------------------------------------
-  macos-qt68:
-    name: macOS (Apple Clang, Qt 6.8)
+  macos-qt611:
+    name: macOS (Apple Clang, Qt 6.11)
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -192,7 +190,7 @@ jobs:
       - name: Upload lusan.app
         uses: actions/upload-artifact@v7
         with:
-          name: lusan-macos-qt68
+          name: lusan-macos-qt611
           path: |
             build/**/lusan.app/**
           if-no-files-found: warn

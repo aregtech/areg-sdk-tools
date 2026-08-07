@@ -104,7 +104,7 @@ namespace
         }
 
     private:
-        int spacing(bool horizontal) const
+        int layoutSpacing(bool horizontal) const
         {
             const int stored = (horizontal ? mHSpace : mVSpace);
             if (stored >= 0)
@@ -133,12 +133,12 @@ namespace
             for (QLayoutItem* item : mItems)
             {
                 const QSize hint = item->sizeHint();
-                int nextX = x + hint.width() + spacing(true);
-                if ((nextX - spacing(true) > effective.right()) && (lineHeight > 0))
+                int nextX = x + hint.width() + layoutSpacing(true);
+                if ((nextX - layoutSpacing(true) > effective.right()) && (lineHeight > 0))
                 {
                     x = effective.x();
-                    y = y + lineHeight + spacing(false);
-                    nextX = x + hint.width() + spacing(true);
+                    y = y + lineHeight + layoutSpacing(false);
+                    nextX = x + hint.width() + layoutSpacing(true);
                     lineHeight = 0;
                 }
 

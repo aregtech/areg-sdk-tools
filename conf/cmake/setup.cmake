@@ -55,6 +55,10 @@ endif()
 include(${AREG_CMAKE})
 set(AREG_RESOURCES "${AREG_FRAMEWORK}/areg/resources")
 
+if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND TARGET areg)
+    target_compile_options(areg PRIVATE -Wno-unused-const-variable)
+endif()
+
 # ##################################################################
 # Qt Advanced Docking System (ADS): dockable Outline/Properties/Toolbar
 # that drag/float/tab across the Navigation Window and Design page
@@ -73,6 +77,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(ads)
 set(LUSAN_ADS_TARGET "qtadvanceddocking-qt${QT_VERSION_MAJOR}")
 message(STATUS ">>> Fetched Qt-Advanced-Docking-System ${ADS_VERSION}; target '${LUSAN_ADS_TARGET}'")
+
+if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND TARGET ${LUSAN_ADS_TARGET})
+    target_compile_options(${LUSAN_ADS_TARGET} PRIVATE -Wno-unused-but-set-variable)
+endif()
 
 message(STATUS "-------------------- CMakeLists Status Report Begin --------------------")
 message(STATUS "LUSAN: >>> Qt Version = \'${QT_VERSION_MAJOR}\'")

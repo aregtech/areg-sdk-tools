@@ -137,12 +137,6 @@ public:
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
     
-    /**
-     * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
-     *          If no live logs are available, returns nullptr.
-     **/
-    LiveLogsModel* getLoggingModel();
-    
     //!< Returns true if the logging is configured.
     inline bool isConfigured() const;
 
@@ -378,7 +372,6 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // NaviLiveLogsScopes inline methods
 //////////////////////////////////////////////////////////////////////////
-
 inline bool NaviLiveLogsScopes::isConfigured() const
 {
     switch (mState)
