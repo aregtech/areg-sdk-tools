@@ -80,6 +80,7 @@
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QScreen>
+#include <QScrollBar>
 #include <QSettings>
 #include <QDockWidget>
 #include <QShortcut>
@@ -4248,6 +4249,58 @@ int main(int argc, char* argv[])
                 }
             }
         }
+    }
+
+    std::printf("sect: a validation finding activates the document view and scrolls only when needed\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene&          revealScene = page.getScene();
+        SMGraphicsView&   revealView  = page.getView();
+        StateMachineData& revealData  = doc.getData();
+
+        SMStateEntry* target = revealData.findState("LightOff");
+        CHECK(target != nullptr);
+        SMCanvasItem* targetItem = revealScene.findCanvasItem(target->getId());
+        CHECK(targetItem != nullptr);
+
+        // Visible but off-centre: centring the view here (the old behaviour) would move the
+        // scrollbars even though nothing needed to scroll, which is what this section catches.
+        revealView.centerOn(targetItem);
+        QApplication::processEvents();
+        revealView.horizontalScrollBar()->setValue(revealView.horizontalScrollBar()->value() + 40);
+        revealView.verticalScrollBar()->setValue(revealView.verticalScrollBar()->value() + 40);
+        QApplication::processEvents();
+        const QRect stillVisible = revealView.mapFromScene(targetItem->sceneBoundingRect()).boundingRect();
+        CHECK(revealView.viewport()->rect().contains(stillVisible));
+        revealView.clearFocus();
+        const int hVisible = revealView.horizontalScrollBar()->value();
+        const int vVisible = revealView.verticalScrollBar()->value();
+
+        page.navigateToIssue(target->getId(), eDocElementKind::State);
+        QApplication::processEvents();
+
+        CHECK(revealView.hasFocus());
+        CHECK(revealView.horizontalScrollBar()->value() == hVisible);
+        CHECK(revealView.verticalScrollBar()->value() == vVisible);
+
+        revealView.centerOn(QPointF(4000.0, 4000.0));
+        QApplication::processEvents();
+        revealView.clearFocus();
+        const QRect farRect = revealView.mapFromScene(targetItem->sceneBoundingRect()).boundingRect();
+        CHECK(revealView.viewport()->rect().intersects(farRect) == false);
+
+        page.navigateToIssue(target->getId(), eDocElementKind::State);
+        QApplication::processEvents();
+
+        const QRect broughtBackRect = revealView.mapFromScene(targetItem->sceneBoundingRect()).boundingRect();
+        CHECK(revealView.hasFocus());
+        CHECK(revealView.viewport()->rect().intersects(broughtBackRect));
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
