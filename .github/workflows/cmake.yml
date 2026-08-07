@@ -28,8 +28,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Qt version used by the two "modern Qt" jobs
+  # Qt version used by the Windows and Linux "modern Qt" jobs
   QT_MODERN_VERSION: "6.8.1"
+  # Qt version used only by macOS; Qt 6.11 supports macOS 26.
+  QT_MACOS_VERSION: "6.11.1"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -175,7 +177,7 @@ jobs:
       - name: Install Qt (aqt)
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ env.QT_MODERN_VERSION }}
+          version: ${{ env.QT_MACOS_VERSION }}
           host: mac
           target: desktop
           arch: clang_64
