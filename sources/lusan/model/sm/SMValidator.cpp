@@ -188,7 +188,6 @@ namespace
         void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name);
         bool fragmentResolves(const QString& fragment) const;
         QString unresolvedFragment(const QString& typeName) const;
-        bool typeResolves(const QString& typeName) const;
         void checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName);
 
         void checkDuplicateIds();
@@ -296,11 +295,6 @@ namespace
         }
 
         return QString();
-    }
-
-    bool Ctx::typeResolves(const QString& typeName) const
-    {
-        return unresolvedFragment(typeName).isEmpty();
     }
 
     void Ctx::checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName)

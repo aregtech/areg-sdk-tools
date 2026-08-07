@@ -66,9 +66,21 @@ target_compile_definitions(${APP_NAME} PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::aregextend areg::areglogger aregsqlite3 ${LUSAN_ADS_TARGET})
 
 # copying log and router init files to 'bin/config'
-add_custom_command( TARGET ${APP_NAME} POST_BUILD 
+add_custom_command( TARGET ${APP_NAME} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy ${LUSAN_BASE}/lusan/res/lusan.init ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config/lusan.init
                     VERBATIM)
+
+# ADS is a shared library (see conf/cmake/setup.cmake); look for it next to the
+# executable at runtime, and copy it there after each build, the same way the
+# Qt runtime libraries are deployed below.
+set_target_properties(${APP_NAME} PROPERTIES
+    BUILD_RPATH   "$ORIGIN;@loader_path"
+    INSTALL_RPATH "$ORIGIN;@loader_path"
+)
+add_custom_command(TARGET ${APP_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" "$<TARGET_FILE_DIR:${APP_NAME}>"
+    COMMENT "Copying ADS shared library next to the executable"
+    VERBATIM)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
@@ -126,6 +138,7 @@ endif()
 if (UNIX AND NOT APPLE)
     include(GNUInstallDirs)
     install(TARGETS ${APP_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan-256.png"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps" RENAME lusan.png)
     install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.svg"

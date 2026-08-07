@@ -61,18 +61,18 @@ endif()
 
 # ##################################################################
 # Qt Advanced Docking System (ADS): dockable Outline/Properties/Toolbar
-# that drag/float/tab across the Navigation Window and Design page
-# (issue #516). Fetched from GitHub and built as a static library so no
-# extra runtime DLL has to be deployed alongside lusan.
+# that drag/float/tab across the Navigation Window and Design page.
+# Fetched from GitHub and built as a shared library: ADS is LGPL-2.1, and
+# dynamic linking is what keeps that compatible with lusan application.
 # ##################################################################
-set(ADS_VERSION       "4.4.1")
-set(BUILD_STATIC      ON  CACHE BOOL "Build ADS as a static library" FORCE)
+set(ADS_VERSION       "5.0.0")
+set(BUILD_STATIC      OFF CACHE BOOL "Build ADS as a static library" FORCE)
 set(BUILD_EXAMPLES    OFF CACHE BOOL "Do not build ADS examples"     FORCE)
-set(ADS_BUILD_STATIC  ON  CACHE BOOL "Build ADS as a static library" FORCE)
+set(ADS_BUILD_STATIC  OFF CACHE BOOL "Build ADS as a static library" FORCE)
 FetchContent_Declare(
     ads
     GIT_REPOSITORY https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System.git
-    GIT_TAG "4.4.1"
+    GIT_TAG "5.0.0"
 )
 FetchContent_MakeAvailable(ads)
 set(LUSAN_ADS_TARGET "qtadvanceddocking-qt${QT_VERSION_MAJOR}")
