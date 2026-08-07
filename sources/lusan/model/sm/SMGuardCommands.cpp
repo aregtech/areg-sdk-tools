@@ -132,12 +132,8 @@ void SMSetGuardCommand::apply(const SMGuard& guard)
     }
 
     *slot = guard;
-    // The notification names the element the user sees, not the value that changed: a transition
-    // guard changes the transition, a Do stop condition changes the state that owns the activity.
-    notifier().notifyElementChanged(mTarget.getId()
-                                   , (mTarget.getOwner() == SMGuardRef::eOwner::DoActivity)
-                                        ? eDocElementKind::State
-                                        : eDocElementKind::Transition);
+    // The notification names the element the user sees, not the value that changed.
+    notifier().notifyElementChanged(mTarget.getId(), eDocElementKind::Transition);
 }
 
 void SMSetGuardCommand::redo()

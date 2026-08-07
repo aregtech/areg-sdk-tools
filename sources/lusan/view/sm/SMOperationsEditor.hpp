@@ -40,22 +40,20 @@ class ElementBase;
 enum class eDocElementKind;
 
 class QComboBox;
-class QIcon;
 class QLabel;
 class QVBoxLayout;
 
 /**
  * \class   SMOperationsEditor
- * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList`,
- *          `DoList` or `ExitList`, or a transition's `OperationList`. It presents a fixed
+ * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList`
+ *          or `ExitList`, or a transition's `OperationList`. It presents a fixed
  *          three-part form (all parts optional) as a collapsible accordion under a shared
  *          SMSectionChrome toolbar (one jump button per section + a compact toggle to expand
  *          or collapse each): one **Action** (a declared action call), one **Event** (an
  *          event send), and any number of **Timers** (start/stop). There is no ordering UI --
  *          the action runs first, the event second, timers after -- so the form has no list
  *          or reorder controls. The same toolbar+accordion is shown in every scope this editor
- *          serves; a host may append its own section via \ref addSection (the state Do tab adds
- *          a Repeat-policy section that way). The action's and the
+ *          serves. The action's and the
  *          event's argument mapping is rendered by the
  *          shared \ref SMArgMapTable (in its Compact row shape) and committed through an
  *          \ref SMArgSinkOperation, so each parameter is one row with a single editable combo:
@@ -97,18 +95,10 @@ public:
     void clearBinding();
 
     /**
-     * \brief   Appends a host-owned section to this editor's accordion, after the built-in
-     *          Action/Event/Timers sections, and returns its index. Used by the state `Do` tab to
-     *          give the repeat policy (interval + stop-condition) its own collapsible section under
-     *          the same expand/collapse toolbar. The editor takes ownership of \p content.
-     **/
-    int addSection(const QIcon& icon, const QString& title, QWidget* content);
-
-    /**
      * \brief   Opens ONE of the Action / Event / Timers sections at a time (the `Action` one) rather
      *          than all three together.
      *
-     *          All three open is right where this editor owns a whole tab -- the state's Enter, Do
+     *          All three open is right where this editor owns a whole tab -- the state's Enter
      *          and Exit tabs, and the transition's Actions tab -- because the page then reads as one
      *          short form instead of a stack of closed bars. It is wrong where the editor shares its
      *          height with something else: on the state's `Internal` tab it sits under a transition

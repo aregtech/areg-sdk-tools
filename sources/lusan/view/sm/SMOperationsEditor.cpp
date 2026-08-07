@@ -133,8 +133,7 @@ void SMOperationsEditor::buildUi()
     box->setContentsMargins(6, 6, 6, 6);
     box->setSpacing(8);
 
-    // Action / Event / Timers are three collapsible sections under a shared chrome. The state Do
-    // tab appends a fourth "Repeat" section through addSection().
+    // Action / Event / Timers are three collapsible sections under a shared chrome.
     mChrome = new SMSectionChrome(content);
 
     // Action section.
@@ -228,13 +227,6 @@ void SMOperationsEditor::clearBinding()
     mList = nullptr;
     mOwner = nullptr;
     rebuild();
-}
-
-int SMOperationsEditor::addSection(const QIcon& icon, const QString& title, QWidget* content)
-{
-    const int index = mChrome->addSection(icon, title, content, title);
-    mChrome->setCurrentSection(index);      // open like the built-in sections
-    return index;
 }
 
 void SMOperationsEditor::setSectionsCompact(bool compact)

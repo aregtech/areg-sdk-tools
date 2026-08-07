@@ -104,25 +104,10 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
         break;
     }
 
-    case eGlyph::Do:
-    {
-        // A circular repeat arrow, the same mark the Do tab header wears. Deliberately without the
-        // state bar the others share: a Do activity never crosses the state's boundary.
-        const double radius = 3.6;
-        const QRectF loop{ rect.center().x() - radius, midY - radius, 2.0 * radius, 2.0 * radius };
-        painter.drawArc(loop, 300 * 16, 300 * 16);
-        // The head sits at the open end of the arc (300 degrees = lower right), pointing the way
-        // the arc travels, so the ring reads as a repetition rather than as a broken circle.
-        const QPointF tip{ loop.center().x() + (radius * 0.5), loop.center().y() + (radius * 0.87) };
-        painter.drawLine(tip, tip + QPointF(-3.0, 0.6));
-        painter.drawLine(tip, tip + QPointF(-0.6, -3.0));
-        break;
-    }
-
     case eGlyph::Internal:
     {
         // An internal transition: the same bar the entry and exit marks use, with a hook that leaves
-        // it and turns back in. Square and smaller than the bar, so it is not the Do repeat ring.
+        // it and turns back in.
         const double barX = rect.right() - 1.0;
         const double left = barX - 6.5;
         const double up   = midY - 2.5;
@@ -292,7 +277,7 @@ bool SMKindGlyph::isDrawn(eGlyph glyph)
         return false;
     }
 
-    // A band mark (enter / do / exit / internal) is always drawn: it is the row's position marker,
+    // A band mark (enter / exit / internal) is always drawn: it is the row's position marker,
     // not a spelling of its kind, so the Word style does not replace it.
     switch (glyph)
     {

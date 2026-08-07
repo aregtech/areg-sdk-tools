@@ -35,9 +35,8 @@ QList<SMReferences::Use> SMWhereUsed::collect(const StateMachineData& data, SMRe
     {
         for (const SMGuardWhereUsed::Use& u : SMGuardWhereUsed::symbolUses(data, id))
         {
-            // `isState` says which registry the id belongs to: a Do stop condition is owned by
-            // its state, a transition guard by the transition.
-            out.append({ u.target.getId(), (u.target.getOwner() == SMGuardRef::eOwner::DoActivity), u.location });
+            // `isState` says which registry the id belongs to; a guard is owned by its transition.
+            out.append({ u.target.getId(), false, u.location });
         }
     }
 

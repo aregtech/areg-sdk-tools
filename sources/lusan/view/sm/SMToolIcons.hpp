@@ -98,7 +98,6 @@ namespace SMToolIcons
         , SectionText       //!< A `Description` section (paragraph lines).
         , SectionEnter      //!< An `On Enter` actions section (arrow into a box).
         , SectionExit       //!< An `On Exit` actions section (arrow out of a box).
-        , SectionDo         //!< A `Do` actions section (a circular repeat arrow).
     };
 
     /**

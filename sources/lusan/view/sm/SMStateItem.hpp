@@ -58,7 +58,7 @@ public:
      * \enum    eRowZone
      * \brief   Where a behavior row is anchored inside the state box. Enter runs from the top of
      *          the body down, Exit is anchored to the bottom, and everything that happens WHILE
-     *          in the state (Do operations, internal transitions) sits in the middle -- so the box
+     *          in the state (internal transitions) sits in the middle -- so the box
      *          reads in the order the state actually executes.
      **/
     enum class eRowZone
@@ -77,7 +77,7 @@ public:
         SMKindGlyph::eGlyph         icon;           //!< The row's mark: its band, or its own kind.
         QString                     text;           //!< The row text.
         eRowZone                    zone;           //!< Where in the box the row is anchored.
-        bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the band mark).
+        bool                        firstInGroup;   //!< First row of its Enter/Exit group (carries the band mark).
         bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
         QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
 

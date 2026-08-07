@@ -209,10 +209,6 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStateDesc    (nullptr)
     , mEnterOps     (nullptr)
     , mExitOps      (nullptr)
-    , mDoOps        (nullptr)
-    , mDoInterval   (nullptr)
-    , mDoUntil      (nullptr)
-    , mDoUntilStatus(nullptr)
     , mTransitions  (nullptr)
     , mInternal     (nullptr)
     , mInternalTab  (-1)
@@ -395,77 +391,17 @@ void SMPropertiesPanel::buildStatePage()
         QTimer::singleShot(0, this, [this, from, to]() { reorderTransition(from, to); });
     };
 
-    // One tab per state activity, Enter, Do and Exit, each hosting the shared SMOperationsEditor.
-    // The Do page is built by hand, since it adds a repeat interval and a stop condition.
+    // One tab per state activity, Enter and Exit, each hosting the shared SMOperationsEditor.
     mEnterOps = new SMOperationsEditor(mModel, this);
-    mDoOps    = new SMOperationsEditor(mModel, this);
     mExitOps  = new SMOperationsEditor(mModel, this);
-
-    // The Do repeat policy is its own collapsible `Repeat` section appended to the Do editor's
-    // accordion, so the interval and stop condition sit beside the other sections.
-    mDoInterval = new QSpinBox(this);
-    // The minimum is 1, not 0: a Do activity is a timer loop and a loop has no zero period.
-    // Reacting to one named stimulus without leaving the state is an internal transition instead.
-    mDoInterval->setRange(static_cast<int>(SMStateEntry::MIN_DO_INTERVAL), 3600000);
-    mDoInterval->setSingleStep(50);
-    mDoInterval->setSuffix(tr(" ms"));
-    mDoInterval->setToolTip(tr("How often the Do operations run while the state is active. "
-                               "The first tick is one interval after entry, never at entry -- "
-                               "work that must happen on arrival belongs in Enter."));
-
-    // The stop condition is the same editing surface a transition guard uses, pointed at this
-    // state's activity: one grammar, one completer, and a rename re-renders instead of breaking it.
-    mDoUntil = new SMGuardField(mModel, this);
-    // The panel hosts two guard surfaces that would otherwise share one object name. Naming each
-    // for what it edits keeps every by-name lookup unambiguous.
-    mDoUntil->setObjectName(QStringLiteral("smDoUntilField"));
-    mDoUntil->setHeightLines(1, 4);
-    mDoUntil->setPlaceholderText(tr("Stop condition (optional)"));
-    mDoUntil->setToolTip(tr("Tested BEFORE each tick. Once it holds, the activity stops for the rest "
-                            "of the visit -- only a fresh entry to the state starts it again."));
-    mDoUntilStatus = new SMGuardStatusLine(this);
-    mDoUntilStatus->setObjectName(QStringLiteral("smDoUntilStatusLine"));
-    // The verdict LABEL inside it carries the name the lookups actually reach for, so it is the
-    // one that has to differ; the line itself is renamed above only so the pair reads as a pair.
-    if (QLabel* verdict = mDoUntilStatus->findChild<QLabel*>(QStringLiteral("smGuardStatus")))
-    {
-        verdict->setObjectName(QStringLiteral("smDoUntilStatus"));
-    }
-
-    QWidget* repeatBody = new QWidget(this);
-    QFormLayout* repeatForm = new QFormLayout(repeatBody);
-    repeatForm->setContentsMargins(6, 6, 6, 6);
-    repeatForm->addRow(tr("Repeat every:"), mDoInterval);
-    repeatForm->addRow(tr("Until:"), mDoUntil);
-    repeatForm->addRow(QString(), mDoUntilStatus);
-    mDoOps->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionDo), tr("Repeat"), repeatBody);
-
-    connect(mDoInterval, &QSpinBox::editingFinished, this, &SMPropertiesPanel::onDoIntervalCommit);
-    // The field commits itself (Enter / focus-out) through SMGuardCommands, so there is no
-    // commit slot here -- only the verdict to relay, exactly as the Conditions tab does.
-    connect(mDoUntil, &SMGuardField::statusUpdated, this
-           , [this](int severity, const QString& verdict, const QString& preview, const QStringList& chips)
-    {
-        if (verdict.isEmpty())
-        {
-            mDoUntilStatus->clearStatus();
-        }
-        else
-        {
-            mDoUntilStatus->setStatus(static_cast<NEGuardStyle::eSeverity>(severity), verdict, preview, chips);
-        }
-    });
-    connect(mDoUntil, &SMGuardField::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
 
     mStateTabs = new QTabWidget(this);
     mStateTabs->setObjectName(QStringLiteral("smStateTabs"));
     mStateGeneral->setObjectName(QStringLiteral("smStateGeneral"));
     mStateTabs->addTab(mStateGeneral, tr("General"));
     const int enterTab = mStateTabs->addTab(mEnterOps, tr("Enter"));
-    const int doTab    = mStateTabs->addTab(mDoOps, tr("Do"));
     const int exitTab  = mStateTabs->addTab(mExitOps, tr("Exit"));
     mActionSlots.append({ eOpList::Entry, mEnterOps, enterTab });
-    mActionSlots.append({ eOpList::Do,    mDoOps,    doTab });
     mActionSlots.append({ eOpList::Exit,  mExitOps,  exitTab });
 
     buildInternalTab();
@@ -751,13 +687,6 @@ void SMPropertiesPanel::showEmpty()
         mConditions->setTransition(0u);
     }
 
-    // The Do tab's stop-condition surface is bound to the shown state and its rebuild is deferred,
-    // so it is released here: a deferred rebuild must not outlive the element it reads.
-    if (mDoUntil != nullptr)
-    {
-        mDoUntil->setTarget(SMGuardRef());
-    }
-
     // The Internal tab's editors hold a live pointer into the shown state's transition; drop it with
     // the page, or a deferred rebuild can outlive the document that owns it.
     if (mInternal != nullptr)
@@ -868,7 +797,7 @@ void SMPropertiesPanel::showState(uint32_t stateId)
                               : tr("Only a state with a submachine can remember where it was"));
     mStateDesc->setPlainText(state->getDescription());
     // Entry/exit operations have no transition scope, so the Param source is not offered here. The
-    // Actions sections are bound from the slot table, so a `Do` list joins by adding one slot.
+    // Actions sections are bound from the slot table.
     SMStateEntry* mutableState = mModel.getData().findStateById(stateId);
     for (const ActionSlot& slot : mActionSlots)
     {
@@ -876,15 +805,10 @@ void SMPropertiesPanel::showState(uint32_t stateId)
         switch (slot.role)
         {
         case eOpList::Entry:    list = &mutableState->getEntryList();  break;
-        case eOpList::Do:       list = &mutableState->getDoList();     break;
         case eOpList::Exit:     list = &mutableState->getExitList();   break;
         }
         slot.editor->bind(stateId, eDocElementKind::State, 0u, mutableState, list);
     }
-    // A document that names no interval reads back as 0, which the spin box cannot show and must
-    // not silently "correct" into a value the file does not contain
-    mDoInterval->setValue(static_cast<int>(qMax(state->getDoInterval(), SMStateEntry::MIN_DO_INTERVAL)));
-    mDoUntil->setTarget(SMGuardRef::doActivity(stateId));
     refreshActionSummaries();
     populateTransitionList(stateId);
     mInternal->bind(stateId);
@@ -904,7 +828,7 @@ void SMPropertiesPanel::refreshActionSummaries()
     for (const ActionSlot& slot : mActionSlots)
     {
         // The tab tooltip carries the per-list summary, so hovering says what happens around this
-        // state without switching tabs. The Do tooltip also folds in its repeat policy.
+        // state without switching tabs.
         const SMOperationList* list = nullptr;
         QString title;
         switch (slot.role)
@@ -912,14 +836,6 @@ void SMPropertiesPanel::refreshActionSummaries()
         case eOpList::Entry:
             list = &state->getEntryList();
             title = tr("On Enter");
-            break;
-        case eOpList::Do:
-            list = &state->getDoList();
-            // A Do is a timer loop, its label is its period
-            title = list->isEmpty() ? tr("Do")
-                  : (state->getDoInterval() >= SMStateEntry::MIN_DO_INTERVAL
-                        ? tr("Do (every %1 ms)").arg(state->getDoInterval())
-                        : tr("Do (no interval set)"));
             break;
         case eOpList::Exit:
             list = &state->getExitList();
@@ -1279,28 +1195,6 @@ void SMPropertiesPanel::onStateDescriptionCommit()
     auto getter = [doc, id]() -> QString { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDescription() : QString()); };
     auto setter = [doc, id](const QString& value) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDescription(value); };
     mModel.getUndoStack().push(new TDocSetPropertyCommand<QString>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, mStateDesc->toPlainText(), tr("Set description")));
-}
-
-void SMPropertiesPanel::onDoIntervalCommit()
-{
-    if (mUpdating || (mPage != PageState))
-    {
-        return;
-    }
-
-    StateMachineData& data = mModel.getData();
-    const SMStateEntry* state = data.findStateById(mCurrentId);
-    const uint32_t value = qMax(static_cast<uint32_t>(mDoInterval->value()), SMStateEntry::MIN_DO_INTERVAL);
-    if ((state == nullptr) || (value == state->getDoInterval()))
-    {
-        return;
-    }
-
-    const uint32_t id = mCurrentId;
-    StateMachineData* doc = &data;
-    auto getter = [doc, id]() -> uint32_t { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoInterval() : 0u); };
-    auto setter = [doc, id](const uint32_t& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoInterval(v); };
-    mModel.getUndoStack().push(new TDocSetPropertyCommand<uint32_t>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, value, tr("Set Do interval")));
 }
 
 void SMPropertiesPanel::onTransitionDescriptionCommit()

@@ -45,10 +45,9 @@ class SMGuardNode;
  *          so it is not a finding at all. Validation covers `.fsml` content
  *          only -- raw C++ bodies are never parsed. View-free and headless-testable.
  *
- *          Every predicate in the format is checked here, which since L3 means a state
- *          `DoList`'s `<Until>` stop condition as well as a transition's `<Guard>`: they are
- *          the same value, so a stale reference in one is the same fault as in the other, and
- *          one checker is what keeps them from being reported differently.
+ *          Every predicate in the format is checked here, which means a transition's `<Guard>`.
+ *          One checker is what keeps a second predicate, should the format gain one, from
+ *          reporting the same fault differently.
  **/
 class SMGuardValidation
 {
@@ -74,7 +73,7 @@ public:
     /**
      * \struct  Finding
      * \brief   One guard validation entry; navigates to the element that owns the predicate --
-     *          the transition, or the state whose `DoList` carries the stop condition.
+     *          the transition that owns it.
      **/
     struct Finding
     {
@@ -104,9 +103,6 @@ public:
 
     //!< The findings of one transition's guard.
     static QList<Finding> validateTransition(const StateMachineData& data, uint32_t transitionId);
-
-    //!< The findings of one state's `DoList` stop condition.
-    static QList<Finding> validateDoActivity(const StateMachineData& data, uint32_t stateId);
 
     /**
      * \brief   The worst severity of one transition's findings; false when the guard is

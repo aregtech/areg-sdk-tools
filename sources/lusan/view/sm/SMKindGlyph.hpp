@@ -42,10 +42,10 @@ class SMOperationBase;
  * \namespace   SMKindGlyph
  * \brief       The one place that decides how a state machine surface announces WHAT a row is:
  *              an event send, a timer start or stop, a trigger, a plain action, or the
- *              enter/do/exit/internal band a row belongs to.
+ *              enter/exit/internal band a row belongs to.
  *
  *              One concept, one mark: no two constructs share a glyph. The band marks say WHERE a
- *              row runs (\c Entry, \c Do, \c Exit, \c Internal) and the kind marks say WHAT fires
+ *              row runs (Entry, Exit, Internal) and the kind marks say WHAT fires
  *              or what it does (\c Trigger, \c Event, \c TimerStart, \c TimerStop, \c Action) --
  *              which is what lets a reader tell a cause from an effect without reading the text.
  *
@@ -68,7 +68,6 @@ namespace SMKindGlyph
         , Entry         //!< The state's entry band: an arrow running INTO a bar, `->|`.
         , Exit          //!< The state's exit band: an arrow running away from a bar, `<-|`.
         , ExitAlt       //!< The alternative exit mark, `|<-` -- see \c ExitBandGlyph in the .cpp.
-        , Do            //!< The do band: a circular repeat arrow, the mark the `Do` tab already wears.
         , Internal      //!< An internal transition: a hook that LEAVES the state's bar and returns
                         //!< into it. Shares the bar with \c Entry and \c Exit, so the three read as
                         //!< the family they are -- in, out, and back to the same state.

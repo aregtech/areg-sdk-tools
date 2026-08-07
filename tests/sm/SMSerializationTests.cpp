@@ -955,95 +955,6 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
-// SM-21-R24: state `Do` activity (interval + stop condition)
-//////////////////////////////////////////////////////////////////////////
-
-namespace
-{
-    void testDoActivity()
-    {
-        std::printf("[L3] state Do activity: interval + Until TREE round-trip\n");
-
-        StateMachineData doc;
-        doc.getOverview().setName("DoActivity");
-        doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
-        SMAttributeEntry* done = doc.getAttributes().createAttribute("IsDone");
-        CHECK(done != nullptr);
-
-        // Root: a timer loop with a stop condition. Since L3 the stop condition is the same
-        // ID-bound tree a transition guard is, so it is written as a `<Until>` CHILD of the
-        // DoList and not as a string attribute -- which is what makes a rename follow it.
-        // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
-        // and the read shim would rewrite a merged-form one on the next load.
-        SMStateEntry* begin = doc.getStates().createState("Begin", SMStateEntry::eStateKind::Start);
-        SMStateEntry* root  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Normal);
-        CHECK(begin != nullptr);
-        CHECK(root != nullptr);
-        begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
-        SMInlineCode* work = new SMInlineCode();
-        work->setBody("tick();");
-        root->getDoList().addOperation(work);
-        root->setDoInterval(200u);
-        SMGuard until;
-        until.setTree(SMGuardNode::makeRef(SMGuardNode::eKind::Attr, done->getId()));
-        until.setRendered("IsDone");
-        root->setDoUntil(until);
-
-        // Loop: an activity with no stop condition at all. The interval is still written -- a Do
-        // is a timer loop, and the period is what makes it one.
-        SMStateEntry* loop = doc.getStates().createState("Loop", SMStateEntry::eStateKind::Normal);
-        CHECK(loop != nullptr);
-        SMInlineCode* pump = new SMInlineCode();
-        pump->setBody("pump();");
-        loop->getDoList().addOperation(pump);
-        loop->setDoInterval(50u);
-
-        const QString outPath = outFile("sm21_do.fsml");
-        CHECK(doc.writeToFile(outPath));
-
-        const QByteArray written = readAllBytes(outPath);
-        CHECK(written.contains("<DoList"));
-        CHECK(written.contains("Interval=\"200\""));
-        CHECK(written.contains("Interval=\"50\""));
-        // The tree, not the old free text: an `Until=` attribute must be gone from the format.
-        CHECK(written.contains("<Until state=\"ok\">"));
-        CHECK(written.contains("Until=\"") == false);
-
-        StateMachineData reread;
-        CHECK(reread.readFromFile(outPath));
-        CHECK(reread.openSucceeded());
-
-        SMStateEntry* rroot = reread.getStates().findState("Root");
-        CHECK(rroot != nullptr);
-        if (rroot != nullptr)
-        {
-            CHECK(rroot->getDoList().getCount() == 1);
-            CHECK(rroot->getDoInterval() == 200u);
-            CHECK(rroot->getDoUntil().isOk());
-            const SMGuardNode* tree = rroot->getDoUntil().getTree();
-            CHECK(tree != nullptr);
-            CHECK((tree != nullptr) && (tree->getKind() == SMGuardNode::eKind::Attr));
-            CHECK((tree != nullptr) && (tree->getSymbolId() == done->getId()));
-            CHECK(rroot->getDoUntilLegacy().isEmpty());
-        }
-
-        SMStateEntry* rloop = reread.getStates().findState("Loop");
-        CHECK(rloop != nullptr);
-        if (rloop != nullptr)
-        {
-            CHECK(rloop->getDoList().getCount() == 1);
-            CHECK(rloop->getDoInterval() == 50u);
-            CHECK(rloop->getDoUntil().isEmpty());
-        }
-
-        // A second resave of the reloaded model must be byte-identical (determinism / idempotence).
-        const QString outPath2 = outFile("sm21_do_2.fsml");
-        CHECK(reread.writeToFile(outPath2));
-        CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
 // Ephemeral submachine: a not-real submachine (only Start/Final, or empty) is
 // created in RAM while the user builds it but is never persisted (issue #514 follow-up).
 //////////////////////////////////////////////////////////////////////////
@@ -1210,8 +1121,6 @@ namespace
         CHECK(nested != nullptr);
         const SMStateEntry* polling = doc.findState(QStringLiteral("Polling"));
         CHECK((polling != nullptr) && (polling->getKind() == SMStateEntry::eStateKind::Normal));
-        CHECK((polling != nullptr) && (polling->getDoList().getOperations().size() == 1));
-        CHECK((polling != nullptr) && (polling->getDoInterval() == 250u));
         if (nested != nullptr)
         {
             const SMStateEntry* innerStart = nested->getStartState();
@@ -1403,7 +1312,6 @@ int main(int /*argc*/, char** /*argv*/)
     testRejectNewerMajor();
     testNewDocumentSkeleton();
     testAutosaveHelpers();
-    testDoActivity();
     testEphemeralSubmachine();
     testHistoryModes();
     testLegacyMergedStart();

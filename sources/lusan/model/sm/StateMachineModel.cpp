@@ -62,45 +62,6 @@ namespace
     }
 
     /**
-     * \brief   Resolves a `DoList` whose stop condition is still the legacy free-text `Until`
-     *          attribute into the id-bound tree every other predicate already is.
-     *          `allowRaw` is on, so whatever the grammar has no node for stays a single `Raw`
-     *          node; the scope is 0, because a do activity runs with no stimulus in hand.
-     **/
-    void convertLegacyDoUntil(const StateMachineData& data, SMStateData& level)
-    {
-        for (SMStateEntry* state : level.getElements())
-        {
-            if (state == nullptr)
-            {
-                continue;
-            }
-
-            const QString legacy = state->getDoUntilLegacy().trimmed();
-            if ((legacy.isEmpty() == false) && state->getDoUntil().isEmpty())
-            {
-                SMGuard parsed = SMGuardParser::parseToGuard(data, 0u, legacy, true);
-                if (parsed.isOk() == false)
-                {
-                    // Not parseable at all: keep it whole and verbatim rather than as a draft.
-                    // A draft would say "the user is mid-edit"; this text was never edited here.
-                    parsed = SMGuard();
-                    parsed.setTree(SMGuardNode::makeVerbatim(SMGuardNode::eKind::Raw, legacy));
-                }
-
-                state->setDoUntil(parsed);
-            }
-
-            state->clearDoUntilLegacy();
-
-            if (state->hasNestedStates())
-            {
-                convertLegacyDoUntil(data, *state->getNestedStates());
-            }
-        }
-    }
-
-    /**
      * \brief   Refreshes the advisory `name` on every guard tree before a save, so the names
      *          written to the file follow renames. The name is never read back; the id binds.
      **/
@@ -120,12 +81,6 @@ namespace
                 {
                     SMGuardRender::refreshNames(data, transition->getId(), *tree);
                 }
-            }
-
-            SMGuardNode* until = state->getDoUntil().getTree();
-            if (until != nullptr)
-            {
-                SMGuardRender::refreshNames(data, 0u, *until);
             }
 
             if (state->hasNestedStates())
@@ -199,7 +154,6 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
 
     loaded->setFilePath(documentPath);
     convertLegacyGuards(loaded->getStates());
-    convertLegacyDoUntil(*loaded, loaded->getStates());
     mData = std::move(loaded);
     mOpenSuccess = true;
 

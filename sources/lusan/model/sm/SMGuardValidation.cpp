@@ -52,22 +52,12 @@ namespace
                                 : QStringLiteral("'%1'").arg(cached);
     }
 
-    //!< What the message calls the predicate being checked. A stop condition is not a guard, and
-    //!< a finding that says "guard" about a `do/` activity sends the reader to the wrong tab.
-    QString noun(const SMGuardRef& target)
-    {
-        return (target.getOwner() == SMGuardRef::eOwner::DoActivity)
-                    ? QStringLiteral("Do stop condition")
-                    : QStringLiteral("guard");
-    }
 
     void checkNode(const StateMachineData& data, const SMGuardRef& target, const QString& location
                   , const SMGuardNode& node, QList<Finding>& findings)
     {
-        // The stimulus parameter scope of the checked predicate: its own, for a transition; none
-        // at all for a `do/` activity, which ticks on a timer with no stimulus in hand.
         const uint32_t transitionId = target.getScopeId();
-        const QString what = noun(target);
+        const QString what = QStringLiteral("guard");
         switch (node.getKind())
         {
         case eKind::Attr:
@@ -141,7 +131,7 @@ namespace
         if (guard.isDraft())
         {
             findings.append({ eSeverity::Error, eFinding::Draft, target, location
-                            , QStringLiteral("%1 is still a draft: %2. Code generation refuses it").arg(noun(target), elide(guard.getDraftText()))
+                            , QStringLiteral("guard is still a draft: %1. Code generation refuses it").arg(elide(guard.getDraftText()))
                             , 0u });   // a draft is the whole predicate, not one element of it
             return;
         }
@@ -162,19 +152,6 @@ namespace
         }
 
         checkGuard(data, SMGuardRef(transition.getId()), location, transition.getGuard(), findings);
-    }
-
-    //!< The `<Until>` of a state's `DoList`. A stop condition on a state with no activity is not
-    //!< checked: there is no timer for it to stop, so there is nothing there to be wrong about.
-    void checkDoActivity(const StateMachineData& data, const SMStateEntry& state, QList<Finding>& findings)
-    {
-        if (state.getDoList().isEmpty())
-        {
-            return;
-        }
-
-        checkGuard(data, SMGuardRef::doActivity(state.getId())
-                  , state.getName() + QStringLiteral(" : do/"), state.getDoUntil(), findings);
     }
 
     /**
@@ -199,11 +176,6 @@ namespace
                 {
                     checkTransition(data, *state, *transition, findings);
                 }
-            }
-
-            if (all || (only == SMGuardRef::doActivity(state->getId())))
-            {
-                checkDoActivity(data, *state, findings);
             }
 
             if (state->hasNestedStates())
@@ -246,17 +218,6 @@ QList<SMGuardValidation::Finding> SMGuardValidation::validateTransition(const St
     if (transitionId != 0u)
     {
         checkLevel(data, data.getStates(), SMGuardRef(transitionId), findings);
-    }
-
-    return findings;
-}
-
-QList<SMGuardValidation::Finding> SMGuardValidation::validateDoActivity(const StateMachineData& data, uint32_t stateId)
-{
-    QList<Finding> findings;
-    if (stateId != 0u)
-    {
-        checkLevel(data, data.getStates(), SMGuardRef::doActivity(stateId), findings);
     }
 
     return findings;

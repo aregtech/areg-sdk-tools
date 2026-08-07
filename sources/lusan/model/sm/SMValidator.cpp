@@ -341,7 +341,6 @@ namespace
             note(state->getId());
             noteOps(state->getEntryList());
             noteOps(state->getExitList());
-            noteOps(state->getDoList());
             for (SMTransitionEntry* tr : state->getTransitions().getElements())
             {
                 if (tr == nullptr)
@@ -616,20 +615,10 @@ namespace
             }
         }
 
-        // Entry / exit / do operations carry no stimulus scope.
+        // Entry and exit operations carry no stimulus scope.
         const Scope entryScope;
         validateOperations(state.getEntryList(), entryScope);
         validateOperations(state.getExitList(), entryScope);
-        validateOperations(state.getDoList(), entryScope);
-
-        // Do activity is a timer loop, so it has to say how often it ticks
-        if ((state.getDoList().isEmpty() == false) && (state.getDoInterval() < SMStateEntry::MIN_DO_INTERVAL))
-        {
-            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_DO_ACTIVITY
-               , vtr("State '%1' has a Do activity with no repeat interval; a Do is a timer loop and Interval must be at least %2 ms. "
-                     "To react to one stimulus without leaving the state, use an internal transition -- it names which stimulus.")
-                    .arg(state.getName()).arg(SMStateEntry::MIN_DO_INTERVAL));
-        }
 
         for (SMTransitionEntry* tr : state.getTransitions().getElements())
         {
@@ -650,9 +639,6 @@ namespace
         if (state.getExitList().isEmpty() == false)
             add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
                , vtr("Start state '%1' has exit operations; a Start is a marker and performs nothing").arg(name));
-        if (state.getDoList().isEmpty() == false)
-            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
-               , vtr("Start state '%1' has a Do activity; a Start is a marker and performs nothing").arg(name));
 
         // The outgoing transitions are the level's initial transitions
         int outgoing = 0;
@@ -1507,9 +1493,23 @@ namespace
         }
 
         // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr'
-        // plus its name and an embedded condition 'mCond' plus its name. A state name that starts
-        // with 'Attr' or 'Cond' therefore lands on a member that belongs to another kind. An
-        // attribute or a condition starting with those words is fine: it keeps its own prefix.
+        // plus its name, an embedded condition 'mCond' plus its name and a timer 'mTimer' plus its
+        // name. A state name that starts with one of those words therefore lands on a member that
+        // belongs to another kind. An attribute, a condition or a timer starting with its own word
+        // is fine: it keeps its own prefix. A state named exactly the word is fine too, because the
+        // member it makes is the bare prefix, which no name of the owning kind can produce.
+        struct ReservedWord
+        {
+            QLatin1StringView   word;   //!< The leading word a state name may not extend.
+            QLatin1StringView   owner;  //!< What the resulting prefix is reserved for.
+        };
+        static constexpr ReservedWord reserved[]
+        {
+              { QLatin1StringView("Attr"),  QLatin1StringView("attribute members")          }
+            , { QLatin1StringView("Cond"),  QLatin1StringView("embedded condition members") }
+            , { QLatin1StringView("Timer"), QLatin1StringView("timer members")              }
+        };
+
         for (const LevelInfo& info : levels)
         {
             for (SMStateEntry* state : info.level->getElements())
@@ -1518,15 +1518,15 @@ namespace
                     continue;
 
                 const QString& name = state->getName();
-                if (name.startsWith(QStringLiteral("Attr")))
+                for (const ReservedWord& entry : reserved)
                 {
-                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
-                      , vtr("State '%1' generates a member named 'm%1', and the prefix 'mAttr' is reserved for attribute members. Rename the state so that it does not begin with 'Attr'.").arg(name));
-                }
-                else if (name.startsWith(QStringLiteral("Cond")))
-                {
-                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
-                      , vtr("State '%1' generates a member named 'm%1', and the prefix 'mCond' is reserved for embedded condition members. Rename the state so that it does not begin with 'Cond'.").arg(name));
+                    if ((name.size() > entry.word.size()) && name.startsWith(entry.word))
+                    {
+                        add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                          , vtr("State '%1' generates a member named 'm%1', and the prefix 'm%2' is reserved for %3. Rename the state so that it does not begin with '%2'.")
+                                .arg(name, QString(entry.word), QString(entry.owner)));
+                        break;
+                    }
                 }
             }
         }
@@ -1585,9 +1585,7 @@ namespace
     {
         for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
         {
-            const eDocElementKind kind = (finding.target.getOwner() == SMGuardRef::eOwner::DoActivity)
-                                    ? eDocElementKind::State
-                                    : eDocElementKind::Transition;
+            const eDocElementKind kind = eDocElementKind::Transition;
             // Through add(), so a non-error guard finding carries the same offset number the
             // generator uses instead of the bare rule id.
             add(finding.target.getId(), kind, finding.severity, SMValidator::RULE_GUARD
@@ -1814,18 +1812,6 @@ namespace
 
                 noteOps(st->getEntryList());
                 noteOps(st->getExitList());
-                noteOps(st->getDoList());
-
-                // A Do stop condition uses everything it references, exactly as a guard does, so an
-                // attribute read only by an `Until` still counts as read.
-                {
-                    GuardUses until;
-                    collectGuardUses(mData, st->getDoUntil().getTree(), until);
-                    attrsRead      += until.attributes;
-                    constsUsed     += until.constants;
-                    conditionsUsed += until.conditions;
-                    typesUsed      += until.types;
-                }
 
                 // Unreachable: nothing at this level targets it, and the level's Start does not
                 // descend into it. A warning, never an error, since a half-drawn machine is normal.

@@ -2998,7 +2998,7 @@ namespace
         {
             if (st == nullptr)
                 continue;
-            if (owns(st->getEntryList()) || owns(st->getExitList()) || owns(st->getDoList()))
+            if (owns(st->getEntryList()) || owns(st->getExitList()))
             {
                 levelOut = levelId;
                 return st->getId();

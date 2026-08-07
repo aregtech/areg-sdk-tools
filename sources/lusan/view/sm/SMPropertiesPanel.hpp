@@ -187,7 +187,6 @@ private slots:
     void onStateSubmachineCommit();
     void onStateOnFinalCommit();
     void onStateDescriptionCommit();
-    void onDoIntervalCommit();
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
     void onTransKindCommit();
@@ -202,10 +201,8 @@ private:
     void buildStatePage();
 
     /**
-     * rief   Adds the state page's `Internal` tab, which hosts the shared 
-ef SMInternalEditor.
-     *          Enter, Do, Exit and Internal are the four things a state does without leaving
-     *          itself, and until now only three of them had a tab -- the fourth was reachable only
+     * \brief   Enter, Exit and Internal are the three things a state does without leaving
+     *          itself, and until now only two of them had a tab -- Internal was reachable only
      *          by double-clicking a row in a collapsible list on the General tab. The canvas
      *          context menu opens the SAME editor in an SMInternalDialog.
      **/
@@ -240,14 +237,11 @@ ef SMInternalEditor.
 private:
     /**
      * \enum    eOpList
-     * \brief   Which of a state's operation lists a state-action tab is bound to. The `Do` list
-     *          (R24) is not parallel to Enter/Exit: its tab also carries a repeat interval and a
-     *          stop-condition above the shared editor, so its page is built by hand.
+     * \brief   Which of a state's operation lists a state-action tab is bound to.
      **/
     enum class eOpList
     {
           Entry     //!< The state's EntryList (`Enter` tab).
-        , Do        //!< The state's DoList (`Do` tab -- the repeated activity).
         , Exit      //!< The state's ExitList (`Exit` tab).
     };
 
@@ -255,7 +249,7 @@ private:
      * \struct  ActionSlot
      * \brief   One state-action tab: its operation-list role, its editor and its index in the state
      *          tab widget. showState() binds each editor and refreshActionSummaries() re-tips each
-     *          tab from this table, so a third `Do` list is a one-line addition.
+     *          tab from this table, so a further list is a one-line addition.
      **/
     struct ActionSlot
     {
@@ -275,7 +269,7 @@ private:
     bool                mUpdating;      //!< Guards field population against commit signals.
 
     // State page.
-    QTabWidget*         mStateTabs;     //!< The General / Enter / Do / Exit tab host.
+    QTabWidget*         mStateTabs;     //!< The General / Enter / Exit / Internal tab host.
     SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
     QToolButton*        mBtnEnterSubmachine;  //!< Enter / open / add a substate, per selection.
     QToolButton*        mBtnGoToParent;
@@ -292,10 +286,6 @@ private:
                                         //!< hidden rather than shown disabled.
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
-    SMOperationsEditor* mDoOps;         //!< The Do-activity operations editor (Actions tab).
-    QSpinBox*           mDoInterval;    //!< The Do tick period in ms (never below MIN_DO_INTERVAL).
-    SMGuardField*       mDoUntil;       //!< The Do stop condition: the SHARED guard editing surface.
-    SMGuardStatusLine*  mDoUntilStatus; //!< That surface's verdict line (the one place it reports).
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
     QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
 

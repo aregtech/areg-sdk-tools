@@ -174,7 +174,6 @@ bool SMOperationValidation::worstForState(const StateMachineData& data, uint32_t
     }
 
     QList<DocIssue> issues = listIssues(data, state->getEntryList(), stateId, eDocElementKind::State, QString());
-    issues += listIssues(data, state->getDoList(), stateId, eDocElementKind::State, QString());
     issues += listIssues(data, state->getExitList(), stateId, eDocElementKind::State, QString());
     if (issues.isEmpty())
     {

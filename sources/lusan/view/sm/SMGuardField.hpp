@@ -84,10 +84,9 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * rief   Points the field at the guard it edits -- a transition's `<Guard>` or a state
-     *          `DoList`'s `<Until>` stop condition -- and rebuilds the catalog and the text. An
-     *          invalid ref clears it. A bare transition id converts, so the transition callers
-     *          read exactly as they did.
+     * \brief   Points the field at the guard it edits -- a transition's `<Guard>` or a state
+     *          and rebuilds the catalog and the text. An invalid ref clears it. A bare transition
+     *          id converts, so the transition callers read exactly as they did.
      **/
     void setTarget(const SMGuardRef& target);
 
@@ -401,7 +400,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     StateMachineModel&      mModel;         //!< The document facade.
-    SMGuardRef              mTarget;        //!< The edited guard (transition guard / Do stop condition).
+    SMGuardRef              mTarget;        //!< The edited guard (transition guard).
     QString                 mCommittedText; //!< The last committed text (Esc target).
     bool                    mAllowRaw;      //!< Unresolved fragments become raw nodes.
     bool                    mRebuildPending;//!< Coalesces deferred rebuilds.

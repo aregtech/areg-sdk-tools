@@ -546,16 +546,14 @@ namespace
                 named = named || ((i.rule == rule) && i.message.contains(QStringLiteral("'Begin'")));
             CHECK(named);
         }
-        {   // Rule 1, the other two lists: exit operations and a Do activity are equally refused.
+        {   // Rule 1, the other list: exit operations on a Start are equally refused.
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             doc.getMethods().createMethod("Cooldown", eMethod::Action);
-            doc.getMethods().createMethod("Poll", eMethod::Action);
             start->getExitList().addOperation(new SMActionCall(0, "Cooldown"));
-            start->getDoList().addOperation(new SMActionCall(0, "Poll"));
-            CHECK(countRule(SMValidator::validate(doc), rule) == 2);
+            CHECK(countRule(SMValidator::validate(doc), rule) == 1);
         }
         {   // Rule 2: nothing may target a Start, and a Start may not target itself.
             StateMachineData doc;
