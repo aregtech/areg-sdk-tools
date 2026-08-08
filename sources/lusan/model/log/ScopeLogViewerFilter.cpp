@@ -345,7 +345,7 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
     }
 
     emit signalFilterSelected(mIndexStart, mIndexEnd);
-    invalidateFilter();
+    invalidateRowFilter();
 }
 
 inline void ScopeLogViewerFilter::_clearData()

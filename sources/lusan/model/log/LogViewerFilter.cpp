@@ -52,13 +52,13 @@ void LogViewerFilter::setComboFilter(int logicalColumn, const NELusanCommon::Fil
         if (mComboFilters.contains(columnKey))
         {
             mComboFilters.remove(columnKey);
-            invalidateFilter();
+            invalidateRowFilter();
         }
     }
     else
     {
         mComboFilters[columnKey] = filters;
-        invalidateFilter();
+        invalidateRowFilter();
     }
 }
 
@@ -90,7 +90,7 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
                 prepareReExpression(filter.text, false, false, false);
             }
 
-            invalidateFilter();
+            invalidateRowFilter();
         }
     }
     else
@@ -120,7 +120,7 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
             break;
         }
 
-        invalidateFilter();
+        invalidateRowFilter();
     }
 }
 
@@ -128,7 +128,7 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
 void LogViewerFilter::clearFilters()
 {
     _clearData();
-    invalidateFilter();
+    invalidateRowFilter();
 }
 
 bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
