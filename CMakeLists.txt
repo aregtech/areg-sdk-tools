@@ -70,6 +70,12 @@ add_custom_command( TARGET ${APP_NAME} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy ${LUSAN_BASE}/lusan/res/lusan.init ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config/lusan.init
                     VERBATIM)
 
+# Qt and ADS are LGPL and distributed as shared libraries, ship their license texts.
+add_custom_command(TARGET ${APP_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${LUSAN_ROOT}/licenses" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/licenses"
+    COMMENT "Copying third-party license notices"
+    VERBATIM)
+
 # ADS is a shared library (see conf/cmake/setup.cmake); look for it next to the
 # executable at runtime, and copy it there after each build, the same way the
 # Qt runtime libraries are deployed below.
@@ -81,6 +87,11 @@ add_custom_command(TARGET ${APP_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" "$<TARGET_FILE_DIR:${APP_NAME}>"
     COMMENT "Copying ADS shared library next to the executable"
     VERBATIM)
+if (UNIX)
+    add_custom_command(TARGET ${APP_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_SONAME_FILE:${LUSAN_ADS_TARGET}>" "$<TARGET_FILE_DIR:${APP_NAME}>"
+        VERBATIM)
+endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
@@ -139,6 +150,8 @@ if (UNIX AND NOT APPLE)
     include(GNUInstallDirs)
     install(TARGETS ${APP_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES "$<TARGET_SONAME_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(DIRECTORY "${LUSAN_ROOT}/licenses" DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan-256.png"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps" RENAME lusan.png)
     install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.svg"
