@@ -194,5 +194,5 @@ jobs:
         with:
           name: lusan-macos-qt611
           path: |
-            build/**/lusan.app/**
-          if-no-files-found: warn
+            build/**/lusan.mac.app/**
+          if-no-files-found: error

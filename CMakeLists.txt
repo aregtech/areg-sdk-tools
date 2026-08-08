@@ -124,16 +124,13 @@ if (WIN32)
         COMMENT "Deploying Qt runtime libraries for Win32"
     )
 elseif (APPLE)
+    # macdeployqt has its own command line, the .app bundle directory must come first
     add_custom_command(TARGET lusan POST_BUILD
         COMMAND "${_qt_bin_dir}/macdeployqt"
-            --no-opengl-sw
-            --no-compiler-runtime
-            --no-translations
-            --no-system-dxc-compiler
-            --no-quick-import
-            --no-ffmpeg
-            "$<TARGET_FILE:${APP_NAME}>"
+            "$<TARGET_BUNDLE_DIR:${APP_NAME}>"
+            -always-overwrite
         COMMENT "Deploying Qt runtime libraries for macOS"
+        VERBATIM
     )
 else()
     message(STATUS "Qt deployment skipped on Linux (handled by system packaging)")
