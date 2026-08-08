@@ -32,8 +32,8 @@
 NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent)
     : NavigationWindow(naviWindow, wndMain, parent)
     , mScopesModel(nullptr)
-    , mNaviTree(nullptr)
     , mSelModel(nullptr)
+    , mNaviTree(nullptr)
 {
 }
 

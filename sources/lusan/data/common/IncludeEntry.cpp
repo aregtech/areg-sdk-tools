@@ -182,6 +182,18 @@ void IncludeEntry::setVersion(const VersionNumber& version)
     mVersion = version;
 }
 
+void IncludeEntry::markVersionPatchAutoFixed()
+{
+    mVersionPatchAutoFixed = true;
+}
+
+bool IncludeEntry::consumeVersionPatchAutoFixed() const
+{
+    const bool result = mVersionPatchAutoFixed;
+    mVersionPatchAutoFixed = false;
+    return result;
+}
+
 const QString& IncludeEntry::getDescription() const
 {
     return mDescription;

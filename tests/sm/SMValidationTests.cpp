@@ -365,6 +365,55 @@ namespace
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK((countRule(issues, 32) == 0) && (countRule(issues, 33) == 0) && (countRule(issues, 4) == 0));
         }
+        {   // OW-62: a declared timer named 'Consumer' becomes 'mTimerConsumer', which is already
+            // the machine's own timer consumer member. The generator built this with zero errors.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getTimers().createTimer("Consumer")->setTimeout(1000);
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // A declared timer whose name does not land on a fixed member is silent.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getTimers().createTimer("Red")->setTimeout(1000);
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+        }
+        {   // OW-62: a state hosting an import named 'State' or 'ActionHandler' becomes a member
+            // that is already the machine's own bookkeeping, not merely another kind's prefix.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("State", eKind::Normal)->setSubmachine("Lib");
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("ActionHandler", eKind::Normal)->setSubmachine("Lib");
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // The same name on a state that does NOT host an import is legal: a plain state
+            // generates no member at all, so there is nothing to collide with.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("State", eKind::Normal);
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+        }
+        {   // A hosting state whose name does not land on a fixed member is silent.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("Ready", eKind::Normal)->setSubmachine("Lib");
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+        }
+        {   // 'OwnLock' and 'Epoch' only exist on a Shared machine, so a hosting state named
+            // 'Epoch' is legal on a Local one and refused the moment the machine turns Shared.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("Epoch", eKind::Normal)->setSubmachine("Lib");
+            doc.getOverview().setThreading(SMOverviewData::eThreading::Local);
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+            doc.getOverview().setThreading(SMOverviewData::eThreading::Shared);
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
         {   // A trigger whose parameter carries the method's own name hides the method in the body.
             StateMachineData doc;
             addStart(doc);
@@ -1478,6 +1527,25 @@ namespace
             CHECK(countWarn(issues, 13) == 1);
             CHECK(countRule(issues, 17) == 0);
             CHECK(countWarn(issues, 17) == 1);
+        }
+        {   // The same pairing in a CONDITION comparison (== / !=), not just an argument mapping:
+            // areComparable used to refuse it outright ("cannot compare 'bool' with 'uint32'").
+            // It warns now, like every other narrowing pair.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getAttributes().createAttribute("flag")->setType("bool");
+            doc.getAttributes().createAttribute("count")->setType("uint32");
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
+            SMConditionEntry* row = tr->getConditions().addCondition();
+            row->setLhsKind(eSource::Attribute); row->setLhs("flag");
+            row->setOperator(eOp::Equal);
+            row->setRhsKind(eSource::Attribute); row->setRhs("count");
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, 13) == 0);
+            CHECK(countWarn(issues, 13) == 1);
+            CHECK(warnSeverityIs(issues, 13, SMIssue::eSeverity::Warning));
         }
         {   // char is deliberately not part of that: it stays a mismatch against a number.
             StateMachineData doc;

@@ -71,9 +71,6 @@ namespace
     QMap<uint32_t, QIcon>   _logIcons;
     
     const QColor NoColor            { Qt::transparent };
-    constexpr int IconBegin         { 0 };
-    constexpr int IconEnd           { LogIconFactory::IconPixels - IconBegin };
-    constexpr int IconMiddle        { (IconEnd - IconBegin) / 2 };
     constexpr uint32_t NoPrio       { static_cast<uint32_t>(areg::LogPriority::PrioNotset) };
     constexpr int32_t  AlphaSolid   { 255 };
     constexpr int32_t  AlphaMixed   { 75 };

@@ -55,24 +55,37 @@ endif()
 include(${AREG_CMAKE})
 set(AREG_RESOURCES "${AREG_FRAMEWORK}/areg/resources")
 
+if (APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND TARGET areg)
+    target_compile_options(areg PRIVATE -Wno-unused-const-variable)
+endif()
+
 # ##################################################################
 # Qt Advanced Docking System (ADS): dockable Outline/Properties/Toolbar
-# that drag/float/tab across the Navigation Window and Design page
-# (issue #516). Fetched from GitHub and built as a static library so no
-# extra runtime DLL has to be deployed alongside lusan.
+# that drag/float/tab across the Navigation Window and Design page.
+# Fetched from GitHub and built as a shared library: ADS is LGPL-2.1
 # ##################################################################
-set(ADS_VERSION       "4.4.1")
-set(BUILD_STATIC      ON  CACHE BOOL "Build ADS as a static library" FORCE)
+set(ADS_VERSION       "5.0.0")
+set(BUILD_STATIC      OFF CACHE BOOL "Build ADS as a static library" FORCE)
 set(BUILD_EXAMPLES    OFF CACHE BOOL "Do not build ADS examples"     FORCE)
-set(ADS_BUILD_STATIC  ON  CACHE BOOL "Build ADS as a static library" FORCE)
+set(ADS_BUILD_STATIC  OFF CACHE BOOL "Build ADS as a static library" FORCE)
 FetchContent_Declare(
     ads
     GIT_REPOSITORY https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System.git
-    GIT_TAG "4.4.1"
+    GIT_TAG "5.0.0"
 )
 FetchContent_MakeAvailable(ads)
 set(LUSAN_ADS_TARGET "qtadvanceddocking-qt${QT_VERSION_MAJOR}")
 message(STATUS ">>> Fetched Qt-Advanced-Docking-System ${ADS_VERSION}; target '${LUSAN_ADS_TARGET}'")
+
+# ADS is vendored third-party code, its own build may warn.
+# Lusan targets keeping full compiler warnings.
+if (TARGET ${LUSAN_ADS_TARGET})
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${LUSAN_ADS_TARGET} PRIVATE -w)
+    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        target_compile_options(${LUSAN_ADS_TARGET} PRIVATE /W0)
+    endif()
+endif()
 
 message(STATUS "-------------------- CMakeLists Status Report Begin --------------------")
 message(STATUS "LUSAN: >>> Qt Version = \'${QT_VERSION_MAJOR}\'")

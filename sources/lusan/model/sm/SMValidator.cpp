@@ -188,7 +188,6 @@ namespace
         void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name);
         bool fragmentResolves(const QString& fragment) const;
         QString unresolvedFragment(const QString& typeName) const;
-        bool typeResolves(const QString& typeName) const;
         void checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName);
 
         void checkDuplicateIds();
@@ -296,11 +295,6 @@ namespace
         }
 
         return QString();
-    }
-
-    bool Ctx::typeResolves(const QString& typeName) const
-    {
-        return unresolvedFragment(typeName).isEmpty();
     }
 
     void Ctx::checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName)
@@ -1013,17 +1007,21 @@ namespace
         case eValueSource::Expression:
         case eValueSource::Lambda:
             break;      // Literal or verbatim: not a name reference.
+
         case eValueSource::Param:
             validateParamScope(ownerId, eDocElementKind::Condition, ref, scope);
             break;
+
         case eValueSource::Attribute:
             if (mData.getAttributes().findElement(ref) == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(ref));
             break;
+
         case eValueSource::Constant:
             if (mData.getConstants().findElement(ref) == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Constant '%1' is not declared").arg(ref));
             break;
+
         case eValueSource::Condition:
         {
             SMMethodEntry* c = mData.getMethods().findCondition(ref);
@@ -1031,8 +1029,12 @@ namespace
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
-            break;
         }
+        break;
+
+        case eValueSource::Invalid:
+            add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
+            break;
         }
     }
 
@@ -1076,21 +1078,25 @@ namespace
                 }
             }
             return QString();
+        
         case eValueSource::Attribute:
         {
             const SMAttributeEntry* a = mData.getAttributes().findElement(ref);
             return (a != nullptr) ? a->getType() : QString();
         }
+        
         case eValueSource::Constant:
         {
             const ConstantEntry* c = mData.getConstants().findElement(ref);
             return (c != nullptr) ? c->getType() : QString();
         }
+        
         case eValueSource::Condition:
         {
             SMMethodEntry* m = mData.getMethods().findCondition(ref);
             return (m != nullptr) ? m->getReturn() : QString();
         }
+
         default:
             return QString();
         }
@@ -1109,21 +1115,23 @@ namespace
         case eTypeCat::Structure:
         case eTypeCat::Container:
             add(id, kind, eSeverity::Error, rule, vtr("Type '%1' has no literal form").arg(targetType));
-            return;
+            break;
+
         case eTypeCat::Enum:
         {
             const DataTypeEnum* e = dynamic_cast<const DataTypeEnum*>(customType(targetType));
             if ((e != nullptr) && (e->hasElement(literal) == false))
                 add(id, kind, eSeverity::Error, rule, vtr("'%1' is not an enumerator of '%2'").arg(literal, targetType));
-            return;
         }
+        break;
+
         default:
         {
             const QString reason = SMLiteralValidator::validate(targetType, literal);
             if (reason.isEmpty() == false)
                 add(id, kind, eSeverity::Error, rule, vtr("Invalid %1 literal '%2': %3").arg(targetType, literal, reason));
-            return;
         }
+        break;
         }
     }
 
@@ -1217,7 +1225,14 @@ namespace
         {
             const QString reason = SMTypeCompat::areComparable(lhsType, op, rhsType);
             if (reason.isEmpty() == false)
-                add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
+            {
+                // bool against a number is a comparison C++ builds -- lossy, not illegal --
+                // so it warns like every other narrowing conversion instead of refusing.
+                if (SMTypeCompat::isBoolNumberComparison(lhsType, rhsType))
+                    add(id, eDocElementKind::Condition, eSeverity::Warning, 13, vtr("Comparing '%1' with '%2' narrows: bool converts to 0 or 1 before the comparison").arg(lhsType, rhsType));
+                else
+                    add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
+            }
         }
 
         // a comparison of two design-time constants (literals or Constant sources).
@@ -1384,18 +1399,20 @@ namespace
                     , vtr("Import '%1' is pinned to version %2, the file is %3; updating is recommended")
                         .arg(name, pinned.toString(), actual.toString()));
             }
+            else if (entry.consumeVersionPatchAutoFixed())
+            {
+                // A patch-only drift is fixed silently on load (see StateMachineModel::loadFromFile);
+                // this is the one-time notice that it happened, not a finding to act on.
+                add(id, eDocElementKind::Import, eSeverity::Info, 12
+                    , vtr("Import '%1' pin was updated to %2 to match the file's patch level")
+                        .arg(name, pinned.toString()));
+            }
             else if (pinned.getPatch() != actual.getPatch())
             {
                 add(id, eDocElementKind::Import, eSeverity::Info, 12
                     , vtr("Import '%1' is pinned to version %2, the file is %3")
                         .arg(name, pinned.toString(), actual.toString()));
             }
-
-            // The two Threading values an import brings together are not compared any more. A hosted
-            // machine takes the synchronization object of the machine that hosts it, so the host
-            // decides for the whole import tree and an imported document's own value applies only
-            // when that document is instantiated on its own. Rules 26 and warning 13 are retired and
-            // their numbers are not reused.
         }
 
         if (brokenAliases.isEmpty())
@@ -1492,12 +1509,8 @@ namespace
                   , vtr("Trigger '%1' has the same name as an attribute. An attribute and a trigger must have different names, because both become members of the machine class.").arg(m->getName()));
         }
 
-        // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr'
-        // plus its name, an embedded condition 'mCond' plus its name and a timer 'mTimer' plus its
-        // name. A state name that starts with one of those words therefore lands on a member that
-        // belongs to another kind. An attribute, a condition or a timer starting with its own word
-        // is fine: it keeps its own prefix. A state named exactly the word is fine too, because the
-        // member it makes is the bare prefix, which no name of the owning kind can produce.
+        // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr',
+        // embedded condition 'mCond'+name, and a timer 'mTimer' its name.
         struct ReservedWord
         {
             QLatin1StringView   word;   //!< The leading word a state name may not extend.
@@ -1528,6 +1541,65 @@ namespace
                         break;
                     }
                 }
+            }
+        }
+
+        // Either can land on a member the machine class
+        static constexpr QLatin1StringView fixedMembers[]
+        {
+              QLatin1StringView("ActionHandler"), QLatin1StringView("InstanceName")
+            , QLatin1StringView("Lock"),          QLatin1StringView("MasterThread")
+            , QLatin1StringView("OwnProcessing"), QLatin1StringView("Processing")
+            , QLatin1StringView("State"),         QLatin1StringView("EventConsumer")
+            , QLatin1StringView("TimerConsumer"), QLatin1StringView("FinalObserver")
+        };
+        static constexpr QLatin1StringView sharedFixedMembers[]
+        {
+              QLatin1StringView("OwnLock"), QLatin1StringView("Epoch")
+        };
+
+        const bool isShared = (mData.getOverview().getThreading() == SMOverviewData::eThreading::Shared);
+        auto collidesWithFixedMember = [&](const QString& word) -> bool
+        {
+            for (const QLatin1StringView& fixed : fixedMembers)
+            {
+                if (word == QString(fixed))
+                    return true;
+            }
+            if (isShared)
+            {
+                for (const QLatin1StringView& fixed : sharedFixedMembers)
+                {
+                    if (word == QString(fixed))
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        for (const LevelInfo& info : levels)
+        {
+            for (SMStateEntry* state : info.level->getElements())
+            {
+                if ((state == nullptr) || (state->isImportedSubmachine() == false))
+                    continue;
+
+                const QString& name = state->getName();
+                if (collidesWithFixedMember(name))
+                {
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                      , vtr("Hosting state '%1' generates a member named 'm%1', which the machine class already uses for itself. Rename the state.").arg(name));
+                }
+            }
+        }
+
+        for (const SMTimerEntry& timer : mData.getTimers().getElements())
+        {
+            const QString member = QStringLiteral("Timer") + timer.getName();
+            if (collidesWithFixedMember(member))
+            {
+                add(timer.getId(), eDocElementKind::Timer, eSeverity::Error, 33
+                  , vtr("Timer '%1' generates a member named 'm%2', which the machine class already uses for itself. Rename the timer.").arg(timer.getName(), member));
             }
         }
 

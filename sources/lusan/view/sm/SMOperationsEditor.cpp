@@ -51,8 +51,6 @@ namespace
     using eOp     = SMOperationBase::eOperation;
     using eSource = SMArgumentEntry::eValueSource;
 
-    constexpr int RoleTimerOpId { Qt::UserRole + 1 };
-
     //!< The Actions/Events source universe: a literal, a stimulus parameter, a machine attribute or
     //!< a constant. The condition and verbatim-C++ kinds belong to Conditions only.
     QList<eSource> kActionSources(void)

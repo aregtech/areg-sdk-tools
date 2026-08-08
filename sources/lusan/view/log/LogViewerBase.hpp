@@ -165,7 +165,7 @@ protected:
      * \param   fileName    The name of the file to save.
      * \return  True if the file was successfully saved, false otherwise.
      **/
-    virtual bool saveFile(const QString& fileName);
+    bool saveFile(const QString& fileName) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.

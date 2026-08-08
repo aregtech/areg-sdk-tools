@@ -75,6 +75,24 @@ public slots:
     void setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter);
 
 //////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+protected:
+    /**
+     * \brief   Re-applies the row filter. Call it right after changing the filter
+     *          parameters so that filterAcceptsRow() runs again on the mapped rows.
+     *          Qt 6.10 replaced invalidateFilter() with endFilterChange().
+     **/
+    inline void invalidateRowFilter(void)
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+        endFilterChange(QSortFilterProxyModel::Direction::Rows);
+#else   // QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+        invalidateFilter();
+#endif  // QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+    }
+
+//////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:

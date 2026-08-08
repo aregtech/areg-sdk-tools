@@ -393,7 +393,7 @@ QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end,
     const double a1 = std::atan2(end.y() - center.y(), end.x() - center.x());
     const double aApex = std::atan2(apex.y() - center.y(), apex.x() - center.x());
 
-    const auto wrap = [Pi](double a) -> double
+    const auto wrap = [](double a) -> double
     {
         while (a <= -Pi) a += 2.0 * Pi;
         while (a > Pi)   a -= 2.0 * Pi;

@@ -1134,6 +1134,67 @@ namespace
         CHECK(includes.canImport(at("broken.fsml"), chain) == SMIncludeModel::eImportRefusal::Unreadable);
     }
 
+    void testPatchPinAutoFix()
+    {
+        std::printf("[SM-29-EXT] a patch-only pin drift is corrected silently on open\n");
+
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString root = dir.path();
+        const auto at = [&root](const char* file) -> QString { return QDir(root).absoluteFilePath(QString::fromLatin1(file)); };
+
+        // The imported machine is actually at 1.2.7.
+        std::unique_ptr<StateMachineData> imported = StateMachineData::createNewDocument(QStringLiteral("Imported"));
+        imported->getOverview().setVersion(VersionNumber(QStringLiteral("1.2.7")));
+        imported->writeToFile(at("imported.fsml"));
+
+        // The host pins it at 1.2.1 -- same MAJOR.MINOR, drifted PATCH only.
+        std::unique_ptr<StateMachineData> host = StateMachineData::createNewDocument(QStringLiteral("Host"));
+        IncludeEntry* pin = host->getIncludes().createInclude(QStringLiteral("./imported.fsml"));
+        pin->setAlias(QStringLiteral("Nested"));
+        pin->setVersion(VersionNumber(QStringLiteral("1.2.1")));
+        host->writeToFile(at("host.fsml"));
+        SMDocumentCache::getInstance().clear();
+
+        StateMachineModel model;
+        CHECK(model.loadFromFile(at("host.fsml")));
+
+        // The pin is corrected in memory immediately, no dialog.
+        const IncludeEntry* fixed = model.getData().findImportByAlias(QStringLiteral("Nested"));
+        CHECK(fixed != nullptr);
+        CHECK((fixed != nullptr) && (fixed->getVersion().toString() == QStringLiteral("1.2.7")));
+
+        // The document is marked modified, so the normal save path picks it up.
+        CHECK(model.isDirty());
+
+        // The very first validation pass says so, once, as Info.
+        auto hasAutoFixNotice = [](const QList<SMIssue>& issues) -> bool
+        {
+            for (const SMIssue& issue : issues)
+            {
+                if ((issue.rule == (SMValidator::WARNING_RULE_BASE + 12)) && issue.message.contains(QStringLiteral("updated")))
+                    return true;
+            }
+            return false;
+        };
+        CHECK(hasAutoFixNotice(model.getValidationController().issues()));
+
+        // Re-running validation on the same, already-fixed document does not repeat the notice.
+        model.getValidationController().validateNow();
+        CHECK(hasAutoFixNotice(model.getValidationController().issues()) == false);
+
+        // Saving persists the corrected pin, so a fresh open finds no drift at all.
+        CHECK(model.saveToFile());
+        SMDocumentCache::getInstance().clear();
+        StateMachineModel reopened;
+        CHECK(reopened.loadFromFile(at("host.fsml")));
+        CHECK(reopened.isDirty() == false);
+        bool anyPinIssue = false;
+        for (const SMIssue& issue : reopened.getValidationController().issues())
+            anyPinIssue = anyPinIssue || (issue.rule == 22) || (issue.rule == (SMValidator::WARNING_RULE_BASE + 12));
+        CHECK(anyPinIssue == false);
+    }
+
     void testRemoveComposite()
     {
         std::printf("[SM-29-EXT] remove a painted submachine, three levels deep\n");
@@ -1266,6 +1327,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testHistoryMode();
     testSubmachineHosting();
     testImportPreChecks();
+    testPatchPinAutoFix();
     testRemoveComposite();
     testStimulusSilentRebind();
 

@@ -158,7 +158,7 @@ void LiveLogsModel::_setupSignals(bool doSetup)
         mConLogs                = connect(log, &LogObserver::signalLogMessage            , this, &LiveLogsModel::slotLogMessage);
         mConInstancesDisconnect = connect(log, &LogObserver::signalLogInstancesDisconnect, this, &LiveLogsModel::slotLogInstancesDisconnect);
         
-        mConLogger              = connect(log, &LogObserver::signalLogServiceConnected   , this, [this]() {
+        mConLogger              = connect(log, &LogObserver::signalLogServiceConnected   , this, []() {
         });
         mConInstancesConnect    = connect(log, &LogObserver::signalLogInstancesConnect   , this, [this](const std::vector<areg::ConnectedInstance>& instances) {
             addInstances(instances, true);

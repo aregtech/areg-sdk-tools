@@ -159,6 +159,10 @@ git clone https://github.com/aregtech/areg-sdk-tools.git .
 The sources of Lusan are released under the **Apache version 2.0 License**. It uses sources of Areg SDK, which are released under the **Apache License 2.0**. 
 You are free to use, modify, and distribute the software in accordance with the license terms.
 
+Lusan also links Qt 6 (LGPLv3) and the Qt Advanced Docking System (LGPL-2.1) as
+shared libraries; see [`licenses/THIRD-PARTY-NOTICES.md`](licenses/THIRD-PARTY-NOTICES.md)
+for the full attribution and the license texts that ship alongside the binary.
+
 ---
 
 ## Call to Action
