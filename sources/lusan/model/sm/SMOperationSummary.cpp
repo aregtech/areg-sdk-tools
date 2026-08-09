@@ -88,21 +88,6 @@ namespace
         return name + QLatin1Char('(') + parts.join(QStringLiteral(", ")) + QLatin1Char(')');
     }
 
-    //!< The first non-empty, trimmed line of an inline body, elided for the row.
-    QString firstLine(const QString& body)
-    {
-        const QStringList lines = body.split(QLatin1Char('\n'));
-        for (const QString& line : lines)
-        {
-            const QString trimmed = line.trimmed();
-            if (trimmed.isEmpty() == false)
-            {
-                return (trimmed.length() > 40) ? (trimmed.left(37) + QStringLiteral("...")) : trimmed;
-            }
-        }
-
-        return QString();
-    }
 }
 
 QString SMOperationSummary::stimulusSignature(const StateMachineData& data, const SMTransitionEntry& transition)
@@ -185,13 +170,7 @@ QString SMOperationSummary::text(const StateMachineData& data, const SMOperation
     }
 
     case SMOperationBase::eOperation::TimerStop:
-        return QStringLiteral("stop ") + static_cast<const SMTimerStop&>(op).getTimer();
-
-    case SMOperationBase::eOperation::InlineCode:
     default:
-    {
-        const QString line = firstLine(static_cast<const SMInlineCode&>(op).getBody());
-        return line.isEmpty() ? QStringLiteral("{ inline code }") : (QStringLiteral("{ ") + line + QStringLiteral(" }"));
-    }
+        return QStringLiteral("stop ") + static_cast<const SMTimerStop&>(op).getTimer();
     }
 }

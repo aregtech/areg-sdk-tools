@@ -23,6 +23,8 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
+#include <QSet>
+
 //////////////////////////////////////////////////////////////////////////
 // SMMoveNodeCommand
 //////////////////////////////////////////////////////////////////////////
@@ -419,9 +421,13 @@ void SMRemoveLayoutCommand::redo()
     SMLayoutData& layout = data().getLayout();
     if (mCaptured == false)
     {
+        // Deleting a large composite matches every removed id against every layout entry, so the
+        // ids are hashed once instead of scanned per entry.
+        const QSet<uint32_t> ids(mIds.constBegin(), mIds.constEnd());
+
         for (const SMLayoutView& view : layout.getViews())
         {
-            if (mIds.contains(view.owner))
+            if (ids.contains(view.owner))
             {
                 mViews.append(view);
             }
@@ -429,7 +435,7 @@ void SMRemoveLayoutCommand::redo()
 
         for (const SMLayoutNode& node : layout.getNodes())
         {
-            if (mIds.contains(node.owner))
+            if (ids.contains(node.owner))
             {
                 mNodes.append(node);
             }
@@ -437,7 +443,7 @@ void SMRemoveLayoutCommand::redo()
 
         for (const SMLayoutEdge& edge : layout.getEdges())
         {
-            if (mIds.contains(edge.owner))
+            if (ids.contains(edge.owner))
             {
                 mEdges.append(edge);
             }
@@ -447,7 +453,7 @@ void SMRemoveLayoutCommand::redo()
         // A note bound to a deleted state/transition (its owner) goes with it too.
         for (const SMLayoutNote& note : layout.getNotes())
         {
-            if (mIds.contains(note.level) || ((note.owner != 0) && mIds.contains(note.owner)))
+            if (ids.contains(note.level) || ((note.owner != 0) && ids.contains(note.owner)))
             {
                 mNotes.append(note);
             }

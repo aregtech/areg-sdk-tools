@@ -182,10 +182,8 @@ namespace
         case SMOperationBase::eOperation::TimerStop:
             return QStringLiteral("stop ") + op.getName();
         case SMOperationBase::eOperation::EventSend:
-            return QStringLiteral("send ") + op.getName();
-        case SMOperationBase::eOperation::InlineCode:
         default:
-            return QStringLiteral("{ ... }");
+            return QStringLiteral("send ") + op.getName();
         }
     }
 

@@ -88,6 +88,38 @@ namespace
                     ok ? "ok" : "OVER");
     }
 
+    //!< How many times a repeatable gesture is measured before it is judged.
+    constexpr int GESTURE_RUNS { 5 };
+
+    //!< One run of a gesture is dominated by scheduler noise on a debug build, and a gesture
+    //!< sitting near its budget then passes or fails by luck. The gesture is measured several
+    //!< times and judged on the median, and the spread is printed so a real regression -- where
+    //!< the whole range moves -- is told apart from one slow sample.
+    void reportRuns(const char* what, QList<qint64> samples, qint64 budget)
+    {
+        ++gChecks;
+        if (samples.isEmpty())
+        {
+            ++gFailures;
+            std::printf("  %-46s no samples\n", what);
+            return;
+        }
+
+        std::sort(samples.begin(), samples.end());
+        const qint64 median = samples.at(samples.size() / 2);
+        const bool ok = (median <= budget);
+        if (ok == false)
+        {
+            ++gFailures;
+        }
+
+        std::printf("  %-46s %6lld ms median (budget %lld ms, %d runs %lld..%lld) %s\n",
+                    what, static_cast<long long>(median), static_cast<long long>(budget),
+                    static_cast<int>(samples.size()),
+                    static_cast<long long>(samples.first()), static_cast<long long>(samples.last()),
+                    ok ? "ok" : "OVER");
+    }
+
     //!< For a gesture whose cost is dominated by model work (selection fan-out to the outline
     //!< and properties, a level switch), the same gesture on a small document measures the
     //!< harness's fixed cost; the difference is what the document size added, and that is what
@@ -488,32 +520,48 @@ int main(int argc, char* argv[])
         {
             const SMLayoutNode before = *node;
 
-            timer.restart();
-            model.getUndoStack().push(new SMMoveNodeCommand(data, model.getNotifier(), id,
-                                                            SMMoveNodeCommand::takeNextGesture(),
-                                                            before.x + 320.0, before.y + 180.0,
-                                                            before.width, before.height,
-                                                            QStringLiteral("Move state")));
-            QApplication::processEvents();
-            report("move a state (command + notify + repaint)", timer.elapsed(), BUDGET_INTERACTION_MS);
+            QList<qint64> moves;
+            QList<qint64> undos;
+            QList<qint64> redos;
+            for (int run = 0; run < GESTURE_RUNS; ++run)
+            {
+                timer.restart();
+                model.getUndoStack().push(new SMMoveNodeCommand(data, model.getNotifier(), id,
+                                                                SMMoveNodeCommand::takeNextGesture(),
+                                                                before.x + 320.0 + run, before.y + 180.0 + run,
+                                                                before.width, before.height,
+                                                                QStringLiteral("Move state")));
+                QApplication::processEvents();
+                moves.append(timer.elapsed());
 
-            timer.restart();
-            model.getUndoStack().undo();
-            QApplication::processEvents();
-            report("undo the move", timer.elapsed(), BUDGET_INTERACTION_MS);
+                timer.restart();
+                model.getUndoStack().undo();
+                QApplication::processEvents();
+                undos.append(timer.elapsed());
 
-            timer.restart();
-            model.getUndoStack().redo();
-            QApplication::processEvents();
-            report("redo the move", timer.elapsed(), BUDGET_INTERACTION_MS);
+                timer.restart();
+                model.getUndoStack().redo();
+                QApplication::processEvents();
+                redos.append(timer.elapsed());
+            }
+
+            reportRuns("move a state (command + notify + repaint)", moves, BUDGET_INTERACTION_MS);
+            reportRuns("undo the move", undos, BUDGET_INTERACTION_MS);
+            reportRuns("redo the move", redos, BUDGET_INTERACTION_MS);
         }
 
-        timer.restart();
-        model.getUndoStack().push(new SMRenameStateCommand(data, model.getNotifier(), id,
-                                                           QStringLiteral("RenamedState"),
-                                                           QStringLiteral("Rename state")));
-        QApplication::processEvents();
-        report("rename a state (reference rewrite)", timer.elapsed(), BUDGET_INTERACTION_MS);
+        QList<qint64> renames;
+        for (int run = 0; run < GESTURE_RUNS; ++run)
+        {
+            timer.restart();
+            model.getUndoStack().push(new SMRenameStateCommand(data, model.getNotifier(), id,
+                                                               QStringLiteral("RenamedState%1").arg(run),
+                                                               QStringLiteral("Rename state")));
+            QApplication::processEvents();
+            renames.append(timer.elapsed());
+        }
+
+        reportRuns("rename a state (reference rewrite)", renames, BUDGET_INTERACTION_MS);
     }
 
     check(composite != nullptr, "a composite state exists to navigate into");

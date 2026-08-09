@@ -108,7 +108,6 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMElementTimerStart      { "TimerStart" };
     constexpr QLatin1StringView xmlSMElementTimerStop       { "TimerStop" };
     constexpr QLatin1StringView xmlSMElementEventSend       { "EventSend" };
-    constexpr QLatin1StringView xmlSMElementInlineCode      { "InlineCode" };
 
     // Layout element names
     constexpr QLatin1StringView xmlSMElementLayout          { "Layout" };

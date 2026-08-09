@@ -317,24 +317,51 @@ namespace
             doc.getAttributes().createAttribute("Ready")->setType("bool");
             CHECK(countRule(SMValidator::validate(doc), 32) == 0);
         }
-        {   // A state named 'Attr...' becomes a member that reads as a generated attribute member.
+        {   // A HOSTING state named 'Attr...' becomes a member that reads as a generated
+            // attribute member. Only a hosting state generates one at all.
             StateMachineData doc;
             addStart(doc);
-            doc.getStates().createState("AttrReady", eKind::Normal);
+            doc.getStates().createState("AttrReady", eKind::Normal)->setSubmachine("Lib");
             CHECK(hasRule(SMValidator::validate(doc), 33));
         }
         {   // The same for 'Cond...', which belongs to an embedded condition member.
             StateMachineData doc;
             addStart(doc);
-            doc.getStates().createState("CondReady", eKind::Normal);
+            doc.getStates().createState("CondReady", eKind::Normal)->setSubmachine("Lib");
             CHECK(hasRule(SMValidator::validate(doc), 33));
         }
-        {   // A substate is a member too, so the check reaches every level.
+        {   // A hosting substate is a member too, so the check reaches every level.
             StateMachineData doc;
             addStart(doc);
             SMStateEntry* parent = doc.getStates().createState("Work", eKind::Normal);
-            parent->getOrCreateNestedStates()->createState("AttrInner", eKind::Normal);
+            parent->getOrCreateNestedStates()->createState("AttrInner", eKind::Normal)->setSubmachine("Lib");
             CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // A PLAIN state carrying a reserved prefix is legal, and used to be refused. It
+            // hosts nothing, so it generates no member, and the build accepts it.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("AttrReady", eKind::Normal);
+            doc.getStates().createState("ParamCount", eKind::Normal);
+            CHECK(countRule(SMValidator::validate(doc), 33) == 0);
+        }
+        {   // 'Param...' is reserved as well: the two document types share one set of member
+            // prefixes, so a hosting state spelled that way is refused by both tools.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("ParamCount", eKind::Normal)->setSubmachine("Lib");
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+        }
+        {   // Two fixed members the machine class always declares, added 2026-08-09.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getStates().createState("CurrentStates", eKind::Normal)->setSubmachine("Lib");
+            CHECK(hasRule(SMValidator::validate(doc), 33));
+
+            StateMachineData doc2;
+            addStart(doc2);
+            doc2.getStates().createState("HistoryRecord", eKind::Normal)->setSubmachine("Lib");
+            CHECK(hasRule(SMValidator::validate(doc2), 33));
         }
         {   // A state name that owns no reserved prefix is silent.
             StateMachineData doc;
@@ -984,6 +1011,75 @@ namespace
             comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
             comp->setOnFinal("Done");
             CHECK(countRule(SMValidator::validate(doc), 10) == 0);
+        }
+        {   // Rule 10 on an ActionCall: a declared parameter with no default that no argument binds.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMMethodEntry* act = doc.getMethods().createMethod("DoWork", eMethod::Action);
+            act->addElement(MethodParameter(doc.getNextId(), "count", "int32", QString(), false, act), true);
+            start->getEntryList().addOperation(new SMActionCall(0, "DoWork"));
+            CHECK(countRule(SMValidator::validate(doc), 10) == 1);
+        }
+        {   // Rule 10 on an EventSend, the same fault on the other call site.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMEventEntry* ev = doc.getEvents().createEvent("Go");
+            ev->addParam("code");
+            start->getEntryList().addOperation(new SMEventSend(0, "Go"));
+            CHECK(hasRule(SMValidator::validate(doc), 10));
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Rules allocated 2026-08-09: 38 (a default out of trailing position) and
+    // 139 (a condition already named like a generated function).
+    //////////////////////////////////////////////////////////////////////////
+    void testDefaultOrderAndCallableNames()
+    {
+        std::printf("- a default out of trailing position, and a condition named like a generated function\n");
+
+        {   // Error 38: `run(int32 a = 0, int32 b)` -- C++ takes defaults from the end of the
+            // list. addParam() copies the previous parameter's flag, so the violation has to be
+            // built with the constructor, exactly as a hand-edited document produces it.
+            StateMachineData doc;
+            addStart(doc);
+            SMMethodEntry* act = doc.getMethods().createMethod("run", eMethod::Action);
+            act->addElement(MethodParameter(doc.getNextId(), "a", "int32", "0", true, act), true);
+            act->addElement(MethodParameter(doc.getNextId(), "b", "int32", QString(), false, act), true);
+            CHECK(hasRule(SMValidator::validate(doc), 38));
+        }
+        {   // Negative: the defaulted parameter is last, which is the only legal shape.
+            StateMachineData doc;
+            addStart(doc);
+            SMMethodEntry* act = doc.getMethods().createMethod("run", eMethod::Action);
+            act->addElement(MethodParameter(doc.getNextId(), "a", "int32", QString(), false, act), true);
+            act->addElement(MethodParameter(doc.getNextId(), "b", "int32", "0", true, act), true);
+            CHECK(countRule(SMValidator::validate(doc), 38) == 0);
+        }
+        {   // The same rule on an event, because it lives on the shared parameter list.
+            StateMachineData doc;
+            addStart(doc);
+            SMEventEntry* ev = doc.getEvents().createEvent("Go");
+            ev->addElement(MethodParameter(doc.getNextId(), "a", "int32", "0", true, ev), true);
+            ev->addElement(MethodParameter(doc.getNextId(), "b", "int32", QString(), false, ev), true);
+            CHECK(hasRule(SMValidator::validate(doc), 38));
+        }
+        {   // Warning 139: an Action 'CheckLimit' generates 'action_CheckLimit'; a Condition
+            // spelled that way generates the identical name.
+            StateMachineData doc;
+            addStart(doc);
+            SMMethodEntry* cond = doc.getMethods().createMethod("action_CheckLimit", eMethod::Condition);
+            cond->setReturn("bool");
+            CHECK(countWarn(SMValidator::validate(doc), 39) == 1);
+        }
+        {   // Negative: an ordinary condition name, and an ACTION spelled the same way (an
+            // action is generated under the prefix, so it never collides with itself).
+            StateMachineData doc;
+            addStart(doc);
+            SMMethodEntry* cond = doc.getMethods().createMethod("CheckLimit", eMethod::Condition);
+            cond->setReturn("bool");
+            doc.getMethods().createMethod("action_Other", eMethod::Action);
+            CHECK(countWarn(SMValidator::validate(doc), 39) == 0);
         }
     }
 }
@@ -1873,17 +1969,6 @@ namespace
             comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
             CHECK(countWarn(SMValidator::validate(doc), 10) == 0);
         }
-        {   // W11: an empty inline-code block; negative once it has content.
-            StateMachineData doc;
-            SMStateEntry* s = addStart(doc);
-            s->getEntryList().addOperation(new SMInlineCode(0, "   "));
-            CHECK(hasWarn(SMValidator::validate(doc), 11));
-
-            StateMachineData doc2;
-            SMStateEntry* s2 = addStart(doc2);
-            s2->getEntryList().addOperation(new SMInlineCode(0, "doThing();"));
-            CHECK(countWarn(SMValidator::validate(doc2), 11) == 0);
-        }
         {   // W14: a declaration the generator has no comment for. Information and never a
             // warning: an undescribed element is legal, it just generates uncommented code.
             StateMachineData doc;
@@ -2159,7 +2244,7 @@ namespace
         const QList<Expect> expected =
         {
               { "TrafficLight.fsml"     , {}          , "the golden machine: must be clean" }
-            , { "FullFeature.fsml"      , {18, 19, 25}, "deliberate: History on a non-composite, an unresolved import, a draft guard."
+            , { "FullFeature.fsml"      , {18, 19, 25, 34}, "deliberate: History on a non-composite, an unresolved import, a draft guard, a removed InlineCode tag."
                                                            " 'Operational' and its descendants both reacting to Dispensed is the plain"
                                                            " hierarchical override and is reported by nothing" }
             , { "GuardDemo.fsml"        , {}          , "every guard node kind, all resolved" }
@@ -2780,6 +2865,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testImportDepth();
     testIncludeRegistry();
     testDataTypeGaps();
+    testDefaultOrderAndCallableNames();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

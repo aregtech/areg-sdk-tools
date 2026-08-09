@@ -184,8 +184,8 @@ comparisons, condition-method calls, attributes, constants, stimulus parameters,
 and, where structure is not enough, verbatim C++ (a lambda or a raw expression). References
 are bound by element ID, so renames never break a guard.
 
-**Operations** are the typed instructions a state's entry / exit / do list or a transition
-runs, in list order:
+**Operations** are the typed instructions a state's entry or exit list, or a transition, runs
+in list order:
 
 | Operation | Effect |
 |---|---|
@@ -193,9 +193,11 @@ runs, in list order:
 | `AttributeSet` | Assigns to an attribute from a value, another declaration or a verbatim expression |
 | `TimerStart` / `TimerStop` | Starts or stops a timer, optionally overriding timeout and repeat |
 | `EventSend` | Raises a machine event with its payload mapped |
-| `InlineCode` | Verbatim C++ emitted at that point |
 
-A state's **do activity** additionally carries a repeat interval and a stop condition.
+These five are the whole set. An operation list containing anything else is reported as an
+unknown element and the document does not generate. To run work periodically while a state is
+active, declare a timer, start it on entry, stop it on exit, and react to its expiry with an
+internal transition.
 
 Every value slot accepts the same set of sources: a literal `Value`, a stimulus `Param`, an
 `Attribute`, a `Constant`, a `Condition` result, a verbatim `Expression`, or a `Lambda`.
@@ -217,8 +219,8 @@ the **Validation** tab with three severities:
 - **Warnings** are design smells -- unreachable states, dead ends, shadowed transitions,
   declarations nothing references (an imported machine no state hosts included), the same file
   included more than once, events sent but never reacted to, timers reacted to but never
-  started, empty internal transitions, comparisons of two constants, empty inline code, a
-  pinned import version whose minor component has moved.
+  started, empty internal transitions, comparisons of two constants, a pinned import version
+  whose minor component has moved.
 - **Information** covers declarations that are simply not used yet: an unused attribute or
   constant is legitimate at any point in a design and is never reported as a warning.
 

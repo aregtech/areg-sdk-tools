@@ -132,7 +132,6 @@ namespace
                 _collectArgumentRefs(send->getArguments(), out);
                 break;
             }
-            case SMOperationBase::eOperation::InlineCode:
             default:
                 break;
             }
@@ -219,7 +218,6 @@ namespace
                 _remapArguments(send->getArguments(), renames);
                 break;
             }
-            case SMOperationBase::eOperation::InlineCode:
             default:
                 break;
             }

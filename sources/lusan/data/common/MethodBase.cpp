@@ -228,6 +228,32 @@ int MethodBase::firsPositionWithDefault() const
     return -1;
 }
 
+int MethodBase::misplacedDefaultPosition() const
+{
+    int lastPlain = -1;
+    for (int i = mElementList.size() - 1; i >= 0; --i)
+    {
+        if (mElementList[i].hasDefault() == false)
+        {
+            lastPlain = i;
+            break;
+        }
+    }
+
+    if (lastPlain > 0)
+    {
+        for (int i = 0; i < lastPlain; ++i)
+        {
+            if (mElementList[i].hasDefault())
+            {
+                return i;
+            }
+        }
+    }
+
+    return -1;
+}
+
 bool MethodBase::canSwitchDefaultValue(uint32_t id) const
 {
     int pos = findIndex(id);

@@ -54,12 +54,12 @@ namespace
 namespace
 {
     //!< Builds a small machine: registries, one trigger with a payload param, a transition
-    //!< with a verbatim condition row, an embedded condition body, and an inline-code op.
+    //!< with a verbatim condition row, an embedded condition body, and a verbatim operation.
     struct Fixture
     {
         StateMachineData    data;
         uint32_t            transitionId { 0 };
-        uint32_t            inlineId     { 0 };
+        uint32_t            exprOpId     { 0 };
         QString             conditionText;
 
         Fixture()
@@ -90,11 +90,14 @@ namespace
             row->setLhsKind(SMConditionEntry::eOperandKind::Expression);
             row->setExpression(conditionText);
 
-            // An inline-code operation referencing a still-declared symbol and an undeclared one.
-            SMInlineCode* inl = new SMInlineCode();
-            inl->setBody("GhostAttr = 1; Speed();");
-            run->getEntryList().addOperation(inl);
-            inlineId = inl->getId();
+            // A verbatim operation expression referencing a still-declared symbol and an
+            // undeclared one.
+            SMAttributeSet* set = new SMAttributeSet();
+            set->setAttribute("Speed");
+            set->setSource(SMArgumentEntry::eValueSource::Expression);
+            set->setExpression("GhostAttr + Speed()");
+            run->getEntryList().addOperation(set);
+            exprOpId = set->getId();
         }
     };
 
@@ -156,7 +159,7 @@ namespace
         std::printf("[SM-21-06] verbatim where-used resolves references by block\n");
         Fixture fx;
 
-        // Speed is referenced by the condition row, the embedded body, and the inline code.
+        // Speed is referenced by the condition row, the embedded body, and the operation expression.
         const QList<SMSymbolIndex::VerbatimRef> speedRefs = SMSymbolIndex::findReferences(fx.data, "Speed");
         CHECK(speedRefs.size() == 3);
 
@@ -164,9 +167,9 @@ namespace
         // mentions it -- the answer SM-24/25/26 consume.
         const QList<SMSymbolIndex::VerbatimRef> ghost = SMSymbolIndex::findReferences(fx.data, "GhostAttr");
         CHECK(ghost.size() == 1);
-        CHECK((ghost.isEmpty() == false) && (ghost.first().elementId == fx.inlineId));
+        CHECK((ghost.isEmpty() == false) && (ghost.first().elementId == fx.exprOpId));
 
-        // The whole verbatim inventory: condition row + embedded body + inline code.
+        // The whole verbatim inventory: condition row + embedded body + operation expression.
         CHECK(SMSymbolIndex::collectVerbatimBlocks(fx.data).size() == 3);
     }
 }

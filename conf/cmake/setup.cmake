@@ -18,9 +18,9 @@ if (NOT areg_FOUND)
     endif()
     set(FETCHCONTENT_BASE_DIR "${AREG_DEPS_DIR}")
     
-    # The root directory for Areg SDK build outputs.
+    # The root directory for Areg SDK build outputs. AREG_DEPS_DIR is already set above, and
+    # setting it again here would throw away a caller-supplied location.
     set(AREG_BUILD_DIR  "${CMAKE_BINARY_DIR}")
-    set(AREG_DEPS_DIR   "${CMAKE_BINARY_DIR}/packages")
     # Build Areg shared library.
     set(AREG_LIB_TYPE         shared)
     set(AREG_LOGGER_LIB_TYPE  shared)

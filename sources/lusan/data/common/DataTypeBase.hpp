@@ -20,6 +20,7 @@
  ************************************************************************/
 #include "lusan/data/common/DocumentElem.hpp"
 
+#include <QList>
 #include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -154,6 +155,14 @@ public:
     const QString& getName() const;
 
     /**
+     * \brief   Checks whether the type answers to the given spelling. Every lookup by name goes
+     *          through this, because a type may legally be written more than one way: an
+     *          imported type also answers to its qualified form.
+     * \param   typeName    The spelling as written in the document.
+     **/
+    virtual bool hasTypeName(const QString& typeName) const;
+
+    /**
      * \brief   Sets the name of the data type.
      * \param   name    The name of the data type.
      **/
@@ -267,5 +276,26 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 // DataTypeBase class inline methods
 //////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The first type in \p dataTypes that answers to \p typeName, or nullptr when none
+ *          does. Every resolution of a document's type spelling goes through here, so a type
+ *          that accepts more than one spelling accepts it everywhere.
+ * \param   dataTypes   The types to search.
+ * \param   typeName    The spelling as written in the document.
+ **/
+template<class DataType>
+inline DataType* findTypeByName(const QList<DataType*>& dataTypes, const QString& typeName)
+{
+    for (DataType* dataType : dataTypes)
+    {
+        if ((dataType != nullptr) && dataType->hasTypeName(typeName))
+        {
+            return dataType;
+        }
+    }
+
+    return nullptr;
+}
 
 #endif  // LUSAN_DATA_COMMON_DATATYPEBASE_HPP

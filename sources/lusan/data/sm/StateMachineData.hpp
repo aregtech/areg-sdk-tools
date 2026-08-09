@@ -35,6 +35,7 @@
 #include "lusan/data/sm/SMIncludeData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/model/common/DocUnknownScan.hpp"
 
 #include <QList>
 #include <QString>
@@ -136,6 +137,12 @@ public:
 
     inline bool openSucceeded() const;
     inline void setOpenSucceeded(bool succeeded);
+
+    /**
+     * \brief   Every element of the opened document that the format does not define, in
+     *          document order. Empty for a document written by this build.
+     **/
+    inline const QList<DocUnknownElement>& getUnknownElements() const;
 
     inline const SMOverviewData& getOverview() const;
     inline SMOverviewData& getOverview();
@@ -355,6 +362,7 @@ private:
     SMLayoutData    mLayout;        //!< The Layout section.
     QVector<UnknownAttribute> mUnknownRootAttributes; //!< Unknown root attributes preserved on round-trip.
     QVector<UnknownElement>   mUnknownRootElements;   //!< Unknown root elements preserved on round-trip.
+    QList<DocUnknownElement>  mUnknownElements;       //!< Every element the format does not define, with its line and text.
     bool            mOpenSuccess;   //!< Whether the document opened successfully.
 };
 
@@ -390,6 +398,11 @@ inline bool StateMachineData::openSucceeded() const
 inline void StateMachineData::setOpenSucceeded(bool succeeded)
 {
     mOpenSuccess = succeeded;
+}
+
+inline const QList<DocUnknownElement>& StateMachineData::getUnknownElements() const
+{
+    return mUnknownElements;
 }
 
 inline const SMOverviewData& StateMachineData::getOverview() const

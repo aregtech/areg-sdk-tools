@@ -82,6 +82,14 @@ public:
     static constexpr int WARNING_RULE_BASE { 100 };
 
     /**
+     * \brief   An information `n` is reported with the rule id (`INFORMATION_RULE_BASE + n`).
+     *          A band, not a second severity of the same rule: the id the author reads is the
+     *          rule identity, so `n`, `WARNING_RULE_BASE + n` and `INFORMATION_RULE_BASE + n`
+     *          are three unrelated rules.
+     **/
+    static constexpr int INFORMATION_RULE_BASE { 200 };
+
+    /**
      * \brief   The argument-to-parameter mapping faults.
      **/
     static constexpr int RULE_ARGUMENT_MAPPING { 10 };

@@ -136,8 +136,9 @@ DataTypeCustom* SMDataTypeData::addImported(const QString& name)
 
 DataTypeCustom* SMDataTypeData::findCustomDataType(const QString& name) const
 {
-    DataTypeCustom* const* found = findElement(name);
-    return (found != nullptr) ? *found : nullptr;
+    // Not findElement(): that matches the registry name only, and an imported type is also
+    // written in its qualified form.
+    return findTypeByName(getElements(), name);
 }
 
 DataTypeCustom* SMDataTypeData::findCustomDataType(uint32_t id) const

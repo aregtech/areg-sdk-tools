@@ -103,6 +103,13 @@ public:
      */
     QString getString(ElementBase::eDisplay display) const override;
 
+    /**
+     * \brief   An imported type is an alias, so it answers both to its own name and to the
+     *          qualified `<Namespace>::<ImportedObject>` spelling. Both are legal in a document.
+     * \param   typeName    The spelling as written in the document.
+     **/
+    bool hasTypeName(const QString& typeName) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes, operations
 //////////////////////////////////////////////////////////////////////////
@@ -151,6 +158,7 @@ private:
     QString mNamespace; //!< The namespace of the imported data type.
     QString mObject;    //!< The object of the imported data type in the namespace.
     QString mLocation;  //!< The location of the imported data type.
+    bool    mHasObject; //!< Whether the document spelled the object out, rather than defaulting it.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -185,6 +193,9 @@ inline const QString& DataTypeImported::getObject() const
 inline void DataTypeImported::setObject(const QString& object)
 {
     mObject = object;
+    // Clearing the object hands the name back to the default, which the document does not
+    // spell out. Only a real name is written back.
+    mHasObject = (object.isEmpty() == false);
 }
 
 #endif // LUSAN_DATA_COMMON_DATATYPEIMPORTED_HPP

@@ -234,7 +234,9 @@ void SMGuardDataPanel::onContextMenu(const QPoint& pos)
         return;
     }
 
-    const SMGuardSymbol& symbol = mSymbols.at(index.toInt());
+    // By value, not by reference into the list: exec() below spins its own event loop, and a
+    // rebuild armed by any document change repopulates the list while the menu is still open.
+    const SMGuardSymbol symbol = mSymbols.at(index.toInt());
     QMenu menu(this);
     QAction* insert = menu.addAction(tr("Insert %1").arg(symbol.mention()));
     QAction* used   = menu.addAction(tr("Where used..."));

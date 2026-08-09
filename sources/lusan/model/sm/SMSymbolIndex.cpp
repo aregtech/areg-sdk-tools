@@ -147,16 +147,6 @@ namespace
 
             switch (op->getOperationType())
             {
-            case SMOperationBase::eOperation::InlineCode:
-                {
-                    const SMInlineCode* inl = static_cast<const SMInlineCode*>(op);
-                    if (inl->getBody().isEmpty() == false)
-                    {
-                        out.append({ inl->getId(), inl->getBody(), QStringLiteral("inline code") });
-                    }
-                }
-                break;
-
             case SMOperationBase::eOperation::AttributeSet:
                 {
                     const SMAttributeSet* set = static_cast<const SMAttributeSet*>(op);

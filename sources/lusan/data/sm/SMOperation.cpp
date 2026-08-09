@@ -46,8 +46,6 @@ namespace
             return new SMTimerStop(parent);
         else if (name == XmlSM::xmlSMElementEventSend)
             return new SMEventSend(parent);
-        else if (name == XmlSM::xmlSMElementInlineCode)
-            return new SMInlineCode(parent);
         else
             return nullptr;
     }
@@ -308,9 +306,8 @@ const char* SMOperationBase::getElementName() const
     case eOperation::AttributeSet:  return STR_ATTRIBUTE_SET;
     case eOperation::TimerStart:    return STR_TIMER_START;
     case eOperation::TimerStop:     return STR_TIMER_STOP;
-    case eOperation::EventSend:     return STR_EVENT_SEND;
-    case eOperation::InlineCode:
-    default:                        return STR_INLINE_CODE;
+    case eOperation::EventSend:
+    default:                        return STR_EVENT_SEND;
     }
 }
 
@@ -371,7 +368,6 @@ bool SMOperationBase::readFromXml(QXmlStreamReader& xml)
         static_cast<SMEventSend*>(this)->setEvent(attributes.value(XmlSM::xmlSMAttributeEvent).toString());
         break;
 
-    case eOperation::InlineCode:
     default:
         break;
     }
@@ -395,10 +391,6 @@ bool SMOperationBase::readFromXml(QXmlStreamReader& xml)
             else if ((name == XmlSM::xmlSMElementExpression) && (mKind == eOperation::AttributeSet))
             {
                 static_cast<SMAttributeSet*>(this)->setExpression(xml.readElementText());
-            }
-            else if ((name == XmlSM::xmlSMElementBody) && (mKind == eOperation::InlineCode))
-            {
-                static_cast<SMInlineCode*>(this)->setBody(xml.readElementText());
             }
         }
 
@@ -459,17 +451,13 @@ void SMOperationBase::writeToXml(QXmlStreamWriter& xml) const
         break;
 
     case eOperation::EventSend:
+    default:
     {
         const SMEventSend* send = static_cast<const SMEventSend*>(this);
         xml.writeAttribute(XmlSM::xmlSMAttributeEvent, send->getEvent());
         SMArgumentEntry::writeArgumentList(xml, send->getArguments());
         break;
     }
-
-    case eOperation::InlineCode:
-    default:
-        writeCDataElem(xml, XmlSM::xmlSMElementBody, static_cast<const SMInlineCode*>(this)->getBody());
-        break;
     }
 
     xml.writeEndElement();
@@ -704,38 +692,6 @@ SMOperationBase* SMEventSend::clone() const
 QString SMEventSend::getName() const
 {
     return mEvent;
-}
-
-//////////////////////////////////////////////////////////////////////////
-// SMInlineCode implementation
-//////////////////////////////////////////////////////////////////////////
-
-SMInlineCode::SMInlineCode(ElementBase* parent /*= nullptr*/)
-    : SMOperationBase   (eOperation::InlineCode, parent)
-    , mBody             ( )
-{
-}
-
-SMInlineCode::SMInlineCode(uint32_t id, const QString& body, ElementBase* parent /*= nullptr*/)
-    : SMOperationBase   (eOperation::InlineCode, id, parent)
-    , mBody             (body)
-{
-}
-
-SMInlineCode::SMInlineCode(const SMInlineCode& src)
-    : SMOperationBase   (src)
-    , mBody             (src.mBody)
-{
-}
-
-SMOperationBase* SMInlineCode::clone() const
-{
-    return new SMInlineCode(*this);
-}
-
-QString SMInlineCode::getName() const
-{
-    return QString();
 }
 
 //////////////////////////////////////////////////////////////////////////

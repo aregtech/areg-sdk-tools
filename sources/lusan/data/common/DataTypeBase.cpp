@@ -91,6 +91,11 @@ void DataTypeBase::setName(const QString& name)
     mName = name;
 }
 
+bool DataTypeBase::hasTypeName(const QString& typeName) const
+{
+    return (mName == typeName);
+}
+
 DataTypeBase::eCategory DataTypeBase::getCategory() const
 {
     return mCategory;

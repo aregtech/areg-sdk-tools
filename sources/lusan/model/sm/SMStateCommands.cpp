@@ -19,6 +19,7 @@
 
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
@@ -265,6 +266,33 @@ void SMSetSubmachineCommand::redo()
     }
 
     notifier().notifyElementChanged(mId, eDocElementKind::State);
+    notifyImportUsage(mOldAlias, mNew);
+}
+
+void SMSetSubmachineCommand::notifyImportUsage(const QString& before, const QString& after)
+{
+    // Whether an import is used is a fact about the states that point at it, so the two imports
+    // on either side of this change are told as well. Without it the import list keeps showing
+    // the state it had before, and only a change to an import itself would correct it.
+    const auto tell = [this](const QString& alias)
+    {
+        if (alias.isEmpty())
+        {
+            return;
+        }
+
+        const IncludeEntry* import = data().findImportByAlias(alias);
+        if (import != nullptr)
+        {
+            notifier().notifyElementChanged(import->getId(), eDocElementKind::Import);
+        }
+    };
+
+    tell(before);
+    if (after != before)
+    {
+        tell(after);
+    }
 }
 
 void SMSetSubmachineCommand::undo()
@@ -279,6 +307,7 @@ void SMSetSubmachineCommand::undo()
     state->setOnFinal(mOldFinal);
     state->setHistory(mOldHistory);
     notifier().notifyElementChanged(mId, eDocElementKind::State);
+    notifyImportUsage(mNew, mOldAlias);
 }
 
 //////////////////////////////////////////////////////////////////////////

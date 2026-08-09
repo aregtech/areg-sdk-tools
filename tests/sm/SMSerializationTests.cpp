@@ -266,9 +266,11 @@ namespace
         CHECK(root != nullptr);
         begin->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QString(), root->getId(), SMTransitionEntry::eTransitionKind::Initial);
 
-        SMInlineCode* inline1 = new SMInlineCode();
-        inline1->setBody(body);
-        root->getEntryList().addOperation(inline1);
+        SMAttributeSet* set = new SMAttributeSet();
+        set->setAttribute("Count");
+        set->setSource(SMArgumentEntry::eValueSource::Expression);
+        set->setExpression(body);
+        root->getEntryList().addOperation(set);
 
         SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
         SMConditionEntry* row = trans->getConditions().addCondition();
@@ -292,8 +294,8 @@ namespace
         if ((rroot != nullptr) && (rroot->getEntryList().getCount() == 1))
         {
             SMOperationBase* op = rroot->getEntryList().at(0);
-            CHECK(op->getOperationType() == SMOperationBase::eOperation::InlineCode);
-            CHECK(static_cast<SMInlineCode*>(op)->getBody() == body);
+            CHECK(op->getOperationType() == SMOperationBase::eOperation::AttributeSet);
+            CHECK(static_cast<SMAttributeSet*>(op)->getExpression() == body);
         }
 
         if ((rroot != nullptr) && (rroot->getTransitions().getElements().isEmpty() == false))
@@ -568,9 +570,12 @@ namespace
         CHECK(beforeOpen == afterOpen);
     }
 
-    void testUnknownPreservation()
+    //!< A newer minor used to be tolerated. It is refused now (owner ruling 2026-08-09): an
+    //!< element this build has never heard of cannot be edited, and saving it back would be
+    //!< the way its meaning is lost.
+    void testRejectNewerMinor()
     {
-        std::printf("[SM-03] newer minor preserves unknown root content\n");
+        std::printf("[SM-03] newer minor is refused\n");
 
         const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
         CHECK(original.isEmpty() == false);
@@ -578,25 +583,59 @@ namespace
         QByteArray future = original;
         CHECK(replaceOnce(future,
                           "<StateMachine FormatVersion=\"1.1.0\">",
-                          "<StateMachine FormatVersion=\"1.2.0\" FutureAttr=\"KeepMe\">"));
-        CHECK(replaceOnce(future,
-                          "</StateMachine>",
-                          "    <FutureSection Flag=\"x\"><FutureLeaf Value=\"42\"/></FutureSection>\n</StateMachine>"));
+                          "<StateMachine FormatVersion=\"1.2.0\">"));
 
         const QString inPath = outFile("sm03_future_minor_in.fsml");
         CHECK(writeAllBytes(inPath, future));
 
         StateMachineData doc;
+        CHECK(doc.readFromFile(inPath) == false);
+        CHECK(doc.openSucceeded() == false);
+    }
+
+    //!< A document of a version this build reads keeps every element the format does not
+    //!< define, wherever it sits. The block is reported as an error, and it still survives the
+    //!< save: that is what lets the author take the document to a build that understands it.
+    void testUnknownPreservation()
+    {
+        std::printf("[SM-03] unknown elements survive a save, nested and at the root\n");
+
+        const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
+        CHECK(original.isEmpty() == false);
+
+        QByteArray odd = original;
+        CHECK(replaceOnce(odd, "<TimerList>", "<TimerList>\n        <Time ID=\"901\" Name=\"Blink\"/>"));
+        CHECK(replaceOnce(odd,
+                          "</StateMachine>",
+                          "    <FutureSection Flag=\"x\"><FutureLeaf Value=\"42\"/></FutureSection>\n</StateMachine>"));
+
+        const QString inPath = outFile("sm03_unknown_in.fsml");
+        CHECK(writeAllBytes(inPath, odd));
+
+        StateMachineData doc;
         CHECK(doc.readFromFile(inPath));
         CHECK(doc.openSucceeded());
-        CHECK(doc.getFormatVersion().toString() == QString("1.2.0"));
 
-        const QString outPath = outFile("sm03_future_minor_out.fsml");
+        // Both are reported, and the nested one carries the line the author has to go to. The
+        // leaf inside FutureSection is not reported separately: the whole block is one finding.
+        CHECK(doc.getUnknownElements().size() == 2);    // Time, FutureSection
+        bool foundTime = false;
+        for (const DocUnknownElement& unknown : doc.getUnknownElements())
+        {
+            if (unknown.name == QString("Time"))
+            {
+                foundTime = true;
+                CHECK(unknown.parent == QString("TimerList"));
+                CHECK(unknown.line > 0);
+            }
+        }
+        CHECK(foundTime);
+
+        const QString outPath = outFile("sm03_unknown_out.fsml");
         CHECK(doc.writeToFile(outPath));
 
         const QByteArray written = readAllBytes(outPath);
-        CHECK(written.contains("FormatVersion=\"1.2.0\""));
-        CHECK(written.contains("FutureAttr=\"KeepMe\""));
+        CHECK(written.contains("<Time "));
         CHECK(written.contains("<FutureSection"));
         CHECK(written.contains("<FutureLeaf"));
     }
@@ -1308,6 +1347,7 @@ int main(int /*argc*/, char** /*argv*/)
     testHostileAttributes();
     testLegacyTargetByName();
     testVersionMigration();
+    testRejectNewerMinor();
     testUnknownPreservation();
     testRejectNewerMajor();
     testNewDocumentSkeleton();
