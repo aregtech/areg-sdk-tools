@@ -46,6 +46,7 @@
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
+#include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
@@ -1311,6 +1312,52 @@ namespace
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+// The Constants page keeps working after the document object is replaced
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< Creating a new document, and opening a file, both swap the data object the model holds.
+    //!< The Constants page model has to reach the section that is current then, not the one that
+    //!< existed when the model was built.
+    void testConstantsSurviveDocumentSwap()
+    {
+        StateMachineModel model;
+        ConstantModel& constants = model.getConstantModel();
+
+        CHECK(constants.createConstant(QStringLiteral("Before")) != nullptr);
+        CHECK(constants.getConstantCount() == 1);
+
+        // What "File / New" does.
+        CHECK(model.createNewDocument(QStringLiteral("Swapped")));
+        CHECK(constants.getConstantCount() == 0);
+        CHECK(&model.getData().getConstants().getElements() == &constants.getConstants());
+
+        ConstantEntry* added = constants.createConstant(QStringLiteral("MaxRetries"));
+        CHECK(added != nullptr);
+        CHECK(constants.getConstantCount() == 1);
+        CHECK(model.getData().getConstants().getElementCount() == 1);
+
+        // The edit landed in the new document, and undo takes it back out of that same one.
+        constants.setValue(added->getId(), QStringLiteral("5"));
+        CHECK(model.getData().getConstants().findElement(added->getId())->getValue() == QStringLiteral("5"));
+        model.getUndoStack().undo();
+        CHECK(model.getData().getConstants().findElement(added->getId())->getValue().isEmpty());
+
+        // And again after a reload, which swaps the data object a second time.
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = dir.filePath(QStringLiteral("swap.fsml"));
+        CHECK(model.saveToFile(path));
+        CHECK(model.loadFromFile(path));
+        CHECK(constants.getConstantCount() == 1);
+        CHECK(constants.findConstant(QStringLiteral("MaxRetries")) != nullptr);
+        CHECK(constants.createConstant(QStringLiteral("AfterReload")) != nullptr);
+        CHECK(model.getData().getConstants().getElementCount() == 2);
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("SM-04 command framework tests\n");
@@ -1330,6 +1377,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testPatchPinAutoFix();
     testRemoveComposite();
     testStimulusSilentRebind();
+    testConstantsSurviveDocumentSwap();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

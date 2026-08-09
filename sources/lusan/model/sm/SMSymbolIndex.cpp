@@ -23,7 +23,7 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
-#include "lusan/data/sm/SMConstantData.hpp"
+#include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMOperation.hpp"

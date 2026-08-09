@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/model/sm/SMLiteralValidator.hpp
+ *  \file        lusan/model/common/LiteralValidator.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, FSM literal value syntax validator
@@ -29,7 +29,7 @@
  *          resolve an enumeration literal against the declared type's enumerators and
  *          disable literal entry entirely for structure/container/imported types.
  **/
-class SMLiteralValidator
+class LiteralValidator
 {
 public:
     /**

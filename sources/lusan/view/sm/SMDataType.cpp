@@ -32,7 +32,7 @@
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
-#include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/common/LiteralValidator.hpp"
 #include "lusan/view/common/DataTypeDetailsView.hpp"
 #include "lusan/view/common/DataTypeFieldDetailsView.hpp"
 #include "lusan/view/common/DataTypeListView.hpp"
@@ -606,7 +606,7 @@ QString SMDataType::validateFieldValue(const QString& typeName, const QString& v
     if (value.isEmpty() || (mModel.findDataType(typeName) != nullptr))
         return QString();
 
-    return SMLiteralValidator::validate(typeName, value);
+    return LiteralValidator::validate(typeName, value);
 }
 
 void SMDataType::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const

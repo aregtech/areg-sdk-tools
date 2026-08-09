@@ -31,7 +31,7 @@
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
-#include "lusan/data/sm/SMConstantData.hpp"
+#include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMIncludeData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
@@ -162,8 +162,8 @@ public:
     inline const SMMethodData& getMethods() const;
     inline SMMethodData& getMethods();
 
-    inline const SMConstantData& getConstants() const;
-    inline SMConstantData& getConstants();
+    inline const ConstantDataSection& getConstants() const;
+    inline ConstantDataSection& getConstants();
 
     inline const SMIncludeData& getIncludes() const;
     inline SMIncludeData& getIncludes();
@@ -356,7 +356,7 @@ private:
     SMEventData     mEvents;        //!< The EventList section.
     SMTimerData     mTimers;        //!< The TimerList section.
     SMMethodData    mMethods;       //!< The MethodList section.
-    SMConstantData  mConstants;     //!< The ConstantList section.
+    ConstantDataSection  mConstants;     //!< The ConstantList section.
     SMIncludeData   mIncludes;      //!< The IncludeList section, machine imports included.
     SMStateData     mStates;        //!< The root StateList (level 0).
     SMLayoutData    mLayout;        //!< The Layout section.
@@ -465,12 +465,12 @@ inline SMMethodData& StateMachineData::getMethods()
     return mMethods;
 }
 
-inline const SMConstantData& StateMachineData::getConstants() const
+inline const ConstantDataSection& StateMachineData::getConstants() const
 {
     return mConstants;
 }
 
-inline SMConstantData& StateMachineData::getConstants()
+inline ConstantDataSection& StateMachineData::getConstants()
 {
     return mConstants;
 }

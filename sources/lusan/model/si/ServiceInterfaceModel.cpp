@@ -19,13 +19,22 @@
 
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 
+#include "lusan/data/common/DataTypeCustom.hpp"
+
 ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString()*/)
     : mSIData           (filePath)
+    , mNotifier         ( )
+    , mUndoStack        ( )
     , mModelOverview    (mSIData.getOverviewData())
     , mModelDataType    (mSIData.getDataTypeData())
     , mModelAttributes  (mSIData.getAttributeData() , mSIData.getDataTypeData())
     , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
-    , mModelConstant    (mSIData.getConstantData()  , mSIData.getDataTypeData())
+    , mModelConstant    (*this)
     , mModelInclude     (mSIData.getIncludeData())
 {
+}
+
+const QList<DataTypeCustom*>& ServiceInterfaceModel::getCustomDataTypes() const
+{
+    return mSIData.getDataTypeData().getCustomDataTypes();
 }

@@ -23,8 +23,11 @@
   * Includes
   ************************************************************************/
 #include "lusan/data/si/ServiceInterfaceData.hpp"
+#include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/common/DocUndoStack.hpp"
+#include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/si/SIAttributeModel.hpp"
-#include "lusan/model/si/SIConstantModel.hpp"
+#include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/si/SIDataTypeModel.hpp"
 #include "lusan/model/si/SIIncludeModel.hpp"
 #include "lusan/model/si/SIMethodModel.hpp"
@@ -34,7 +37,7 @@
  * \class   ServiceInterfaceModel
  * \brief   The model of the service interface.
  **/
-class ServiceInterfaceModel
+class ServiceInterfaceModel : public IEDocumentModel
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -61,7 +64,7 @@ public:
     /**
      * \brief   Returns the constant model.
      **/
-    inline SIConstantModel& getConstantsModel();
+    inline ConstantModel& getConstantsModel();
     
     /**
      * \brief   Returns the include model.
@@ -117,17 +120,46 @@ public:
     inline ServiceInterfaceData& getData();
 
     inline const ServiceInterfaceData& getData() const;
-    
+
+    /**
+     * \brief   The document's change notifier. Commands are its only emitters.
+     **/
+    inline DocModelNotifier& getNotifier() override;
+
+    /**
+     * \brief   The document's undo stack. Every edit reaches the data through it.
+     **/
+    inline DocUndoStack& getUndoStack() override;
+    inline const DocUndoStack& getUndoStack() const;
+
+    /**
+     * \brief   The document's custom data types, so a declared type name can be resolved.
+     **/
+    const QList<DataTypeCustom*>& getCustomDataTypes() const override;
+
+    /**
+     * \brief   The document's `ConstantList` section.
+     **/
+    inline ConstantDataSection& getConstantSection() override;
+
+    /**
+     * \brief   True while the document holds edits that have not been saved.
+     **/
+    inline bool isDirty() const;
+
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden class members
 //////////////////////////////////////////////////////////////////////////
 private:
     ServiceInterfaceData    mSIData;            //!< The service interface data.
+    DocModelNotifier        mNotifier;          //!< The document's change notifier.
+    DocUndoStack            mUndoStack;         //!< The document's undo stack.
     SIOverviewModel         mModelOverview;     //!< The overview model.
     SIDataTypeModel         mModelDataType;     //!< The data type model.
     SIAttributeModel        mModelAttributes;   //!< The data attributes model.
     SIMethodModel           mModelMethods;      //!< The methods model.
-    SIConstantModel         mModelConstant;     //!< The constant model.
+    ConstantModel         mModelConstant;     //!< The constant model.
     SIIncludeModel          mModelInclude;      //!< The include model.
 
 //////////////////////////////////////////////////////////////////////////
@@ -164,7 +196,7 @@ inline SIMethodModel& ServiceInterfaceModel::getMethodsModel()
     return mModelMethods;
 }
 
-inline SIConstantModel& ServiceInterfaceModel::getConstantsModel()
+inline ConstantModel& ServiceInterfaceModel::getConstantsModel()
 {
     return mModelConstant;
 }
@@ -172,6 +204,31 @@ inline SIConstantModel& ServiceInterfaceModel::getConstantsModel()
 inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel()
 {
     return mModelInclude;
+}
+
+inline ConstantDataSection& ServiceInterfaceModel::getConstantSection()
+{
+    return mSIData.getConstantData();
+}
+
+inline DocModelNotifier& ServiceInterfaceModel::getNotifier()
+{
+    return mNotifier;
+}
+
+inline DocUndoStack& ServiceInterfaceModel::getUndoStack()
+{
+    return mUndoStack;
+}
+
+inline const DocUndoStack& ServiceInterfaceModel::getUndoStack() const
+{
+    return mUndoStack;
+}
+
+inline bool ServiceInterfaceModel::isDirty() const
+{
+    return mUndoStack.isClean() == false;
 }
 
 inline bool ServiceInterfaceModel::saveToFile(const QString& filePath)

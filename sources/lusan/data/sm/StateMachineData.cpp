@@ -441,7 +441,7 @@ bool StateMachineData::readFromFile(const QString& filePath)
             // pointer now so icons/pickers match an interactively edited document.
             mDataTypes.validate(mDataTypes);
             mAttributes.validate(mDataTypes);
-            mConstants.validate(mDataTypes);
+            mConstants.validate(mDataTypes.getCustomDataTypes());
         }
     }
 

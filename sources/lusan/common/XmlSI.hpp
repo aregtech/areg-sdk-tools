@@ -61,6 +61,7 @@ namespace XmlSI
     constexpr QLatin1StringView xmlSIAttributeAlias         { "Alias" };
     constexpr QLatin1StringView xmlSIAttributeCategory      { "Category" };
     constexpr QLatin1StringView xmlSIAttributeDataType      { "DataType" };
+    constexpr QLatin1StringView xmlSIAttributeDeprecateHint { "DeprecateHint" };
     constexpr QLatin1StringView xmlSIAttributeHasKey        { "HasKey" };
     constexpr QLatin1StringView xmlSIAttributeHasValue      { "HasValue" };
     constexpr QLatin1StringView xmlSIAttributeID            { "ID" };
@@ -72,6 +73,7 @@ namespace XmlSI
     constexpr QLatin1StringView xmlSIAttributeNotify        { "Notify" };
     constexpr QLatin1StringView xmlSIAttributeType          { "Type" };
     constexpr QLatin1StringView xmlSIAttributeResponse      { "Response" };
+    constexpr QLatin1StringView xmlSIAttributeValue         { "Value" };
     constexpr QLatin1StringView xmlSIAttributeValues        { "Values" };
     constexpr QLatin1StringView xmlSIAttributeVersion       { "Version" };
     

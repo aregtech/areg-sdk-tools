@@ -25,6 +25,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
+#include "lusan/model/sm/SMRenameCommands.hpp"
 
 #include <QUndoCommand>
 
@@ -264,6 +265,43 @@ bool StateMachineModel::removeAutosave()
 void StateMachineModel::publishStateNamePreview(uint32_t stateId, const QString& text)
 {
     emit signalStateNamePreview(stateId, text);
+}
+
+const QList<DataTypeCustom*>& StateMachineModel::getCustomDataTypes() const
+{
+    return const_cast<StateMachineModel*>(this)->mDataTypeModel.getCustomDataTypes();
+}
+
+QUndoCommand* StateMachineModel::createRenameSideEffects( eDocElementKind kind, uint32_t id
+                                                        , const QString& oldName, const QString& newName
+                                                        , QUndoCommand* parent)
+{
+    SMReferences::eTarget target{ SMReferences::eTarget::Constant };
+    switch (kind)
+    {
+    case eDocElementKind::Constant:
+        target = SMReferences::eTarget::Constant;
+        break;
+
+    case eDocElementKind::Attribute:
+        target = SMReferences::eTarget::Attribute;
+        break;
+
+    case eDocElementKind::Event:
+        target = SMReferences::eTarget::Event;
+        break;
+
+    case eDocElementKind::Timer:
+        target = SMReferences::eTarget::Timer;
+        break;
+
+    default:
+        // The remaining kinds either carry no name-based reference or are renamed through their
+        // own command, which already knows the target.
+        return nullptr;
+    }
+
+    return new SMRewriteReferencesCommand(getData(), getNotifier(), target, id, oldName, newName, parent->text(), parent);
 }
 
 void StateMachineModel::onAutosaveTimeout()

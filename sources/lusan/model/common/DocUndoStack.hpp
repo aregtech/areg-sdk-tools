@@ -1,5 +1,5 @@
-#ifndef LUSAN_MODEL_SM_SMUNDOSTACK_HPP
-#define LUSAN_MODEL_SM_SMUNDOSTACK_HPP
+#ifndef LUSAN_MODEL_COMMON_DOCUNDOSTACK_HPP
+#define LUSAN_MODEL_COMMON_DOCUNDOSTACK_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,10 +12,10 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/model/sm/SMUndoStack.hpp
+ *  \file        lusan/model/common/DocUndoStack.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, the undo stack that a read-only document refuses.
+ *  \brief       Lusan application, the undo stack shared by every document editor.
  *
  ************************************************************************/
 
@@ -26,24 +26,24 @@
 #include <QUndoStack>
 
 /**
- * \class   SMUndoStack
+ * \class   DocUndoStack
  * \brief   The document's undo stack, with one addition: while the document is read-only it
  *          accepts nothing. A command reaches the model only through `push()`, so this is the
  *          single place a read-only document has to defend -- rather than every one of the
  *          call sites that build commands.
  *
- *          `push()` deliberately shadows the non-virtual `QUndoStack::push()`. Every FSM caller
- *          holds this type (the facade hands it out), so the shadow is what they call; Qt never
+ *          `push()` deliberately shadows the non-virtual `QUndoStack::push()`. Every caller
+ *          holds this type (the document hands it out), so the shadow is what they call; Qt never
  *          pushes anything itself. A refused command is deleted, exactly as `QUndoStack` would
  *          delete a merged one, so no caller has to think about ownership.
  **/
-class SMUndoStack : public QUndoStack
+class DocUndoStack : public QUndoStack
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMUndoStack(QObject* parent = nullptr)
+    explicit DocUndoStack(QObject* parent = nullptr)
         : QUndoStack(parent)
         , mReadOnly (false)
     {
@@ -71,20 +71,20 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// SMUndoStack inline methods
+// DocUndoStack inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool SMUndoStack::isReadOnly() const
+inline bool DocUndoStack::isReadOnly() const
 {
     return mReadOnly;
 }
 
-inline void SMUndoStack::setReadOnly(bool readOnly)
+inline void DocUndoStack::setReadOnly(bool readOnly)
 {
     mReadOnly = readOnly;
 }
 
-inline bool SMUndoStack::push(QUndoCommand* command)
+inline bool DocUndoStack::push(QUndoCommand* command)
 {
     if (mReadOnly)
     {
@@ -96,4 +96,4 @@ inline bool SMUndoStack::push(QUndoCommand* command)
     return true;
 }
 
-#endif  // LUSAN_MODEL_SM_SMUNDOSTACK_HPP
+#endif  // LUSAN_MODEL_COMMON_DOCUNDOSTACK_HPP

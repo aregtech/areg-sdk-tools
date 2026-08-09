@@ -73,7 +73,7 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
             mDataTypeData.validate(mDataTypeData);
             mAttributeData.validate(mDataTypeData);
             mMethodData.validate(mDataTypeData);
-            mConstantData.validate(mDataTypeData);
+            mConstantData.validate(mDataTypeData.getCustomDataTypes());
             mIncludeData.validate(mDataTypeData);
         }
     }

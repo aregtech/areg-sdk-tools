@@ -25,7 +25,7 @@
 #include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/data/si/SIAttributeData.hpp"
 #include "lusan/data/si/SIMethodData.hpp"
-#include "lusan/data/si/SIConstantData.hpp"
+#include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/si/SIIncludeData.hpp"
 
 
@@ -139,8 +139,8 @@ public:
      * \brief   Gets the constant data.
      * \return  The constant data.
      **/
-    inline const SIConstantData& getConstantData() const;
-    inline SIConstantData& getConstantData();
+    inline const ConstantDataSection& getConstantData() const;
+    inline ConstantDataSection& getConstantData();
 
     /**
      * \brief   Gets the include data.
@@ -169,7 +169,7 @@ private:
     SIDataTypeData  mDataTypeData;  //!< The data type data.
     SIAttributeData mAttributeData; //!< The attribute data.
     SIMethodData    mMethodData;    //!< The method data.
-    SIConstantData  mConstantData;  //!< The constant data.
+    ConstantDataSection  mConstantData;  //!< The constant data.
     SIIncludeData   mIncludeData;   //!< The include data.
     bool            mOpenSuccess;   //!< File, indicating if opening file succeeded.
 };
@@ -228,12 +228,12 @@ inline SIMethodData& ServiceInterfaceData::getMethodData()
     return mMethodData;
 }
 
-inline const SIConstantData& ServiceInterfaceData::getConstantData() const
+inline const ConstantDataSection& ServiceInterfaceData::getConstantData() const
 {
     return mConstantData;
 }
 
-inline SIConstantData& ServiceInterfaceData::getConstantData()
+inline ConstantDataSection& ServiceInterfaceData::getConstantData()
 {
     return mConstantData;
 }

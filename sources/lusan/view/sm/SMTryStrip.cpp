@@ -30,7 +30,7 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
-#include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/common/LiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 
 #include "lusan/view/sm/NEGuardStyle.hpp"
@@ -356,7 +356,7 @@ QWidget* SMTryStrip::makeValueField(SMGuardNode::eKind kind, uint32_t symbolId, 
         edit->setMaximumWidth(90);
         connect(edit, &QLineEdit::textChanged, this, [this, symbolId, typeName, edit](const QString& text)
         {
-            const QString reason = SMLiteralValidator::validate(typeName, text);
+            const QString reason = LiteralValidator::validate(typeName, text);
             const bool valid = reason.isEmpty();
             edit->setToolTip(reason);
             edit->setStyleSheet(valid

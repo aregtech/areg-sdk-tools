@@ -1,5 +1,6 @@
 ﻿list(APPEND LUSAN_SRC
     ${LUSAN}/data/common/AttributeEntry.cpp
+    ${LUSAN}/data/common/ConstantDataSection.cpp
     ${LUSAN}/data/common/ConstantEntry.cpp
     ${LUSAN}/data/common/DataTypeBase.cpp
     ${LUSAN}/data/common/DataTypeBasic.cpp
@@ -25,6 +26,7 @@
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/AttributeEntry.hpp
+    ${LUSAN}/data/common/ConstantDataSection.hpp
     ${LUSAN}/data/common/ConstantEntry.hpp
     ${LUSAN}/data/common/DataTypeBase.hpp
     ${LUSAN}/data/common/DataTypeBasic.hpp

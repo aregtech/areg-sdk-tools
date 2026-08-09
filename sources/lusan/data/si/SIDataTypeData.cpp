@@ -10,10 +10,10 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/data/si/SIConstantData.cpp
+ *  \file        lusan/data/si/SIDataTypeData.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Constant Data.
+ *  \brief       Lusan application, Service Interface Data Type Data.
  *
  ************************************************************************/
 

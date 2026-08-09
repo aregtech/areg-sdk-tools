@@ -29,6 +29,22 @@
 #include <cstdint>
 
 /**
+ * \enum    eIssueField
+ * \brief   Which editable field of an element a finding blames, when the check knows that much.
+ *          A results view navigates to the element by id; this says what to put the caret on
+ *          once it is there, so the author lands on the thing they have to change instead of
+ *          hunting for it across the form. \a None means the element itself is the whole answer.
+ **/
+enum class eIssueField
+{
+      None          //!< Nothing finer than the element; selecting it is the reveal.
+    , Name          //!< The name field.
+    , Type          //!< The data type field.
+    , Value         //!< The literal value field.
+    , Description   //!< The description field.
+};
+
+/**
  * \struct  DocIssue
  * \brief   One validation finding, in the single vocabulary every checker speaks.
  *
