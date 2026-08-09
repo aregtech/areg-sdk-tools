@@ -494,15 +494,7 @@ inline bool SIDataTypeData::exists(const QList<DataType*>& dataTypes, uint32_t i
 template<class DataType>
 inline DataType* SIDataTypeData::findDataType(const QList<DataType*>& dataTypes, const QString& typeName) const
 {
-    for (DataType* dataType : dataTypes)
-    {
-        if (dataType->getName() == typeName)
-        {
-            return dataType;
-        }
-    }
-
-    return nullptr;
+    return findTypeByName(dataTypes, typeName);
 }
 
 template<class DataType>

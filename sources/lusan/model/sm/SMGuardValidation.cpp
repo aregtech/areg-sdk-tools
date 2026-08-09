@@ -87,6 +87,23 @@ namespace
                                 , QStringLiteral("%1 calls a deleted condition method %2").arg(what, refDisplay(node))
                                 , node.getSymbolId() });
             }
+            else
+            {
+                // A parameter with a default takes the bound value when there is one and the
+                // default otherwise. A parameter without one has to be bound.
+                const QList<MethodParameter>& formals = method->getElements();
+                const QList<int> bound = SMGuardSymbols::bindArguments(node, *method);
+                for (int i = 0; i < formals.size(); ++i)
+                {
+                    if ((formals.at(i).hasDefault() == false) && (bound.at(i) < 0))
+                    {
+                        findings.append({ eSeverity::Error, eFinding::UnmappedArg, target, location
+                                        , QStringLiteral("%1 calls '%2' without a value for parameter '%3'")
+                                            .arg(what, method->getName(), formals.at(i).getName())
+                                        , node.getSymbolId() });
+                    }
+                }
+            }
             break;
         }
 
@@ -200,6 +217,8 @@ QString SMGuardValidation::describe(SMGuardValidation::eKind kind)
         return QObject::tr("A verbatim C++ fragment is emitted as written and is never parsed or checked. Listed so every unchecked fragment in the document is accounted for.");
     case eKind::BrokenRef:
         return QObject::tr("The guard references a declaration that no longer exists or has left its scope. Re-bind the reference or remove it.");
+    case eKind::UnmappedArg:
+        return QObject::tr("The parameter has no default, so the call cannot be generated until a value is bound to it.");
     default:
         return QString();
     }
@@ -215,9 +234,18 @@ QList<SMGuardValidation::Finding> SMGuardValidation::validate(const StateMachine
 QList<SMGuardValidation::Finding> SMGuardValidation::validateTransition(const StateMachineData& data, uint32_t transitionId)
 {
     QList<Finding> findings;
-    if (transitionId != 0u)
+    if (transitionId == 0u)
     {
-        checkLevel(data, data.getStates(), SMGuardRef(transitionId), findings);
+        return findings;
+    }
+
+    // The canvas asks this per edge while it repaints, so it looks the transition up instead of
+    // walking every level to find one id.
+    const SMStateEntry* owner = data.getStates().findTransitionOwnerRecursive(transitionId);
+    const SMTransitionEntry* transition = data.findTransitionById(transitionId);
+    if ((owner != nullptr) && (transition != nullptr))
+    {
+        checkTransition(data, *owner, *transition, findings);
     }
 
     return findings;

@@ -25,9 +25,12 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
+
+#include <QHash>
 
 SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data, const QStringList& parts, QString& typeNameOut)
 {
@@ -228,4 +231,41 @@ QString SMGuardSymbols::paramType(const StateMachineData& data, uint32_t transit
 const SMMethodEntry* SMGuardSymbols::method(const StateMachineData& data, uint32_t id)
 {
     return SMDocumentIndex(data).method(id);
+}
+
+QList<int> SMGuardSymbols::bindArguments(const SMGuardNode& call, const SMMethodEntry& method)
+{
+    const QList<SMGuardNode*>& args = call.getChildren();
+    const QList<MethodParameter>& formals = method.getElements();
+
+    QHash<uint32_t, int> childByFormal;
+    QList<int>           unnamed;      // argument children that name no parameter
+    for (int i = 0; i < args.size(); ++i)
+    {
+        const uint32_t formalId = args.at(i)->getArgFormalId();
+        if (formalId != 0u)
+        {
+            childByFormal.insert(formalId, i);
+        }
+        else
+        {
+            unnamed.append(i);
+        }
+    }
+
+    QList<int> bound;
+    bound.reserve(formals.size());
+    int cursor = 0;
+    for (const MethodParameter& formal : formals)
+    {
+        int index = childByFormal.value(formal.getId(), -1);
+        if ((index < 0) && (cursor < unnamed.size()))
+        {
+            index = unnamed.at(cursor++);
+        }
+
+        bound.append(index);
+    }
+
+    return bound;
 }

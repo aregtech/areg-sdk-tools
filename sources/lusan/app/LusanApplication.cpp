@@ -25,6 +25,8 @@
 #include "lusan/view/common/WorkspaceSetupDialog.hpp"
 #include "lusan/app/NEAppThemes.hpp"
 
+#include <QDir>
+
 const QStringList   LusanApplication::ExternalExts
 {
       "*.c"
@@ -326,7 +328,12 @@ WorkspaceEntry LusanApplication::startupWorkspace(bool enableDefault)
         mOptions.setDefaultWorkspace(0);
     }
     
-    if (mOptions.hasDefaultWorkspace())
+    // The remembered folder can be gone since the last run. Reopening it then gives an empty
+    // tree with nothing to explain it, so the workspace dialog is offered instead -- the same
+    // check that dialog already makes before it enables its OK button.
+    const bool defaultUsable = mOptions.hasDefaultWorkspace()
+                            && QDir(mOptions.getDefaultWorkspaceRoot()).exists();
+    if (defaultUsable)
     {
         mOptions.activateDefaultWorkspace();
         return mOptions.getDefaultWorkspace();

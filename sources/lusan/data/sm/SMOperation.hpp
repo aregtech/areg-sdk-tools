@@ -136,7 +136,6 @@ public:
         , TimerStart    //!< Start a declared timer.
         , TimerStop     //!< Stop a declared timer.
         , EventSend     //!< Queue an event for asynchronous dispatch.
-        , InlineCode    //!< Execute a verbatim user code block.
     };
 
     static constexpr const char* const  STR_ACTION_CALL     { "ActionCall"   };
@@ -144,7 +143,6 @@ public:
     static constexpr const char* const  STR_TIMER_START     { "TimerStart"   };
     static constexpr const char* const  STR_TIMER_STOP      { "TimerStop"    };
     static constexpr const char* const  STR_EVENT_SEND      { "EventSend"    };
-    static constexpr const char* const  STR_INLINE_CODE     { "InlineCode"   };
 
 protected:
     SMOperationBase(eOperation kind, ElementBase* parent = nullptr);
@@ -174,7 +172,7 @@ public:
 
     /**
      * \brief   The primary referenced name (action/attribute/timer/event); used as the
-     *          element display name. Empty for InlineCode.
+     *          element display name.
      **/
     virtual QString getName() const = 0;
 
@@ -323,27 +321,6 @@ public:
 private:
     QString                     mEvent;         //!< The event name.
     QList<SMArgumentEntry>      mArguments;     //!< The argument list.
-};
-
-/**
- * \class   SMInlineCode
- * \brief   `InlineCode`: execute a verbatim user code block (never parsed).
- **/
-class SMInlineCode : public SMOperationBase
-{
-public:
-    SMInlineCode(ElementBase* parent = nullptr);
-    SMInlineCode(uint32_t id, const QString& body, ElementBase* parent = nullptr);
-    SMInlineCode(const SMInlineCode& src);
-
-    inline const QString& getBody() const;
-    inline void setBody(const QString& body);
-
-    SMOperationBase* clone() const override;
-    QString getName() const override;
-
-private:
-    QString     mBody;      //!< The verbatim C++ body (CDATA on write).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -608,16 +585,6 @@ inline const QList<SMArgumentEntry>& SMEventSend::getArguments() const
 inline QList<SMArgumentEntry>& SMEventSend::getArguments()
 {
     return mArguments;
-}
-
-inline const QString& SMInlineCode::getBody() const
-{
-    return mBody;
-}
-
-inline void SMInlineCode::setBody(const QString& body)
-{
-    mBody = body;
 }
 
 inline ElementBase* SMOperationList::getParent() const

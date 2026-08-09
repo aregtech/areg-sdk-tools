@@ -142,8 +142,6 @@ namespace
                 collectArgSites(send.getArguments(), i, use, out);
             break;
         }
-        case SMOperationBase::eOperation::InlineCode:
-            break; // Verbatim code is never parsed for references.
         }
     }
 
@@ -292,8 +290,6 @@ QList<SMReferences::Ref> SMReferences::operationRefs(const SMOperationBase& op)
     case SMOperationBase::eOperation::EventSend:
         refs.append({ eTarget::Event,     static_cast<const SMEventSend&>(op).getEvent() });
         break;
-    case SMOperationBase::eOperation::InlineCode:
-        break;      // Verbatim code is never parsed for references.
     }
 
     return refs;

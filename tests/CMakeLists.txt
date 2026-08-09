@@ -10,10 +10,13 @@
 
 set(LUSAN_TEST_SUPPORT_SRC
     # common
+    ${LUSAN}/common/DocElementTable.cpp
+    ${LUSAN}/common/DocReservedNames.cpp
     ${LUSAN}/common/ElementBase.cpp
     ${LUSAN}/common/VersionNumber.cpp
     ${LUSAN}/common/NELusanCommon.cpp
     ${LUSAN}/common/XmlSI.cpp
+    ${LUSAN}/model/common/DocUnknownScan.cpp
     # data/common (reused by the FSM model)
     ${LUSAN}/data/common/DocumentElem.cpp
     ${LUSAN}/data/common/ParamBase.cpp

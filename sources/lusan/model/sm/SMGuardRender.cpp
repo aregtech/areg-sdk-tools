@@ -412,28 +412,13 @@ namespace
         {
             const QList<SMGuardNode*>& args = node.getChildren();
             const QList<MethodParameter>& formals = method->getElements();
+            const QList<int> bound = SMGuardSymbols::bindArguments(node, *method);
 
-            QHash<uint32_t, int> childByFormal;
-            QList<int>           positionalFallback;   // arg children with id 0, consumed in order
-            for (int i = 0; i < args.size(); ++i)
-            {
-                const uint32_t fid = args.at(i)->getArgFormalId();
-                if (fid != 0u) { childByFormal.insert(fid, i); }
-                else           { positionalFallback.append(i); }
-            }
-
-            int  fallbackCursor = 0;
             bool holeSeen = false;
             bool first    = true;
             for (int fi = 0; fi < formals.size(); ++fi)
             {
-                const uint32_t fid = formals.at(fi).getId();
-                int childIndex = childByFormal.value(fid, -1);
-                if ((childIndex < 0) && (fallbackCursor < positionalFallback.size()))
-                {
-                    childIndex = positionalFallback.at(fallbackCursor++);
-                }
-
+                const int childIndex = bound.at(fi);
                 if (childIndex < 0)
                 {
                     // Unmapped formal. In display (ghost) mode show a labeled amber ghost; the

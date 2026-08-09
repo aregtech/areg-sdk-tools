@@ -22,6 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include <QList>
 #include <QString>
 #include <QStringList>
 #include <cstdint>
@@ -30,6 +31,7 @@
  * Dependencies
  ************************************************************************/
 class StateMachineData;
+class SMGuardNode;
 class SMMethodEntry;
 
 /**
@@ -163,6 +165,21 @@ namespace SMGuardSymbols
 
     //!< The condition method with the document ID \p id, or nullptr.
     const SMMethodEntry* method(const StateMachineData& data, uint32_t id);
+
+    // ---- Call argument binding --------------------------------------------
+
+    /**
+     * \brief   Matches a call's argument children to the declared parameters of \p method: a
+     *          child naming a parameter binds it, and children naming none are handed to the
+     *          parameters left over, in document order. Rendering and validation both go
+     *          through this, so what the field draws as an unfilled parameter is the same one
+     *          the results list reports.
+     * \param   call    The call node whose children are the arguments.
+     * \param   method  The called condition method.
+     * \return  One entry per declared parameter, in declared order: the index of the argument
+     *          child that binds it, or -1 when nothing does.
+     **/
+    QList<int> bindArguments(const SMGuardNode& call, const SMMethodEntry& method);
 }
 
 #endif  // LUSAN_MODEL_SM_SMGUARDSYMBOLS_HPP

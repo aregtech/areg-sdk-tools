@@ -68,6 +68,7 @@ public:
           Draft         //!< The guard is a draft -- generation refuses.
         , RawFragment   //!< One verbatim raw-C++ fragment (the audit).
         , BrokenRef     //!< A referenced symbol no longer exists / left the scope.
+        , UnmappedArg   //!< A called parameter has no default and nothing bound to it.
     };
 
     /**

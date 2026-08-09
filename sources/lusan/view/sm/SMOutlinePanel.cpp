@@ -422,9 +422,12 @@ void SMOutlinePanel::onContextMenuRequested(const QPoint& pos)
     QMenu menu(this);
     if (kind == KindState)
     {
+        // The id, not the row: exec() below spins its own event loop, and a rebuild armed by any
+        // document change empties the tree and frees the item while the menu is still open.
+        const uint32_t elementId = item->data(0, RoleElementId).toUInt();
         QAction* rename = menu.addAction(tr("Rename"));
-        connect(rename, &QAction::triggered, this, [this, item]() {
-            emit signalRenameRequested(item->data(0, RoleElementId).toUInt());
+        connect(rename, &QAction::triggered, this, [this, elementId]() {
+            emit signalRenameRequested(elementId);
         });
     }
 

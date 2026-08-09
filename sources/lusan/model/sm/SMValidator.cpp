@@ -19,6 +19,9 @@
 
 #include "lusan/model/sm/SMValidator.hpp"
 
+#include "lusan/common/DocElementTable.hpp"
+#include "lusan/common/DocReservedNames.hpp"
+
 #include "lusan/model/sm/SMGuardValidation.hpp"
 #include "lusan/model/sm/SMOperationValidation.hpp"
 
@@ -221,6 +224,15 @@ namespace
         void checkWarnings(const QList<LevelInfo>& levels);
         void checkGuards();
         void checkDescriptions();
+
+        // Elements the format does not define.
+        void checkUnknownElements();
+
+        // A default value that is not in trailing position, on any declaration that takes parameters.
+        void checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName);
+
+        // A condition whose name is already the name of a generated function.
+        void checkConditionCallableName(const SMMethodEntry& method);
 
         // Import rules.
         void checkImports(const QList<LevelInfo>& levels);
@@ -869,8 +881,6 @@ namespace
                 validateArguments(id, eDocElementKind::Operation, event, send->getArguments(), scope);
                 break;
             }
-            case SMOperationBase::eOperation::InlineCode:
-                break;
             }
         }
     }
@@ -1250,6 +1260,7 @@ namespace
         for (const LevelInfo& info : levels)
             validateLevel(info);
 
+        checkUnknownElements();
         checkDuplicateIds();
         checkDuplicateStateNames(levels);
         checkRegistryNames();
@@ -1267,9 +1278,13 @@ namespace
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("A body is only allowed on an Embedded condition"));
             // Return belongs to a condition method and is a declared type like any other.
             if (m->isCondition())
+            {
                 checkDataType(m->getId(), eDocElementKind::Method, m->getReturn());
+                checkConditionCallableName(*m);
+            }
             for (const MethodParameter& p : m->getElements())
                 checkDataType(p.getId(), eDocElementKind::Method, p.getType());
+            checkDefaultOrder(*m, eDocElementKind::Method, m->getName());
         }
         for (SMEventEntry* e : mData.getEvents().getElements())
         {
@@ -1277,6 +1292,7 @@ namespace
             checkIdentifier(e->getId(), eDocElementKind::Event, e->getName());
             for (const MethodParameter& p : e->getElements())
                 checkDataType(p.getId(), eDocElementKind::Event, p.getType());
+            checkDefaultOrder(*e, eDocElementKind::Event, e->getName());
         }
         for (const SMTimerEntry& t : mData.getTimers().getElements())
             checkIdentifier(t.getId(), eDocElementKind::Timer, t.getName());
@@ -1509,73 +1525,11 @@ namespace
                   , vtr("Trigger '%1' has the same name as an attribute. An attribute and a trigger must have different names, because both become members of the machine class.").arg(m->getName()));
         }
 
-        // A state becomes a member named 'm' plus its own name, while an attribute becomes 'mAttr',
-        // embedded condition 'mCond'+name, and a timer 'mTimer' its name.
-        struct ReservedWord
-        {
-            QLatin1StringView   word;   //!< The leading word a state name may not extend.
-            QLatin1StringView   owner;  //!< What the resulting prefix is reserved for.
-        };
-        static constexpr ReservedWord reserved[]
-        {
-              { QLatin1StringView("Attr"),  QLatin1StringView("attribute members")          }
-            , { QLatin1StringView("Cond"),  QLatin1StringView("embedded condition members") }
-            , { QLatin1StringView("Timer"), QLatin1StringView("timer members")              }
-        };
-
-        for (const LevelInfo& info : levels)
-        {
-            for (SMStateEntry* state : info.level->getElements())
-            {
-                if (state == nullptr)
-                    continue;
-
-                const QString& name = state->getName();
-                for (const ReservedWord& entry : reserved)
-                {
-                    if ((name.size() > entry.word.size()) && name.startsWith(entry.word))
-                    {
-                        add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
-                          , vtr("State '%1' generates a member named 'm%1', and the prefix 'm%2' is reserved for %3. Rename the state so that it does not begin with '%2'.")
-                                .arg(name, QString(entry.word), QString(entry.owner)));
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Either can land on a member the machine class
-        static constexpr QLatin1StringView fixedMembers[]
-        {
-              QLatin1StringView("ActionHandler"), QLatin1StringView("InstanceName")
-            , QLatin1StringView("Lock"),          QLatin1StringView("MasterThread")
-            , QLatin1StringView("OwnProcessing"), QLatin1StringView("Processing")
-            , QLatin1StringView("State"),         QLatin1StringView("EventConsumer")
-            , QLatin1StringView("TimerConsumer"), QLatin1StringView("FinalObserver")
-        };
-        static constexpr QLatin1StringView sharedFixedMembers[]
-        {
-              QLatin1StringView("OwnLock"), QLatin1StringView("Epoch")
-        };
-
+        // Only a state that hosts an imported machine becomes a member: it holds the machine in
+        // 'm' plus the state name. A plain state generates nothing, so its name is free.
         const bool isShared = (mData.getOverview().getThreading() == SMOverviewData::eThreading::Shared);
-        auto collidesWithFixedMember = [&](const QString& word) -> bool
-        {
-            for (const QLatin1StringView& fixed : fixedMembers)
-            {
-                if (word == QString(fixed))
-                    return true;
-            }
-            if (isShared)
-            {
-                for (const QLatin1StringView& fixed : sharedFixedMembers)
-                {
-                    if (word == QString(fixed))
-                        return true;
-                }
-            }
-            return false;
-        };
+        const QList<const DocReservedNames::Row*> prefixes
+            = DocReservedNames::stateMachine(DocReservedNames::eKind::NamePrefix, isShared);
 
         for (const LevelInfo& info : levels)
         {
@@ -1585,21 +1539,38 @@ namespace
                     continue;
 
                 const QString& name = state->getName();
-                if (collidesWithFixedMember(name))
+                const QString member = QStringLiteral("m") + name;
+
+                if (const DocReservedNames::Row* row = DocReservedNames::fixedMember(member, isShared))
                 {
                     add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
-                      , vtr("Hosting state '%1' generates a member named 'm%1', which the machine class already uses for itself. Rename the state.").arg(name));
+                      , vtr("Hosting state '%1' generates a member named '%2', which the machine class already uses for %3. Rename the state.")
+                            .arg(name, member, QString(row->owner)));
+                    continue;
+                }
+
+                for (const DocReservedNames::Row* row : prefixes)
+                {
+                    const QLatin1StringView word = DocReservedNames::reservedWord(*row);
+                    if ((name.size() > word.size()) && name.startsWith(word))
+                    {
+                        add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                          , vtr("Hosting state '%1' generates a member named '%2', and the prefix '%3' is reserved for %4. Rename the state so that it does not begin with '%5'.")
+                                .arg(name, member, QString(row->member), QString(row->owner), QString(word)));
+                        break;
+                    }
                 }
             }
         }
 
         for (const SMTimerEntry& timer : mData.getTimers().getElements())
         {
-            const QString member = QStringLiteral("Timer") + timer.getName();
-            if (collidesWithFixedMember(member))
+            const QString member = QStringLiteral("mTimer") + timer.getName();
+            if (const DocReservedNames::Row* row = DocReservedNames::fixedMember(member, isShared))
             {
                 add(timer.getId(), eDocElementKind::Timer, eSeverity::Error, 33
-                  , vtr("Timer '%1' generates a member named 'm%2', which the machine class already uses for itself. Rename the timer.").arg(timer.getName(), member));
+                  , vtr("Timer '%1' generates a member named '%2', which the machine class already uses for %3. Rename the timer.")
+                        .arg(timer.getName(), member, QString(row->owner)));
             }
         }
 
@@ -1653,14 +1624,91 @@ namespace
         }
     }
 
+    void Ctx::checkUnknownElements()
+    {
+        for (const DocUnknownElement& unknown : mData.getUnknownElements())
+        {
+            // The tag is the only thing to point at: an element the format does not define has
+            // no document element behind it, and so nothing to select. The line is what lets the
+            // author find the first one, which matters because a mistyped tag travels by copy.
+            const QString message = unknown.removed
+                ? vtr("Unknown tag '%1', line %2. The format no longer defines it")
+                        .arg(unknown.name).arg(unknown.line)
+                : vtr("Unknown tag '%1', line %2").arg(unknown.name).arg(unknown.line);
+
+            const DocElementTable::Row* row = DocElementTable::find(unknown.name);
+            QString detail = vtr("The code generator refuses the whole document, so nothing generates until the tag is removed or corrected. "
+                                 "The block is kept as written until then.");
+            if ((row != nullptr) && (row->replacement.isEmpty() == false))
+            {
+                detail = vtr("The format no longer defines this element; use %1 instead. "
+                             "Nothing generates until the block is removed or replaced. The block is kept as written until then.")
+                            .arg(QString(row->replacement));
+            }
+
+            add(0u, eDocElementKind::Overview, eSeverity::Error, 34, message, detail);
+            mIssues.last().location = unknown.parent.isEmpty()
+                                        ? QString()
+                                        : vtr("in <%1>").arg(unknown.parent);
+        }
+    }
+
+    void Ctx::checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName)
+    {
+        const int misplaced = owner.misplacedDefaultPosition();
+        if (misplaced < 0)
+        {
+            return;
+        }
+
+        const MethodParameter& param = owner.getElements().at(misplaced);
+        add(param.getId(), kind, eSeverity::Error, 38
+          , vtr("Parameter '%1' of '%2' has a default value but is not among the last parameters")
+                .arg(param.getName(), ownerName)
+          , vtr("A default value stands in for an argument the caller leaves out, so every parameter after one that has a default must have a default too. "
+                "Move the parameter to the end, or give the parameters after it defaults as well."));
+    }
+
+    void Ctx::checkConditionCallableName(const SMMethodEntry& method)
+    {
+        // A condition keeps its document name in the generated code, while an action is generated
+        // under a prefix. A condition already spelled that way lands on the same identifier.
+        const QList<const DocReservedNames::Row*> reserved
+            = DocReservedNames::stateMachine(DocReservedNames::eKind::FunctionPrefix, false);
+
+        const QString& name = method.getName();
+        for (const DocReservedNames::Row* row : reserved)
+        {
+            if ((row->applies & DocReservedNames::AppliesCondition) == 0)
+            {
+                continue;
+            }
+
+            if ((name.size() > row->member.size()) && name.startsWith(row->member))
+            {
+                add(method.getId(), eDocElementKind::Method, eSeverity::Warning, 39
+                  , vtr("Condition '%1' is generated under that exact name, and '%2' is the prefix of %3")
+                        .arg(name, QString(row->member), QString(row->owner))
+                  , vtr("Two declarations can reach one C++ identifier this way, and the build then refuses whichever comes second. "
+                        "Rename the condition unless nothing calls both."));
+                break;
+            }
+        }
+    }
+
     void Ctx::checkGuards()
     {
         for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
         {
             const eDocElementKind kind = eDocElementKind::Transition;
+            // An unbound call parameter is the argument-mapping fault wherever it is found, so it
+            // keeps that number here rather than being filed as a guard fault.
+            const int rule = (finding.kind == SMGuardValidation::eKind::UnmappedArg)
+                                ? SMValidator::RULE_ARGUMENT_MAPPING
+                                : SMValidator::RULE_GUARD;
             // Through add(), so a non-error guard finding carries the same offset number the
             // generator uses instead of the bare rule id.
-            add(finding.target.getId(), kind, finding.severity, SMValidator::RULE_GUARD
+            add(finding.target.getId(), kind, finding.severity, rule
                , finding.message, SMGuardValidation::describe(finding.kind));
             mIssues.last().location = finding.location;
         }
@@ -1792,10 +1840,6 @@ namespace
                     for (const SMArgumentEntry& arg : e->getArguments()) noteSource(arg.getSource(), arg.getValue());
                     break;
                 }
-                case eOp::InlineCode:
-                    if (static_cast<SMInlineCode*>(op)->getBody().trimmed().isEmpty())
-                        add(op->getId(), eDocElementKind::Operation, eSeverity::Warning, 11, vtr("Inline code block is empty"));
-                    break;
                 }
             }
         };

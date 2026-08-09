@@ -22,6 +22,8 @@
 
 #include <QByteArray>
 #include <QFile>
+#include "lusan/common/DocElementTable.hpp"
+
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QSaveFile>
@@ -350,6 +352,9 @@ namespace
             data.writeToXml(xml);
         }
 
+        // An element this build cannot show goes back where it was found. Dropping it would
+        // destroy the very document the author has to open elsewhere to recover.
+        buffer = DocUnknownScan::restore(buffer, data.getUnknownElements());
         buffer.append('\n');
         return buffer;
     }
@@ -406,7 +411,8 @@ bool StateMachineData::readFromFile(const QString& filePath)
     {
         mFilePath = filePath;
 
-        QXmlStreamReader xml(&file);
+        const QByteArray content = file.readAll();
+        QXmlStreamReader xml(content);
         while (!xml.atEnd() && !xml.hasError())
         {
             if (xml.readNextStartElement())
@@ -425,6 +431,12 @@ bool StateMachineData::readFromFile(const QString& filePath)
         mOpenSuccess = (xml.hasError() == false);
         if (mOpenSuccess)
         {
+            // The readers build no element they do not recognize, so by the time the model
+            // exists the name and the line are gone. The text is read once more to keep both,
+            // and to keep the block itself for the save. It runs after the parse because
+            // reading the document clears what the last one left behind.
+            mUnknownElements = DocUnknownScan::scan(content);
+
             // A freshly parsed entry only carries its type name; resolve the cached type
             // pointer now so icons/pickers match an interactively edited document.
             mDataTypes.validate(mDataTypes);
@@ -561,10 +573,15 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
         }
     }
 
-    const VersionNumber& current = currentFormatVersion();
-    if (mFormatVersion.getMajor() > current.getMajor())
+    // A newer document may use elements this build has never heard of, and an editor that cannot
+    // show them cannot save them back safely either. Refusing names both versions, because the
+    // way out is to update the tool or to refresh the format description beside it.
+    const VersionNumber& current = DocElementTable::maxFormatVersion();
+    if (current < mFormatVersion)
     {
-        xml.raiseError(tr("Unsupported FSML format version %1; supported version is %2").arg(mFormatVersion.toString(), current.toString()));
+        xml.raiseError(tr("This document is written in FSML format %1, and this build reads up to format %2. "
+                          "Update Lusan, or refresh the format description delivered with the Areg SDK, then open it again.")
+                            .arg(mFormatVersion.toString(), current.toString()));
         return false;
     }
 
@@ -818,6 +835,7 @@ void StateMachineData::clearUnknownContent()
 {
     mUnknownRootAttributes.clear();
     mUnknownRootElements.clear();
+    mUnknownElements.clear();
 }
 
 StateMachineData::StimulusRef StateMachineData::findStimulus(const QString& name) const

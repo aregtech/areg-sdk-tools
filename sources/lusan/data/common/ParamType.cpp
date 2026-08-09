@@ -28,16 +28,6 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 
-namespace
-{
-    template<typename DataType>
-    inline DataType* findDataType(const QList<DataType*>& dataTypes, const QString& typeName)
-    {
-        auto it = std::find_if(dataTypes.begin(), dataTypes.end(), [typeName](const DataType* item) -> bool { return (item != nullptr) && (item->getName() == typeName); });
-        return (it != dataTypes.end() ? (*it) : nullptr);
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////
 // TypeFinder class implementation
 //////////////////////////////////////////////////////////////////////////
@@ -46,19 +36,19 @@ DataTypeBase* TypeFinder::findObject(const QString& name, const QList<DataTypeCu
 {
     DataTypeBase* dataType{ nullptr };
     
-    dataType = static_cast<DataTypeBase*>(findDataType(listTypes, name));
+    dataType = static_cast<DataTypeBase*>(findTypeByName(listTypes, name));
     if (dataType != nullptr)
     {
         return dataType;
     }
 
-    dataType = static_cast<DataTypeBase*>(findDataType(DataTypeFactory::getPrimitiveTypes(), name));
+    dataType = static_cast<DataTypeBase*>(findTypeByName(DataTypeFactory::getPrimitiveTypes(), name));
     if (dataType != nullptr)
     {
         return dataType;
     }
 
-    dataType = static_cast<DataTypeBase*>(findDataType(DataTypeFactory::getBasicTypes(), name));
+    dataType = static_cast<DataTypeBase*>(findTypeByName(DataTypeFactory::getBasicTypes(), name));
     if (dataType != nullptr)
     {
         return dataType;
@@ -148,7 +138,7 @@ bool ParamType::operator == (const QString& typeName) const
 {
     if (mTypeObj != nullptr)
     {
-        return (mTypeObj->getName() == typeName);
+        return mTypeObj->hasTypeName(typeName);
     }
     else
     {

@@ -439,15 +439,7 @@ bool DataTypesModel::addDataType(DataTypeCustom* dataType)
 
 DataTypeBase* DataTypesModel::findDataType(const QString& name) const
 {
-    for (DataTypeBase* dataType : mDataTypeList)
-    {
-        if (dataType->getName() == name)
-        {
-            return dataType;
-        }
-    }
-
-    return nullptr;
+    return findTypeByName(mDataTypeList, name);
 }
 
 DataTypeBase* DataTypesModel::findDataType(uint32_t id) const

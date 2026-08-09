@@ -25,6 +25,7 @@ DataTypeImported::DataTypeImported(ElementBase* parent /*= nullptr*/)
     , mNamespace    ( )
     , mObject       ( )
     , mLocation     ( )
+    , mHasObject    (false)
 {
 }
 
@@ -33,6 +34,7 @@ DataTypeImported::DataTypeImported(const QString& name, ElementBase* parent /*= 
     , mNamespace    ( )
     , mObject       ( )
     , mLocation     ( )
+    , mHasObject    (false)
 {
 }
 
@@ -41,6 +43,7 @@ DataTypeImported::DataTypeImported(const DataTypeImported& src)
     , mNamespace    (src.mNamespace)
     , mObject       (src.mObject)
     , mLocation     (src.mLocation)
+    , mHasObject    (src.mHasObject)
 {
 }
 
@@ -49,6 +52,7 @@ DataTypeImported::DataTypeImported(DataTypeImported&& src) noexcept
     , mNamespace    (std::move(src.mNamespace))
     , mObject       (std::move(src.mObject))
     , mLocation     (std::move(src.mLocation))
+    , mHasObject    (src.mHasObject)
 {
 }
 
@@ -60,6 +64,7 @@ DataTypeImported& DataTypeImported::operator = (const DataTypeImported& other)
         mNamespace  = other.mNamespace;
         mObject     = other.mObject;
         mLocation   = other.mLocation;
+        mHasObject  = other.mHasObject;
     }
 
     return *this;
@@ -73,6 +78,7 @@ DataTypeImported& DataTypeImported::operator = (DataTypeImported&& other) noexce
         mNamespace  = std::move(other.mNamespace);
         mObject     = std::move(other.mObject);
         mLocation   = std::move(other.mLocation);
+        mHasObject  = other.mHasObject;
     }
 
     return *this;
@@ -113,7 +119,7 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
         }
         else if (xmlName == XmlSI::xmlSIElementImportedObject)
         {
-            mObject = xml.readElementText();
+            setObject(xml.readElementText());
         }
         else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
         {
@@ -123,8 +129,13 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
         xml.readNext();
     }
 
+    // An absent object name means the type's own name; the default is not the author's text, so
+    // it must not be written back.
     if  (mObject.isEmpty())
+    {
         mObject = getName();
+        mHasObject = false;
+    }
 
     return true;
 }
@@ -143,7 +154,12 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
 
     writeTextElem(xml, XmlSI::xmlSIElementLocation, mLocation, false);
     writeTextElem(xml, XmlSI::xmlSIElementNamespace, mNamespace, false);
-    writeTextElem(xml, XmlSI::xmlSIElementImportedObject, mObject, false);
+    // The object name defaults to the type name when the document omits it, so writing it back
+    // unconditionally would put a tag in the file that the author never wrote.
+    if (mHasObject)
+    {
+        writeTextElem(xml, XmlSI::xmlSIElementImportedObject, mObject, false);
+    }
     writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
 
     xml.writeEndElement(); // DataType
@@ -152,6 +168,11 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
 QString DataTypeImported::toTypeString() const
 {
     return (mNamespace.isEmpty() ? mObject : mNamespace + "::" + mObject);
+}
+
+bool DataTypeImported::hasTypeName(const QString& typeName) const
+{
+    return (DataTypeCustom::hasTypeName(typeName) || (toTypeString() == typeName));
 }
 
 QIcon DataTypeImported::getIcon(ElementBase::eDisplay display) const

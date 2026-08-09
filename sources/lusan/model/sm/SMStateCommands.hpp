@@ -143,6 +143,10 @@ public:
     bool isEffective() const;
 
 private:
+    //!< Tells the imports on both sides of the change that their usage may have moved.
+    void notifyImportUsage(const QString& before, const QString& after);
+
+private:
     uint32_t                mId;
     QString                 mNew;                       //!< The requested alias (empty unlinks).
     QString                 mOldAlias;

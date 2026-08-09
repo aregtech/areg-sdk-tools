@@ -217,6 +217,15 @@ public:
     int firsPositionWithDefault() const;
 
     /**
+     * \brief   The position of the first parameter that carries a default value and is still
+     *          followed by one that does not. Generated C++ takes its defaults from the end of
+     *          the list, so such a declaration either fails to compile or means something the
+     *          document does not say. The editor cannot produce one; a hand-edited document can.
+     * \return  The position, or -1 when every default sits at the end of the list.
+     **/
+    int misplacedDefaultPosition() const;
+
+    /**
      * \brief   Checks if the parameter with the given ID can switch its default value.
      * \param   id  The ID of the parameter.
      * \return  True if the parameter can switch its default value, false otherwise.
