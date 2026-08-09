@@ -33,7 +33,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-class SIDataTypeData;
+class DataTypeDataSection;
 
  /**
   * \class   SIMethodData
@@ -294,7 +294,7 @@ public:
      * \brief   Validates the method data.
      * \param   dataTypes   The data type data to validate the methods.
      **/
-    void validate(const SIDataTypeData& dataTypes);
+    void validate(const DataTypeDataSection& dataTypes);
 
 private:
     /**

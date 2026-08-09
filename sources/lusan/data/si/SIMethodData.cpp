@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodData.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 namespace
@@ -347,7 +347,7 @@ void SIMethodData::removeParameter(SIMethodBase& method, uint32_t id)
     method.removeElement(id);
 }
 
-void SIMethodData::validate(const SIDataTypeData& dataTypes)
+void SIMethodData::validate(const DataTypeDataSection& dataTypes)
 {
     const QList<DataTypeCustom *>& customTypes = dataTypes.getCustomDataTypes();
     QList<SIMethodBase*>& list = getElements();

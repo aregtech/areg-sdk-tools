@@ -34,6 +34,7 @@
  ************************************************************************/
 class ConstantDataSection;
 class DataTypeCustom;
+class DataTypeDataSection;
 class QUndoCommand;
 
 /**
@@ -82,6 +83,12 @@ public:
      *          the section lives in, and a reference taken earlier would outlive it.
      **/
     virtual ConstantDataSection& getConstantSection() = 0;
+
+    /**
+     * \brief   The document's `DataTypeList` section. Answered on every call, for the same
+     *          reason as the constants section above.
+     **/
+    virtual DataTypeDataSection& getDataTypeSection() = 0;
 
     /**
      * \brief   Builds the command that repairs whatever else in the document refers to a renamed

@@ -24,7 +24,7 @@
 #include "lusan/model/common/DocUndoStack.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/sm/SMOverviewModel.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
@@ -96,6 +96,12 @@ public:
     inline ConstantDataSection& getConstantSection() override;
 
     /**
+     * \brief   The document's `DataTypeList` section, read from the data object that is current
+     *          now for the same reason as the constants section above.
+     **/
+    inline DataTypeDataSection& getDataTypeSection() override;
+
+    /**
      * \brief   Builds the command that rewrites whatever refers to a renamed element by name.
      *          A state machine reaches guards, operations and transition stimuli this way, so
      *          unlike a service interface it always has repair work to do.
@@ -105,7 +111,7 @@ public:
                                          , QUndoCommand* parent) override;
 
     inline SMOverviewModel& getOverviewModel();
-    inline SMDataTypeModel& getDataTypeModel();
+    inline DataTypeModel& getDataTypeModel();
     inline SMAttributeModel& getAttributeModel();
     inline SMEventModel& getEventModel();
     inline SMTimerModel& getTimerModel();
@@ -133,7 +139,7 @@ private:
     DocUndoStack    mUndoStack;
     QTimer          mAutosaveTimer;
     SMOverviewModel mOverviewModel;
-    SMDataTypeModel mDataTypeModel;
+    DataTypeModel mDataTypeModel;
     SMAttributeModel mAttributeModel;
     SMEventModel    mEventModel;
     SMTimerModel    mTimerModel;
@@ -177,6 +183,11 @@ inline ConstantDataSection& StateMachineModel::getConstantSection()
     return mData->getConstants();
 }
 
+inline DataTypeDataSection& StateMachineModel::getDataTypeSection()
+{
+    return mData->getDataTypes();
+}
+
 inline bool StateMachineModel::isReadOnly() const
 {
     return mUndoStack.isReadOnly();
@@ -207,7 +218,7 @@ inline SMOverviewModel& StateMachineModel::getOverviewModel()
     return mOverviewModel;
 }
 
-inline SMDataTypeModel& StateMachineModel::getDataTypeModel()
+inline DataTypeModel& StateMachineModel::getDataTypeModel()
 {
     return mDataTypeModel;
 }

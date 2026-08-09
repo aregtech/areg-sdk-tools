@@ -21,8 +21,8 @@
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/view/si/SIAttribute.hpp"
-#include "lusan/view/si/SIConstant.hpp"
-#include "lusan/view/si/SIDataType.hpp"
+#include "lusan/view/common/ConstantPage.hpp"
+#include "lusan/view/common/DataTypePage.hpp"
 #include "lusan/view/si/SIInclude.hpp"
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
@@ -91,11 +91,14 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    SIDataTypeData& data = mModel.getData().getDataTypeData();
-    connect(&data, &SIDataTypeData::signalDataTypeCreated   , this, &ServiceInterface::slotDataTypeCreated);
-    connect(&data, &SIDataTypeData::signalDataTypeDeleted   , this, &ServiceInterface::slotDataTypeDeleted);
-    connect(&data, &SIDataTypeData::signalDataTypeConverted , this, &ServiceInterface::slotDataTypeConverted);
-    connect(&data, &SIDataTypeData::signalDataTypeUpdated   , this, &ServiceInterface::slotDataTypeUpdated);
+    // The pages that offer the document's data types, or declare their elements with them, follow
+    // the Data Types page through the document notifier, so an undo or a redo reaches them too.
+    DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, &ServiceInterface::slotDataTypesChanged);
+    connect(&notifier, &DocModelNotifier::elementAdded  , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) slotDataTypesChanged(); });
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) slotDataTypesChanged(); });
+    connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) slotDataTypesChanged(); });
+    connect(&notifier, &DocModelNotifier::listReordered , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) slotDataTypesChanged(); });
 
     // The title mark and the global Edit menu follow how far the history stands from the point
     // the document was last saved at.
@@ -193,44 +196,14 @@ bool ServiceInterface::writeToFile(const QString& filePath)
     }
 }
 
-void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)
+void ServiceInterface::slotDataTypesChanged()
 {
-    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeCreated(dataType);
-    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeCreated(dataType);
-    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeCreated(dataType);
-    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeCreated(dataType);
-    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeCreated(dataType);
-    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeCreated(dataType);
-}
-
-void ServiceInterface::slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
-{
-    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeConverted(oldType, newType);
-    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeConverted(oldType, newType);
-    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeConverted(oldType, newType);
-    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeConverted(oldType, newType);
-    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeConverted(oldType, newType);
-    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeConverted(oldType, newType);
-}
-
-void ServiceInterface::slotDataTypeDeleted(DataTypeCustom* dataType)
-{
-    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeDeleted(dataType);
-    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeDeleted(dataType);
-    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeDeleted(dataType);
-    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeDeleted(dataType);
-    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeDeleted(dataType);
-    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeDeleted(dataType);
-}
-
-void ServiceInterface::slotDataTypeUpdated(DataTypeCustom* dataType)
-{
-    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeUpdated(dataType);
-    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeUpdated(dataType);
-    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeUpdated(dataType);
-    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeUpdated(dataType);
-    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeUpdated(dataType);
-    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeUpdated(dataType);
+    // The Data Types page and the Constants page follow the notifier themselves; the rest are
+    // told here, because they still hold their own copies of the type list.
+    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypesChanged();
+    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypesChanged();
+    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypesChanged();
+    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypesChanged();
 }
 
 void ServiceInterface::attachPage(int index, QWidget* page)
@@ -310,7 +283,7 @@ void ServiceInterface::ensureTabInitialized(int index)
     case eSIPages::PageDataTypes:
         if (mDataType == nullptr)
         {
-            mDataType = new SIDataType(mModel.getDataTypeModel(), &mTabWidget);
+            mDataType = new DataTypePage(mModel.getDataTypeModel(), tr("Service Interface Data Type Editor ..."), &mTabWidget);
             attachPage(index, mDataType);
         }
         break;
@@ -334,7 +307,7 @@ void ServiceInterface::ensureTabInitialized(int index)
     case eSIPages::PageConstants:
         if (mConstant == nullptr)
         {
-            mConstant = new SIConstant(mModel.getConstantsModel(), &mTabWidget);
+            mConstant = new ConstantPage(mModel.getConstantsModel(), tr("Service Interface Constants Editor ..."), &mTabWidget);
             attachPage(index, mConstant);
         }
         break;

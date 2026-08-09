@@ -143,33 +143,10 @@ public:
 protected:
     
     /**
-     * \brief   Triggered when new data type is created.
-     * \param   dataType    New created data type object.
-     * \return  Returns true if new created data type is in the list. Otherwise, returns false.
+     * \brief   Rebuilds the type list the page offers and re-resolves every attribute's declared
+     *          type against what the document holds now.
      **/
-    void dataTypeCreated(DataTypeCustom* dataType) override;
-    
-    /**
-     * \brief   Triggered when the data type is converted.
-     * \param   oldType     The old data type object.
-     * \param   newType     The new data type object.
-     * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
-     **/
-    void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
-    
-    /**
-     * \brief   Triggered when the data type is deleted and invalidated.
-     * \param   dataType    The data type object to be deleted.
-     * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
-     **/
-    void dataTypeDeleted(DataTypeCustom* dataType) override;
-    
-    /**
-     * \brief   Triggered when the data type is updated.
-     * \param   dataType    The data type object to update.
-     * \return  Returns true if the data type is updated. Otherwise, returns false.
-     **/
-    void dataTypeUpdated(DataTypeCustom* dataType) override;
+    void dataTypesChanged() override;
 
     /**
      * \brief   Returns the number of columns in the table.

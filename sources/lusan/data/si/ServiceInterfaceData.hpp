@@ -22,7 +22,7 @@
 #include "lusan/common/ElementBase.hpp"
 
 #include "lusan/data/si/SIOverviewData.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/si/SIAttributeData.hpp"
 #include "lusan/data/si/SIMethodData.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
@@ -118,8 +118,8 @@ public:
      * \brief   Gets the data type data.
      * \return  The data type data.
      **/
-    inline const SIDataTypeData& getDataTypeData() const;
-    inline SIDataTypeData& getDataTypeData();
+    inline const DataTypeDataSection& getDataTypeData() const;
+    inline DataTypeDataSection& getDataTypeData();
 
     /**
      * \brief   Gets the attribute data.
@@ -166,7 +166,7 @@ private:
     QString         mFilePath;      //!< The file path of the service interface data.
     VersionNumber   mXmlVersion;    //!< The XML document data version.
     SIOverviewData  mOverviewData;  //!< The overview data.
-    SIDataTypeData  mDataTypeData;  //!< The data type data.
+    DataTypeDataSection  mDataTypeData;  //!< The data type data.
     SIAttributeData mAttributeData; //!< The attribute data.
     SIMethodData    mMethodData;    //!< The method data.
     ConstantDataSection  mConstantData;  //!< The constant data.
@@ -198,12 +198,12 @@ inline SIOverviewData& ServiceInterfaceData::getOverviewData()
     return mOverviewData;
 }
 
-inline const SIDataTypeData& ServiceInterfaceData::getDataTypeData() const
+inline const DataTypeDataSection& ServiceInterfaceData::getDataTypeData() const
 {
     return mDataTypeData;
 }
 
-inline SIDataTypeData& ServiceInterfaceData::getDataTypeData()
+inline DataTypeDataSection& ServiceInterfaceData::getDataTypeData()
 {
     return mDataTypeData;
 }

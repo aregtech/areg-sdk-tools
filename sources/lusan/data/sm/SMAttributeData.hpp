@@ -25,7 +25,7 @@
 #include "lusan/data/common/ParamBase.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
 
-class SMDataTypeData;
+class DataTypeDataSection;
 
 /**
  * \class   SMAttributeEntry
@@ -124,7 +124,7 @@ public:
      *          right after a file load (a freshly parsed entry only has the type name).
      * \param   dataTypes   The document's data type registry.
      **/
-    void validate(const SMDataTypeData& dataTypes);
+    void validate(const DataTypeDataSection& dataTypes);
 };
 
 //////////////////////////////////////////////////////////////////////////

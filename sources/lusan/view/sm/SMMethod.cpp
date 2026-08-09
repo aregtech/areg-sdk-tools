@@ -28,7 +28,7 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/SMWhereUsed.hpp"

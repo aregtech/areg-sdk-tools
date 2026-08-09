@@ -33,7 +33,7 @@
  * Dependencies
  ************************************************************************/
 class StateMachineModel;
-class SMDataTypeModel;
+class DataTypeModel;
 class DocModelNotifier;
 
 /**
@@ -70,7 +70,7 @@ public:
     int findIndex(const SMMethodEntry* method) const;
 
     //!< The data types page model, so the parameter/return type editors can offer declared types.
-    SMDataTypeModel& getDataTypeModel() const;
+    DataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
 
     //!< The document model, so the page can read the machine's registries (e.g. code completion).
@@ -122,7 +122,7 @@ public:
     void swapParams(SMMethodEntry* method, uint32_t firstId, uint32_t secondId);
 
     void setParamName(SMMethodEntry* method, uint32_t paramId, const QString& name);
-    //!< Sets the parameter's declared type by name — see SMDataTypeModel::setFieldType for
+    //!< Sets the parameter's declared type by name — see DataTypeModel::setFieldType for
     //!< why name, not the resolved DataTypeBase*.
     void setParamType(SMMethodEntry* method, uint32_t paramId, const QString& typeName);
     //!< Sets the optional default flag and its literal as one undo step (one user gesture).

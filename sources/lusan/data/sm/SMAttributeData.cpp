@@ -20,7 +20,7 @@
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -229,7 +229,7 @@ SMAttributeEntry* SMAttributeData::createAttribute(const QString& name)
     return findElement(name);
 }
 
-void SMAttributeData::validate(const SMDataTypeData& dataTypes)
+void SMAttributeData::validate(const DataTypeDataSection& dataTypes)
 {
     const QList<DataTypeCustom*>& customTypes = dataTypes.getCustomDataTypes();
     for (SMAttributeEntry& entry : getElements())

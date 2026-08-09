@@ -26,7 +26,7 @@
 #include "lusan/common/VersionNumber.hpp"
 
 #include "lusan/data/sm/SMOverviewData.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
@@ -147,8 +147,8 @@ public:
     inline const SMOverviewData& getOverview() const;
     inline SMOverviewData& getOverview();
 
-    inline const SMDataTypeData& getDataTypes() const;
-    inline SMDataTypeData& getDataTypes();
+    inline const DataTypeDataSection& getDataTypes() const;
+    inline DataTypeDataSection& getDataTypes();
 
     inline const SMAttributeData& getAttributes() const;
     inline SMAttributeData& getAttributes();
@@ -351,7 +351,7 @@ private:
     QString         mFilePath;      //!< The document file path.
     VersionNumber   mFormatVersion; //!< The editor-owned file format version.
     SMOverviewData  mOverview;      //!< The Overview section.
-    SMDataTypeData  mDataTypes;     //!< The DataTypeList section.
+    DataTypeDataSection  mDataTypes;     //!< The DataTypeList section.
     SMAttributeData mAttributes;    //!< The AttributeList section.
     SMEventData     mEvents;        //!< The EventList section.
     SMTimerData     mTimers;        //!< The TimerList section.
@@ -415,12 +415,12 @@ inline SMOverviewData& StateMachineData::getOverview()
     return mOverview;
 }
 
-inline const SMDataTypeData& StateMachineData::getDataTypes() const
+inline const DataTypeDataSection& StateMachineData::getDataTypes() const
 {
     return mDataTypes;
 }
 
-inline SMDataTypeData& StateMachineData::getDataTypes()
+inline DataTypeDataSection& StateMachineData::getDataTypes()
 {
     return mDataTypes;
 }

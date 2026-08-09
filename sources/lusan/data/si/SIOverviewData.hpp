@@ -27,7 +27,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-class SIDataTypeData;
+class DataTypeDataSection;
 
 /**
  * \class   SIOverviewData
@@ -220,7 +220,7 @@ public:
      * \brief   Validates the service interface data.
      * \param   dataTypes   The data type data to validate the service interface.
      **/
-    void validate(const SIDataTypeData& dataTypes);
+    void validate(const DataTypeDataSection& dataTypes);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

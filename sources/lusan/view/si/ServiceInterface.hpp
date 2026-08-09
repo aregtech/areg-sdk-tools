@@ -30,10 +30,10 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class ConstantPage;
 class MdiMainWindow;
 class SIAttribute;
-class SIConstant;
-class SIDataType;
+class DataTypePage;
 class SIInclude;
 class SIMethod;
 class SIOverview;
@@ -96,29 +96,10 @@ public:
 public slots:
 
     /**
-     * \brief   Triggered when a new data type is created.
-     * \param   dataType    The pointer to the created data type.
+     * \brief   Tells every open page that the document's data types changed, so the pages that
+     *          offer them or declare their elements with them re-read the current set.
      **/
-    void slotDataTypeCreated(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Triggered when a data type is converted.
-     * \param   oldType     The pointer to the old data type.
-     * \param   newType     The pointer to the new data type.
-     **/
-    void slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
-
-    /**
-     * \brief   Triggered when a data type is removed.
-     * \param   dataType    The pointer to the removed data type.
-     **/
-    void slotDataTypeDeleted(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Triggered when a data type is updated.
-     * \param   dataType    The pointer to the updated data type.
-     **/
-    void slotDataTypeUpdated(DataTypeCustom* dataType);
+    void slotDataTypesChanged();
 
     /**
      * \brief   Triggered when a page link is clicked.
@@ -209,10 +190,10 @@ private:
     ServiceInterfaceModel   mModel; //!< The model of the service interface
     QTabWidget  mTabWidget; //!< The tab widget to display the service interface elements
     SIOverview*  mOverview;  //!< The overview widget
-    SIDataType*  mDataType;  //!< The data type widget
+    DataTypePage*  mDataType;  //!< The data type widget
     SIAttribute* mAttribute; //!< The data attribute widget
     SIMethod*    mMethod;    //!< The method widget
-    SIConstant*  mConstant;  //!< The constant widget
+    ConstantPage*  mConstant;  //!< The constant widget
     SIInclude*   mInclude;   //!< The include widget
     QList<int>   mPendingInitTabs; //!< Background initialization queue
 };

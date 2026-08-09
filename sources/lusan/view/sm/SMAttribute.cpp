@@ -28,7 +28,7 @@
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMWhereUsed.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"

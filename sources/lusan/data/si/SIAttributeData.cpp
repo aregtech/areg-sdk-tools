@@ -17,7 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/si/SIAttributeData.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 SIAttributeData::SIAttributeData(ElementBase* parent /*= nullptr*/)
@@ -73,7 +73,7 @@ void SIAttributeData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // AttributeList
 }
 
-void SIAttributeData::validate(const SIDataTypeData& dataTypes)
+void SIAttributeData::validate(const DataTypeDataSection& dataTypes)
 {
     const QList<DataTypeCustom * >& customTypes = dataTypes.getCustomDataTypes();
     QList< AttributeEntry>& list = getElements();

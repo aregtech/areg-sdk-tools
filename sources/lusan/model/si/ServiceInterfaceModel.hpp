@@ -28,7 +28,7 @@
 #include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/si/SIAttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
-#include "lusan/model/si/SIDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/si/SIIncludeModel.hpp"
 #include "lusan/model/si/SIMethodModel.hpp"
 #include "lusan/model/si/SIOverviewModel.hpp"
@@ -74,7 +74,7 @@ public:
     /**
      * \brief   Returns the data type model.
      **/
-    inline SIDataTypeModel& getDataTypeModel();
+    inline DataTypeModel& getDataTypeModel();
 
     /**
      * \brief   Returns the methods model.
@@ -143,6 +143,11 @@ public:
     inline ConstantDataSection& getConstantSection() override;
 
     /**
+     * rief   The document's `DataTypeList` section.
+     **/
+    inline DataTypeDataSection& getDataTypeSection() override;
+
+    /**
      * \brief   True while the document holds edits that have not been saved.
      **/
     inline bool isDirty() const;
@@ -156,10 +161,10 @@ private:
     DocModelNotifier        mNotifier;          //!< The document's change notifier.
     DocUndoStack            mUndoStack;         //!< The document's undo stack.
     SIOverviewModel         mModelOverview;     //!< The overview model.
-    SIDataTypeModel         mModelDataType;     //!< The data type model.
+    DataTypeModel         mModelDataType;     //!< The data type model.
     SIAttributeModel        mModelAttributes;   //!< The data attributes model.
     SIMethodModel           mModelMethods;      //!< The methods model.
-    ConstantModel         mModelConstant;     //!< The constant model.
+    ConstantModel           mModelConstant;     //!< The constant model.
     SIIncludeModel          mModelInclude;      //!< The include model.
 
 //////////////////////////////////////////////////////////////////////////
@@ -181,7 +186,7 @@ inline SIOverviewModel& ServiceInterfaceModel::getOverviewModel()
     return mModelOverview;
 }
 
-inline SIDataTypeModel& ServiceInterfaceModel::getDataTypeModel()
+inline DataTypeModel& ServiceInterfaceModel::getDataTypeModel()
 {
     return mModelDataType;
 }
@@ -209,6 +214,11 @@ inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel()
 inline ConstantDataSection& ServiceInterfaceModel::getConstantSection()
 {
     return mSIData.getConstantData();
+}
+
+inline DataTypeDataSection& ServiceInterfaceModel::getDataTypeSection()
+{
+    return mSIData.getDataTypeData();
 }
 
 inline DocModelNotifier& ServiceInterfaceModel::getNotifier()

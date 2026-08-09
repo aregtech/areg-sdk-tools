@@ -33,7 +33,7 @@
  * Dependencies
  ************************************************************************/
 class StateMachineModel;
-class SMDataTypeModel;
+class DataTypeModel;
 class DocModelNotifier;
 
 /**
@@ -47,7 +47,7 @@ class DocModelNotifier;
  *          directly. Its payload parameters (`MethodParameter`) are stored by value inside
  *          the event, so parameter-level commands identify a parameter by ID and re-resolve
  *          it inside the command's getter/setter — the same rule
- *          `SMDataTypeModel` follows for structure fields.
+ *          `DataTypeModel` follows for structure fields.
  **/
 class SMEventModel
 {
@@ -70,7 +70,7 @@ public:
     int findIndex(const SMEventEntry* event) const;
 
     //!< The data types page model, so the parameter type editor can offer declared types.
-    SMDataTypeModel& getDataTypeModel() const;
+    DataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
 
     //!< The document root, for cross-registry queries (e.g. where-used on delete).
@@ -118,7 +118,7 @@ public:
     void swapParams(SMEventEntry* event, uint32_t firstId, uint32_t secondId);
 
     void setParamName(SMEventEntry* event, uint32_t paramId, const QString& name);
-    //!< Sets the parameter's declared type by name — see SMDataTypeModel::setFieldType for
+    //!< Sets the parameter's declared type by name — see DataTypeModel::setFieldType for
     //!< why name, not the resolved DataTypeBase*.
     void setParamType(SMEventEntry* event, uint32_t paramId, const QString& typeName);
     //!< Sets the optional default flag and its literal as one undo step (one user gesture).

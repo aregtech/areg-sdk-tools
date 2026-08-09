@@ -178,6 +178,15 @@ DataTypeBase::eCategory DataTypeCustom::fromTypeString(const QString& type)
     {
         return DataTypeBase::eCategory::Container;
     }
+    else if (type.compare(QLatin1StringView("Enumerate"), Qt::CaseInsensitive) == 0)
+    {
+        // The two names the first published service interface format used.
+        return DataTypeBase::eCategory::Enumeration;
+    }
+    else if (type.compare(QLatin1StringView("DefinedType"), Qt::CaseInsensitive) == 0)
+    {
+        return DataTypeBase::eCategory::Container;
+    }
     else
     {
         // An unknown `Type` comes from a hand-edited or newer document, never from a programming

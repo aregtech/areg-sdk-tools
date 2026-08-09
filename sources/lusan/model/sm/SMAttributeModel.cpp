@@ -63,7 +63,7 @@ int SMAttributeModel::findIndex(uint32_t id) const
     return attributes().findIndex(id);
 }
 
-SMDataTypeModel& SMAttributeModel::getDataTypeModel() const
+DataTypeModel& SMAttributeModel::getDataTypeModel() const
 {
     return mFacade.getDataTypeModel();
 }

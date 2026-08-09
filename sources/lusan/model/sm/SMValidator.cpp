@@ -38,7 +38,7 @@
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"

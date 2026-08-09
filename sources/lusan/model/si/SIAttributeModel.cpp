@@ -22,7 +22,7 @@
   ************************************************************************/
 #include "lusan/model/si/SIAttributeModel.hpp"
 
-SIAttributeModel::SIAttributeModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData)
+SIAttributeModel::SIAttributeModel(SIAttributeData& attributeData, DataTypeDataSection& dataTypeData)
     : mData(attributeData)
     , mDataType(dataTypeData)
 {

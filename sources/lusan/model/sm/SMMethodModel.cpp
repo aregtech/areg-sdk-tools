@@ -76,7 +76,7 @@ int SMMethodModel::findIndex(const SMMethodEntry* method) const
     return (method != nullptr ? methods().findIndex(method->getId()) : -1);
 }
 
-SMDataTypeModel& SMMethodModel::getDataTypeModel() const
+DataTypeModel& SMMethodModel::getDataTypeModel() const
 {
     return mFacade.getDataTypeModel();
 }

@@ -10,6 +10,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/DataTypeDetailsView.cpp
     ${LUSAN}/view/common/DataTypeFieldDetailsView.cpp
     ${LUSAN}/view/common/DataTypeListView.cpp
+    ${LUSAN}/view/common/DataTypePage.cpp
     ${LUSAN}/view/common/DirSelectionDialog.cpp
     ${LUSAN}/view/common/EditCancelFilter.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
@@ -56,6 +57,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/DataTypeDetailsView.hpp
     ${LUSAN}/view/common/DataTypeFieldDetailsView.hpp
     ${LUSAN}/view/common/DataTypeListView.hpp
+    ${LUSAN}/view/common/DataTypePage.hpp
     ${LUSAN}/view/common/DirSelectionDialog.hpp
     ${LUSAN}/view/common/EditCancelFilter.hpp
     ${LUSAN}/view/common/IEditCommit.hpp

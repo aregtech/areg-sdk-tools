@@ -42,7 +42,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMClipboard.cpp
     ${LUSAN}/data/sm/SMCondition.cpp
     ${LUSAN}/data/common/ConstantDataSection.cpp
-    ${LUSAN}/data/sm/SMDataTypeData.cpp
+    ${LUSAN}/data/common/DataTypeDataSection.cpp
     ${LUSAN}/data/sm/SMEventData.cpp
     ${LUSAN}/data/sm/SMGuardTree.cpp
     ${LUSAN}/data/sm/SMDocumentCache.cpp
@@ -180,7 +180,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
-    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
@@ -233,7 +233,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
-    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
@@ -425,7 +425,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
-    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
@@ -635,7 +635,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
-    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
@@ -779,7 +779,7 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/common/FieldEntry.cpp
     ${LUSAN}/data/si/SIAttributeData.cpp
     ${LUSAN}/data/common/ConstantDataSection.cpp
-    ${LUSAN}/data/si/SIDataTypeData.cpp
+    ${LUSAN}/data/common/DataTypeDataSection.cpp
     ${LUSAN}/data/si/SIIncludeData.cpp
     ${LUSAN}/data/si/SIMethodBase.cpp
     ${LUSAN}/data/si/SIMethodBroadcast.cpp

@@ -26,7 +26,7 @@ class SIMethodBase;
 class SIMethodRequest;
 class SIMethodResponse;
 class SIMethodBroadcast;
-class SIDataTypeData;
+class DataTypeDataSection;
 
 /**
  * \class SIMethodModel
@@ -42,7 +42,7 @@ public:
      * \brief Constructor with initialization.
      * \param data The method data object.
      */
-    SIMethodModel(SIMethodData& data, SIDataTypeData& dataType);
+    SIMethodModel(SIMethodData& data, DataTypeDataSection& dataType);
 
     ~SIMethodModel() = default;
 
@@ -54,8 +54,8 @@ public:
     /**
      * \brief Returns instance of data type data object.
      **/
-    inline SIDataTypeData& getDataTypeData();
-    inline const SIDataTypeData& getDataTypeData() const;
+    inline DataTypeDataSection& getDataTypeData();
+    inline const DataTypeDataSection& getDataTypeData() const;
 
     /**
      * \brief Returns instance of method data object.
@@ -227,19 +227,19 @@ public:
 //////////////////////////////////////////////////////////////////////////
 private:
     SIMethodData&   mData;      //!< The method data object.
-    SIDataTypeData& mDataType;  //!< The data type data object.
+    DataTypeDataSection& mDataType;  //!< The data type data object.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SIMethodModel class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIMethodModel::getDataTypeData()
+inline DataTypeDataSection& SIMethodModel::getDataTypeData()
 {
     return mDataType;
 }
 
-inline const SIDataTypeData& SIMethodModel::getDataTypeData() const
+inline const DataTypeDataSection& SIMethodModel::getDataTypeData() const
 {
     return mDataType;
 }

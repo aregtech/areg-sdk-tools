@@ -18,10 +18,10 @@
  ************************************************************************/
 
 #include "lusan/model/si/SIMethodModel.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypePrimitive.hpp"
 
-SIMethodModel::SIMethodModel(SIMethodData& data, SIDataTypeData& dataType)
+SIMethodModel::SIMethodModel(SIMethodData& data, DataTypeDataSection& dataType)
     : mData     (data)
     , mDataType (dataType)
 {

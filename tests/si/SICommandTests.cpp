@@ -14,9 +14,9 @@
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Undo/redo command framework tests for the Service Interface (.siml) editor.
- *               The Service Interface has no undo/redo of its own; it drives the exact same
- *               shared command framework (model/common) as the FSM editor. This proves the
- *               framework is document-agnostic: identical invariants over ServiceInterfaceData.
+ *               The Service Interface drives the same shared command framework (model/common)
+ *               as the FSM editor. This proves the framework is document-agnostic: identical
+ *               invariants over ServiceInterfaceData.
  *
  *  Self-contained (no external test framework), matching SMModelTests.cpp.
  *
@@ -25,6 +25,10 @@
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/data/common/AttributeEntry.hpp"
 #include "lusan/data/common/ConstantEntry.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/si/SICommand.hpp"
@@ -233,6 +237,103 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario D: the data types section, shared with the FSM editor
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testDataTypeSection()
+    {
+        ServiceInterfaceData    doc;
+        DocModelNotifier        notifier;
+        QUndoStack              stack;
+
+        DataTypeDataSection& types = doc.getDataTypeData();
+        const QString empty = serialize(doc);
+
+        DataTypeStructure* point = new DataTypeStructure();
+        point->setName(QStringLiteral("Point"));
+        stack.push(new TDocAddCommand<DataTypeCustom*, DocumentElem>(notifier, types, static_cast<DataTypeCustom*>(point), eDocElementKind::DataType, "Add Point"));
+        CHECK(types.getElementCount() == 1);
+        CHECK(types.findCustomDataType(QStringLiteral("Point")) == point);
+
+        stack.push(new TDocAddCommand<FieldEntry, DataTypeCustom>(notifier, *point, FieldEntry(0u, QStringLiteral("x"), point), eDocElementKind::DataType, "Add x"));
+        stack.push(new TDocAddCommand<FieldEntry, DataTypeCustom>(notifier, *point, FieldEntry(0u, QStringLiteral("y"), point), eDocElementKind::DataType, "Add y"));
+        CHECK(point->getElementCount() == 2);
+
+        const QString built = serialize(doc);
+
+        // A field reorder is one step, and it round-trips byte for byte.
+        stack.push(new TDocReorderCommand<FieldEntry, DataTypeCustom>(notifier, *point, 0, 1, point->getId(), eDocElementKind::DataType, "Reorder fields"));
+        const QString reordered = serialize(doc);
+        CHECK(reordered != built);
+        stack.undo();
+        CHECK(serialize(doc) == built);
+        stack.redo();
+        CHECK(serialize(doc) == reordered);
+        stack.undo();
+
+        // Removing the type keeps it alive in the command, so undo restores it whole.
+        stack.push(new TDocRemoveCommand<DataTypeCustom*, DocumentElem>(notifier, types, point->getId(), eDocElementKind::DataType, "Delete Point"));
+        CHECK(types.getElementCount() == 0);
+        stack.undo();
+        CHECK(types.getElementCount() == 1);
+        CHECK(serialize(doc) == built);
+
+        // And back to nothing, from the top of the history down.
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+        CHECK(types.getElementCount() == 0);
+        CHECK(serialize(doc) == empty);
+    }
+
+    //!< The first published `.siml` format spelled two categories differently. A document that
+    //!< still uses those names must load with the same categories, not be skipped.
+    void testLegacyTypeNames()
+    {
+        const QString source = QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            "<ServiceInterface FormatVersion=\"1.0.0\">"
+            "  <Overview ID=\"1\" Name=\"Legacy\" Version=\"1.0.0\" isRemote=\"true\"/>"
+            "  <DataTypeList>"
+            "    <DataType ID=\"2\" Name=\"SomeEnum\" Type=\"Enumerate\" Values=\"default\">"
+            "      <FieldList>"
+            "        <EnumEntry ID=\"3\" Name=\"Invalid\"/>"
+            "      </FieldList>"
+            "    </DataType>"
+            "    <DataType ID=\"4\" Name=\"SomeArray\" Type=\"DefinedType\" Values=\"Array\">"
+            "      <Container>Array</Container>"
+            "      <BaseTypeValue>uint32</BaseTypeValue>"
+            "    </DataType>"
+            "  </DataTypeList>"
+            "</ServiceInterface>");
+
+        ServiceInterfaceData doc;
+        QXmlStreamReader reader(source);
+        bool read = false;
+        while (reader.readNextStartElement())
+        {
+            read = doc.readFromXml(reader);
+            break;
+        }
+
+        CHECK(read);
+        const DataTypeDataSection& types = doc.getDataTypeData();
+        CHECK(types.getElementCount() == 2);
+
+        const DataTypeCustom* someEnum = types.findCustomDataType(QStringLiteral("SomeEnum"));
+        CHECK(someEnum != nullptr);
+        CHECK((someEnum != nullptr) && (someEnum->getCategory() == DataTypeBase::eCategory::Enumeration));
+
+        const DataTypeCustom* someArray = types.findCustomDataType(QStringLiteral("SomeArray"));
+        CHECK(someArray != nullptr);
+        CHECK((someArray != nullptr) && (someArray->getCategory() == DataTypeBase::eCategory::Container));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -242,6 +343,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testScriptedSequence();
     testComposite();
     testDeepHistory();
+    testDataTypeSection();
+    testLegacyTypeNames();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

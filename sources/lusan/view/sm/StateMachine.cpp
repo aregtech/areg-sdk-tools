@@ -33,7 +33,7 @@
 #include "lusan/view/common/AttributeListView.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/common/ConstantListView.hpp"
-#include "lusan/view/sm/SMDataType.hpp"
+#include "lusan/view/common/DataTypePage.hpp"
 #include "lusan/view/common/DataTypeListView.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEvent.hpp"
@@ -549,7 +549,7 @@ void StateMachine::onDeclareRequested(SMDesign::eDeclareKind kind)
     }
     case SMDesign::eDeclareKind::DataType:
     {
-        QToolButton* button = static_cast<SMDataType*>(page)->getList()->ctrlButtonAdd();
+        QToolButton* button = static_cast<DataTypePage*>(page)->getList()->ctrlButtonAdd();
         if (button != nullptr) button->click();
         break;
     }
@@ -587,7 +587,7 @@ bool StateMachine::revealIssueOnPage(eDocElementKind kind, uint32_t elementId, i
     switch (kind)
     {
     case eDocElementKind::Overview:     static_cast<SMOverview*>(page)->revealField(field);                  break;
-    case eDocElementKind::DataType:     static_cast<SMDataType*>(page)->revealElement(elementId, field);     break;
+    case eDocElementKind::DataType:     static_cast<DataTypePage*>(page)->revealElement(elementId, field);     break;
     case eDocElementKind::Attribute:    static_cast<SMAttribute*>(page)->revealElement(elementId, field);    break;
     case eDocElementKind::Event:        static_cast<SMEvent*>(page)->revealEvent(elementId, field);          break;
     case eDocElementKind::Timer:        static_cast<SMEvent*>(page)->revealTimer(elementId, field);          break;
@@ -807,7 +807,7 @@ void StateMachine::ensureTabInitialized(int index)
     }
     else if (index == static_cast<int>(PageDataTypes))
     {
-        page = new SMDataType(mModel.getDataTypeModel(), &mTabWidget);
+        page = new DataTypePage(mModel.getDataTypeModel(), tr("State Machine Data Type Editor ..."), &mTabWidget);
     }
     else if (index == static_cast<int>(PageAttributes))
     {

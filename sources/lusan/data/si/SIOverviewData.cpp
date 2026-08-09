@@ -164,6 +164,6 @@ void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-void SIOverviewData::validate(const SIDataTypeData& /*dataTypes*/)
+void SIOverviewData::validate(const DataTypeDataSection& /*dataTypes*/)
 {
 }

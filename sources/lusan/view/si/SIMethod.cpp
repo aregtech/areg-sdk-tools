@@ -30,7 +30,7 @@
 
 #include "lusan/data/si/SIMethodRequest.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
@@ -115,112 +115,43 @@ SIMethod::~SIMethod()
     mWidget->mPanels->removeWidget(mParams);
 }
 
-void SIMethod::dataTypeCreated(DataTypeCustom* dataType)
-{
-    mParamTypes->dataTypeCreated(dataType);
-}
-
-void SIMethod::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
-{
-    mParamTypes->dataTypeConverted(oldType, newType);
-    
-    QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
-    for (int i = 0; i < count; ++i)
-    {
-        QTreeWidgetItem* item = table->topLevelItem(i);
-        if (item != nullptr)
-        {
-            SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
-            Q_ASSERT(method != nullptr);
-            if (method->isEmpty() == false)
-            {
-                int childCount = item->childCount();
-                for (int j = 0; j < childCount; ++j)
-                {
-                    QTreeWidgetItem *child = item->child(j);
-                    Q_ASSERT(child != nullptr);
-                    uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
-                    MethodParameter* param = static_cast<SIMethodBase*>(method)->findElement(id);
-                    if ((param != nullptr) && (param->getParamType() == oldType))
-                    {
-                        param->setParamType(newType);
-                        setNodeText(child, param);
-                    }
-                }
-            }
-        }
-    }
-}
-
-void SIMethod::dataTypeDeleted(DataTypeCustom* dataType)
+void SIMethod::dataTypesChanged()
 {
     blockBasicSignals(true);
-    mParamTypes->dataTypeDeleted(dataType);
+    mParamTypes->updateDataTypeLists();
 
+    // Every parameter keeps a resolved pointer to its declared type beside the type name. A type
+    // that is gone, replaced by a conversion or renamed leaves that pointer wrong, so it is
+    // dropped and looked up again by name. A name with nothing behind it stays as typed.
+    const QList<DataTypeCustom*>& customTypes = mModel.getDataTypeData().getCustomDataTypes();
     QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
+    const int count = table->topLevelItemCount();
     for (int i = 0; i < count; ++i)
     {
         QTreeWidgetItem* item = table->topLevelItem(i);
-        if (item != nullptr)
-        {
-            SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
-            Q_ASSERT(method != nullptr);
-            if (method->isEmpty() == false)
-            {
-                int childCount = item->childCount();
-                for (int j = 0; j < childCount; ++j)
-                {
-                    QTreeWidgetItem *child = item->child(j);
-                    Q_ASSERT(child != nullptr);
-                    uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
-                    MethodParameter* param = static_cast<SIMethodBase*>(method)->findElement(id);
-                    if ((param != nullptr) && (param->getParamType() == dataType))
-                    {
-                        param->setParamType(nullptr);
-                        setNodeText(child, param);
-                    }
-                }
-            }
-        }
-    }
-    
-    blockBasicSignals(false);
-}
+        if (item == nullptr)
+            continue;
 
-void SIMethod::dataTypeUpdated(DataTypeCustom* dataType)
-{
-    blockBasicSignals(true);
-    
-    mParamTypes->dataTypeUpdated(dataType);
-    QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
-    for (int i = 0; i < count; ++i)
-    {
-        QTreeWidgetItem* item = table->topLevelItem(i);
-        if (item != nullptr)
+        SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+        if ((method == nullptr) || method->isEmpty())
+            continue;
+
+        const int childCount = item->childCount();
+        for (int j = 0; j < childCount; ++j)
         {
-            SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
-            Q_ASSERT(method != nullptr);
-            if (method->isEmpty() == false)
+            QTreeWidgetItem* child = item->child(j);
+            Q_ASSERT(child != nullptr);
+            const uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+            MethodParameter* param = method->findElement(id);
+            if (param != nullptr)
             {
-                int childCount = item->childCount();
-                for (int j = 0; j < childCount; ++j)
-                {
-                    QTreeWidgetItem *child = item->child(j);
-                    Q_ASSERT(child != nullptr);
-                    uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
-                    MethodParameter* param = static_cast<SIMethodBase*>(method)->findElement(id);
-                    if ((param != nullptr) && (param->getParamType() == dataType))
-                    {
-                        setNodeText(child, param);
-                    }
-                }
+                param->invalidate();
+                param->validate(customTypes);
+                setNodeText(child, param);
             }
         }
     }
-    
+
     blockBasicSignals(false);
 }
 

@@ -29,7 +29,7 @@
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMWhereUsed.hpp"

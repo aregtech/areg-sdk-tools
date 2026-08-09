@@ -76,7 +76,7 @@ int SMEventModel::findIndex(const SMEventEntry* event) const
     return (event != nullptr ? events().findIndex(event->getId()) : -1);
 }
 
-SMDataTypeModel& SMEventModel::getDataTypeModel() const
+DataTypeModel& SMEventModel::getDataTypeModel() const
 {
     return mFacade.getDataTypeModel();
 }

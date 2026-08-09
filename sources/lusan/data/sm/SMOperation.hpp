@@ -332,7 +332,7 @@ private:
  * \brief   An ordered, owning list of operations, backing a state's `EntryList` /
  *          `ExitList` and a transition's `OperationList`. A dedicated owner (rather than
  *          TEDataContainer) is used because operations are polymorphic and owned by
- *          pointer — the same reason SIDataTypeData manages its pointer entries by hand.
+ *          pointer — the same reason DataTypeDataSection manages its pointer entries by hand.
  *          Order is document order (operations run in order).
  **/
 class SMOperationList

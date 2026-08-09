@@ -132,81 +132,31 @@ SIAttribute::~SIAttribute()
     mWidget->mPanels->removeWidget(mDetails);
 }
 
-void SIAttribute::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+void SIAttribute::dataTypesChanged()
 {
     blockBasicSignals(true);
-    mTypeModel->dataTypeConverted(oldType, newType);
-    QList<uint32_t> list = mModel.replaceDataType(oldType, newType);
-    if (list.isEmpty() == false)
-    {
-        QTreeWidget* table = mList->ctrlTableList();
-        int count = table->topLevelItemCount();
-        int current = table->indexOfTopLevelItem(table->currentItem());
-        for (int i = 0; i < count; ++i)
-        {
-            AttributeEntry* entry = findAttribute(i);
-            if ((entry != nullptr) && (list.contains(entry->getId())))
-            {
-                QTreeWidgetItem* item = table->topLevelItem(i);
-                item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(newType));
-                if (i == current)
-                {
-                    updateDetails(entry, false);
-                }
-            }
-        }
-    }
+    mTypeModel->updateDataTypeLists();
 
-    blockBasicSignals(false);
-}
-
-void SIAttribute::dataTypeCreated(DataTypeCustom* dataType)
-{
-    mTypeModel->dataTypeCreated(dataType);
-}
-
-void SIAttribute::dataTypeDeleted(DataTypeCustom* dataType)
-{
-    blockBasicSignals(true);
-    mTypeModel->dataTypeDeleted(dataType);
+    // Every attribute keeps a resolved pointer to its declared type beside the type name. A type
+    // that is gone, replaced by a conversion or renamed leaves that pointer wrong, so it is
+    // dropped and looked up again by name. A name with nothing behind it stays as typed.
+    const QList<DataTypeCustom*>& customTypes = mModel.getDataTypeData().getCustomDataTypes();
     QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
-    int current = table->indexOfTopLevelItem(table->currentItem());
+    const int count = table->topLevelItemCount();
+    const int current = table->indexOfTopLevelItem(table->currentItem());
     for (int i = 0; i < count; ++i)
     {
         AttributeEntry* entry = findAttribute(i);
-        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase*>(dataType))
-        {
-            entry->setParamType(nullptr);
-            setTexts(i, *entry);
-            if (i == current)
-            {
-                updateDetails(entry, false);
-            }
-        }
-    }
+        if (entry == nullptr)
+            continue;
 
-    blockBasicSignals(false);
-}
-
-void SIAttribute::dataTypeUpdated(DataTypeCustom* dataType)
-{
-    blockBasicSignals(true);
-    Q_ASSERT(dataType != nullptr);
-    mTypeModel->dataTypeUpdated(dataType);
-    QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
-    int current = table->indexOfTopLevelItem(table->currentItem());
-    for (int i = 0; i < count; ++i)
-    {
-        AttributeEntry* entry = findAttribute(i);
-        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase*>(dataType))
+        entry->invalidate();
+        entry->validate(customTypes);
+        table->topLevelItem(i)->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry->getParamType()));
+        setTexts(i, *entry);
+        if (i == current)
         {
-            setTexts(i, *entry);
-            if (i == current)
-            {
-                updateDetails(entry, false);
-            }
+            updateDetails(entry, false);
         }
     }
 

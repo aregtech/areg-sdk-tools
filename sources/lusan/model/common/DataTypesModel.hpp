@@ -32,7 +32,7 @@
  ************************************************************************/
 class DataTypeBase;
 class DataTypeCustom;
-class SIDataTypeData;
+class DataTypeDataSection;
 
 /**
  * \class   DataTypesModel
@@ -45,26 +45,26 @@ class DataTypesModel : public QAbstractListModel
 public:
     /**
      * \brief   Constructor with initialization.
-     * \param   dataTypeData    The instance of SIDataTypeData.
+     * \param   dataTypeData    The document's data types section.
      * \param   parent          The parent object.
      **/
-    DataTypesModel(SIDataTypeData& dataTypeData, bool hasEmpty, QObject* parent = nullptr);
+    DataTypesModel(DataTypeDataSection& dataTypeData, bool hasEmpty, QObject* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
-     * \param   dataTypeData    The instance of SIDataTypeData.
+     * \param   dataTypeData    The document's data types section.
      * \param   excludes        The list of data types to exclude.
      * \param   parent          The parent object.
      **/
-    DataTypesModel(SIDataTypeData& dataTypeData, const QStringList &excludes, bool hasEmpty, QObject* parent = nullptr);
+    DataTypesModel(DataTypeDataSection& dataTypeData, const QStringList &excludes, bool hasEmpty, QObject* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
-     * \param   dataTypeData    The instance of SIDataTypeData.
+     * \param   dataTypeData    The document's data types section.
      * \param   excludes        The list of data types to exclude.
      * \param   parent          The parent object.
      **/
-    DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*> &excludes, bool hasEmpty, QObject* parent = nullptr);
+    DataTypesModel(DataTypeDataSection& dataTypeData, const QList<DataTypeBase*> &excludes, bool hasEmpty, QObject* parent = nullptr);
 
     /**
      * \brief   Sets the list of data type objects when need to display data type elements.
@@ -135,62 +135,11 @@ public:
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
     /**
-     * \brief   Triggered when new data type is created.
-     * \param   dataType    New created data type object.
-     * \return  Returns true if new created data type is in the list. Otherwise, returns false.
-     **/
-    bool dataTypeCreated(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Triggered when the data type is converted.
-     * \param   oldType     The old data type object.
-     * \param   newType     The new data type object.
-     * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
-     **/
-    bool dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
-
-    /**
-     * \brief   Triggered when the data type is deleted and invalidated.
-     * \param   dataType    The data type object to be deleted.
-     * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
-     **/
-    bool dataTypeDeleted(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Triggered when the data type is updated.
-     * \param   dataType    The data type object to update.
-     * \return  Returns true if the data type is updated. Otherwise, returns false.
-     **/
-    bool dataTypeUpdated(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Updates the list of data types.
-     *          Uses filter list to exclude data types.
+     * \brief   Rebuilds the list of data types from the document, honoring the filter. Called
+     *          whenever the document's data types changed: the model keeps no deltas, because a
+     *          pointer-level delta cannot survive an undo that puts a different object back.
      **/
     void updateDataTypeLists();
-
-    /**
-     * \brief   Searches for the data type in the list. If find, removes and includes in the filter.
-     * \param   typeName    The name of the data type to search.
-     * \return  Returns the data type object if found. Otherwise, returns nullptr.
-     **/
-    bool removeDataType(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Searches the field entry in the data type fields list
-     *          and removes it if found.
-     * \param   dataType    The data type object to check the field list.
-     * \param   fieldId     The ID of the field to remove.
-     * \return  Returns true if successfully removed the field.
-     **/
-    bool removeField(DataTypeCustom* dataType, uint32_t fieldId);
-
-    /**
-     * \brief   Adds the data type to the list.
-     * \param   dataType    The data type object to add.
-     * \return  Returns true if the data type is added. Otherwise, returns false.
-     **/
-    bool addDataType(DataTypeCustom* dataType);
 
     /**
      * \brief   Returns flag, indicating whether the list can have an empty entry.
@@ -222,21 +171,10 @@ public:
     DataTypeBase* findDataType(uint32_t id) const;
 
 //////////////////////////////////////////////////////////////////////////
-// Hidden calls.
-//////////////////////////////////////////////////////////////////////////
-private:
-
-    /**
-     * \brief   Sorts the list of data types.
-     * \param   sortPredefined  If true, sorts predefined entries.
-     **/
-    inline void _sort(bool sortPredefined = true);
-
-//////////////////////////////////////////////////////////////////////////
 // Member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIDataTypeData&         mDataTypeData;  //!< Reference to the SIDataTypeData instance.
+    DataTypeDataSection&    mDataTypeData;  //!< The document section the list is read from.
     QList<DataTypeBase*>    mExcludeList;   //!< Filtered list of data types.
     QList<DataTypeBase*>    mDataTypeList;  //!< The list of all data types.
     int                     mCountPredef;   //!< The number of predefined entries, which are set at the beginning of mDataTypeList;

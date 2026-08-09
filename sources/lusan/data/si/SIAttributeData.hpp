@@ -30,7 +30,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-class SIDataTypeData;
+class DataTypeDataSection;
 class DataTypeBase;
 
 /**
@@ -81,7 +81,7 @@ public:
      * \brief   Validates the attribute data.
      * \param   dataTypes   The data type data to validate the attributes.
      **/
-    void validate(const SIDataTypeData& dataTypes);
+    void validate(const DataTypeDataSection& dataTypes);
 
     /**
      * \brief   Creates a AttributeEntry and sets it in SIAttributeData.

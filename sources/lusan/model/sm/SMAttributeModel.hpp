@@ -32,7 +32,7 @@
  * Dependencies
  ************************************************************************/
 class StateMachineModel;
-class SMDataTypeModel;
+class DataTypeModel;
 class DocModelNotifier;
 
 /**
@@ -65,7 +65,7 @@ public:
 
     //!< The data types page model, so the value editor can offer declared types and
     //!< resolve an enumeration's enumerators.
-    SMDataTypeModel& getDataTypeModel() const;
+    DataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
 
     //!< The document facade (the page's guard where-used check on delete).
@@ -85,7 +85,7 @@ public:
 
     void renameAttribute(uint32_t id, const QString& newName);
     
-    //!< Sets the attribute's declared type by name — see SMDataTypeModel::setFieldType for
+    //!< Sets the attribute's declared type by name — see DataTypeModel::setFieldType for
     //!< why name, not the resolved DataTypeBase*.
     void setType(uint32_t id, const QString& typeName);
     

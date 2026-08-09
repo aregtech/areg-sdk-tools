@@ -19,7 +19,7 @@
 
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/common/NELusanCommon.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
@@ -29,7 +29,7 @@
 
 DataTypeEmpty DataTypesModel::_emptyType;
 
-DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData,  bool hasEmpty, QObject* parent)
+DataTypesModel::DataTypesModel(DataTypeDataSection& dataTypeData,  bool hasEmpty, QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( )
@@ -39,7 +39,7 @@ DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData,  bool hasEmpty, QOb
 {
 }
 
-DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QStringList& excludes, bool hasEmpty, QObject* parent)
+DataTypesModel::DataTypesModel(DataTypeDataSection& dataTypeData, const QStringList& excludes, bool hasEmpty, QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( )
@@ -57,7 +57,7 @@ DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QStringList& 
     }
 }
 
-DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*>& excludes, bool hasEmpty, QObject* parent)
+DataTypesModel::DataTypesModel(DataTypeDataSection& dataTypeData, const QList<DataTypeBase*>& excludes, bool hasEmpty, QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( excludes )
@@ -317,70 +317,6 @@ QVariant DataTypesModel::data(const QModelIndex& index, int role) const
     }
 }
 
-bool DataTypesModel::dataTypeCreated(DataTypeCustom* dataType)
-{
-    Q_ASSERT(mDataTypeList.indexOf(dataType) == -1);
-    if (mExcludeList.indexOf(dataType) == -1)
-    {
-        beginInsertRows(QModelIndex(), static_cast<int>(mDataTypeList.size()), static_cast<int>(mDataTypeList.size()));
-        mDataTypeList.append(dataType);
-        endInsertRows();
-        _sort(false);
-
-        return true;
-    }
-
-    return false;
-}
-
-bool DataTypesModel::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
-{
-    Q_ASSERT(mDataTypeList.indexOf(newType) == -1);
-
-    int conv = mExcludeList.indexOf(oldType);
-    int index = mDataTypeList.indexOf(oldType);
-    if (conv >= 0)
-    {
-        mExcludeList[conv] = newType;
-        return true;
-    }
-    else if (index >= 0)
-    {
-        mDataTypeList[index] = newType;
-        _sort(false);
-        return true;
-    }
-
-
-    return false;
-}
-
-bool DataTypesModel::dataTypeDeleted(DataTypeCustom* dataType)
-{
-    int conv = mExcludeList.indexOf(dataType);
-    if (conv >= 0)
-    {
-        mExcludeList.removeAt(conv);
-    }
-
-    int index = mDataTypeList.indexOf(dataType);
-    if (index >= 0)
-    {
-        beginRemoveRows(QModelIndex(), index, index);
-        mDataTypeList.removeAt(index);
-        endRemoveRows();
-
-        return true;
-    }
-
-    return false;
-}
-
-bool DataTypesModel::dataTypeUpdated(DataTypeCustom* dataType)
-{
-    return (mDataTypeList.indexOf(dataType) != -1);
-}
-
 void DataTypesModel::updateDataTypeLists()
 {
     mDataTypeList.clear();
@@ -393,48 +329,6 @@ void DataTypesModel::updateDataTypeLists()
             ++mCountPredef;
         }
     }
-}
-
-bool DataTypesModel::removeDataType(DataTypeCustom* dataType)
-{
-    int conv = mExcludeList.indexOf(dataType);
-    int index = mDataTypeList.indexOf(dataType);
-    if (conv == -1)
-    {
-        mExcludeList.append(dataType);
-    }
-
-    if (index >= 0)
-    {
-        beginRemoveRows(QModelIndex(), index, index);
-        mDataTypeList.removeAt(index);
-        endRemoveRows();
-
-        return true;
-    }
-
-    return false;
-}
-
-bool DataTypesModel::addDataType(DataTypeCustom* dataType)
-{
-    if (mDataTypeList.indexOf(dataType) < 0)
-    {
-        int index = mExcludeList.indexOf(dataType);
-        if (index >= 0)
-        {
-            mExcludeList.removeAt(index);
-        }
-
-        beginInsertRows(QModelIndex(), static_cast<int>(mDataTypeList.size()), static_cast<int>(mDataTypeList.size()));
-        mDataTypeList.append(dataType);
-        endInsertRows();
-        _sort(false);
-
-        return true;
-    }
-
-    return false;
 }
 
 DataTypeBase* DataTypesModel::findDataType(const QString& name) const
@@ -453,35 +347,4 @@ DataTypeBase* DataTypesModel::findDataType(uint32_t id) const
     }
 
     return nullptr;
-}
-
-
-bool DataTypesModel::removeField(DataTypeCustom* dataType, uint32_t fieldId)
-{
-    if (dataType == nullptr)
-        return false;
-
-    switch (dataType->getCategory())
-    {
-    case DataTypeBase::eCategory::Structure:
-        return static_cast<DataTypeStructure *>(dataType)->removeElement(fieldId);
-    case DataTypeBase::eCategory::Enumeration:
-        return static_cast<DataTypeEnum *>(dataType)->removeElement(fieldId);
-    default:
-        return false;
-    }
-}
-
-inline void DataTypesModel::_sort(bool sortPredefined /*= true*/)
-{
-    const int count{ mCountPredef };
-    if (count > 0)
-    {
-        if ((sortPredefined) && (count > 0))
-        {
-            NELusanCommon::sortById<const DataTypeBase *>(mDataTypeList.begin(), mDataTypeList.begin() + count - 1, true);
-        }
-        
-        NELusanCommon::sortByName<const DataTypeBase *>(mDataTypeList.begin() + count, mDataTypeList.end(), true);
-    }
 }
