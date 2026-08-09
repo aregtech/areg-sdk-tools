@@ -5,6 +5,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/AttributeListView.cpp
     ${LUSAN}/view/common/ConstantDetailsView.cpp
     ${LUSAN}/view/common/ConstantListView.cpp
+    ${LUSAN}/view/common/ConstantPage.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/DataTypeDetailsView.cpp
     ${LUSAN}/view/common/DataTypeFieldDetailsView.cpp
@@ -50,6 +51,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/AttributeListView.hpp
     ${LUSAN}/view/common/ConstantDetailsView.hpp
     ${LUSAN}/view/common/ConstantListView.hpp
+    ${LUSAN}/view/common/ConstantPage.hpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.hpp
     ${LUSAN}/view/common/DataTypeDetailsView.hpp
     ${LUSAN}/view/common/DataTypeFieldDetailsView.hpp

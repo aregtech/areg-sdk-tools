@@ -135,7 +135,20 @@ public:
      * \brief   Returns the file open operation success flag.
      **/
     bool openSucceeded() const override;
-    
+
+    /**
+     * \brief   Steps the document's history back one entry.
+     **/
+    void undo() override;
+
+    /**
+     * \brief   Steps the document's history forward one entry.
+     **/
+    void redo() override;
+
+    bool canUndo() const override;
+    bool canRedo() const override;
+
 protected:
     
     /**

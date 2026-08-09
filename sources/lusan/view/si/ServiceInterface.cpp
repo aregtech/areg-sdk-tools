@@ -96,7 +96,13 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     connect(&data, &SIDataTypeData::signalDataTypeDeleted   , this, &ServiceInterface::slotDataTypeDeleted);
     connect(&data, &SIDataTypeData::signalDataTypeConverted , this, &ServiceInterface::slotDataTypeConverted);
     connect(&data, &SIDataTypeData::signalDataTypeUpdated   , this, &ServiceInterface::slotDataTypeUpdated);
-    
+
+    // The title mark and the global Edit menu follow how far the history stands from the point
+    // the document was last saved at.
+    connect(&mModel.getUndoStack(), &QUndoStack::canUndoChanged, this, &MdiChild::signalCanUndoChanged);
+    connect(&mModel.getUndoStack(), &QUndoStack::canRedoChanged, this, &MdiChild::signalCanRedoChanged);
+    connect(&mModel.getUndoStack(), &QUndoStack::cleanChanged  , this, [this](bool clean) { setModified(clean == false); });
+
     setAttribute(Qt::WA_DeleteOnClose);
 
     if (filePath.isEmpty() == false)
@@ -151,10 +157,31 @@ const QString& ServiceInterface::fileFilter() const
     return _filterSI;
 }
 
+void ServiceInterface::undo()
+{
+    mModel.getUndoStack().undo();
+}
+
+void ServiceInterface::redo()
+{
+    mModel.getUndoStack().redo();
+}
+
+bool ServiceInterface::canUndo() const
+{
+    return mModel.getUndoStack().canUndo();
+}
+
+bool ServiceInterface::canRedo() const
+{
+    return mModel.getUndoStack().canRedo();
+}
+
 bool ServiceInterface::writeToFile(const QString& filePath)
 {
     if (mModel.saveToFile(filePath))
     {
+        mModel.getUndoStack().setClean();
         if (mOverview != nullptr)
             mOverview->setServiceInterfaceName(mModel.getName());
         

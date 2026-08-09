@@ -368,7 +368,7 @@ void SMPasteCommand::buildRegistryPlan(SMClipboardContent& content)
         section.removeAllElements();
     };
 
-    const auto planConstants = [&](SMConstantData& section, bool referenced)
+    const auto planConstants = [&](ConstantDataSection& section, bool referenced)
     {
         for (ConstantEntry& entry : section.getElements())
         {

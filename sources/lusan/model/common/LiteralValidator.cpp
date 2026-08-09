@@ -10,14 +10,14 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/model/sm/SMLiteralValidator.cpp
+ *  \file        lusan/model/common/LiteralValidator.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, FSM literal value syntax validator.
  *
  ************************************************************************/
 
-#include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/common/LiteralValidator.hpp"
 
 #include <QObject>
 #include <limits>
@@ -45,7 +45,7 @@ namespace
     }
 }
 
-QString SMLiteralValidator::validate(const QString& typeName, const QString& literal)
+QString LiteralValidator::validate(const QString& typeName, const QString& literal)
 {
     // A default/value literal is optional; absence is never a syntax error.
     if (literal.isEmpty())
@@ -79,7 +79,7 @@ QString SMLiteralValidator::validate(const QString& typeName, const QString& lit
     return QString();
 }
 
-QString SMLiteralValidator::validateBool(const QString& literal)
+QString LiteralValidator::validateBool(const QString& literal)
 {
     if ((literal == QStringLiteral("true")) || (literal == QStringLiteral("false")))
         return QString();
@@ -87,7 +87,7 @@ QString SMLiteralValidator::validateBool(const QString& literal)
     return QObject::tr("Expected 'true' or 'false'");
 }
 
-QString SMLiteralValidator::validateChar(const QString& literal)
+QString LiteralValidator::validateChar(const QString& literal)
 {
     if (literal.length() == 1)
         return QString();
@@ -95,7 +95,7 @@ QString SMLiteralValidator::validateChar(const QString& literal)
     return QObject::tr("Expected exactly one character");
 }
 
-QString SMLiteralValidator::validateSignedInteger(const QString& literal, int bits)
+QString LiteralValidator::validateSignedInteger(const QString& literal, int bits)
 {
     bool negative = false;
     quint64 magnitude = 0;
@@ -112,7 +112,7 @@ QString SMLiteralValidator::validateSignedInteger(const QString& literal, int bi
     return QString();
 }
 
-QString SMLiteralValidator::validateUnsignedInteger(const QString& literal, int bits)
+QString LiteralValidator::validateUnsignedInteger(const QString& literal, int bits)
 {
     bool negative = false;
     quint64 magnitude = 0;
@@ -129,7 +129,7 @@ QString SMLiteralValidator::validateUnsignedInteger(const QString& literal, int 
     return QString();
 }
 
-QString SMLiteralValidator::validateFloatingPoint(const QString& literal)
+QString LiteralValidator::validateFloatingPoint(const QString& literal)
 {
     if (literal.trimmed().isEmpty())
         return QObject::tr("Value is required");

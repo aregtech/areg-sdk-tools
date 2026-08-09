@@ -133,7 +133,7 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeVersion       { XmlSI::xmlSIAttributeVersion };
     constexpr QLatin1StringView xmlSMAttributeThreading     { "Threading" };
     constexpr QLatin1StringView xmlSMAttributeDataType      { XmlSI::xmlSIAttributeDataType };
-    constexpr QLatin1StringView xmlSMAttributeValue         { "Value" };
+    constexpr QLatin1StringView xmlSMAttributeValue         { XmlSI::xmlSIAttributeValue };
     constexpr QLatin1StringView xmlSMAttributeDefault       { "Default" };
     constexpr QLatin1StringView xmlSMAttributeTimeout       { "Timeout" };
     constexpr QLatin1StringView xmlSMAttributeRepeat        { "Repeat" };
@@ -141,6 +141,7 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeReturn        { "Return" };
     constexpr QLatin1StringView xmlSMAttributeImplement     { "Implement" };
     constexpr QLatin1StringView xmlSMAttributeIsDeprecated  { XmlSI::xmlSIAttributeIsDeprecated };
+    constexpr QLatin1StringView xmlSMAttributeDeprecateHint { XmlSI::xmlSIAttributeDeprecateHint };
     constexpr QLatin1StringView xmlSMAttributeLocation      { "Location" };
     constexpr QLatin1StringView xmlSMAttributeKind          { "Kind" };
     constexpr QLatin1StringView xmlSMAttributeHistory       { "History" };

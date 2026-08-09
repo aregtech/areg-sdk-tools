@@ -19,7 +19,7 @@
 
 #include "lusan/view/sm/SMArgMapTable.hpp"
 
-#include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/common/LiteralValidator.hpp"
 #include "lusan/model/sm/SMMappingSources.hpp"
 #include "lusan/model/sm/SMTypeCompat.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -533,7 +533,7 @@ QString SMArgMapTable::compactStatus(const Param& param, const SMArgumentEntry* 
 
     if (cur->getSource() == eSource::Value)
     {
-        const QString err = SMLiteralValidator::validate(param.type, cur->getValue());
+        const QString err = LiteralValidator::validate(param.type, cur->getValue());
         return err.isEmpty() ? tr("A fixed value of type %1").arg(param.type) : err;
     }
 
@@ -812,7 +812,7 @@ void SMArgMapTable::refreshRow(int row)
     }
     else if (cur->getSource() == eSource::Value)
     {
-        const QString err = SMLiteralValidator::validate(param.type, cur->getValue());
+        const QString err = LiteralValidator::validate(param.type, cur->getValue());
         if (err.isEmpty() == false)
         {
             statusText = err;

@@ -823,7 +823,7 @@ void StateMachine::ensureTabInitialized(int index)
     }
     else if (index == static_cast<int>(PageConstants))
     {
-        page = new SMConstant(mModel.getConstantModel(), &mTabWidget);
+        page = new SMConstant(mModel.getConstantModel(), mModel, &mTabWidget);
     }
     else if (index == static_cast<int>(PageIncludes))
     {

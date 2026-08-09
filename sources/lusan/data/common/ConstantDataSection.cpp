@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,34 +9,36 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/data/si/SIConstantData.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/data/common/ConstantDataSection.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Constant Data.
+ *  \brief       Lusan application, the constants section of a document.
  *
  ************************************************************************/
-#include "lusan/data/si/SIConstantData.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
-#include "lusan/common/XmlSI.hpp"
 
-SIConstantData::SIConstantData(ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< ConstantEntry, DocumentElem>(parent)
+#include "lusan/data/common/ConstantDataSection.hpp"
+
+#include "lusan/common/XmlSI.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+
+ConstantDataSection::ConstantDataSection(ElementBase* parent /*= nullptr*/)
+    : TEDataContainer<ConstantEntry, DocumentElem>(parent)
 {
 }
 
-SIConstantData::SIConstantData(const QList<ConstantEntry>& entries, ElementBase* parent /*= nullptr*/)
+ConstantDataSection::ConstantDataSection(const QList<ConstantEntry>& entries, ElementBase* parent /*= nullptr*/)
     : TEDataContainer<ConstantEntry, DocumentElem>(parent)
 {
     setElements(entries);
 }
 
-bool SIConstantData::isValid() const
+bool ConstantDataSection::isValid() const
 {
     return true;
 }
 
-bool SIConstantData::readFromXml(QXmlStreamReader& xml)
+bool ConstantDataSection::readFromXml(QXmlStreamReader& xml)
 {
     if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementConstantList))
         return false;
@@ -58,12 +60,12 @@ bool SIConstantData::readFromXml(QXmlStreamReader& xml)
     return true;
 }
 
-void SIConstantData::writeToXml(QXmlStreamWriter& xml) const
+void ConstantDataSection::writeToXml(QXmlStreamWriter& xml) const
 {
     const QList<ConstantEntry>& elements = getElements();
-    if (elements.size() == 0)
+    if (elements.isEmpty())
         return;
-    
+
     xml.writeStartElement(XmlSI::xmlSIElementConstantList);
     for (const ConstantEntry& entry : elements)
     {
@@ -73,32 +75,37 @@ void SIConstantData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // ConstantList
 }
 
-void SIConstantData::validate(const SIDataTypeData& dataTypes)
+void ConstantDataSection::validate(const QList<DataTypeCustom*>& customTypes)
 {
-    const QList<DataTypeCustom *>& customTypes = dataTypes.getCustomDataTypes();
-    QList< ConstantEntry>& list = getElements();
+    QList<ConstantEntry>& list = getElements();
     for (ConstantEntry& entry : list)
     {
         entry.validate(customTypes);
     }
 }
 
-ConstantEntry* SIConstantData::createConstant(const QString& name)
+ConstantEntry* ConstantDataSection::createConstant(const QString& name)
 {
-    ConstantEntry* result{nullptr};
-    ConstantEntry entry(getNextId(), name, this);
-    if (addElement(std::move(entry), false))
-    {
-        result = &mElementList[mElementList.size() - 1];
-    }
+    if (findElement(name) != nullptr)
+        return nullptr;
 
-    return result;
+    ConstantEntry entry(getNextId(), name, this);
+    return addElement(std::move(entry), true) ? findElement(name) : nullptr;
 }
-    
-QList<uint32_t> SIConstantData::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
+
+ConstantEntry* ConstantDataSection::insertConstant(int position, const QString& name)
+{
+    if (findElement(name) != nullptr)
+        return nullptr;
+
+    ConstantEntry entry(getNextId(), name, this);
+    return insertElement(position, std::move(entry), true) ? findElement(name) : nullptr;
+}
+
+QList<uint32_t> ConstantDataSection::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
 {
     QList<uint32_t> result;
-    QList< ConstantEntry>& list = getElements();
+    QList<ConstantEntry>& list = getElements();
     for (ConstantEntry& entry : list)
     {
         if (entry.getParamType() == oldDataType)
@@ -106,18 +113,6 @@ QList<uint32_t> SIConstantData::replaceDataType(DataTypeBase* oldDataType, DataT
             entry.setParamType(newDataType);
             result.push_back(entry.getId());
         }
-    }
-
-    return result;
-}
-
-ConstantEntry* SIConstantData::insertConstant(int position, const QString& name)
-{
-    ConstantEntry* result{nullptr};
-    ConstantEntry entry(getNextId(), name, this);
-    if (insertElement(position, std::move(entry), false))
-    {
-        result = &mElementList[position];
     }
 
     return result;

@@ -1,5 +1,5 @@
-#ifndef LUSAN_MODEL_SM_SMCONSTANTMODEL_HPP
-#define LUSAN_MODEL_SM_SMCONSTANTMODEL_HPP
+#ifndef LUSAN_MODEL_COMMON_CONSTANTMODEL_HPP
+#define LUSAN_MODEL_COMMON_CONSTANTMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,18 +11,19 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/model/sm/SMConstantModel.hpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/model/common/ConstantModel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Constants page model.
+ *  \brief       Lusan application, the Constants page model shared by every document editor.
  *
  ************************************************************************/
 
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/data/sm/SMConstantData.hpp"
+#include "lusan/data/common/ConstantDataSection.hpp"
+#include "lusan/model/common/IEDocumentModel.hpp"
 
 #include <QList>
 #include <QString>
@@ -31,26 +32,28 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class StateMachineModel;
-class SMDataTypeModel;
-class DocModelNotifier;
+class DataTypeBase;
 
 /**
- * \class   SMConstantModel
- * \brief   The Constants page model. Reads the live `ConstantList` section through the
- *          facade and routes every edit through an undo command, so the page never mutates
- *          `ConstantEntry` directly. `ConstantEntry` is stored by value in its section, so
- *          mutators identify an entry by ID and re-resolve it inside the command's
- *          getter/setter rather than capturing a pointer that a sibling insert/remove could
- *          invalidate.
+ * \class   ConstantModel
+ * \brief   The Constants page model. Reads the document's `ConstantList` section and routes
+ *          every edit through an undo command, so a page never mutates a `ConstantEntry`
+ *          directly. An entry is stored by value in its section, so the mutators identify it
+ *          by ID and re-resolve it inside the command's getter and setter rather than
+ *          capturing a pointer that a sibling insert or remove could invalidate.
+ *
+ *          The model knows only the document interface, so the same class serves the service
+ *          interface, the state machine and a standalone data type document. The section itself
+ *          is asked for on every access: a document that opens or reloads a file swaps the data
+ *          object underneath, and a section reference kept from construction would dangle.
  **/
-class SMConstantModel
+class ConstantModel
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMConstantModel(StateMachineModel& facade);
+    explicit ConstantModel(IEDocumentModel& document);
 
 //////////////////////////////////////////////////////////////////////////
 // Reads
@@ -63,13 +66,8 @@ public:
     ConstantEntry* findConstant(uint32_t id) const;
     int findIndex(uint32_t id) const;
 
-    //!< The data types page model, so the value editor can offer declared types and
-    //!< resolve an enumeration's enumerators.
-    SMDataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
-
-    //!< The document facade (the page's guard where-used check on delete).
-    StateMachineModel& getFacade() const;
+    IEDocumentModel& getDocument() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Mutations
@@ -81,26 +79,45 @@ public:
     void swapConstants(uint32_t firstId, uint32_t secondId);
 
     void renameConstant(uint32_t id, const QString& newName);
-    //!< Sets the constant's declared type by name — see SMDataTypeModel::setFieldType for
-    //!< why name, not the resolved DataTypeBase*.
+
+    /**
+     * \brief   Sets the constant's declared type by name. The name, not the resolved pointer,
+     *          is what the command records, so undo and redo survive a data type being
+     *          replaced or reloaded underneath.
+     **/
     void setType(uint32_t id, const QString& typeName);
     void setValue(uint32_t id, const QString& value);
     void setDescription(uint32_t id, const QString& text);
     void setDeprecated(uint32_t id, bool deprecated);
     void setDeprecateHint(uint32_t id, const QString& hint);
 
+    /**
+     * \brief   Repoints every constant that uses the old data type to the new one.
+     *          Called when a data type is converted or removed, not by a page edit, so it
+     *          writes through the section and reports what changed.
+     **/
+    QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    const SMConstantData& constants() const;
-    SMConstantData& constants();
+    inline ConstantDataSection& section() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    StateMachineModel&  mFacade;
+    IEDocumentModel&    mDocument;
 };
 
-#endif  // LUSAN_MODEL_SM_SMCONSTANTMODEL_HPP
+//////////////////////////////////////////////////////////////////////////
+// ConstantModel inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline ConstantDataSection& ConstantModel::section() const
+{
+    return mDocument.getConstantSection();
+}
+
+#endif  // LUSAN_MODEL_COMMON_CONSTANTMODEL_HPP

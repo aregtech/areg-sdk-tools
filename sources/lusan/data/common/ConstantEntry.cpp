@@ -120,26 +120,17 @@ bool ConstantEntry::readFromXml(QXmlStreamReader& xml)
     setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
     setType(attributes.value(XmlSI::xmlSIAttributeDataType).toString());
     
+    mValue = attributes.value(XmlSI::xmlSIAttributeValue).toString();
+
     QString depValue  = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
     setIsDeprecated( depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
+    setDeprecateHint(attributes.value(XmlSI::xmlSIAttributeDeprecateHint).toString());
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementConstant))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        if ((xml.tokenType() == QXmlStreamReader::StartElement) && (xml.name() == XmlSI::xmlSIElementDescription))
         {
-            QStringView xmlName{ xml.name() };
-            if (xmlName == XmlSI::xmlSIElementValue)
-            {
-                mValue = xml.readElementText();
-            }
-            else if (xmlName == XmlSI::xmlSIElementDescription)
-            {
-                setDescription(xml.readElementText());
-            }
-            else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
-            {
-                setDeprecateHint(xml.readElementText());
-            }
+            setDescription(xml.readElementText());
         }
 
         xml.readNext();
@@ -150,19 +141,25 @@ bool ConstantEntry::readFromXml(QXmlStreamReader& xml)
 
 void ConstantEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    if (isValid())
+    // Identity is enough to write. isValid() would also demand a resolved type pointer, and a
+    // constant read from a document is not resolved until the data types are loaded -- gating on
+    // it drops the constant from the file. The declared type name is kept either way.
+    if ((getId() != 0) && (mName.isEmpty() == false))
     {
         xml.writeStartElement(XmlSI::xmlSIElementConstant);
         xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
         xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
         xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
+        xml.writeAttribute(XmlSI::xmlSIAttributeValue, mValue);
         if (getIsDeprecated())
         {
             xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
-            writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
+            if (getDeprecateHint().isEmpty() == false)
+            {
+                xml.writeAttribute(XmlSI::xmlSIAttributeDeprecateHint, getDeprecateHint());
+            }
         }
-        
-        writeTextElem(xml, XmlSI::xmlSIElementValue, mValue, false);
+
         writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
         
         xml.writeEndElement();

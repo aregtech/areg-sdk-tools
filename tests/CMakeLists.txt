@@ -41,7 +41,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMAttributeData.cpp
     ${LUSAN}/data/sm/SMClipboard.cpp
     ${LUSAN}/data/sm/SMCondition.cpp
-    ${LUSAN}/data/sm/SMConstantData.cpp
+    ${LUSAN}/data/common/ConstantDataSection.cpp
     ${LUSAN}/data/sm/SMDataTypeData.cpp
     ${LUSAN}/data/sm/SMEventData.cpp
     ${LUSAN}/data/sm/SMGuardTree.cpp
@@ -131,7 +131,7 @@ qt_add_executable(lusan_sm_validation_tests
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
-    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMValidationTests.cpp
     # Enumeration literal checks (rule 15) load the basic-container/predefined type catalog.
     ${LUSAN}/res/lusan.qrc
@@ -185,7 +185,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
-    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
@@ -194,7 +194,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
-    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
     # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
     # loaded from the "Predefined Types" resource at runtime (DataTypeFactory::_initPredefined),
@@ -238,7 +238,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
-    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
@@ -248,7 +248,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
-    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMAccordion.cpp
@@ -419,7 +419,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
-    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
@@ -430,7 +430,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
-    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
@@ -629,7 +629,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
-    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
@@ -640,7 +640,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
-    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
@@ -778,7 +778,7 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/FieldEntry.cpp
     ${LUSAN}/data/si/SIAttributeData.cpp
-    ${LUSAN}/data/si/SIConstantData.cpp
+    ${LUSAN}/data/common/ConstantDataSection.cpp
     ${LUSAN}/data/si/SIDataTypeData.cpp
     ${LUSAN}/data/si/SIIncludeData.cpp
     ${LUSAN}/data/si/SIMethodBase.cpp

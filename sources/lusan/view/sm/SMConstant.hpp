@@ -19,29 +19,25 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/view/common/ConstantPage.hpp"
+
 #include "lusan/data/sm/SMReferences.hpp"
-#include "lusan/model/sm/SMValidator.hpp"
-#include "lusan/view/common/IEditCommit.hpp"
 
-#include <QScrollArea>
-#include <cstdint>
-
-class ConstantDetailsView;
-class ConstantEntry;
-class ConstantListView;
-class QEvent;
-class QTreeWidgetItem;
-class SMConstantModel;
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class StateMachineModel;
 
 /**
- * \brief   The FSM Constants page: named typed literals - the direct counterpart of the
- *          Service Interface Constants page. Every edit is committed through SMConstantModel's
- *          undo commands; the page mutates no model state directly, and refreshes by rebuilding
- *          the list from the live model on every relevant DocModelNotifier signal
- *          rather than patching individual rows.
+ * \brief   The FSM Constants page. The editing itself is the shared \ref ConstantPage; what a
+ *          state machine adds is knowing where a constant is used -- the where-used popup, the
+ *          search seed for the canvas, and the warning before deleting something a guard or an
+ *          action still refers to.
  **/
-class SMConstant : public QScrollArea
-                 , public IEditCommit
+class SMConstant : public ConstantPage
 {
     Q_OBJECT
 
@@ -49,24 +45,19 @@ class SMConstant : public QScrollArea
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMConstant(SMConstantModel& model, QWidget* parent = nullptr);
-    virtual ~SMConstant() = default;
+    explicit SMConstant(ConstantModel& model, StateMachineModel& facade, QWidget* parent = nullptr);
+
+    virtual ~SMConstant(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes
+// Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Returns the list panel (its Add button lets a caller start a new constant,
-     *          e.g. from the Design page's Declare dropdown).
-     **/
-    ConstantListView* getList() const;
-
     /**
      * \brief   Shows the where-used popup for the currently selected constant (Find Usages /
      *          Shift+F12). Shows an information box if no constant is selected.
      **/
-    void whereUsedForCurrent();
+    void whereUsedForCurrent(void);
 
     /**
      * \brief   Fills the search seed (kind/id/name) for the currently selected constant.
@@ -74,97 +65,20 @@ public:
      **/
     bool currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const;
 
-    /**
-     * \brief   Selects and reveals the constant with the given document ID (go-to-declaration
-     *          target from the canvas, or a validation finding). Does nothing if no constant
-     *          has that ID.
-     * \param   field   The field the caller wants accented once the row is selected.
-     **/
-    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
-
-    /**
-     * \brief   Hands over the description text the page is still holding. The box applies its
-     *          text when it loses the focus, which a save from the keyboard never causes.
-     **/
-    void commitPendingEdits(void) override;
-
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
-
-//////////////////////////////////////////////////////////////////////////
-// Slots
-//////////////////////////////////////////////////////////////////////////
-private slots:
-    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
-    void onAddClicked();
-    void onInsertClicked();
-    void onRemoveClicked();
-    void onMoveUpClicked();
-    void onMoveDownClicked();
-
-    void onNameCommitted();
-    void onTypeChanged(int index);
-    void onValueCommitted();
-    //!< Mirrors the value into the list row and re-validates while the user types; the
-    //!< model commit still happens once on editing-finished.
-    void onValueTextChanged(const QString& text);
-    void onDeprecatedToggled(bool checked);
-    void onDeprecateHintCommitted();
-
-    //!< Rebuilds the whole list on any Constant-kind notifier signal.
-    void onNotifierChanged();
-    //!< Repopulates the type combo and re-validates the current value on any DataType-kind
-    //!< notifier signal (a declared type may have been added, renamed, converted or removed).
-    void onDataTypesChanged();
-
-//////////////////////////////////////////////////////////////////////////
-// Hidden methods
-//////////////////////////////////////////////////////////////////////////
-private:
-    void buildUi();
-    void setupSignals();
-
-    //!< Rebuilds the whole list from the live model and restores the selection by ID.
-    void refreshAll();
-    //!< Selects the constant by ID; returns false if not found (and selects nothing).
-    bool selectConstant(uint32_t id);
-    //!< Populates the details panel for the given constant.
-    void selectedConstant(const ConstantEntry* entry);
-    //!< Clears the details panel and disables the row-only tool buttons.
-    void showClean();
-
-    //!< Configures the value control (free-text, enumerator picker, or disabled) and shows
-    //!< the current literal's validation hint for the given constant.
-    void updateValueControl(const ConstantEntry* entry);
-    //!< Re-evaluates and displays the value hint for the given type/literal pair.
-    void updateValueValidation(const QString& typeName, const QString& value);
-    //!< Empty string if the literal is valid for the type (a missing value always is),
-    //!< otherwise a short, user-facing reason.
-    QString valueValidationReason(const QString& typeName, const QString& value) const;
-    //!< Fills a list row's columns, flagging an invalid stored value with a warning icon.
-    void setNodeText(QTreeWidgetItem* node, const ConstantEntry& entry) const;
-
-    void populateTypeCombo();
-    void updateMoveButtons(int row, int rowCount);
-
-    //!< The constant ID stored on the currently selected row, or 0 if none.
-    uint32_t currentConstantId() const;
-    QString genName();
-
-    //!< Puts the caret in the selected constant's Name field with its text selected.
-    void focusNameField();
+    /**
+     * \brief   Lists where the constant is still used and lets the author decide.
+     **/
+    virtual bool confirmRemove(uint32_t id) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SMConstantModel&     mModel;
-    ConstantListView*    mList;
-    ConstantDetailsView* mDetails;
-    uint32_t             mNameCounter;
+    StateMachineModel&  mFacade;    //!< The document, for the where-used search.
 };
 
 #endif  // LUSAN_VIEW_SM_SMCONSTANT_HPP

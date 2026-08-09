@@ -35,7 +35,7 @@
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
-#include "lusan/data/sm/SMConstantData.hpp"
+#include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMDataTypeData.hpp"
@@ -52,7 +52,7 @@
 
 #include "lusan/model/sm/SMTypeCompat.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
-#include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/common/LiteralValidator.hpp"
 
 #include <QCoreApplication>
 #include <QHash>
@@ -1137,7 +1137,7 @@ namespace
 
         default:
         {
-            const QString reason = SMLiteralValidator::validate(targetType, literal);
+            const QString reason = LiteralValidator::validate(targetType, literal);
             if (reason.isEmpty() == false)
                 add(id, kind, eSeverity::Error, rule, vtr("Invalid %1 literal '%2': %3").arg(targetType, literal, reason));
         }
@@ -1192,7 +1192,7 @@ namespace
         {
             if (leaf.getLhsKind() == eValueSource::Value)
             {
-                if ((leaf.getLhs().isEmpty() == false) && (SMLiteralValidator::validate("bool", leaf.getLhs()).isEmpty() == false))
+                if ((leaf.getLhs().isEmpty() == false) && (LiteralValidator::validate("bool", leaf.getLhs()).isEmpty() == false))
                     add(id, eDocElementKind::Condition, eSeverity::Error, 16, vtr("A boolean-test operand must be a bool value"));
             }
             else

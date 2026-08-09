@@ -766,8 +766,8 @@ private:
     QAction         mActEditCut;
     QAction         mActEditCopy;
     QAction         mActEditPaste;
-    QAction         mActEditUndo;   //!< Undo, forwarded to the active child (inert for SI/log windows).
-    QAction         mActEditRedo;   //!< Redo, forwarded to the active child (inert for SI/log windows).
+    QAction         mActEditUndo;   //!< Undo, forwarded to the active child (inert for log windows).
+    QAction         mActEditRedo;   //!< Redo, forwarded to the active child (inert for log windows).
     QAction         mActEditFind;   //!< Find (Ctrl+F), forwarded to the active child (inert for SI/log windows).
     QAction         mActEditWhereUsed;  //!< Find usages / where-used (Shift+F12), forwarded to the active child.
     QAction         mActEditGotoDef;    //!< Go to Declaration (F12), forwarded to the active child.

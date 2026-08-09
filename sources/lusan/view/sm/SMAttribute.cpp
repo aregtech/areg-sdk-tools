@@ -30,7 +30,7 @@
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMWhereUsed.hpp"
-#include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/common/LiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/AttributeDetailsView.hpp"
 #include "lusan/view/common/AttributeListView.hpp"
@@ -352,7 +352,7 @@ QString SMAttribute::valueValidationReason(const QString& typeName, const QStrin
         return QString();
     }
 
-    return SMLiteralValidator::validate(typeName, value);
+    return LiteralValidator::validate(typeName, value);
 }
 
 void SMAttribute::updateValueValidation(const QString& typeName, const QString& value)

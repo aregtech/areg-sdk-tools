@@ -21,16 +21,17 @@
 
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/common/DocUndoStack.hpp"
+#include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/sm/SMOverviewModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
-#include "lusan/model/sm/SMConstantModel.hpp"
+#include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
-#include "lusan/model/sm/SMUndoStack.hpp"
 #include "lusan/model/sm/SMValidationController.hpp"
 
 #include <QObject>
@@ -38,6 +39,7 @@
 #include <memory>
 
 class StateMachineModel : public QObject
+                        , public IEDocumentModel
 {
     Q_OBJECT
 
@@ -78,16 +80,37 @@ public:
 
     inline StateMachineData& getData();
     inline const StateMachineData& getData() const;
-    inline SMUndoStack& getUndoStack();
-    inline const SMUndoStack& getUndoStack() const;
-    inline DocModelNotifier& getNotifier();
+    inline DocUndoStack& getUndoStack() override;
+    inline const DocUndoStack& getUndoStack() const;
+    inline DocModelNotifier& getNotifier() override;
+
+    /**
+     * \brief   The document's custom data types, so a declared type name can be resolved.
+     **/
+    const QList<DataTypeCustom*>& getCustomDataTypes() const override;
+
+    /**
+     * \brief   The document's `ConstantList` section. Read from the data object that is current
+     *          now: opening or reloading a file replaces it.
+     **/
+    inline ConstantDataSection& getConstantSection() override;
+
+    /**
+     * \brief   Builds the command that rewrites whatever refers to a renamed element by name.
+     *          A state machine reaches guards, operations and transition stimuli this way, so
+     *          unlike a service interface it always has repair work to do.
+     **/
+    QUndoCommand* createRenameSideEffects( eDocElementKind kind, uint32_t id
+                                         , const QString& oldName, const QString& newName
+                                         , QUndoCommand* parent) override;
+
     inline SMOverviewModel& getOverviewModel();
     inline SMDataTypeModel& getDataTypeModel();
     inline SMAttributeModel& getAttributeModel();
     inline SMEventModel& getEventModel();
     inline SMTimerModel& getTimerModel();
     inline SMMethodModel& getMethodModel();
-    inline SMConstantModel& getConstantModel();
+    inline ConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
     inline SMSelectionModel& getSelectionModel();
     inline SMValidationController& getValidationController();
@@ -107,7 +130,7 @@ private:
 private:
     std::unique_ptr<StateMachineData> mData;
     DocModelNotifier mNotifier;
-    SMUndoStack     mUndoStack;
+    DocUndoStack    mUndoStack;
     QTimer          mAutosaveTimer;
     SMOverviewModel mOverviewModel;
     SMDataTypeModel mDataTypeModel;
@@ -115,7 +138,7 @@ private:
     SMEventModel    mEventModel;
     SMTimerModel    mTimerModel;
     SMMethodModel   mMethodModel;
-    SMConstantModel mConstantModel;
+    ConstantModel mConstantModel;
     SMIncludeModel  mIncludeModel;
     SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
@@ -149,6 +172,11 @@ inline const StateMachineData& StateMachineModel::getData() const
     return *mData;
 }
 
+inline ConstantDataSection& StateMachineModel::getConstantSection()
+{
+    return mData->getConstants();
+}
+
 inline bool StateMachineModel::isReadOnly() const
 {
     return mUndoStack.isReadOnly();
@@ -159,12 +187,12 @@ inline const QString& StateMachineModel::getReadOnlyOrigin() const
     return mReadOnlyOrigin;
 }
 
-inline SMUndoStack& StateMachineModel::getUndoStack()
+inline DocUndoStack& StateMachineModel::getUndoStack()
 {
     return mUndoStack;
 }
 
-inline const SMUndoStack& StateMachineModel::getUndoStack() const
+inline const DocUndoStack& StateMachineModel::getUndoStack() const
 {
     return mUndoStack;
 }
@@ -204,7 +232,7 @@ inline SMMethodModel& StateMachineModel::getMethodModel()
     return mMethodModel;
 }
 
-inline SMConstantModel& StateMachineModel::getConstantModel()
+inline ConstantModel& StateMachineModel::getConstantModel()
 {
     return mConstantModel;
 }
