@@ -28,7 +28,7 @@
 #include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
-#include "lusan/model/sm/SMMethodModel.hpp"
+#include "lusan/model/common/MethodModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
@@ -114,6 +114,12 @@ public:
     inline AttributeDataSection& getAttributeSection() override;
 
     /**
+     * rief   The document's `MethodList` section, read from the data object that is current
+     *          now for the same reason as the constants section above.
+     **/
+    inline MethodDataSection& getMethodSection() override;
+
+    /**
      * \brief   Builds the command that rewrites whatever refers to a renamed element by name.
      *          A state machine reaches guards, operations and transition stimuli this way, so
      *          unlike a service interface it always has repair work to do.
@@ -135,7 +141,7 @@ public:
     inline AttributeModel& getAttributeModel();
     inline SMEventModel& getEventModel();
     inline SMTimerModel& getTimerModel();
-    inline SMMethodModel& getMethodModel();
+    inline MethodModel& getMethodModel();
     inline ConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
     inline SMSelectionModel& getSelectionModel();
@@ -163,7 +169,7 @@ private:
     AttributeModel mAttributeModel;
     SMEventModel    mEventModel;
     SMTimerModel    mTimerModel;
-    SMMethodModel   mMethodModel;
+    MethodModel   mMethodModel;
     ConstantModel mConstantModel;
     SMIncludeModel  mIncludeModel;
     SMSelectionModel mSelectionModel;
@@ -218,6 +224,11 @@ inline AttributeDataSection& StateMachineModel::getAttributeSection()
     return mData->getAttributes();
 }
 
+inline MethodDataSection& StateMachineModel::getMethodSection()
+{
+    return mData->getMethods();
+}
+
 inline bool StateMachineModel::isReadOnly() const
 {
     return mUndoStack.isReadOnly();
@@ -268,7 +279,7 @@ inline SMTimerModel& StateMachineModel::getTimerModel()
     return mTimerModel;
 }
 
-inline SMMethodModel& StateMachineModel::getMethodModel()
+inline MethodModel& StateMachineModel::getMethodModel()
 {
     return mMethodModel;
 }

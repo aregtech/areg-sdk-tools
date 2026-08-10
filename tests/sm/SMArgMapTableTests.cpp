@@ -86,11 +86,11 @@ namespace
         konst->setType(QStringLiteral("uint32"));
         konst->setValue(QStringLiteral("100"));
 
-        SMMethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), NEMethod::SmTrigger);
         trigger->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* ready = data.getMethods().createMethod(QStringLiteral("IsReady"), SMMethodEntry::eMethodType::Condition);
-        ready->setImplement(SMMethodEntry::eImplement::Handler);       // parameterless, returns bool
+        MethodEntry* ready = data.getMethods().createMethod(QStringLiteral("IsReady"), NEMethod::SmCondition);
+        ready->setImplement(MethodEntry::eImplement::Handler);       // parameterless, returns bool
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
         SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u, SMTransitionEntry::eTransitionKind::Internal);
@@ -635,7 +635,7 @@ int main(int argc, char* argv[])
     {
         StateMachineData d2;
         d2.getOverview().setName(QStringLiteral("Warn"));
-        SMMethodEntry* walk = d2.getMethods().createMethod(QStringLiteral("Walk"), SMMethodEntry::eMethodType::Action);
+        MethodEntry* walk = d2.getMethods().createMethod(QStringLiteral("Walk"), NEMethod::SmAction);
         walk->addParam(QStringLiteral("waiting"))->setType(QStringLiteral("uint32"));   // required, no default
 
         SMStateEntry*      root2 = d2.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);

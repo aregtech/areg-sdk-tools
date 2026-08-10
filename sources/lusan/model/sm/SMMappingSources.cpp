@@ -22,7 +22,7 @@
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
 
@@ -72,7 +72,7 @@ QList<SMSourceEntry> SMMappingSources::candidates( const StateMachineData& data
 
     case SMArgumentEntry::eValueSource::Condition:
         // A Condition source is a parameterless condition-method call.
-        for (const SMMethodEntry* method : index.methodsOf(SMMethodEntry::eMethodType::Condition))
+        for (const MethodEntry* method : index.methodsOf(NEMethod::SmCondition))
         {
             if (method->getElements().isEmpty())
             {
@@ -129,7 +129,7 @@ QString SMMappingSources::referencedType( const StateMachineData& data
     {
         // By bare name, not by kind: the row stores what the picker offered, and a stale name
         // must still resolve to whatever declaration still carries it.
-        const SMMethodEntry* method = index.method(name);
+        const MethodEntry* method = index.method(name);
         return (method != nullptr) ? method->getReturn() : QString();
     }
 

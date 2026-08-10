@@ -22,7 +22,7 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
@@ -73,15 +73,15 @@ namespace
         ConstantEntry* konst = data.getConstants().createConstant(QStringLiteral("MIN_WAITING"));
         if (konst != nullptr) { konst->setValue(QStringLiteral("3")); }
 
-        SMMethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), NEMethod::SmTrigger);
         trigger->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), SMMethodEntry::eMethodType::Condition);
-        handler->setImplement(SMMethodEntry::eImplement::Handler);
+        MethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), NEMethod::SmCondition);
+        handler->setImplement(MethodEntry::eImplement::Handler);
         handler->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("IsCalmHours"), SMMethodEntry::eMethodType::Condition);
-        lambda->setImplement(SMMethodEntry::eImplement::Embedded);
+        MethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("IsCalmHours"), NEMethod::SmCondition);
+        lambda->setImplement(MethodEntry::eImplement::Embedded);
         lambda->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
@@ -212,7 +212,7 @@ namespace
         const uint32_t countId  = SMGuardSymbols::paramId(data, transId, QStringLiteral("count"));
         const uint32_t walkId   = SMGuardSymbols::attributeId(data, QStringLiteral("WalkRequested"));
         const uint32_t minId    = SMGuardSymbols::constantId(data, QStringLiteral("MIN_WAITING"));
-        const SMMethodEntry* has = SMGuardSymbols::conditionMethod(data, QStringLiteral("HasWaiting"));
+        const MethodEntry* has = SMGuardSymbols::conditionMethod(data, QStringLiteral("HasWaiting"));
         const uint32_t nightId  = SMGuardSymbols::attributeId(data, QStringLiteral("IsNightMode"));
 
         check(counts.value(countId, 0) == 2, "count is used twice");

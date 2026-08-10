@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/MethodParameter.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -124,7 +124,7 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
         {
             if (xml.name() == XmlSI::xmlSIElementValue)
             {
-                mIsDefault  = xml.attributes().value(XmlSI::xmlSIAttributeIsDefault).toString().compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive);
+                mIsDefault  = (xml.attributes().value(XmlSI::xmlSIAttributeIsDefault).compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
                 mValue      = xml.readElementText();
             }
             else if (xml.name() == XmlSI::xmlSIElementDescription)
@@ -159,7 +159,8 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
         writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
-    if (!mValue.isEmpty())
+    // The flag is what the document stores, so a default with no literal yet still comes back.
+    if (mIsDefault || (mValue.isEmpty() == false))
     {
         xml.writeStartElement(XmlSI::xmlSIElementValue);
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDefault, mIsDefault ? XmlSI::xmlSIValueTrue : XmlSI::xmlSIValueFalse);

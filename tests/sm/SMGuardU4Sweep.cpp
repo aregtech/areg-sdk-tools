@@ -23,7 +23,7 @@
 
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -39,7 +39,8 @@
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMGuardValidation.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
-#include "lusan/model/sm/SMMethodModel.hpp"
+#include "lusan/model/common/MethodModel.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/IEditCommit.hpp"
 #include "lusan/view/common/MethodDetailsView.hpp"
@@ -342,8 +343,8 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     // a save from the keyboard moves no focus. Without the hand-over the file is written without
     // the text just typed, and the findings list keeps reporting a description already written.
     {
-        const QList<SMMethodEntry*>& methods = model.getData().getMethods().getElements();
-        SMMethodEntry* method = methods.isEmpty() ? nullptr : methods.at(0);
+        const QList<MethodEntry*>& methods = model.getData().getMethods().getElements();
+        MethodEntry* method = methods.isEmpty() ? nullptr : methods.at(0);
         check(method != nullptr, "S15: the sweep document declares at least one method");
         if (method != nullptr)
         {
@@ -365,7 +366,7 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
             pump(600);
             check(rowsReporting(reported) == 1, "S15: an undescribed method is reported once");
 
-            SMMethod page(model.getMethodModel());
+            SMMethod page(model.getMethodModel(), model);
             page.resize(760, 520);
             page.show();
             pump(50);
@@ -529,11 +530,11 @@ static void sweepItem17(const QString& docPath, const QString& tmpDir)
     const QString exprBefore = exprBlock(readBytes(fileA));
 
     // Three declaration edits, zero guard edits.
-    SMMethodEntry* handler = data.getMethods().findMethod(QStringLiteral("has_waiting"));
+    MethodEntry* handler = data.getMethods().findMethod(QStringLiteral("has_waiting"));
     handler->setName(QStringLiteral("CanPass"));
     model.getNotifier().notifyElementChanged(handler->getId(), eDocElementKind::Method);
 
-    SMMethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("request_walk"));
+    MethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("request_walk"));
     for (MethodParameter& param : trigger->getElements())
     {
         if (param.getName() == QStringLiteral("count"))
@@ -577,8 +578,8 @@ static void sweepItem18(const QString& docPath)
     StateMachineData& data = model.getData();
     const uint32_t transId = firstTransition(data);
 
-    SMMethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("param"), SMMethodEntry::eMethodType::Condition);
-    lambda->setImplement(SMMethodEntry::eImplement::Embedded);
+    MethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("param"), NEMethod::SmCondition);
+    lambda->setImplement(MethodEntry::eImplement::Embedded);
     lambda->setBody(QStringLiteral("return true;"));
     data.getMethods().findMethod(QStringLiteral("request_walk"))->addParam(QStringLiteral("param"))->setType(QStringLiteral("uint16"));
     model.getNotifier().notifyElementChanged(lambda->getId(), eDocElementKind::Method);
@@ -916,7 +917,7 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         pump(100);
 
         // E6: shadowing (a stimulus parameter hides an attribute).
-        SMMethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("request_walk"));
+        MethodEntry* trigger = data.getMethods().findMethod(QStringLiteral("request_walk"));
         if (trigger->findElement(QStringLiteral("Backlog")) == nullptr)
         {
             trigger->addParam(QStringLiteral("Backlog"))->setType(QStringLiteral("uint32"));
@@ -1078,10 +1079,10 @@ static void sweepActionsLiveRefresh(const QString& docPath)
 
     // An action method with two parameters, so the transition's Actions editor shows two mappable
     // rows (each a merged value combo).
-    SMMethodEntry* act = data.getMethods().findMethod(QStringLiteral("liveDoWork"));
+    MethodEntry* act = data.getMethods().findMethod(QStringLiteral("liveDoWork"));
     if (act == nullptr)
     {
-        act = data.getMethods().createMethod(QStringLiteral("liveDoWork"), SMMethodEntry::eMethodType::Action);
+        act = data.getMethods().createMethod(QStringLiteral("liveDoWork"), NEMethod::SmAction);
         act->addParam(QStringLiteral("a"))->setType(QStringLiteral("bool"));
         act->addParam(QStringLiteral("b"))->setType(QStringLiteral("bool"));
         model.getNotifier().notifyElementAdded(act->getId(), eDocElementKind::Method);

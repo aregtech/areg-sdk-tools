@@ -32,7 +32,7 @@
  ************************************************************************/
 class StateMachineData;
 class SMGuardNode;
-class SMMethodEntry;
+class MethodEntry;
 
 /**
  * \namespace   SMGuardSymbols
@@ -100,7 +100,7 @@ namespace SMGuardSymbols
      *          one non-defaulted argument is offered only through the popup, which inserts the
      *          whole call.
      **/
-    bool conditionBindsBare(const SMMethodEntry& method);
+    bool conditionBindsBare(const MethodEntry& method);
 
     /**
      * \brief   Resolves \p name by the fixed weight of \p surface -- the one silent-default
@@ -133,7 +133,7 @@ namespace SMGuardSymbols
     uint32_t paramId(const StateMachineData& data, uint32_t transitionId, const QString& name);
 
     //!< The condition method (handler or lambda) named \p name, or nullptr when none.
-    const SMMethodEntry* conditionMethod(const StateMachineData& data, const QString& name);
+    const MethodEntry* conditionMethod(const StateMachineData& data, const QString& name);
 
     //!< The in-scope stimulus parameter names of \p transitionId, in declared order.
     QStringList paramNames(const StateMachineData& data, uint32_t transitionId);
@@ -164,7 +164,7 @@ namespace SMGuardSymbols
     QString paramType(const StateMachineData& data, uint32_t transitionId, uint32_t id);
 
     //!< The condition method with the document ID \p id, or nullptr.
-    const SMMethodEntry* method(const StateMachineData& data, uint32_t id);
+    const MethodEntry* method(const StateMachineData& data, uint32_t id);
 
     // ---- Call argument binding --------------------------------------------
 
@@ -179,7 +179,7 @@ namespace SMGuardSymbols
      * \return  One entry per declared parameter, in declared order: the index of the argument
      *          child that binds it, or -1 when nothing does.
      **/
-    QList<int> bindArguments(const SMGuardNode& call, const SMMethodEntry& method);
+    QList<int> bindArguments(const SMGuardNode& call, const MethodEntry& method);
 }
 
 #endif  // LUSAN_MODEL_SM_SMGUARDSYMBOLS_HPP

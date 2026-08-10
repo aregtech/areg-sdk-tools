@@ -37,8 +37,6 @@ class QTreeWidget;
  *          - `typeMenuLabels`      : the Add split-button drop-down entries, one per method kind;
  *                                    a plain Add click creates the first kind (the default).
  *          - `hasResponseColumn`   : append a fourth "Response:" column (Service Interface).
- *          - `hasParamInsertRemove`: show the separate delete/insert-parameter buttons (Service
- *                                    Interface); the State Machine editor has only "add parameter".
  **/
 struct MethodListConfig
 {
@@ -46,7 +44,6 @@ struct MethodListConfig
     QString     typeColumnLabel;
     QStringList typeMenuLabels;
     bool        hasResponseColumn;
-    bool        hasParamInsertRemove;
 };
 
 /**
@@ -85,10 +82,6 @@ public:
     QToolButton* ctrlButtonRemove() const;
     //!< The "add parameter" button (enabled only when a method/parameter is selected).
     QToolButton* ctrlButtonParamAdd() const;
-    //!< The "delete parameter" button, or nullptr when the config omits it.
-    QToolButton* ctrlButtonParamRemove() const;
-    //!< The "insert parameter" button, or nullptr when the config omits it.
-    QToolButton* ctrlButtonParamInsert() const;
     QToolButton* ctrlButtonMoveUp() const;
     QToolButton* ctrlButtonMoveDown() const;
 
@@ -105,8 +98,6 @@ private:
     QToolButton*            mButtonInsert;
     QToolButton*            mButtonRemove;
     QToolButton*            mButtonParamAdd;
-    QToolButton*            mButtonParamRemove;
-    QToolButton*            mButtonParamInsert;
     QToolButton*            mButtonMoveUp;
     QToolButton*            mButtonMoveDown;
     QList<QAction*>         mTypeActions;

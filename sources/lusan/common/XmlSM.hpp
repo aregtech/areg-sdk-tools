@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/XmlSM.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -59,7 +59,7 @@ namespace XmlSM
 
     constexpr QLatin1StringView xmlSMElementMethodList      { XmlSI::xmlSIElementMethodList };
     constexpr QLatin1StringView xmlSMElementMethod          { XmlSI::xmlSIElementMethod };
-    constexpr QLatin1StringView xmlSMElementBody            { "Body" };
+    constexpr QLatin1StringView xmlSMElementBody            { XmlSI::xmlSIElementBody };
 
     constexpr QLatin1StringView xmlSMElementConstantList    { XmlSI::xmlSIElementConstantList };
     constexpr QLatin1StringView xmlSMElementConstant        { XmlSI::xmlSIElementConstant };
@@ -134,12 +134,12 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeThreading     { "Threading" };
     constexpr QLatin1StringView xmlSMAttributeDataType      { XmlSI::xmlSIAttributeDataType };
     constexpr QLatin1StringView xmlSMAttributeValue         { XmlSI::xmlSIAttributeValue };
-    constexpr QLatin1StringView xmlSMAttributeDefault       { "Default" };
+    constexpr QLatin1StringView xmlSMAttributeDefault       { XmlSI::xmlSIAttributeDefault };
     constexpr QLatin1StringView xmlSMAttributeTimeout       { "Timeout" };
     constexpr QLatin1StringView xmlSMAttributeRepeat        { "Repeat" };
     constexpr QLatin1StringView xmlSMAttributeMethodType    { XmlSI::xmlSIAttributeMethodType };
-    constexpr QLatin1StringView xmlSMAttributeReturn        { "Return" };
-    constexpr QLatin1StringView xmlSMAttributeImplement     { "Implement" };
+    constexpr QLatin1StringView xmlSMAttributeReturn        { XmlSI::xmlSIAttributeReturn };
+    constexpr QLatin1StringView xmlSMAttributeImplement     { XmlSI::xmlSIAttributeImplement };
     constexpr QLatin1StringView xmlSMAttributeIsDeprecated  { XmlSI::xmlSIAttributeIsDeprecated };
     constexpr QLatin1StringView xmlSMAttributeDeprecateHint { XmlSI::xmlSIAttributeDeprecateHint };
     constexpr QLatin1StringView xmlSMAttributeLocation      { "Location" };

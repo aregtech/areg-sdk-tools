@@ -22,7 +22,7 @@
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -381,7 +381,7 @@ QString SMGuardEval::stubDisplay(const StateMachineData& data, const SMGuardNode
     {
     case eKind::Call:
     {
-        const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
+        const MethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
         QString display = (method != nullptr) ? method->getName() : QStringLiteral("?");
         display += QLatin1Char('(');
         const QList<SMGuardNode*>& args = node.getChildren();

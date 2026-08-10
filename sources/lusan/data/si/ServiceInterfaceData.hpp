@@ -24,7 +24,7 @@
 #include "lusan/data/si/SIOverviewData.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
-#include "lusan/data/si/SIMethodData.hpp"
+#include "lusan/data/common/MethodDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
 
@@ -132,8 +132,8 @@ public:
      * \brief   Gets the method data.
      * \return  The method data.
      **/
-    inline const SIMethodData& getMethodData() const;
-    inline SIMethodData& getMethodData();
+    inline const MethodDataSection& getMethodData() const;
+    inline MethodDataSection& getMethodData();
 
     /**
      * \brief   Gets the constant data.
@@ -168,7 +168,7 @@ private:
     SIOverviewData  mOverviewData;  //!< The overview data.
     DataTypeDataSection  mDataTypeData;  //!< The data type data.
     AttributeDataSection mAttributeData; //!< The attribute data.
-    SIMethodData    mMethodData;    //!< The method data.
+    MethodDataSection    mMethodData;    //!< The method data.
     ConstantDataSection  mConstantData;  //!< The constant data.
     IncludeDataSection mIncludeData; //!< The include data.
     bool            mOpenSuccess;   //!< File, indicating if opening file succeeded.
@@ -218,12 +218,12 @@ inline AttributeDataSection& ServiceInterfaceData::getAttributeData()
     return mAttributeData;
 }
 
-inline const SIMethodData& ServiceInterfaceData::getMethodData() const
+inline const MethodDataSection& ServiceInterfaceData::getMethodData() const
 {
     return mMethodData;
 }
 
-inline SIMethodData& ServiceInterfaceData::getMethodData()
+inline MethodDataSection& ServiceInterfaceData::getMethodData()
 {
     return mMethodData;
 }

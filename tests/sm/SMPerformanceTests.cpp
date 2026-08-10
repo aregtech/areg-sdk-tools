@@ -25,7 +25,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMLayoutData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -219,7 +219,7 @@ namespace
         }
 
         doc->getStates().removeAll();
-        doc->getMethods().createMethod(QStringLiteral("Step"), SMMethodEntry::eMethodType::Trigger);
+        doc->getMethods().createMethod(QStringLiteral("Step"), NEMethod::SmTrigger);
 
         fillLevel(*doc, doc->getStates(), QStringLiteral("Root"), ROOT_STATES);
 
@@ -282,7 +282,7 @@ namespace
         if (doc != nullptr)
         {
             doc->getStates().removeAll();
-            doc->getMethods().createMethod(QStringLiteral("Step"), SMMethodEntry::eMethodType::Trigger);
+            doc->getMethods().createMethod(QStringLiteral("Step"), NEMethod::SmTrigger);
             fillLevel(*doc, doc->getStates(), QStringLiteral("Root"), SMALL_STATES);
 
             // One composite, so the level-switch baseline is measured the same way as the

@@ -24,7 +24,7 @@
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -90,11 +90,11 @@ namespace
         ConstantEntry* konst = data.getConstants().createConstant(QStringLiteral("MIN_WAITING"));
         if (konst != nullptr) { konst->setValue(QStringLiteral("3")); }
 
-        SMMethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), NEMethod::SmTrigger);
         trigger->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), SMMethodEntry::eMethodType::Condition);
-        handler->setImplement(SMMethodEntry::eImplement::Handler);
+        MethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), NEMethod::SmCondition);
+        handler->setImplement(MethodEntry::eImplement::Handler);
         handler->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Idle"), SMStateEntry::eStateKind::Start);
@@ -268,7 +268,7 @@ static void testLadderRoundTrip()
 
     // ---- Name it... (island -> named lambda + mapped call, ONE undo step) ----
     SMNameIslandCommand* nameCmd = SMGuardLadder::nameIsland(data, notifier, trans1, { 1 }
-                                  , QStringLiteral("IsBusy"), SMMethodEntry::eImplement::Embedded, QStringLiteral("name"));
+                                  , QStringLiteral("IsBusy"), MethodEntry::eImplement::Embedded, QStringLiteral("name"));
     check(nameCmd != nullptr, "nameIsland command builds");
     if (nameCmd == nullptr)
     {
@@ -279,8 +279,8 @@ static void testLadderRoundTrip()
     const uint32_t methodId = nameCmd->methodId();
     check(methodId != 0u, "the declaration got an ID");
 
-    SMMethodEntry* method = data.getMethods().findMethod(QStringLiteral("IsBusy"));
-    check((method != nullptr) && method->isLambdaCondition(), "IsBusy declared as kind lambda");
+    MethodEntry* method = data.getMethods().findMethod(QStringLiteral("IsBusy"));
+    check((method != nullptr) && NESMMethod::isLambdaCondition(method), "IsBusy declared as kind lambda");
     if (method != nullptr)
     {
         checkEq(method->getBody(), body, "the declaration owns the island body");
@@ -306,14 +306,14 @@ static void testLadderRoundTrip()
     }
 
     stack.push(moveCmd);
-    check((method != nullptr) && method->isHandlerCondition(), "IsBusy is now kind handler");
+    check((method != nullptr) && NESMMethod::isHandlerCondition(method), "IsBusy is now kind handler");
     check((method != nullptr) && method->getBody().isEmpty(), "Lusan no longer owns the body");
     checkEq(preview(data, trans1), QStringLiteral("if (WalkRequested() && handler().IsBusy(count))"), "guard 1 previews handler().IsBusy");
     checkEq(preview(data, trans2), QStringLiteral("if (handler().IsBusy(count))"), "guard 2 previews handler().IsBusy");
 
     // ---- undo the move: both guards, the entry and the body restore ----
     stack.undo();
-    check((method != nullptr) && method->isLambdaCondition(), "undo restored kind lambda");
+    check((method != nullptr) && NESMMethod::isLambdaCondition(method), "undo restored kind lambda");
     checkEq((method != nullptr) ? method->getBody() : QString(), body, "undo restored the body");
     checkEq(preview(data, trans1), QStringLiteral("if (WalkRequested() && mIsBusy(count))"), "guard 1 preview restored");
     checkEq(preview(data, trans2), QStringLiteral("if (mIsBusy(count))"), "guard 2 preview restored");
@@ -325,10 +325,10 @@ static void testLadderRoundTrip()
     if (adoptCmd != nullptr)
     {
         stack.push(adoptCmd);
-        check((method != nullptr) && method->isLambdaCondition(), "adopt flipped back to lambda");
+        check((method != nullptr) && NESMMethod::isLambdaCondition(method), "adopt flipped back to lambda");
         checkEq((method != nullptr) ? method->getBody() : QString(), QStringLiteral("return count > 0;"), "adopt set the new body");
         stack.undo();
-        check((method != nullptr) && method->isHandlerCondition(), "undo of adopt restored handler kind");
+        check((method != nullptr) && NESMMethod::isHandlerCondition(method), "undo of adopt restored handler kind");
         stack.redo();
     }
 
@@ -376,7 +376,7 @@ static void testGatesAndWhereUsed()
     uint32_t trans2 = 0;
     buildDoc(data, trans1, trans2);
 
-    const SMMethodEntry* handler = data.getMethods().findMethod(QStringLiteral("HasWaiting"));
+    const MethodEntry* handler = data.getMethods().findMethod(QStringLiteral("HasWaiting"));
     check(handler != nullptr, "HasWaiting exists");
     if (handler == nullptr)
     {

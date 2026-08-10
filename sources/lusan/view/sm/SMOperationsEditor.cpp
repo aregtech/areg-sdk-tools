@@ -21,7 +21,7 @@
 
 #include "lusan/data/common/MethodBase.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocCommand.hpp"
@@ -414,7 +414,7 @@ const MethodBase* SMOperationsEditor::calleeFor(const SMOperationBase* op, bool 
     }
     else
     {
-        for (const SMMethodEntry* m : mModel.getData().getMethods().getElements())
+        for (const MethodEntry* m : mModel.getData().getMethods().getElements())
         {
             if ((m != nullptr) && (m->getName() == name)) { return m; }
         }
@@ -581,9 +581,9 @@ void SMOperationsEditor::setTimerName(uint32_t opId, const QString& name)
 QStringList SMOperationsEditor::actionNames() const
 {
     QStringList names;
-    for (const SMMethodEntry* m : mModel.getData().getMethods().getElements())
+    for (const MethodEntry* m : mModel.getData().getMethods().getElements())
     {
-        if ((m != nullptr) && (m->getMethodType() == SMMethodEntry::eMethodType::Action)) { names.append(m->getName()); }
+        if ((m != nullptr) && (m->getKind() == NEMethod::SmAction)) { names.append(m->getName()); }
     }
 
     return names;

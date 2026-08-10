@@ -40,7 +40,7 @@ namespace
         case eTarget::Action:
         case eTarget::Condition:
         {
-            const SMMethodEntry* method = index.method(name);
+            const MethodEntry* method = index.method(name);
             return (method != nullptr) ? method->getId() : 0u;
         }
         case eTarget::Event:
@@ -80,7 +80,7 @@ namespace
         {
         case eTarget::Condition:
         {
-            const SMMethodEntry* method = index.method(declId);
+            const MethodEntry* method = index.method(declId);
             return (method != nullptr) ? method->getName() : QString();
         }
         case eTarget::Attribute:

@@ -21,7 +21,7 @@
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -68,14 +68,14 @@ namespace
             speed->setType("uint32");
             data.getConstants().createConstant("MAX_SPEED");
 
-            SMMethodEntry* go = data.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+            MethodEntry* go = data.getMethods().createMethod("Go", NEMethod::SmTrigger);
             go->addParam("count");
 
-            SMMethodEntry* ready = data.getMethods().createMethod("IsReady", SMMethodEntry::eMethodType::Condition);
-            ready->setImplement(SMMethodEntry::eImplement::Embedded);
+            MethodEntry* ready = data.getMethods().createMethod("IsReady", NEMethod::SmCondition);
+            ready->setImplement(MethodEntry::eImplement::Embedded);
             ready->setBody("return Speed() > 0;");
 
-            data.getMethods().createMethod("DoWork", SMMethodEntry::eMethodType::Action);
+            data.getMethods().createMethod("DoWork", NEMethod::SmAction);
 
             SMStateEntry* idle = data.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
             SMStateEntry* run = data.getStates().createState("Run", SMStateEntry::eStateKind::Normal);

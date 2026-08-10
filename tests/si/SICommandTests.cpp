@@ -36,9 +36,7 @@
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/si/SICommand.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/si/SIMethodBase.hpp"
-#include "lusan/data/si/SIMethodRequest.hpp"
-#include "lusan/data/si/SIMethodResponse.hpp"
+#include "lusan/data/common/MethodDataSection.hpp"
 #include "lusan/model/si/SIValidator.hpp"
 
 #include <QUndoStack>
@@ -372,6 +370,102 @@ namespace
     //!< the document through the same commands. A service interface attribute carries a
     //!< notification kind and no value, so the section writes a `Notify` and never a `Value`, and
     //!< it round-trips byte for byte across an undo and a redo of each edit.
+
+    //!< The shared method section over a service interface: request, response and broadcast, the
+    //!< request-to-response link, per-kind names, parameters with defaults, and the written shape
+    //!< -- a `Response` attribute, a `<Value IsDefault>` child, and never `Return`/`Implement`.
+    void testMethodSection()
+    {
+        ServiceInterfaceData doc;
+        MethodDataSection& methods = doc.getMethodData();
+
+        MethodEntry* fetch = methods.createMethod(QStringLiteral("fetch"), NEMethod::SiRequest);
+        CHECK(fetch != nullptr);
+        CHECK(fetch->hasReply());
+        CHECK(fetch->hasReturn() == false);
+        CHECK(fetch->hasImplement() == false);
+
+        MethodEntry* fetched = methods.createMethod(QStringLiteral("fetched"), NEMethod::SiResponse);
+        CHECK(fetched != nullptr);
+        CHECK(fetched->isReplyKind());
+        CHECK(fetched->hasReply() == false);
+
+        CHECK(methods.createMethod(QStringLiteral("ready"), NEMethod::SiBroadcast) != nullptr);
+
+        // A name belongs to its kind: a request and a broadcast may share one, two requests
+        // may not.
+        CHECK(methods.createMethod(QStringLiteral("fetch"), NEMethod::SiBroadcast) != nullptr);
+        CHECK(methods.createMethod(QStringLiteral("fetch"), NEMethod::SiRequest) == nullptr);
+
+        fetch->setReply(QStringLiteral("fetched"));
+        MethodParameter* count = fetch->addParam(QStringLiteral("count"));
+        CHECK(count != nullptr);
+        count->setType(QStringLiteral("uint32"));
+        count->setDefault(true);
+        count->setValue(QStringLiteral("10"));
+
+        const QString built = serialize(doc);
+        CHECK(built.contains(QStringLiteral("MethodType=\"Request\"")));
+        CHECK(built.contains(QStringLiteral("Response=\"fetched\"")));
+        CHECK(built.contains(QStringLiteral("IsDefault=\"true\"")));
+        CHECK(built.contains(QStringLiteral("Default=\"10\"")) == false);
+        CHECK(built.contains(QStringLiteral("Return=")) == false);
+        CHECK(built.contains(QStringLiteral("Implement=")) == false);
+
+        // Reading the document back gives the same section, link and default included.
+        ServiceInterfaceData reread;
+        QXmlStreamReader reader(built);
+        CHECK(reader.readNextStartElement());
+        CHECK(reread.readFromXml(reader));
+        MethodEntry* back = reread.getMethodData().findMethod(QStringLiteral("fetch"), NEMethod::SiRequest);
+        CHECK(back != nullptr);
+        CHECK((back != nullptr) && (back->getReply() == QStringLiteral("fetched")));
+        MethodParameter* backParam = (back != nullptr) ? back->findElement(QStringLiteral("count")) : nullptr;
+        CHECK(backParam != nullptr);
+        CHECK((backParam != nullptr) && backParam->hasDefault());
+        CHECK((backParam != nullptr) && (backParam->getValue() == QStringLiteral("10")));
+        CHECK(serialize(reread) == built);
+    }
+
+    //!< A parameter marked as a default has to come back as one. The reader compared the
+    //!< `IsDefault` attribute and stored the comparison result rather than the answer, so every
+    //!< default read back inverted -- a `.siml` round-trip lost the flag it had just written.
+    void testMethodParamDefaultRoundTrip()
+    {
+        const QString xml = QStringLiteral(
+            "<ServiceInterface FormatVersion=\"1.1.0\">"
+            "<MethodList>"
+            "<Method ID=\"7\" Name=\"fetch\" MethodType=\"Request\">"
+            "<ParamList>"
+            "<Parameter ID=\"8\" Name=\"count\" DataType=\"uint32\"><Value IsDefault=\"true\">10</Value></Parameter>"
+            "<Parameter ID=\"9\" Name=\"tag\" DataType=\"String\"><Value IsDefault=\"false\">none</Value></Parameter>"
+            "</ParamList>"
+            "</Method>"
+            "</MethodList>"
+            "</ServiceInterface>");
+
+        ServiceInterfaceData doc;
+        QXmlStreamReader reader(xml);
+        CHECK(reader.readNextStartElement());
+        CHECK(doc.readFromXml(reader));
+
+        MethodEntry* fetch = doc.getMethodData().findMethod(QStringLiteral("fetch"), NEMethod::SiRequest);
+        CHECK(fetch != nullptr);
+        if (fetch == nullptr)
+            return;
+
+        MethodParameter* count = fetch->findElement(QStringLiteral("count"));
+        MethodParameter* tag = fetch->findElement(QStringLiteral("tag"));
+        CHECK((count != nullptr) && count->hasDefault());
+        CHECK((tag != nullptr) && (tag->hasDefault() == false));
+        CHECK((count != nullptr) && (count->getValue() == QStringLiteral("10")));
+
+        // And it survives being written and read again.
+        const QString written = serialize(doc);
+        CHECK(written.contains(QStringLiteral("IsDefault=\"true\"")));
+        CHECK(written.contains(QStringLiteral("IsDefault=\"false\"")));
+    }
+
     void testAttributeSection()
     {
         ServiceInterfaceData    doc;
@@ -700,7 +794,7 @@ namespace
                 }
             }
 
-            SIMethodBase* request = doc.getMethodData().addMethod(QStringLiteral("fetch"), SIMethodBase::eMethodType::MethodRequest);
+            MethodEntry* request = doc.getMethodData().createMethod(QStringLiteral("fetch"), NEMethod::SiRequest);
             CHECK(request != nullptr);
             MethodParameter* count = request->addParam(QStringLiteral("count"));
             CHECK(count != nullptr);
@@ -852,6 +946,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testIncludeSection();
     testAttributeSection();
     testAttributeRoundTrip();
+    testMethodSection();
+    testMethodParamDefaultRoundTrip();
     testLegacyTypeNames();
     testTypeReferenceRefresh();
     testValidatorUnreferenced();

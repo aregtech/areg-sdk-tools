@@ -15,228 +15,114 @@
  *  \file        lusan/view/sm/SMMethod.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Methods page.
+ *  \brief       Lusan application, the state machine's Methods page.
  *
  ************************************************************************/
 
-#include <QScrollArea>
-#include <cstdint>
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/view/common/MethodPage.hpp"
 
-#include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
-#include "lusan/model/sm/SMValidator.hpp"
-#include "lusan/view/common/IEditCommit.hpp"
-#include "lusan/view/common/TableCell.hpp"
 
-class DocumentElem;
-class MethodDetailsView;
-class MethodListView;
-class MethodParamDetailsView;
-class QAbstractItemModel;
-class QEvent;
-class QTreeWidgetItem;
-class SMMethodModel;
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class StateMachineModel;
 
 /**
- * \brief   The FSM Methods page: triggers, actions and conditions with typed parameters and
- *          optional defaults, edited in the shared list-left / details-right page layout. The
- *          left panel is one tree whose top-level rows are methods and whose child rows are
- *          the method parameters, under a single toolbar; the right panel swaps between the
- *          method and parameter detail forms. Conditions additionally carry a return type, an
- *          implementation mode and - when embedded - a verbatim C++ body. Every edit goes
- *          through the page model's undo commands; the page refreshes by rebuilding the tree
- *          from the live model on every relevant DocModelNotifier signal and restoring the
- *          selection by element ID.
+ * \class   SMMethod
+ * \brief   The shared Methods page plus what only a state machine can answer: its guards,
+ *          actions and operations name a method, so the page can say where a method is used,
+ *          seed the canvas search with it, refuse to delete a condition a guard still names,
+ *          and report a trigger name that collides with an event or a timer.
+ *
+ *          Everything else -- the list, both forms, the undo commands, the parameters and the
+ *          inline editing -- is \ref MethodPage.
  **/
-class SMMethod : public QScrollArea
-               , public IEditCommit
-               , public IETableHelper
+class SMMethod : public MethodPage
 {
     Q_OBJECT
-
-//////////////////////////////////////////////////////////////////////////
-// Internal types
-//////////////////////////////////////////////////////////////////////////
-private:
-    //!< What the currently selected tree row represents; drives the detail form swap and the
-    //!< toolbar enable state.
-    enum class eRowKind : int
-    {
-          None      = 0 //!< No selection.
-        , Method    = 1 //!< A method entry.
-        , Param     = 2 //!< A parameter of a method.
-    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMMethod(SMMethodModel& model, QWidget* parent = nullptr);
-    virtual ~SMMethod() = default;
+    explicit SMMethod(MethodModel& model, StateMachineModel& facade, QWidget* parent = nullptr);
+
+    virtual ~SMMethod(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes
+// Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Returns the list panel (its Add-dropdown actions let a caller start a new
-     *          method of a specific kind, e.g. from the Design page's Declare dropdown).
+     * \brief   Shows the where-used popup for the selected method (Find Usages / Shift+F12).
+     *          Says so and does nothing else when no method is selected.
      **/
-    MethodListView* getList() const;
+    void whereUsedForCurrent(void);
 
     /**
-     * \brief   Shows the where-used popup for the currently selected method (Find Usages /
-     *          Shift+F12). Does nothing beyond an information box if no method is selected.
-     **/
-    void whereUsedForCurrent();
-
-    /**
-     * \brief   Fills the search seed (kind/id/name) for the currently selected method, so
-     *          Ctrl+F searches that method's usages. False when no method is selected.
+     * \brief   Fills the search seed (kind, ID and name) for the selected method, so Ctrl+F
+     *          searches that method's usages. False when no method is selected.
      **/
     bool currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const;
-
-    /**
-     * \brief   Selects and reveals a method, or one of its parameters, by document ID
-     *          (go-to-declaration from the canvas, or a validation finding -- a finding about a
-     *          parameter names the parameter, not the method that declares it). Does nothing if
-     *          nothing has that ID.
-     * \param   field   The field the caller wants accented once the row is selected.
-     **/
-    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
-
-    /**
-     * \brief   Hands over the description and the embedded body the page is still holding, for
-     *          whichever of the method or the parameter form the selection is on. A multi-line box
-     *          applies its text when it loses the focus, which a save from the keyboard never
-     *          causes.
-     **/
-    void commitPendingEdits(void) override;
-
-//////////////////////////////////////////////////////////////////////////
-// IETableHelper overrides
-//////////////////////////////////////////////////////////////////////////
-public:
-    //!< Returns the number of columns in the method list tree.
-    int getColumnCount() const override;
-    //!< Returns the display text of the given cell, used to seed the inline editor.
-    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
+    /**
+     * \brief   Refuses to delete a condition an ID-bound guard still names, and asks before
+     *          deleting a method something else refers to by name.
+     **/
+    virtual bool confirmRemove(uint32_t id) override;
 
-//////////////////////////////////////////////////////////////////////////
-// Slots
-//////////////////////////////////////////////////////////////////////////
-private slots:
-    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+    /**
+     * \brief   Adds the shared stimulus name space to the shared per-kind duplicate check: a
+     *          trigger shares its names with the machine's events and timers.
+     **/
+    virtual QString nameCollisionReason(const MethodEntry* method, const QString& name, uint32_t selfId) const override;
 
-    void onAddClicked();
-    void onInsertClicked();
-    void onRemoveClicked();
-    void onMoveUpClicked();
-    void onMoveDownClicked();
+    /**
+     * \brief   Shows a condition's implementation mode as a glyph and a word in the type column.
+     **/
+    virtual void decorateMethodNode(QTreeWidgetItem* node, const MethodEntry& method) const override;
 
-    void onMethodNameTextChanged(const QString& text);
-    void onMethodNameCommitted();
-    void onMethodTypeToggled(bool checked);
-    void onReturnCommitted();
-    void onImplementToggled(bool checked);
-    void onMethodDeprecatedToggled(bool checked);
-    void onMethodDeprecateHintCommitted();
+    /**
+     * \brief   Fills the guard-use line of a condition, and hides it for anything else.
+     **/
+    virtual void updateExtraFields(MethodEntry* method) override;
 
-    void onParamNameTextChanged(const QString& text);
-    void onParamNameCommitted();
-    void onParamTypeChanged(int index);
-    void onParamHasDefaultToggled(bool checked);
-    void onParamValueCommitted();
-    void onParamDeprecatedToggled(bool checked);
-    void onParamDeprecateHintCommitted();
-
-    void onNotifierChanged();
-    //!< Repopulates the type combos on any DataType-kind notifier signal.
-    void onDataTypesChanged();
-
-    //!< Triggered when a cell is edited inline in the tree via the TableCell delegate.
-    void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
+    /**
+     * \brief   Adds the note and the completion words the body editor offers, on top of the
+     *          signature the shared page sets.
+     **/
+    virtual void updateBodyEditor(MethodEntry* method) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    void buildUi();
-    void setupSignals();
+    //!< The reference target of the given method: a trigger, an action or a condition.
+    SMReferences::eTarget targetOf(const MethodEntry& method) const;
 
-    void addNewMethod(SMMethodEntry::eMethodType type);
-    void addNewParam();
-
-    //!< Rebuilds the tree from the live model and restores the selection by ID.
-    void refreshAll();
-    //!< Selects the method / parameter row by ID; returns false if not found.
-    bool selectMethod(uint32_t methodId, uint32_t paramId = 0);
-
-    void showCleanForm();
-    //!< Shows exactly one of the two detail forms, matching the selected row kind.
-    void showDetails(eRowKind kind);
-    void updateToolbar(eRowKind kind);
-
-    void selectedMethod(SMMethodEntry* method);
-    void selectedParam(SMMethodEntry* owner, uint32_t paramId);
-    void updateMoveButtons(int row, int rowCount);
-    //!< Fills the method detail form from \p method and applies the condition-only rows.
-    void showMethodForm(SMMethodEntry* method);
-    //!< Updates the code editor signature and note from the current method state.
-    void updateBodyEditor(SMMethodEntry* method);
-    void populateParamTypeCombo();
-    void populateReturnCombo();
-
-    //!< Empty string if the name is free, otherwise a short, user-facing collision reason --
-    //!< another method with the same name, or (for triggers) an event/timer stimulus clash.
-    QString nameCollisionReason(const SMMethodEntry* method, const QString& name, uint32_t selfId) const;
-    QString paramNameCollisionReason(const SMMethodEntry* owner, const QString& name, uint32_t selfId) const;
-
-    QTreeWidgetItem* createMethodNode(SMMethodEntry* method) const;
-    void setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const;
-
-    //!< Commits a deferred inline cell edit through the page model's undo commands. Called on the
-    //!< next event-loop turn (see onEditorDataChanged) so the delegate editor tears down first.
-    void commitInlineEdit(int kind, uint32_t methodId, uint32_t paramId, int column, const QString& newValue);
-    //!< True if the given cell may be edited inline (method: name; parameter: name/type/value).
-    bool isCellEditable(const QModelIndex& index) const;
-    //!< The combo model for the given cell (parameter Data Type column), or nullptr for a line editor.
-    QAbstractItemModel* editorModelFor(const QModelIndex& index) const;
-    //!< The keystroke validation for the given cell (Name columns are C++ identifiers).
-    TableCell::eCellValidation validationFor(const QModelIndex& index) const;
-
-    eRowKind currentKind() const;
-    //!< The method owning the current selection (method or parameter row), or nullptr.
-    SMMethodEntry* currentMethod() const;
-    //!< The selected parameter ID, or 0 if the selection is not a parameter row.
-    uint32_t currentParamId() const;
-
-    QString genMethodName();
-    QString genParamName(const SMMethodEntry* method) const;
-
-    //!< Puts the caret in the Name field of the selected row, method or parameter, with its
-    //!< text selected.
-    void focusNameField();
-
-    //!< The `used by N guards` popup: pick a guard, select its transition.
+    //!< The `used by N guards` popup: pick a usage, select what it belongs to.
     void showMethodWhereUsed(uint32_t methodId);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SMMethodModel&          mModel;             //!< Methods page model (undo-command mutators).
-    MethodListView*         mList;              //!< Left panel: methods/parameters tree + toolbar.
-    MethodDetailsView*      mDetails;           //!< Right panel: selected method form.
-    MethodParamDetailsView* mParamDetails;      //!< Right panel: selected parameter form.
-    TableCell*              mTableCell;         //!< Inline-editing delegate for the list tree.
-    uint32_t                mMethodNameCounter; //!< Suffix counter for generated method names.
+    StateMachineModel&  mFacade;    //!< The document, for its guards and its name spaces.
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    SMMethod(const SMMethod& /*src*/) = delete;
+    SMMethod& operator = (const SMMethod& /*src*/) = delete;
 };
 
 #endif  // LUSAN_VIEW_SM_SMMETHOD_HPP

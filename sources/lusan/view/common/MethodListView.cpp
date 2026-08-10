@@ -39,8 +39,6 @@ MethodListView::MethodListView(const MethodListConfig& config, QWidget* parent /
     , mButtonInsert     (nullptr)
     , mButtonRemove     (nullptr)
     , mButtonParamAdd   (nullptr)
-    , mButtonParamRemove(nullptr)
-    , mButtonParamInsert(nullptr)
     , mButtonMoveUp     (nullptr)
     , mButtonMoveDown   (nullptr)
     , mTypeActions      ( )
@@ -81,11 +79,6 @@ void MethodListView::buildUi()
     sepParam->setMaximumSize(24, 24);
 
     mButtonParamAdd = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field add"), tr("Create and add new parameter to the selected method"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
-    if (mConfig.hasParamInsertRemove)
-    {
-        mButtonParamRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field delete"), tr("Delete selected method parameter entry")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
-        mButtonParamInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field insert"), tr("Create and insert new method parameter entry"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
-    }
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
@@ -99,11 +92,6 @@ void MethodListView::buildUi()
     toolbarLayout->addWidget(mButtonInsert);
     toolbarLayout->addWidget(sepParam);
     toolbarLayout->addWidget(mButtonParamAdd);
-    if (mConfig.hasParamInsertRemove)
-    {
-        toolbarLayout->addWidget(mButtonParamRemove);
-        toolbarLayout->addWidget(mButtonParamInsert);
-    }
     toolbarLayout->addWidget(sep);
     toolbarLayout->addWidget(mButtonMoveUp);
     toolbarLayout->addWidget(mButtonMoveDown);
@@ -170,16 +158,6 @@ QToolButton* MethodListView::ctrlButtonRemove() const
 QToolButton* MethodListView::ctrlButtonParamAdd() const
 {
     return mButtonParamAdd;
-}
-
-QToolButton* MethodListView::ctrlButtonParamRemove() const
-{
-    return mButtonParamRemove;
-}
-
-QToolButton* MethodListView::ctrlButtonParamInsert() const
-{
-    return mButtonParamInsert;
 }
 
 QToolButton* MethodListView::ctrlButtonMoveUp() const

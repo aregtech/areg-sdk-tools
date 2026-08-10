@@ -26,7 +26,7 @@
 #include "lusan/model/sm/SMCommand.hpp"
 
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 
 #include <QList>
 #include <QString>
@@ -56,7 +56,7 @@ class SMNameIslandCommand : public SMCommand
 public:
     SMNameIslandCommand(  StateMachineData& data, DocModelNotifier& notifier
                         , uint32_t transitionId, const QList<int>& islandPath
-                        , const QString& name, SMMethodEntry::eImplement implement
+                        , const QString& name, MethodEntry::eImplement implement
                         , const QString& text, QUndoCommand* parent = nullptr);
     virtual ~SMNameIslandCommand();
 
@@ -70,10 +70,10 @@ private:
     uint32_t                    mTransId;   //!< The owning transition ID.
     QList<int>                  mPath;      //!< The island node's child-index path.
     QString                     mName;      //!< The declared method name.
-    SMMethodEntry::eImplement   mImplement; //!< The condition kind (Embedded = lambda).
+    MethodEntry::eImplement   mImplement; //!< The condition kind (Embedded = lambda).
     QString                     mBody;      //!< The island body (read on first redo).
     QStringList                 mParams;    //!< The mapped stimulus parameter names.
-    SMMethodEntry*              mEntry;     //!< The declaration (owned while out of the model).
+    MethodEntry*              mEntry;     //!< The declaration (owned while out of the model).
     bool                        mEntryOwned;//!< True when this command owns \ref mEntry.
     uint32_t                    mMethodId;  //!< The allocated method ID.
     SMGuard                     mOldGuard;  //!< The captured previous guard.
@@ -102,7 +102,7 @@ namespace SMGuardLadder
      **/
     SMNameIslandCommand* nameIsland(  StateMachineData& data, DocModelNotifier& notifier
                                     , uint32_t transitionId, const QList<int>& islandPath
-                                    , const QString& name, SMMethodEntry::eImplement implement
+                                    , const QString& name, MethodEntry::eImplement implement
                                     , const QString& text);
 
     /**

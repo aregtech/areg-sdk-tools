@@ -20,7 +20,7 @@
 #include "lusan/model/sm/SMGuardParser.hpp"
 
 #include "lusan/data/sm/SMCondition.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMConditionText.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
@@ -708,7 +708,7 @@ namespace
 
         //!< Resolves \p entries to value nodes for a known \p method, keying each on the formal's
         //!< document id. A positional fills the nth unfilled formal, a named one binds by name.
-        QList<SMGuardNode*> bindArgs(const SMMethodEntry* method, QList<ArgEntry>& entries)
+        QList<SMGuardNode*> bindArgs(const MethodEntry* method, QList<ArgEntry>& entries)
         {
             QList<SMGuardNode*> args;
             const QList<MethodParameter>& formals = method->getElements();
@@ -768,7 +768,7 @@ namespace
             QList<ArgEntry> entries = parseArgList(end);
             const int span = qMax(idTok.len, end - idTok.start);
 
-            const SMMethodEntry* method = SMGuardSymbols::conditionMethod(mData, idTok.text);
+            const MethodEntry* method = SMGuardSymbols::conditionMethod(mData, idTok.text);
             if (method != nullptr)
             {
                 return SMGuardNode::makeCall(method->getId(), bindArgs(method, entries));
@@ -793,7 +793,7 @@ namespace
         //!< is an error (the user stated the kind), never a silent raw fragment.
         SMGuardNode* parseCondCall(const Token& refTok)
         {
-            const SMMethodEntry* method = SMGuardSymbols::conditionMethod(mData, refTok.refName);
+            const MethodEntry* method = SMGuardSymbols::conditionMethod(mData, refTok.refName);
             if (peek().type == eTok::LParen)
             {
                 int end = 0;

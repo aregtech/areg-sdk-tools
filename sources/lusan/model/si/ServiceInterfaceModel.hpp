@@ -31,7 +31,7 @@
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/common/IncludeModel.hpp"
-#include "lusan/model/si/SIMethodModel.hpp"
+#include "lusan/model/common/MethodModel.hpp"
 #include "lusan/model/si/SIOverviewModel.hpp"
 
 /**
@@ -80,7 +80,7 @@ public:
     /**
      * \brief   Returns the methods model.
      **/
-    inline SIMethodModel& getMethodsModel();
+    inline MethodModel& getMethodsModel();
 
     /**
      * \brief   Saves the service interface data to the file.
@@ -159,6 +159,11 @@ public:
     inline AttributeDataSection& getAttributeSection() override;
 
     /**
+     * \brief   The document's `MethodList` section.
+     **/
+    inline MethodDataSection& getMethodSection() override;
+
+    /**
      * \brief   The document's validation scheduler, which owns its findings.
      **/
     inline DocValidationController& getValidationController() override;
@@ -179,7 +184,7 @@ private:
     SIOverviewModel         mModelOverview;     //!< The overview model.
     DataTypeModel           mModelDataType;     //!< The data type model.
     AttributeModel        mModelAttributes;   //!< The data attributes model.
-    SIMethodModel           mModelMethods;      //!< The methods model.
+    MethodModel             mModelMethods;      //!< The methods model.
     ConstantModel           mModelConstant;     //!< The constant model.
     IncludeModel            mModelInclude;      //!< The include model.
     DocValidationController mValidation;        //!< Background structural and reference validation.
@@ -213,7 +218,7 @@ inline AttributeModel& ServiceInterfaceModel::getAttributeModel()
     return mModelAttributes;
 }
 
-inline SIMethodModel& ServiceInterfaceModel::getMethodsModel()
+inline MethodModel& ServiceInterfaceModel::getMethodsModel()
 {
     return mModelMethods;
 }
@@ -246,6 +251,11 @@ inline IncludeDataSection& ServiceInterfaceModel::getIncludeSection()
 inline AttributeDataSection& ServiceInterfaceModel::getAttributeSection()
 {
     return mSIData.getAttributeData();
+}
+
+inline MethodDataSection& ServiceInterfaceModel::getMethodSection()
+{
+    return mSIData.getMethodData();
 }
 
 inline DocValidationController& ServiceInterfaceModel::getValidationController()

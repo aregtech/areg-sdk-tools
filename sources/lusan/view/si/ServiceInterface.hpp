@@ -35,7 +35,7 @@ class MdiMainWindow;
 class AttributePage;
 class DataTypePage;
 class IncludePage;
-class SIMethod;
+class MethodPage;
 class SIOverview;
 
 /**
@@ -212,7 +212,7 @@ private:
     SIOverview*  mOverview;  //!< The overview widget
     DataTypePage*  mDataType;  //!< The data type widget
     AttributePage* mAttribute; //!< The data attribute widget
-    SIMethod*    mMethod;    //!< The method widget
+    MethodPage*  mMethod;    //!< The method widget
     ConstantPage*  mConstant;  //!< The constant widget
     IncludePage* mInclude;   //!< The include widget
     QList<int>   mPendingInitTabs; //!< Background initialization queue

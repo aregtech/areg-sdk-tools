@@ -42,6 +42,7 @@ enum class eIssueField
     , Type          //!< The data type field.
     , Value         //!< The literal value field.
     , Description   //!< The description field.
+    , Link          //!< The field naming another element, such as the response a request is answered by.
 };
 
 /**

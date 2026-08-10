@@ -13,7 +13,7 @@
     ${LUSAN}/model/common/FileSystemFilter.cpp
     ${LUSAN}/model/common/FileSystemModel.cpp
     ${LUSAN}/model/common/TableModelBase.cpp
-    ${LUSAN}/model/common/ReplyMethodModel.cpp
+    ${LUSAN}/model/common/MethodModel.cpp
     ${LUSAN}/model/common/WorkspaceModel.cpp
 )
 
@@ -35,6 +35,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/common/FileSystemFilter.hpp
     ${LUSAN}/model/common/FileSystemModel.hpp
     ${LUSAN}/model/common/TableModelBase.hpp
-    ${LUSAN}/model/common/ReplyMethodModel.hpp
+    ${LUSAN}/model/common/MethodModel.hpp
     ${LUSAN}/model/common/WorkspaceModel.hpp
 )

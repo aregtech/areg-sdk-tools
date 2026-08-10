@@ -27,7 +27,7 @@
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -91,16 +91,16 @@ namespace
         ConstantEntry* konst = data.getConstants().createConstant(QStringLiteral("MIN_WAITING"));
         if (konst != nullptr) { konst->setValue(QStringLiteral("3")); }
 
-        SMMethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), NEMethod::SmTrigger);
         MethodParameter* tp = trigger->addParam(QStringLiteral("count"));
         tp->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), SMMethodEntry::eMethodType::Condition);
-        handler->setImplement(SMMethodEntry::eImplement::Handler);
+        MethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), NEMethod::SmCondition);
+        handler->setImplement(MethodEntry::eImplement::Handler);
         handler->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("IsCalmHours"), SMMethodEntry::eMethodType::Condition);
-        lambda->setImplement(SMMethodEntry::eImplement::Embedded);
+        MethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("IsCalmHours"), NEMethod::SmCondition);
+        lambda->setImplement(MethodEntry::eImplement::Embedded);
         lambda->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
         lambda->setBody(QStringLiteral("return count < MIN_WAITING;"));
 
@@ -234,16 +234,16 @@ static void testConditionWeight()
     const uint32_t tid = buildDoc(data);
 
     // A zero-argument condition binds from a bare name, as a call.
-    SMMethodEntry* ready = data.getMethods().createMethod(QStringLiteral("Ready"), SMMethodEntry::eMethodType::Condition);
-    ready->setImplement(SMMethodEntry::eImplement::Handler);
+    MethodEntry* ready = data.getMethods().createMethod(QStringLiteral("Ready"), NEMethod::SmCondition);
+    ready->setImplement(MethodEntry::eImplement::Handler);
     SMGuardParser::Result r1 = SMGuardParser::parse(data, tid, QStringLiteral("Ready"));
     check(r1.resolved() && (r1.tree != nullptr) && (r1.tree->getKind() == eKind::Call)
             && (r1.tree->getSymbolId() == ready->getId()), "a bare zero-argument condition binds as a call");
     delete r1.tree;
 
     // A condition that declares a non-defaulted argument never binds from a bare name.
-    SMMethodEntry* check2 = data.getMethods().createMethod(QStringLiteral("Check"), SMMethodEntry::eMethodType::Condition);
-    check2->setImplement(SMMethodEntry::eImplement::Handler);
+    MethodEntry* check2 = data.getMethods().createMethod(QStringLiteral("Check"), NEMethod::SmCondition);
+    check2->setImplement(MethodEntry::eImplement::Handler);
     check2->addParam(QStringLiteral("n"))->setType(QStringLiteral("uint16"));
     SMGuardParser::Result r2 = SMGuardParser::parse(data, tid, QStringLiteral("Check"));
     check(r2.hasError(), "a bare multi-argument condition does not bind");
@@ -251,8 +251,8 @@ static void testConditionWeight()
 
     // A condition outranks an attribute of the same name in a guard.
     data.getAttributes().createAttribute(QStringLiteral("Ping"))->setType(QStringLiteral("bool"));
-    SMMethodEntry* pingCond = data.getMethods().createMethod(QStringLiteral("Ping"), SMMethodEntry::eMethodType::Condition);
-    pingCond->setImplement(SMMethodEntry::eImplement::Handler);
+    MethodEntry* pingCond = data.getMethods().createMethod(QStringLiteral("Ping"), NEMethod::SmCondition);
+    pingCond->setImplement(MethodEntry::eImplement::Handler);
     SMGuardParser::Result r3 = SMGuardParser::parse(data, tid, QStringLiteral("Ping"));
     check(r3.resolved() && (r3.tree != nullptr) && (r3.tree->getKind() == eKind::Call)
             && (r3.tree->getSymbolId() == pingCond->getId()), "a condition outranks an attribute of the same name");
@@ -274,8 +274,8 @@ static void testParamVsCall()
     const uint32_t tid = buildDoc(data);
 
     // A named lambda 'param' coexists with the stimulus parameter 'param' (call form vs bare).
-    SMMethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("param"), SMMethodEntry::eMethodType::Condition);
-    lambda->setImplement(SMMethodEntry::eImplement::Embedded);
+    MethodEntry* lambda = data.getMethods().createMethod(QStringLiteral("param"), NEMethod::SmCondition);
+    lambda->setImplement(MethodEntry::eImplement::Embedded);
     // Add 'param' as a stimulus parameter of RequestWalk.
     data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("param"))->setType(QStringLiteral("uint16"));
 
@@ -402,8 +402,8 @@ static void testCallArgGrammar()
     const uint32_t tid = buildDoc(data);
 
     // A 3-formal condition method for argument mapping.
-    SMMethodEntry* cond = data.getMethods().createMethod(QStringLiteral("check3"), SMMethodEntry::eMethodType::Condition);
-    cond->setImplement(SMMethodEntry::eImplement::Handler);
+    MethodEntry* cond = data.getMethods().createMethod(QStringLiteral("check3"), NEMethod::SmCondition);
+    cond->setImplement(MethodEntry::eImplement::Handler);
     const uint32_t p1 = cond->addParam(QStringLiteral("p1"))->getId();
     const uint32_t p2 = cond->addParam(QStringLiteral("p2"))->getId();
     const uint32_t p3 = cond->addParam(QStringLiteral("p3"))->getId();
@@ -649,8 +649,8 @@ static void testRenameByID()
     const uint32_t tid = buildDoc(data);
 
     // A handler condition my_condition(param1, param2), an attribute my_attribute, a param.
-    SMMethodEntry* cond = data.getMethods().createMethod(QStringLiteral("my_condition"), SMMethodEntry::eMethodType::Condition);
-    cond->setImplement(SMMethodEntry::eImplement::Handler);
+    MethodEntry* cond = data.getMethods().createMethod(QStringLiteral("my_condition"), NEMethod::SmCondition);
+    cond->setImplement(MethodEntry::eImplement::Handler);
     cond->addParam(QStringLiteral("p1"))->setType(QStringLiteral("uint16"));
     cond->addParam(QStringLiteral("p2"))->setType(QStringLiteral("bool"));
     data.getAttributes().createAttribute(QStringLiteral("my_attribute"));

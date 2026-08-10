@@ -31,7 +31,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 
 #include <QByteArray>
 #include <QDir>
@@ -250,12 +250,12 @@ namespace
         StateMachineData doc;
         doc.getOverview().setName("CdataTest");
 
-        SMMethodData& methods = doc.getMethods();
-        methods.createMethod("Go", SMMethodEntry::eMethodType::Trigger);
-        SMMethodEntry* cond = methods.createMethod("Check", SMMethodEntry::eMethodType::Condition);
+        MethodDataSection& methods = doc.getMethods();
+        methods.createMethod("Go", NEMethod::SmTrigger);
+        MethodEntry* cond = methods.createMethod("Check", NEMethod::SmCondition);
         CHECK(cond != nullptr);
         cond->setReturn("bool");
-        cond->setImplement(SMMethodEntry::eImplement::Embedded);
+        cond->setImplement(MethodEntry::eImplement::Embedded);
         cond->setBody(body);
 
         // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
@@ -284,7 +284,7 @@ namespace
         CHECK(reread.readFromFile(outPath));
         CHECK(reread.openSucceeded());
 
-        SMMethodEntry* rcond = reread.getMethods().findMethod("Check");
+        MethodEntry* rcond = reread.getMethods().findMethod("Check");
         CHECK(rcond != nullptr);
         CHECK((rcond != nullptr) && (rcond->getBody() == body));
 
@@ -342,7 +342,7 @@ namespace
 
         StateMachineData doc;
         doc.getOverview().setName("NestedCond");
-        doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+        doc.getMethods().createMethod("Go", NEMethod::SmTrigger);
 
         // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
         // and the read shim would rewrite a merged-form one on the next load.
@@ -436,7 +436,7 @@ namespace
 
         StateMachineData doc;
         doc.getOverview().setName("FlatCond");
-        doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+        doc.getMethods().createMethod("Go", NEMethod::SmTrigger);
 
         // `Root` carries behaviour, so it is an ordinary state: a Kind="Start" is a pseudo-state
         // and the read shim would rewrite a merged-form one on the next load.
@@ -502,7 +502,7 @@ namespace
             if (p != nullptr) { p->setIsDeprecated(true); p->setDeprecateHint("unused payload"); }
         }
 
-        SMMethodEntry* m = doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* m = doc.getMethods().createMethod("Go", NEMethod::SmTrigger);
         CHECK(m != nullptr);
         if (m != nullptr) { m->setIsDeprecated(true); m->setDeprecateHint("call Start instead"); }
 
@@ -528,7 +528,7 @@ namespace
             CHECK((rp != nullptr) && rp->getIsDeprecated() && (rp->getDeprecateHint() == "unused payload"));
         }
 
-        SMMethodEntry* rm = reread.getMethods().findMethod("Go");
+        MethodEntry* rm = reread.getMethods().findMethod("Go");
         CHECK((rm != nullptr) && rm->getIsDeprecated() && (rm->getDeprecateHint() == "call Start instead"));
 
         SMTimerEntry* rt = reread.getTimers().findElement("Tick");
@@ -1210,8 +1210,8 @@ namespace
             SMStateEntry* start = doc.getStates().createState(QStringLiteral("Start"), SMStateEntry::eStateKind::Start);
             SMStateEntry* idle  = doc.getStates().createState(QStringLiteral("Idle"), SMStateEntry::eStateKind::Normal);
             SMStateEntry* work  = doc.getStates().createState(QStringLiteral("Work"), SMStateEntry::eStateKind::Normal);
-            doc.getMethods().createMethod(QStringLiteral("Begin"), SMMethodEntry::eMethodType::Trigger);
-            doc.getMethods().createMethod(QStringLiteral("Poke"), SMMethodEntry::eMethodType::Trigger);
+            doc.getMethods().createMethod(QStringLiteral("Begin"), NEMethod::SmTrigger);
+            doc.getMethods().createMethod(QStringLiteral("Poke"), NEMethod::SmTrigger);
 
             const uint32_t initialId = start->getTransitions().createTransition(
                     SMTransitionEntry::eStimulusKind::Trigger, QString(), idle->getId()

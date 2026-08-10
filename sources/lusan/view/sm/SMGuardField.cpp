@@ -19,7 +19,7 @@
 
 #include "lusan/view/sm/SMGuardField.hpp"
 
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
@@ -151,8 +151,8 @@ namespace
 
         if (node->getKind() == SMGuardNode::eKind::Call)
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(data, node->getSymbolId());
-            if ((method != nullptr) && method->isHandlerCondition() && (chips.contains(method->getName()) == false))
+            const MethodEntry* method = SMGuardSymbols::method(data, node->getSymbolId());
+            if ((method != nullptr) && NESMMethod::isHandlerCondition(method) && (chips.contains(method->getName()) == false))
             {
                 chips.append(method->getName());
             }
@@ -806,7 +806,7 @@ bool SMGuardField::cycleFocusedChipKind(int direction)
         kinds.append(SMGuardSymbols::eBind::Param);
     }
 
-    const SMMethodEntry* cond = SMGuardSymbols::conditionMethod(data, name);
+    const MethodEntry* cond = SMGuardSymbols::conditionMethod(data, name);
     if ((cond != nullptr) && SMGuardSymbols::conditionBindsBare(*cond))
     {
         kinds.append(SMGuardSymbols::eBind::Condition);

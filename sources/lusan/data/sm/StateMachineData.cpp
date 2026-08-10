@@ -369,7 +369,7 @@ StateMachineData::StateMachineData()
     , mAttributes       (NEAttribute::StateMachine, this)
     , mEvents           (this)
     , mTimers           (this)
-    , mMethods          (this)
+    , mMethods          (NEMethod::stateMachine(), this)
     , mConstants        (this)
     , mIncludes         (this)
     , mStates           (this)
@@ -842,7 +842,7 @@ StateMachineData::StimulusRef StateMachineData::findStimulus(const QString& name
 {
     StimulusRef result;
 
-    if (SMMethodEntry* trigger = mMethods.findTrigger(name))
+    if (MethodEntry* trigger = mMethods.findMethod(name, NEMethod::SmTrigger))
     {
         result.type    = eStimulusType::Trigger;
         result.element = trigger;

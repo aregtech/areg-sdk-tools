@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/DocElementCommands.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -35,7 +35,7 @@
  * \class   TDocElementCommand
  * \brief   Shared machinery to add/remove one element of a TEDataContainer section. Works
  *          for value entries (AttributeEntry, ConstantEntry, SMTimerEntry) and for
- *          owning-pointer entries (DataTypeCustom*, SIMethodBase*, SMStateEntry*): while
+ *          owning-pointer entries (DataTypeCustom*, MethodEntry*, SMStateEntry*): while
  *          the element sits outside the model between undo/redo, this command owns it, so
  *          its subtree is captured for undo and re-inserted under its original ID.
  *
@@ -43,7 +43,7 @@
  *          re-inserting the same element at its recorded index restores the section's exact
  *          ID layout, so history navigation allocates nothing and never duplicates an ID.
  *
- * \tparam  Data     The container's element type — a value type or an owning pointer type.
+ * \tparam  Data     The container's element type -- a value type or an owning pointer type.
  * \tparam  ElemBase The container's element base (DocumentElem or ElementBase), matching
  *                   the concrete section's TEDataContainer instantiation.
  **/
@@ -207,7 +207,7 @@ private:
 
 /**
  * \class   TDocReorderCommand
- * \brief   Swaps two entries of a section — the priority/model-order gesture. The container
+ * \brief   Swaps two entries of a section -- the priority/model-order gesture. The container
  *          keeps IDs in list order, so redo and undo are the same swap; each is its own
  *          inverse.
  **/
@@ -247,7 +247,7 @@ private:
  * \brief   Builds a composite that inserts a pre-built element at an explicit position
  *          without ever renumbering siblings. A direct TEDataContainer::insertElement()
  *          mid-list calls reorderIds(), which reassigns every sibling's ID by its new list
- *          position — harmless for a fresh redo, but that broadcast renumbering is not
+ *          position -- harmless for a fresh redo, but that broadcast renumbering is not
  *          itself undone by removing the inserted element, so undo would leave siblings
  *          with the wrong IDs. This builds the safe equivalent instead: append (a no-op for
  *          reorderIds(), since the appended element already sorts last) and then bubble it

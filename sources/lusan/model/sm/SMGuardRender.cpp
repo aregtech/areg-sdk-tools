@@ -21,7 +21,7 @@
 
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 
@@ -177,7 +177,7 @@ namespace
             case eKind::Param: name = SMGuardSymbols::paramName(mData, mTransId, node.getSymbolId());  kind = QStringLiteral("param"); return true;
             case eKind::Call:
                 {
-                    const SMMethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
+                    const MethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
                     name = (method != nullptr) ? method->getName() : QString();
                     kind = QStringLiteral("cond");
                     return true;
@@ -371,11 +371,11 @@ namespace
 
         void renderCall(const SMGuardNode& node)
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
             const bool broken = (method == nullptr);
             const QString name = broken ? brokenName(node) : method->getName();
             // A named-lambda call is an FSM symbol (teal); a handler condition is a handler (orange).
-            const eRole role = ((broken == false) && method->isLambdaCondition()) ? eRole::Fsm : eRole::Handler;
+            const eRole role = ((broken == false) && NESMMethod::isLambdaCondition(method)) ? eRole::Fsm : eRole::Handler;
             // The callee name is a chip (kind "cond"); its argument list follows as ordinary text.
             // A callee whose method is gone is an invalid reference (error color), its args kept.
             appendChip(name, role, QStringLiteral("cond"), name, broken);
@@ -408,7 +408,7 @@ namespace
          *          place, an unmapped formal as a ghost `<name>` in display mode only, and a
          *          value mapped after a hole as the named `@arg:name = value`.
          **/
-        void renderArgs(const SMGuardNode& node, const SMMethodEntry* method)
+        void renderArgs(const SMGuardNode& node, const MethodEntry* method)
         {
             const QList<SMGuardNode*>& args = node.getChildren();
             const QList<MethodParameter>& formals = method->getElements();
@@ -530,7 +530,7 @@ namespace
 
         case eKind::Call:
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
             if (method == nullptr)
             {
                 return QStringLiteral("?()");
@@ -538,7 +538,7 @@ namespace
 
             // A lambda condition captures its scope (`[this]` / `[&]`), so it is generated and
             // called WITHOUT arguments -- there is no argument list to collapse.
-            if (method->isLambdaCondition())
+            if (NESMMethod::isLambdaCondition(method))
             {
                 return method->getName() + QStringLiteral("()");
             }
@@ -660,7 +660,7 @@ void SMGuardRender::refreshNames(const StateMachineData& data, uint32_t transiti
     case eKind::Param:  node.setCacheName(SMGuardSymbols::paramName(data, transitionId, node.getSymbolId())); break;
     case eKind::Call:
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
             node.setCacheName((method != nullptr) ? method->getName() : QString());
         }
         break;

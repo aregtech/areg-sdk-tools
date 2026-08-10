@@ -30,7 +30,7 @@
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
@@ -83,7 +83,6 @@ namespace
     using eKind   = SMStateEntry::eStateKind;
     using eStim   = SMTransitionEntry::eStimulusKind;
     using eSource = SMArgumentEntry::eValueSource;
-    using eMethod = SMMethodEntry::eMethodType;
     using eOp     = SMConditionEntry::eOperator;
     using eTrans  = SMTransitionEntry::eTransitionKind;
 
@@ -271,14 +270,14 @@ namespace
         {   // Positive: a trigger and an event share a name (stimulus space).
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             doc.getEvents().createEvent("go");
             CHECK(hasRule(SMValidator::validate(doc), 4));
         }
         {   // Positive: duplicate parameter name within one ParamList.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* m = doc.getMethods().createMethod("act", eMethod::Action);
+            MethodEntry* m = doc.getMethods().createMethod("act", NEMethod::SmAction);
             m->addParam("p");
             m->addParam("p");
             CHECK(hasRule(SMValidator::validate(doc), 4));
@@ -286,7 +285,7 @@ namespace
         {   // Negative: disjoint names.
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             doc.getEvents().createEvent("done");
             doc.getTimers().createTimer("tick");
             CHECK(countRule(SMValidator::validate(doc), 4) == 0);
@@ -299,21 +298,21 @@ namespace
         {   // A trigger and an attribute of the same name both become members of the machine class.
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("Ready", eMethod::Trigger);
+            doc.getMethods().createMethod("Ready", NEMethod::SmTrigger);
             doc.getAttributes().createAttribute("Ready")->setType("bool");
             CHECK(hasRule(SMValidator::validate(doc), 32));
         }
         {   // Different names: no collision.
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("Ready", eMethod::Trigger);
+            doc.getMethods().createMethod("Ready", NEMethod::SmTrigger);
             doc.getAttributes().createAttribute("IsReady")->setType("bool");
             CHECK(countRule(SMValidator::validate(doc), 32) == 0);
         }
         {   // A condition and an attribute of the same name land on different classes: no collision.
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("Ready", eMethod::Condition);
+            doc.getMethods().createMethod("Ready", NEMethod::SmCondition);
             doc.getAttributes().createAttribute("Ready")->setType("bool");
             CHECK(countRule(SMValidator::validate(doc), 32) == 0);
         }
@@ -374,8 +373,8 @@ namespace
             StateMachineData doc;
             addStart(doc);
             doc.getAttributes().createAttribute("AttrReady")->setType("bool");
-            SMMethodEntry* c = doc.getMethods().createMethod("CondReady", eMethod::Condition);
-            c->setImplement(SMMethodEntry::eImplement::Embedded);
+            MethodEntry* c = doc.getMethods().createMethod("CondReady", NEMethod::SmCondition);
+            c->setImplement(MethodEntry::eImplement::Embedded);
             c->setBody("return true;");
             c->setReturn("bool");
             CHECK(countRule(SMValidator::validate(doc), 33) == 0);
@@ -385,8 +384,8 @@ namespace
             StateMachineData doc;
             addStart(doc);
             doc.getAttributes().createAttribute("Ready")->setType("bool");
-            SMMethodEntry* c = doc.getMethods().createMethod("Ready", eMethod::Condition);
-            c->setImplement(SMMethodEntry::eImplement::Embedded);
+            MethodEntry* c = doc.getMethods().createMethod("Ready", NEMethod::SmCondition);
+            c->setImplement(MethodEntry::eImplement::Embedded);
             c->setBody("return true;");
             c->setReturn("bool");
             const QList<SMIssue> issues = SMValidator::validate(doc);
@@ -444,14 +443,14 @@ namespace
         {   // A trigger whose parameter carries the method's own name hides the method in the body.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* m = doc.getMethods().createMethod("Ready", eMethod::Trigger);
+            MethodEntry* m = doc.getMethods().createMethod("Ready", NEMethod::SmTrigger);
             m->addParam("Ready");
             CHECK(hasWarn(SMValidator::validate(doc), 34));
         }
         {   // The same shape on an action is generated with a name prefix, so it is silent.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* m = doc.getMethods().createMethod("Ready", eMethod::Action);
+            MethodEntry* m = doc.getMethods().createMethod("Ready", NEMethod::SmAction);
             m->addParam("Ready");
             CHECK(countWarn(SMValidator::validate(doc), 34) == 0);
         }
@@ -459,7 +458,7 @@ namespace
             // an error until it is re-mapped.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            SMMethodEntry* act = doc.getMethods().createMethod("act", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("act", NEMethod::SmAction);
             act->addParam("x")->setType("bool");
             SMActionCall* call = new SMActionCall(0, "act");
             call->addArgument("x", eSource::Invalid, "IsReady");
@@ -509,14 +508,14 @@ namespace
         {   // Positive: an unresolved transition target.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Nowhere"));
             CHECK(hasRule(SMValidator::validate(doc), 6));
         }
         {   // Positive: a target that exists but is not a sibling (it is nested).
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
             comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
             start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Inner"));
@@ -532,7 +531,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Work"));
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(countRule(issues, 6) == 0);
@@ -554,7 +553,7 @@ namespace
             StateMachineData doc;
             addStart(doc);
             SMStateEntry* fin = doc.getStates().createState("Done", eKind::Final);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             fin->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(hasRule(SMValidator::validate(doc), 8));
         }
@@ -586,7 +585,7 @@ namespace
     //!< matter here, only that the guard is not empty and that it resolves.
     void guardIt(StateMachineData& doc, SMTransitionEntry& transition, const QString& call)
     {
-        SMMethodEntry* cond = doc.getMethods().createMethod(call, eMethod::Condition);
+        MethodEntry* cond = doc.getMethods().createMethod(call, NEMethod::SmCondition);
         transition.getGuard().setTree(SMGuardNode::makeCall(cond != nullptr ? cond->getId() : 0u, QList<SMGuardNode*>()));
     }
 
@@ -612,7 +611,7 @@ namespace
             SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
-            doc.getMethods().createMethod("Warmup", eMethod::Action);
+            doc.getMethods().createMethod("Warmup", NEMethod::SmAction);
             start->getEntryList().addOperation(new SMActionCall(0, "Warmup"));
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
@@ -627,7 +626,7 @@ namespace
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
-            doc.getMethods().createMethod("Cooldown", eMethod::Action);
+            doc.getMethods().createMethod("Cooldown", NEMethod::SmAction);
             start->getExitList().addOperation(new SMActionCall(0, "Cooldown"));
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
         }
@@ -636,7 +635,7 @@ namespace
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, "go", start->getId());
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
         }
@@ -735,7 +734,7 @@ namespace
             // byte-identical to a deliberate internal transition, and so meant something.
             StateMachineData doc;
             SMStateEntry* work = addWorkingState(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::External);
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
@@ -750,8 +749,8 @@ namespace
         {   // The same shape as an Internal transition is the negative case: no target is correct.
             StateMachineData doc;
             SMStateEntry* work = addWorkingState(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
-            doc.getMethods().createMethod("act", eMethod::Action);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
+            doc.getMethods().createMethod("act", NEMethod::SmAction);
             SMTransitionEntry* tr = work->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             tr->getOperations().addOperation(new SMActionCall(0, "act"));
             CHECK(countRule(SMValidator::validate(doc), rule) == 0);
@@ -761,7 +760,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* work = addWorkingState(doc);
             SMStateEntry* other = doc.getStates().createState("Other", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = work->getTransitions().createTransition(eStim::Trigger, "go", other->getId());
             tr->setToId(other->getId());
             // setKind(Internal) drops the target on purpose, so the fault is built by hand.
@@ -787,7 +786,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             start->getTransitions().createTransition(eStim::Trigger, "go", work->getId(), eTrans::External);
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
@@ -804,7 +803,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             start->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             CHECK(countRule(SMValidator::validate(doc), rule) == 1);
@@ -813,7 +812,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             tr->setStimulus(QStringLiteral("go"));      // setKind(Initial) clears it; forced back
 
@@ -827,9 +826,9 @@ namespace
             SMStateEntry* start = addStart(doc, QStringLiteral("Begin"));
             SMStateEntry* work  = doc.getStates().createState("Work", eKind::Normal);
             SMStateEntry* done  = doc.getStates().createState("Done", eKind::Normal);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
-            doc.getMethods().createMethod("poke", eMethod::Trigger);
-            doc.getMethods().createMethod("act", eMethod::Action);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
+            doc.getMethods().createMethod("poke", NEMethod::SmTrigger);
+            doc.getMethods().createMethod("act", NEMethod::SmAction);
             start->getTransitions().createTransition(eStim::Trigger, QString(), work->getId(), eTrans::Initial);
             work->getTransitions().createTransition(eStim::Trigger, "go", done->getId(), eTrans::External);
             SMTransitionEntry* internalTx = work->getTransitions().createTransition(eStim::Trigger, "poke", 0u, eTrans::Internal);
@@ -854,7 +853,7 @@ namespace
             SMStateEntry* session = doc.getStates().createState(QStringLiteral("Session"), eKind::Normal);
             SMStateEntry* other   = doc.getStates().createState(QStringLiteral("Other"), eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), session->getId(), eTrans::Initial);
-            doc.getMethods().createMethod(QStringLiteral("poke"), eMethod::Trigger);
+            doc.getMethods().createMethod(QStringLiteral("poke"), NEMethod::SmTrigger);
 
             SMStateData* inner = session->getOrCreateNestedStates();
             SMStateEntry* innerStart = inner->createState(QStringLiteral("InnerStart"), eKind::Start);
@@ -884,7 +883,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* work  = addWorkingState(doc);
             SMStateEntry* other = doc.getStates().createState(QStringLiteral("Other"), eKind::Normal);
-            doc.getMethods().createMethod(QStringLiteral("poke"), eMethod::Trigger);
+            doc.getMethods().createMethod(QStringLiteral("poke"), NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
             other->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), work->getId());
             CHECK(countSeverity(SMValidator::validate(doc), SMIssue::eSeverity::Error) == 0);
@@ -944,7 +943,7 @@ namespace
         {   // Positive: a required parameter left unmapped.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            SMMethodEntry* act = doc.getMethods().createMethod("act", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("act", NEMethod::SmAction);
             act->addParam("p");
             s->getEntryList().addOperation(new SMActionCall(0, "act"));
             CHECK(hasRule(SMValidator::validate(doc), 10));
@@ -952,7 +951,7 @@ namespace
         {   // Positive: an argument that names no declared parameter.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action);
+            doc.getMethods().createMethod("act", NEMethod::SmAction);
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
             call->addArgument("stranger", eSource::Value, "1");
@@ -961,7 +960,7 @@ namespace
         {   // Negative: every declared parameter is mapped.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            SMMethodEntry* act = doc.getMethods().createMethod("act", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("act", NEMethod::SmAction);
             act->addParam("p");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1015,7 +1014,7 @@ namespace
         {   // Rule 10 on an ActionCall: a declared parameter with no default that no argument binds.
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
-            SMMethodEntry* act = doc.getMethods().createMethod("DoWork", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("DoWork", NEMethod::SmAction);
             act->addElement(MethodParameter(doc.getNextId(), "count", "int32", QString(), false, act), true);
             start->getEntryList().addOperation(new SMActionCall(0, "DoWork"));
             CHECK(countRule(SMValidator::validate(doc), 10) == 1);
@@ -1043,7 +1042,7 @@ namespace
             // built with the constructor, exactly as a hand-edited document produces it.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* act = doc.getMethods().createMethod("run", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("run", NEMethod::SmAction);
             act->addElement(MethodParameter(doc.getNextId(), "a", "int32", "0", true, act), true);
             act->addElement(MethodParameter(doc.getNextId(), "b", "int32", QString(), false, act), true);
             CHECK(hasRule(SMValidator::validate(doc), 38));
@@ -1051,7 +1050,7 @@ namespace
         {   // Negative: the defaulted parameter is last, which is the only legal shape.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* act = doc.getMethods().createMethod("run", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("run", NEMethod::SmAction);
             act->addElement(MethodParameter(doc.getNextId(), "a", "int32", QString(), false, act), true);
             act->addElement(MethodParameter(doc.getNextId(), "b", "int32", "0", true, act), true);
             CHECK(countRule(SMValidator::validate(doc), 38) == 0);
@@ -1068,7 +1067,7 @@ namespace
             // spelled that way generates the identical name.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* cond = doc.getMethods().createMethod("action_CheckLimit", eMethod::Condition);
+            MethodEntry* cond = doc.getMethods().createMethod("action_CheckLimit", NEMethod::SmCondition);
             cond->setReturn("bool");
             CHECK(countWarn(SMValidator::validate(doc), 39) == 1);
         }
@@ -1076,9 +1075,9 @@ namespace
             // action is generated under the prefix, so it never collides with itself).
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* cond = doc.getMethods().createMethod("CheckLimit", eMethod::Condition);
+            MethodEntry* cond = doc.getMethods().createMethod("CheckLimit", NEMethod::SmCondition);
             cond->setReturn("bool");
-            doc.getMethods().createMethod("action_Other", eMethod::Action);
+            doc.getMethods().createMethod("action_Other", NEMethod::SmAction);
             CHECK(countWarn(SMValidator::validate(doc), 39) == 0);
         }
     }
@@ -1094,7 +1093,7 @@ namespace
     SMActionCall* mappedCall(StateMachineData& doc, SMOperationList& list, const QString& paramValue)
     {
         if (doc.getMethods().findMethod("act") == nullptr)
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p");
         SMActionCall* call = new SMActionCall(0, "act");
         list.addOperation(call);
         call->addArgument("p", eSource::Param, paramValue);
@@ -1121,7 +1120,7 @@ namespace
         {   // Positive: the trigger stimulus declares no such parameter.
             StateMachineData doc;
             SMStateEntry* s = addWorkingState(doc);
-            doc.getMethods().createMethod("onTick", eMethod::Trigger);  // no parameters.
+            doc.getMethods().createMethod("onTick", NEMethod::SmTrigger);  // no parameters.
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "onTick", 0u, eTrans::Internal);
             mappedCall(doc, tr->getOperations(), "amount");
             CHECK(hasRule(SMValidator::validate(doc), 12));
@@ -1129,7 +1128,7 @@ namespace
         {   // Negative: Param names an actual stimulus parameter.
             StateMachineData doc;
             SMStateEntry* s = addWorkingState(doc);
-            doc.getMethods().createMethod("onTick", eMethod::Trigger)->addParam("amount");
+            doc.getMethods().createMethod("onTick", NEMethod::SmTrigger)->addParam("amount");
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "onTick", 0u, eTrans::Internal);
             mappedCall(doc, tr->getOperations(), "amount");
             CHECK(countRule(SMValidator::validate(doc), 12) == 0);
@@ -1199,22 +1198,22 @@ namespace
         {   // Positive: an Embedded condition with an empty body.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* c = doc.getMethods().createMethod("ready", eMethod::Condition);
-            c->setImplement(SMMethodEntry::eImplement::Embedded);
+            MethodEntry* c = doc.getMethods().createMethod("ready", NEMethod::SmCondition);
+            c->setImplement(MethodEntry::eImplement::Embedded);
             c->setBody("   ");
             CHECK(hasRule(SMValidator::validate(doc), 20));
         }
         {   // Positive: a body on a non-embedded method.
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger)->setBody("do();");
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger)->setBody("do();");
             CHECK(hasRule(SMValidator::validate(doc), 20));
         }
         {   // Negative: an Embedded condition with a real body.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* c = doc.getMethods().createMethod("ready", eMethod::Condition);
-            c->setImplement(SMMethodEntry::eImplement::Embedded);
+            MethodEntry* c = doc.getMethods().createMethod("ready", NEMethod::SmCondition);
+            c->setImplement(MethodEntry::eImplement::Embedded);
             c->setBody("return true;");
             CHECK(countRule(SMValidator::validate(doc), 20) == 0);
         }
@@ -1230,7 +1229,7 @@ namespace
     SMTransitionEntry* triggeredTransition(StateMachineData& doc, SMStateEntry* owner)
     {
         if (doc.getMethods().findMethod("go") == nullptr)
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
         return owner->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
     }
 
@@ -1240,7 +1239,7 @@ namespace
         {   // Positive: a parameterized condition on the RHS.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("isReady", eMethod::Condition)->addParam("x");
+            doc.getMethods().createMethod("isReady", NEMethod::SmCondition)->addParam("x");
             SMTransitionEntry* tr = triggeredTransition(doc, s);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Value);
@@ -1253,7 +1252,7 @@ namespace
         {   // Negative: the same parameterized condition on the LHS.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("isReady", eMethod::Condition)->addParam("x");
+            doc.getMethods().createMethod("isReady", NEMethod::SmCondition)->addParam("x");
             SMTransitionEntry* tr = triggeredTransition(doc, s);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Condition);
@@ -1424,7 +1423,7 @@ namespace
         {   // Rule 13: mapping a String attribute onto a uint16 parameter (no widening).
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint16");
             doc.getAttributes().createAttribute("label")->setType("String");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1434,7 +1433,7 @@ namespace
         {   // Negative rule 13: a uint8 attribute widens to a uint16 parameter.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint16");
             doc.getAttributes().createAttribute("small")->setType("uint8");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1445,7 +1444,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("label")->setType("String");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("label");
@@ -1458,7 +1457,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             doc.getDataTypes().addStructure("Rec");
             doc.getAttributes().createAttribute("r")->setType("Rec");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("r");
@@ -1470,7 +1469,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("n")->setType("uint16");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("n");
@@ -1481,7 +1480,7 @@ namespace
         {   // Rule 15: an out-of-range integer literal for a uint8 parameter.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint8");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint8");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
             call->addArgument("p", eSource::Value, "999");
@@ -1492,7 +1491,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             DataTypeEnum* color = static_cast<DataTypeEnum*>(doc.getDataTypes().addEnum("Color"));
             color->addField("Red"); color->addField("Green");
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("Color");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("Color");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
             call->addArgument("p", eSource::Value, "Blue");
@@ -1503,7 +1502,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             DataTypeEnum* color = static_cast<DataTypeEnum*>(doc.getDataTypes().addEnum("Color"));
             color->addField("Red");
-            SMMethodEntry* act = doc.getMethods().createMethod("act", eMethod::Action);
+            MethodEntry* act = doc.getMethods().createMethod("act", NEMethod::SmAction);
             act->addParam("p")->setType("uint8");
             act->addParam("c")->setType("Color");
             SMActionCall* call = new SMActionCall(0, "act");
@@ -1516,7 +1515,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("cnt")->setType("uint16");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("cnt");    // no operator: boolean test.
@@ -1526,7 +1525,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("flag")->setType("bool");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("flag");
@@ -1564,7 +1563,7 @@ namespace
         {   // uint32 -> uint16 parameter: one warning, filed under the offset id, no error.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint16");
             doc.getAttributes().createAttribute("wide")->setType("uint32");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1578,7 +1577,7 @@ namespace
         {   // The signed ladder narrows the same way the unsigned one does.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("int16");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("int16");
             doc.getAttributes().createAttribute("wide")->setType("int32");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1606,7 +1605,7 @@ namespace
             // so neither pairing is a refusal. Both warn, and the code generator agrees.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint32");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint32");
             doc.getAttributes().createAttribute("flag")->setType("bool");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1631,7 +1630,7 @@ namespace
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("flag")->setType("bool");
             doc.getAttributes().createAttribute("count")->setType("uint32");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("flag");
@@ -1646,7 +1645,7 @@ namespace
         {   // char is deliberately not part of that: it stays a mismatch against a number.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint32");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint32");
             doc.getAttributes().createAttribute("letter")->setType("char");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1674,7 +1673,7 @@ namespace
         {   // Matching types raise neither, on either surface.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint16");
             doc.getAttributes().createAttribute("count")->setType("uint16");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1692,7 +1691,7 @@ namespace
         {   // A narrowing is a finding the user can act on: it names both types and navigates.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("act", eMethod::Action)->addParam("p")->setType("uint16");
+            doc.getMethods().createMethod("act", NEMethod::SmAction)->addParam("p")->setType("uint16");
             doc.getAttributes().createAttribute("wide")->setType("uint32");
             SMActionCall* call = new SMActionCall(0, "act");
             s->getEntryList().addOperation(call);
@@ -1726,7 +1725,7 @@ namespace
     {
         SMStateEntry* st = doc.getStates().createState(name, eKind::Normal);
         if (doc.getMethods().findMethod(trigger) == nullptr)
-            doc.getMethods().createMethod(trigger, eMethod::Trigger);
+            doc.getMethods().createMethod(trigger, NEMethod::SmTrigger);
         start->getTransitions().createTransition(eStim::Trigger, trigger, stateId(doc, name));
         return st;
     }
@@ -1741,7 +1740,7 @@ namespace
             doc.getStates().createState("Lost", eKind::Normal);
             CHECK(hasWarn(SMValidator::validate(doc), 1));
 
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Lost"));
             CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
         }
@@ -1751,7 +1750,7 @@ namespace
             SMStateEntry* work = addReachedState(doc, s, "Work", "go");
             CHECK(hasWarn(SMValidator::validate(doc), 2));
 
-            doc.getMethods().createMethod("back", eMethod::Trigger);
+            doc.getMethods().createMethod("back", NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, "back", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 2) == 0);
         }
@@ -1766,7 +1765,7 @@ namespace
             innerStart->getTransitions().createTransition(eStim::Trigger, QString(), leaf->getId(), eTrans::Initial);
             CHECK(hasWarn(SMValidator::validate(doc), 2));      // nothing anywhere above the leaf leaves yet
 
-            doc.getMethods().createMethod("back", eMethod::Trigger);
+            doc.getMethods().createMethod("back", NEMethod::SmTrigger);
             outer->getTransitions().createTransition(eStim::Trigger, "back", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 2) == 0);
         }
@@ -1775,14 +1774,14 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             SMStateEntry* work = addReachedState(doc, s, "Work", "go");
-            doc.getMethods().createMethod("tick", eMethod::Trigger);
+            doc.getMethods().createMethod("tick", NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, "tick", 0, eTrans::Internal);
             CHECK(hasWarn(SMValidator::validate(doc), 2));
         }
         {   // W3: a transition shadowed by an earlier unconditional one on the same stimulus.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(hasWarn(SMValidator::validate(doc), 3));
@@ -1790,7 +1789,7 @@ namespace
         {   // Negative W3: the first transition carries a condition, so it does not shadow.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* first = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             SMConditionEntry* row = first->getConditions().addCondition();
             row->setLhsKind(eSource::Expression); row->setExpression("count > 0");
@@ -1809,7 +1808,7 @@ namespace
             // a warning. One rule number, two severities, decided by the kind of the declaration.
             StateMachineData doc;
             addStart(doc);
-            doc.getMethods().createMethod("orphan", eMethod::Action);
+            doc.getMethods().createMethod("orphan", NEMethod::SmAction);
             CHECK(hasWarn(SMValidator::validate(doc), 4));
             CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Warning));
         }
@@ -1817,7 +1816,7 @@ namespace
             // usage scan that only walked the legacy condition rows called this attribute unused.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             AttributeEntry* power = doc.getAttributes().createAttribute("Power");
             power->setType("int32");
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
@@ -1829,10 +1828,10 @@ namespace
         {   // Same for a constant and for a condition method called by the guard.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             ConstantEntry* limit = doc.getConstants().createConstant("Limit");
             limit->setType("int32");
-            SMMethodEntry* cond = doc.getMethods().createMethod("isReady", eMethod::Condition);
+            MethodEntry* cond = doc.getMethods().createMethod("isReady", NEMethod::SmCondition);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             tr->getGuard().setTree(SMGuardNode::makeCmp(SMGuardNode::eCmpOp::Lt
                                                        , SMGuardNode::makeCall(cond->getId(), QList<SMGuardNode*>())
@@ -1843,7 +1842,7 @@ namespace
             // so the type it names is not "never referenced" either.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             doc.getDataTypes().addEnum("PowerState");
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             tr->getGuard().setTree(SMGuardNode::makeVerbatim(SMGuardNode::eKind::Lit, "PowerState::On"));
@@ -1886,7 +1885,7 @@ namespace
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Timer, "tick", 0u, eTrans::Internal);
             CHECK(hasWarn(SMValidator::validate(doc), 7));
 
-            doc.getMethods().createMethod("act", eMethod::Action);
+            doc.getMethods().createMethod("act", NEMethod::SmAction);
             tr->getOperations().addOperation(new SMActionCall(0, "act"));
             CHECK(countWarn(SMValidator::validate(doc), 7) == 0);
         }
@@ -1903,7 +1902,7 @@ namespace
             CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
 
             doc.getAttributes().createAttribute("r")->setType("int32");
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Attribute); row->setLhs("r");
@@ -1920,7 +1919,7 @@ namespace
         {   // W9: a comparison of two design-time constants; negative once one side is live.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", 0u, eTrans::Internal);
             SMConditionEntry* row = tr->getConditions().addCondition();
             row->setLhsKind(eSource::Value); row->setLhs("1");
@@ -1942,7 +1941,7 @@ namespace
             comp->setHistory(SMStateEntry::eHistory::Shallow);
             CHECK(hasWarn(SMValidator::validate(doc), 10));
 
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
             CHECK(hasWarn(SMValidator::validate(doc), 10));
 
@@ -1957,7 +1956,7 @@ namespace
             SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
             comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
             comp->setHistory(SMStateEntry::eHistory::Deep);
-            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
             comp->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
             CHECK(countWarn(SMValidator::validate(doc), 10) == 0);
@@ -1975,7 +1974,7 @@ namespace
             addStart(doc);
             doc.getOverview().setName("Machine");
             doc.getTimers().createTimer("Tick");
-            SMMethodEntry* action = doc.getMethods().createMethod("run", eMethod::Action);
+            MethodEntry* action = doc.getMethods().createMethod("run", NEMethod::SmAction);
             action->addElement(MethodParameter(doc.getNextId(), "count", "int32"), true);
             CHECK(countWarn(SMValidator::validate(doc), 14) == 4);   // machine, timer, method, parameter
             CHECK(warnSeverityIs(SMValidator::validate(doc), 14, SMIssue::eSeverity::Info));
@@ -2030,7 +2029,7 @@ namespace
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, "begin", work->getId());
-            doc.getMethods().createMethod("begin", eMethod::Trigger);
+            doc.getMethods().createMethod("begin", NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, "ghost", stateId(doc, "Idle"));
             CHECK(hasRule(SMValidator::validate(doc), 6));
         }
@@ -2041,9 +2040,9 @@ namespace
             StateMachineData doc;
             SMStateEntry* start = addStart(doc);
             SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
-            CHECK(doc.getMethods().createMethod("on", eMethod::Trigger) != nullptr);
-            CHECK(doc.getMethods().createMethod("on", eMethod::Action) != nullptr);
-            CHECK(doc.getMethods().createMethod("on", eMethod::Condition) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", NEMethod::SmTrigger) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", NEMethod::SmAction) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", NEMethod::SmCondition) != nullptr);
 
             start->getTransitions().createTransition(eStim::Trigger, "on", work->getId());
             work->getEntryList().addOperation(new SMActionCall(0, "on"));
@@ -2055,12 +2054,12 @@ namespace
         {   // Positive: two entries of the SAME kind are still a duplicate.
             StateMachineData doc;
             addStart(doc);
-            CHECK(doc.getMethods().createMethod("on", eMethod::Action) != nullptr);
-            CHECK(doc.getMethods().createMethod("on", eMethod::Action) == nullptr);
+            CHECK(doc.getMethods().createMethod("on", NEMethod::SmAction) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", NEMethod::SmAction) == nullptr);
 
             // The creator refuses the second one, so build the collision the way a hand-edited
             // document would carry it.
-            SMMethodEntry* clone = new SMMethodEntry(doc.getNextId(), "on", eMethod::Action, &doc.getMethods());
+            MethodEntry* clone = new MethodEntry(doc.getNextId(), "on", NEMethod::SmAction, NEMethod::stateMachine(), &doc.getMethods());
             doc.getMethods().addElement(clone, false);
             CHECK(hasRule(SMValidator::validate(doc), 4));
         }
@@ -2080,7 +2079,7 @@ namespace
         StateMachineData doc;
         SMStateEntry* start = addStart(doc);
         SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
-        SMMethodEntry* act = doc.getMethods().createMethod("Walk", eMethod::Action);
+        MethodEntry* act = doc.getMethods().createMethod("Walk", NEMethod::SmAction);
         CHECK(act != nullptr);
         MethodParameter required(act);
         required.setName("waiting");
@@ -2722,9 +2721,9 @@ namespace
         {   // A condition's Return is a declared type like any other.
             StateMachineData doc;
             addStart(doc);
-            SMMethodEntry* cond = doc.getMethods().createMethod("IsReady", eMethod::Condition);
+            MethodEntry* cond = doc.getMethods().createMethod("IsReady", NEMethod::SmCondition);
             cond->setReturn("NoSuchType");
-            cond->setImplement(SMMethodEntry::eImplement::Handler);
+            cond->setImplement(MethodEntry::eImplement::Handler);
             CHECK(hasRule(SMValidator::validate(doc), 6));
         }
 

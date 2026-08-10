@@ -19,6 +19,8 @@
 
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 
+#include "lusan/common/XmlSI.hpp"
+
 #include <QFile>
 #include <QFileInfo>
 
@@ -29,7 +31,7 @@ ServiceInterfaceData::ServiceInterfaceData(const QString& filePath /*= QString()
     , mOverviewData (this)
     , mDataTypeData (this)
     , mAttributeData(NEAttribute::ServiceInterface, this)
-    , mMethodData   (this)
+    , mMethodData   (NEMethod::serviceInterface(), this)
     , mConstantData (this)
     , mIncludeData  (this)
     , mOpenSuccess  (false)

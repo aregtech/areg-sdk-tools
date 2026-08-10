@@ -21,7 +21,7 @@
 
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -589,7 +589,7 @@ void SMInternalEditor::showSignature(const SMTransitionEntry* transition)
         // A trigger IS a declared method, so it reads as a signature -- and its parameters are what
         // the operations on this transition may map, which is the next thing the author does.
         text += SMOperationSummary::stimulusSignature(data, *transition);
-        const SMMethodEntry* method = SMDocumentIndex(data).method(name);
+        const MethodEntry* method = SMDocumentIndex(data).method(name);
         if (method != nullptr)
         {
             mSignatureKind = SMReferences::eTarget::Trigger;

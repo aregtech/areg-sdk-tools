@@ -6,7 +6,6 @@
     ${LUSAN}/data/sm/SMGuardTree.cpp
     ${LUSAN}/data/sm/SMImportResolver.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
-    ${LUSAN}/data/sm/SMMethodData.cpp
     ${LUSAN}/data/sm/SMOperation.cpp
     ${LUSAN}/data/sm/SMOverviewData.cpp
     ${LUSAN}/data/sm/SMReferences.cpp
@@ -24,7 +23,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/sm/SMGuardTree.hpp
     ${LUSAN}/data/sm/SMImportResolver.hpp
     ${LUSAN}/data/sm/SMLayoutData.hpp
-    ${LUSAN}/data/sm/SMMethodData.hpp
+    ${LUSAN}/data/sm/SMMethodKind.hpp
     ${LUSAN}/data/sm/SMOperation.hpp
     ${LUSAN}/data/sm/SMOverviewData.hpp
     ${LUSAN}/data/sm/SMReferences.hpp

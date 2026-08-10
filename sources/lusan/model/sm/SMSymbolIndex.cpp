@@ -25,7 +25,7 @@
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -262,7 +262,7 @@ QList<SMSymbolIndex::KnownSymbol> SMSymbolIndex::machineSymbols(const StateMachi
     {
         result.append({ constant.getName(), eSymbolKind::Constant });
     }
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const MethodEntry* method : data.getMethods().getElements())
     {
         if (method != nullptr)
         {
@@ -334,9 +334,9 @@ QStringList SMSymbolIndex::completionWords(const StateMachineData& data, uint32_
         words.append(attr.getName() + QStringLiteral("()"));
     }
     // Condition and action methods are callable from verbatim code; triggers are stimuli.
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const MethodEntry* method : data.getMethods().getElements())
     {
-        if ((method != nullptr) && (method->isCondition() || method->isAction()))
+        if ((method != nullptr) && (NESMMethod::isCondition(method) || NESMMethod::isAction(method)))
         {
             words.append(method->getName() + QStringLiteral("()"));
         }
@@ -391,11 +391,11 @@ QList<SMSymbolIndex::VerbatimBlock> SMSymbolIndex::collectVerbatimBlocks(const S
 {
     QList<VerbatimBlock> result;
 
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const MethodEntry* method : data.getMethods().getElements())
     {
         if ((method != nullptr)
-            && method->isCondition()
-            && (method->getImplement() == SMMethodEntry::eImplement::Embedded)
+            && NESMMethod::isCondition(method)
+            && (method->getImplement() == MethodEntry::eImplement::Embedded)
             && (method->getBody().isEmpty() == false))
         {
             result.append({ method->getId(), method->getBody(), QStringLiteral("condition method body") });

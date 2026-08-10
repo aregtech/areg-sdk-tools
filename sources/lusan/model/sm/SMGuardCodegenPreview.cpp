@@ -20,7 +20,7 @@
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 
@@ -120,7 +120,7 @@ namespace
 
         QString renderCall(const SMGuardNode& node)
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(mData, node.getSymbolId());
             const QString name = (method != nullptr) ? method->getName() : QString();
 
             QStringList args;
@@ -130,7 +130,7 @@ namespace
             }
             const QString argList = args.join(QStringLiteral(", "));
 
-            if ((method != nullptr) && method->isLambdaCondition())
+            if ((method != nullptr) && NESMMethod::isLambdaCondition(method))
             {
                 // A named lambda is generated as a std::function member m<Name>.
                 return QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX) + name

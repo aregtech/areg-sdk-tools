@@ -240,12 +240,12 @@ void SMOutlinePanel::rebuild()
     }
 
     QTreeWidgetItem* methods = addGroup(tr("Methods"));
-    for (const SMMethodEntry* method : data.getMethods().getElements())
+    for (const MethodEntry* method : data.getMethods().getElements())
     {
         if (method != nullptr)
         {
             const QString label = method->getName() + QStringLiteral(" (")
-                    + QString::fromLatin1(SMMethodEntry::toString(method->getMethodType())) + QStringLiteral(")");
+                    + method->getType() + QStringLiteral(")");
             addRegistry(methods, method->getId(), label);
         }
     }

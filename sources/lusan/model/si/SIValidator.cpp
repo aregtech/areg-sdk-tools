@@ -32,10 +32,7 @@
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
-#include "lusan/data/si/SIMethodBase.hpp"
-#include "lusan/data/si/SIMethodBroadcast.hpp"
-#include "lusan/data/si/SIMethodRequest.hpp"
-#include "lusan/data/si/SIMethodResponse.hpp"
+#include "lusan/data/common/MethodDataSection.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
 #include <QCoreApplication>
@@ -55,15 +52,10 @@ namespace
     }
 
     //!< A short label for a method kind, used where a message has to tell two entries apart.
-    QString methodKindWord(SIMethodBase::eMethodType type)
+    QString methodKindWord(const MethodEntry& method)
     {
-        switch (type)
-        {
-        case SIMethodBase::eMethodType::MethodRequest:      return vtr("Request");
-        case SIMethodBase::eMethodType::MethodResponse:     return vtr("Response");
-        case SIMethodBase::eMethodType::MethodBroadcast:    return vtr("Broadcast");
-        default:                                            return vtr("Method");
-        }
+        const QString& label = method.kind().label;
+        return label.isEmpty() ? vtr("Method") : label;
     }
 
     /**
@@ -96,7 +88,7 @@ namespace
         void checkName(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
         void checkType(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& what);
         void checkLiteral(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& literal, const QString& what);
-        void checkParameters(const SIMethodBase& method);
+        void checkParameters(const MethodEntry& method);
 
         void checkOverview();
         void checkDataTypes();
@@ -211,9 +203,9 @@ namespace
         }
     }
 
-    void Ctx::checkParameters(const SIMethodBase& method)
+    void Ctx::checkParameters(const MethodEntry& method)
     {
-        const QString kindWord = methodKindWord(method.getMethodType());
+        const QString kindWord = methodKindWord(method);
         QSet<QString> names;
         bool defaulted = false;
         for (const MethodParameter& param : method.getElements())
@@ -258,7 +250,7 @@ namespace
 
         // An interface a client cannot do anything with is worth saying out loud, but it is a
         // perfectly good starting point for a document being written.
-        if (mData.getAttributeData().getElementCount() == 0 && mData.getMethodData().getAllMethods().isEmpty())
+        if (mData.getAttributeData().getElementCount() == 0 && mData.getMethodData().getElements().isEmpty())
         {
             add(overview.getId(), eDocElementKind::Overview, eSeverity::Info, SIValidator::RULE_EMPTY_INTERFACE
                , vtr("The interface declares no attribute and no method, so it offers nothing to a client"));
@@ -373,18 +365,18 @@ namespace
         // Names are unique per method kind: a request, a response and a broadcast may share one
         // name, but two requests may not.
         QHash<int, QSet<QString> > names;
-        for (SIMethodBase* method : mData.getMethodData().getAllMethods())
+        for (MethodEntry* method : mData.getMethodData().getElements())
         {
             if (method == nullptr)
                 continue;
 
             const uint32_t id = method->getId();
             const QString name = method->getName();
-            const QString kindWord = methodKindWord(method->getMethodType());
+            const QString kindWord = methodKindWord(*method);
             checkName(id, eDocElementKind::Method, name, vtr("The %1").arg(kindWord.toLower()));
             checkParameters(*method);
 
-            QSet<QString>& taken = names[static_cast<int>(method->getMethodType())];
+            QSet<QString>& taken = names[static_cast<int>(method->getKind())];
             if (taken.contains(name))
             {
                 add(id, eDocElementKind::Method, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
@@ -396,28 +388,30 @@ namespace
 
         // A request either answers with a declared response or answers with nothing at all; a name
         // that leads nowhere means the caller waits for a reply the interface never sends.
-        for (SIMethodRequest* request : mData.getMethodData().getRequests())
+        const QList<MethodEntry*> requests  = mData.getMethodData().methodsOfKind(NEMethod::SiRequest);
+        const QList<MethodEntry*> responses = mData.getMethodData().methodsOfKind(NEMethod::SiResponse);
+        for (MethodEntry* request : requests)
         {
             if (request == nullptr)
                 continue;
 
-            const QString response = request->getConectedResponseName();
-            if ((response.isEmpty() == false) && (mData.getMethodData().hasResponse(response) == false))
+            const QString response = request->getReply();
+            if ((response.isEmpty() == false) && (mData.getMethodData().findMethod(response, NEMethod::SiResponse) == nullptr))
             {
                 add(request->getId(), eDocElementKind::Method, eSeverity::Error, SIValidator::RULE_RESPONSE_LINK
                    , vtr("Request '%1' answers with response '%2', which is not declared").arg(request->getName(), response));
             }
         }
 
-        for (SIMethodResponse* response : mData.getMethodData().getResponses())
+        for (MethodEntry* response : responses)
         {
             if (response == nullptr)
                 continue;
 
             bool bound = false;
-            for (SIMethodRequest* request : mData.getMethodData().getRequests())
+            for (MethodEntry* request : requests)
             {
-                bound = bound || ((request != nullptr) && (request->getConectedResponseName() == response->getName()));
+                bound = bound || ((request != nullptr) && (request->getReply() == response->getName()));
             }
 
             if (bound == false)
@@ -530,7 +524,7 @@ namespace
             mConstsUsed.insert(constant.getValue().trimmed());
         }
 
-        for (SIMethodBase* method : mData.getMethodData().getAllMethods())
+        for (MethodEntry* method : mData.getMethodData().getElements())
         {
             if (method == nullptr)
                 continue;
@@ -575,6 +569,9 @@ eIssueField SIValidator::fieldOfRule(int rule)
 
     case SIValidator::RULE_BAD_LITERAL:
         return eIssueField::Value;
+
+    case SIValidator::RULE_RESPONSE_LINK:
+        return eIssueField::Link;
 
     default:
         return eIssueField::None;

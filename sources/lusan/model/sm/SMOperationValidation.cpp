@@ -22,7 +22,7 @@
 #include "lusan/data/common/MethodBase.hpp"
 #include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -47,7 +47,7 @@ namespace
             SMActionCall* call = static_cast<SMActionCall*>(op);
             args = &call->getArguments();
             // By kind: a trigger sharing the action's name is a different declaration.
-            return index.method(call->getAction(), SMMethodEntry::eMethodType::Action);
+            return index.method(call->getAction(), NEMethod::SmAction);
         }
         else if (op->getOperationType() == eOp::EventSend)
         {
