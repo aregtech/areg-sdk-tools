@@ -22,7 +22,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"

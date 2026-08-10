@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_IEDATATYPECONSUMER_HPP
+#ifndef LUSAN_VIEW_COMMON_IEDATATYPECONSUMER_HPP
 #define LUSAN_VIEW_COMMON_IEDATATYPECONSUMER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/IEDataTypeConsumer.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -19,19 +19,17 @@
  *
  ************************************************************************/
 
- /************************************************************************
-  * Includes
-  ************************************************************************/
-
- /************************************************************************
-  * Dependencies
-  ************************************************************************/
-
-class DataTypeCustom;
-
+/**
+ * \class   IEDataTypeConsumer
+ * \brief   A page that offers the document's data types, or declares its elements with them,
+ *          and so has to follow what the Data Types page stores.
+ *
+ *          The page is told that the set changed, not what changed in it, and re-reads the
+ *          document. A delta would not survive an undo: it names objects that a later redo
+ *          replaces, and the page cannot tell an added type from a converted one by pointer.
+ **/
 class IEDataTypeConsumer
 {
-
 protected:
     IEDataTypeConsumer() = default;
     virtual ~IEDataTypeConsumer() = default;
@@ -39,33 +37,11 @@ protected:
 public:
 
     /**
-     * \brief   Triggered when new data type is created.
-     * \param   dataType    New created data type object.
-     * \return  Returns true if new created data type is in the list. Otherwise, returns false.
+     * \brief   Triggered after any change to the document's data types: one was added, removed,
+     *          renamed, converted, reordered, or the whole document was reloaded. The page
+     *          re-reads the current set and re-resolves whatever it declared with it.
      **/
-    virtual void dataTypeCreated(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Triggered when the data type is converted.
-     * \param   oldType     The old data type object.
-     * \param   newType     The new data type object.
-     * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
-     **/
-    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
-
-    /**
-     * \brief   Triggered when the data type is deleted and invalidated.
-     * \param   dataType    The data type object to be deleted.
-     * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
-     **/
-    virtual void dataTypeDeleted(DataTypeCustom* dataType);
-
-    /**
-     * \brief   Triggered when the data type is updated.
-     * \param   dataType    The data type object to update.
-     * \return  Returns true if the data type is updated. Otherwise, returns false.
-     **/
-    virtual void dataTypeUpdated(DataTypeCustom* dataType);
+    virtual void dataTypesChanged();
 };
 
 #endif // LUSAN_VIEW_COMMON_IEDATATYPECONSUMER_HPP

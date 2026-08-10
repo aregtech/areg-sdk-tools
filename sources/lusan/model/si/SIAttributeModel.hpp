@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/data/si/SIAttributeData.hpp"
-#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 
 /**
  * \class   SIAttributeModel
@@ -38,9 +38,9 @@ public:
     /**
      * \brief   Constructor with initialization.
      * \param   attributeData   The instance of SIAttributeData.
-     * \param   dataTypeData    The instance of SIDataTypeData.
+     * \param   dataTypeData    The instance of DataTypeDataSection.
      **/
-    SIAttributeModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData);
+    SIAttributeModel(SIAttributeData& attributeData, DataTypeDataSection& dataTypeData);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -117,21 +117,21 @@ public:
     /**
      * \brief   Returns the instance of data type data object relevant with the attributes.
      **/
-    inline SIDataTypeData& getDataTypeData();
+    inline DataTypeDataSection& getDataTypeData();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
     SIAttributeData&    mData;      //!< Reference to the SIAttributeData instance.
-    SIDataTypeData&     mDataType;  //!< Reference to the SIDataTypeData instance.
+    DataTypeDataSection&     mDataType;  //!< Reference to the DataTypeDataSection instance.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SIAttributeModel class inline function implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIAttributeModel::getDataTypeData()
+inline DataTypeDataSection& SIAttributeModel::getDataTypeData()
 {
     return mDataType;
 }

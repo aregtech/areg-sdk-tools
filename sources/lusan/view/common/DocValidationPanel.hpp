@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMVALIDATIONPANEL_HPP
-#define LUSAN_VIEW_SM_SMVALIDATIONPANEL_HPP
+#ifndef LUSAN_VIEW_COMMON_DOCVALIDATIONPANEL_HPP
+#define LUSAN_VIEW_COMMON_DOCVALIDATIONPANEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,10 +12,10 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMValidationPanel.hpp
+ *  \file        lusan/view/common/DocValidationPanel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM document validation results panel.
+ *  \brief       Lusan application, Document validation results panel.
  *
  ************************************************************************/
 
@@ -24,7 +24,7 @@
  ************************************************************************/
 #include <QWidget>
 
-#include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/model/common/DocIssue.hpp"
 
 #include <QList>
 #include <QPointer>
@@ -36,12 +36,13 @@
 class QLabel;
 class QTreeWidget;
 class QTreeWidgetItem;
-class StateMachineModel;
+class DocValidationController;
+class IEDocumentModel;
 
 #include <QMetaObject>
 
 /**
- * \class   SMValidationPanel
+ * \class   DocValidationPanel
  * \brief   The validation results of every open document, in the output window's Validation
  *          tab: one tree root per document, its findings beneath it, so a message always says
  *          which document it belongs to. Rows come from the one document engine
@@ -54,7 +55,7 @@ class StateMachineModel;
  *          the offending element. F8 / Shift+F8 step through the findings across all documents.
  *          The tree rebuilds, deferred and coalesced, on every change.
  **/
-class SMValidationPanel : public QWidget
+class DocValidationPanel : public QWidget
 {
     Q_OBJECT
 
@@ -62,10 +63,10 @@ class SMValidationPanel : public QWidget
 // Constructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMValidationPanel(QWidget* parent = nullptr);
+    explicit DocValidationPanel(QWidget* parent = nullptr);
 
-    //!< Convenience for a single-document host (tests): constructs and adds \p model.
-    explicit SMValidationPanel(StateMachineModel& model, QWidget* parent = nullptr);
+    //!< Convenience for a single-document host (tests): constructs and adds \p document.
+    explicit DocValidationPanel(IEDocumentModel& document, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -77,10 +78,10 @@ public:
      * \param   owner   Emitted back with a navigation request so the host can reveal the
      *                  element in the right document; may be nullptr in a single-document host.
      **/
-    void addDocument(StateMachineModel& model, const QString& name, QObject* owner = nullptr);
+    void addDocument(IEDocumentModel& document, const QString& name, QObject* owner = nullptr);
 
     //!< Drops a document's root and stops tracking it.
-    void removeDocument(StateMachineModel& model);
+    void removeDocument(IEDocumentModel& document);
 
     //!< The documents currently shown, in tree order.
     int documentCount() const;
@@ -145,22 +146,24 @@ private:
     void purgeClosedDocuments();
 
     /**
-     * \brief   One shown document: its facade, display name, live findings, and signal bindings.
-     *          The facade and the owning window are held weakly -- a document window can be closed
-     *          and destroyed while its findings are still listed, and a raw pointer would then be
-     *          dereferenced by the next rebuild or by activating one of its rows.
+     * \brief   One shown document: its validation controller, the window that owns it, the
+     *          display name, the live findings and the signal bindings. The controller and the
+     *          window are held weakly -- a document window can be closed and destroyed while its
+     *          findings are still listed, and a raw pointer would then be dereferenced by the
+     *          next rebuild or by activating one of its rows. The controller stands in for the
+     *          document facade here, which is not a QObject in every editor.
      **/
     struct Source
     {
-        QPointer<StateMachineModel> model;
-        QPointer<QObject>           owner;
-        QString                     name;
-        QList<SMIssue>              issues;
-        QList<QMetaObject::Connection> bindings;
+        QPointer<DocValidationController>   controller;
+        QPointer<QObject>                   owner;
+        QString                             name;
+        QList<DocIssue>                     issues;
+        QList<QMetaObject::Connection>      bindings;
     };
 
-    //!< The index of \p model in mSources, or -1.
-    int indexOf(const StateMachineModel* model) const;
+    //!< The index of \p document in mSources, or -1.
+    int indexOf(const IEDocumentModel* document) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -177,9 +180,9 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTreeWidget* SMValidationPanel::list() const
+inline QTreeWidget* DocValidationPanel::list() const
 {
     return mList;
 }
 
-#endif  // LUSAN_VIEW_SM_SMVALIDATIONPANEL_HPP
+#endif  // LUSAN_VIEW_COMMON_DOCVALIDATIONPANEL_HPP

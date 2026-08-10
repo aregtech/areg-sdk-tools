@@ -205,9 +205,11 @@ public slots:
      * \param   rule    The check that produced the finding, carried so the landing can put the
      *                  accent on the field at fault rather than only on the element.
      **/
-    void navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule = 0);
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule) override;
 
 public:
+    IEDocumentModel* documentModel() override;
+
     /**
      * \brief   The document facade. The output window's Validation tab binds to it directly,
      *          since findings exist whether or not the expensive Design page has been built.

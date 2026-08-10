@@ -144,6 +144,12 @@ public:
      * \return  \a eIssueField::None when the check names no single field.
      **/
     static eIssueField fieldOfRule(int rule);
+
+    /**
+     * \brief   Why a finding is a finding, and what resolves it, in the author's terms. Empty
+     *          when the message already says everything there is to say.
+     **/
+    static QString explainRule(int rule, DocIssue::eSeverity severity);
 };
 
 #endif  // LUSAN_MODEL_SM_SMVALIDATOR_HPP

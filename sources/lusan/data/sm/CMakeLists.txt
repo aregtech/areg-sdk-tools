@@ -2,7 +2,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/sm/SMAttributeData.cpp
     ${LUSAN}/data/sm/SMClipboard.cpp
     ${LUSAN}/data/sm/SMCondition.cpp
-    ${LUSAN}/data/sm/SMDataTypeData.cpp
     ${LUSAN}/data/sm/SMDocumentCache.cpp
     ${LUSAN}/data/sm/SMEventData.cpp
     ${LUSAN}/data/sm/SMGuardTree.cpp
@@ -23,7 +22,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/sm/SMAttributeData.hpp
     ${LUSAN}/data/sm/SMClipboard.hpp
     ${LUSAN}/data/sm/SMCondition.hpp
-    ${LUSAN}/data/sm/SMDataTypeData.hpp
     ${LUSAN}/data/sm/SMDocumentCache.hpp
     ${LUSAN}/data/sm/SMEventData.hpp
     ${LUSAN}/data/sm/SMGuardTree.hpp

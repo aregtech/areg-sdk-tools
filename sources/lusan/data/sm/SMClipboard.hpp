@@ -27,7 +27,7 @@
 #include "lusan/common/ElementBase.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMIncludeData.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
@@ -98,7 +98,7 @@ private:
 public:
     SMStateData     mStates;            //!< The copied top-level states with their subtrees.
     SMLayoutData    mLayout;            //!< The Node/Edge entries of the copied set and the copied notes.
-    SMDataTypeData  mDataTypes;         //!< Explicitly copied data types.
+    DataTypeDataSection  mDataTypes;         //!< Explicitly copied data types.
     SMAttributeData mAttributes;        //!< Explicitly copied attributes.
     SMEventData     mEvents;            //!< Explicitly copied events.
     SMTimerData     mTimers;            //!< Explicitly copied timers.

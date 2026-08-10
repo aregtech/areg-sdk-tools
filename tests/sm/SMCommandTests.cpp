@@ -18,7 +18,7 @@
  *               serialization, so element IDs are compared too), that redo restores original
  *               IDs with no duplicates, that a composite delete is a single step, that layout
  *               drags coalesce, and that 100+ step histories navigate without corruption.
- *               Also covers SM-07 (SMDataTypeModel): the full data-type/field lifecycle
+ *               Also covers SM-07 (DataTypeModel): the full data-type/field lifecycle
  *               (create/insert/rename/convert/reorder/delete) through the same undo stack.
  *               SM-07-02 extends this with container data types: basic-container object,
  *               key and value type mutations, keyed/non-keyed switching, through the same
@@ -42,7 +42,8 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
@@ -360,7 +361,7 @@ namespace
 
 //////////////////////////////////////////////////////////////////////////
 // Scenario E: SM-07 Data Types page model -- enumeration/structure/imported
-// lifecycle through SMDataTypeModel exactly as SMDataType (the view) drives it,
+// lifecycle through DataTypeModel exactly as DataTypePage (the view) drives it,
 // undo/redo round-trip, and a category conversion composite.
 //////////////////////////////////////////////////////////////////////////
 
@@ -369,7 +370,7 @@ namespace
     void testDataTypeLifecycle()
     {
         StateMachineModel model;
-        SMDataTypeModel&  dt = model.getDataTypeModel();
+        DataTypeModel&  dt = model.getDataTypeModel();
 
         QStringList checkpoints;
         checkpoints << serialize(model.getData());
@@ -473,7 +474,7 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 // Scenario F (SM-07-02): container data types -- direct creation and conversion-from-
 // existing both seed sensible defaults, switching basic container enables/disables and
-// clears the key, key/value are set by name through SMDataTypeModel, undo/redo round-trip.
+// clears the key, key/value are set by name through DataTypeModel, undo/redo round-trip.
 //////////////////////////////////////////////////////////////////////////
 
 namespace
@@ -481,7 +482,7 @@ namespace
     void testContainerLifecycle()
     {
         StateMachineModel model;
-        SMDataTypeModel&  dt = model.getDataTypeModel();
+        DataTypeModel&  dt = model.getDataTypeModel();
 
         QStringList checkpoints;
         checkpoints << serialize(model.getData());
@@ -1356,6 +1357,102 @@ namespace
         CHECK(constants.createConstant(QStringLiteral("AfterReload")) != nullptr);
         CHECK(model.getData().getConstants().getElementCount() == 2);
     }
+
+    //!< The Data Types page model reaches its section the same way, so the same swap must not
+    //!< leave it editing the document that File / New or a reload replaced.
+    void testDataTypesSurviveDocumentSwap()
+    {
+        StateMachineModel model;
+        DataTypeModel& dataTypes = model.getDataTypeModel();
+
+        CHECK(dataTypes.createDataType(QStringLiteral("Before"), DataTypeBase::eCategory::Structure) != nullptr);
+        CHECK(dataTypes.getDataTypeCount() == 1);
+
+        // What "File / New" does.
+        CHECK(model.createNewDocument(QStringLiteral("Swapped")));
+        CHECK(dataTypes.getDataTypeCount() == 0);
+        CHECK(&model.getData().getDataTypes().getElements() == &dataTypes.getCustomDataTypes());
+
+        DataTypeCustom* added = dataTypes.createDataType(QStringLiteral("Point"), DataTypeBase::eCategory::Structure);
+        CHECK(added != nullptr);
+        CHECK(model.getData().getDataTypes().getElementCount() == 1);
+
+        // The edit landed in the new document, and undo takes it back out of that same one.
+        dataTypes.setDescription(added, QStringLiteral("a point"));
+        CHECK(model.getData().getDataTypes().findCustomDataType(added->getId())->getDescription() == QStringLiteral("a point"));
+        model.getUndoStack().undo();
+        CHECK(model.getData().getDataTypes().findCustomDataType(added->getId())->getDescription().isEmpty());
+
+        // And again after a reload, which swaps the data object a second time.
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = dir.filePath(QStringLiteral("swap-types.fsml"));
+        CHECK(model.saveToFile(path));
+        CHECK(model.loadFromFile(path));
+        CHECK(dataTypes.getDataTypeCount() == 1);
+        CHECK(dataTypes.findDataType(QStringLiteral("Point")) != nullptr);
+        CHECK(dataTypes.createDataType(QStringLiteral("AfterReload"), DataTypeBase::eCategory::Enumeration) != nullptr);
+        CHECK(model.getData().getDataTypes().getElementCount() == 2);
+    }
+
+    //!< A declared type is marked as a problem when the name it holds resolves to nothing. The
+    //!< model keeps those resolutions current through the notifier, so an edit, an undo and a
+    //!< redo all leave the same answer as loading the document from a file would.
+    void testDeclaredTypesStayResolved()
+    {
+        StateMachineModel model;
+        DataTypeModel& dt = model.getDataTypeModel();
+
+        // A new container declares Array<bool>. Nothing is wrong with it: bool is a primitive the
+        // document knows, so the row must not be marked.
+        DataTypeContainer* list = static_cast<DataTypeContainer*>(dt.createDataType(QStringLiteral("List"), DataTypeBase::eCategory::Container));
+        CHECK(list != nullptr);
+        CHECK(list->getValueDataType() != nullptr);
+
+        // A value type nothing declares is a problem, and stops being one when it is declared.
+        dt.setContainerValue(list, QStringLiteral("Item"));
+        CHECK(list->getValueDataType() == nullptr);
+        DataTypeCustom* item = dt.createDataType(QStringLiteral("Item"), DataTypeBase::eCategory::Structure);
+        CHECK(item != nullptr);
+        CHECK(list->getValueDataType() == item);
+
+        // A rename carries the reference with it, and undoing the rename carries it back.
+        dt.renameDataType(item, QStringLiteral("Element"));
+        CHECK(list->getValue() == QStringLiteral("Element"));
+        CHECK(list->getValueDataType() == item);
+        model.getUndoStack().undo();
+        CHECK(list->getValue() == QStringLiteral("Item"));
+        CHECK(list->getValueDataType() == item);
+
+        // Deleting the declared type drops the reference rather than leaving a pointer to a type
+        // the document no longer holds; undo brings both back.
+        dt.deleteDataType(item);
+        CHECK(list->getValueDataType() == nullptr);
+        CHECK(list->getValue() == QStringLiteral("Item"));
+        model.getUndoStack().undo();
+        CHECK(list->getValueDataType() != nullptr);
+
+        // A keyed container is judged on both of its element types.
+        dt.setContainerObject(list, QStringLiteral("HashMap"));
+        CHECK(list->canHaveKey());
+        dt.setContainerKey(list, QStringLiteral("uint32"));
+        CHECK(list->getKeyDataType() != nullptr);
+        dt.setContainerKey(list, QStringLiteral("Missing"));
+        CHECK(list->getKeyDataType() == nullptr);
+
+        // A structure field declares a type the same way and is kept current the same way.
+        DataTypeStructure* rec = static_cast<DataTypeStructure*>(dt.createDataType(QStringLiteral("Rec"), DataTypeBase::eCategory::Structure));
+        CHECK(rec != nullptr);
+        ElementBase* created = dt.createField(rec, QStringLiteral("count"));
+        CHECK(created != nullptr);
+        const uint32_t fieldId = (created != nullptr ? created->getId() : 0u);
+        dt.setFieldType(rec, fieldId, QStringLiteral("uint32"));
+        CHECK(rec->findElement(fieldId)->getParamType() != nullptr);
+        dt.setFieldType(rec, fieldId, QStringLiteral("Nothing"));
+        CHECK(rec->findElement(fieldId)->getParamType() == nullptr);
+        model.getUndoStack().undo();
+        CHECK(rec->findElement(fieldId)->getParamType() != nullptr);
+    }
 }
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -1378,6 +1475,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testRemoveComposite();
     testStimulusSilentRebind();
     testConstantsSurviveDocumentSwap();
+    testDataTypesSurviveDocumentSwap();
+    testDeclaredTypesStayResolved();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

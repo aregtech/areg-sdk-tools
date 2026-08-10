@@ -24,7 +24,7 @@
 #include "lusan/model/common/DocUndoStack.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/sm/SMOverviewModel.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
@@ -32,7 +32,7 @@
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
-#include "lusan/model/sm/SMValidationController.hpp"
+#include "lusan/model/common/DocValidationController.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -96,6 +96,12 @@ public:
     inline ConstantDataSection& getConstantSection() override;
 
     /**
+     * \brief   The document's `DataTypeList` section, read from the data object that is current
+     *          now for the same reason as the constants section above.
+     **/
+    inline DataTypeDataSection& getDataTypeSection() override;
+
+    /**
      * \brief   Builds the command that rewrites whatever refers to a renamed element by name.
      *          A state machine reaches guards, operations and transition stimuli this way, so
      *          unlike a service interface it always has repair work to do.
@@ -104,8 +110,16 @@ public:
                                          , const QString& oldName, const QString& newName
                                          , QUndoCommand* parent) override;
 
+    /**
+     * \brief   Names a state or a transition for a results row. A transition has no name of its
+     *          own, so it is identified by what it reacts to and where it leads, the way it is
+     *          labelled on the canvas. Everything else is left to its kind: those messages quote
+     *          the name that failed already.
+     **/
+    QString describeElement(uint32_t id, eDocElementKind kind) const override;
+
     inline SMOverviewModel& getOverviewModel();
-    inline SMDataTypeModel& getDataTypeModel();
+    inline DataTypeModel& getDataTypeModel();
     inline SMAttributeModel& getAttributeModel();
     inline SMEventModel& getEventModel();
     inline SMTimerModel& getTimerModel();
@@ -113,7 +127,7 @@ public:
     inline ConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
     inline SMSelectionModel& getSelectionModel();
-    inline SMValidationController& getValidationController();
+    inline DocValidationController& getValidationController() override;
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -133,7 +147,7 @@ private:
     DocUndoStack    mUndoStack;
     QTimer          mAutosaveTimer;
     SMOverviewModel mOverviewModel;
-    SMDataTypeModel mDataTypeModel;
+    DataTypeModel mDataTypeModel;
     SMAttributeModel mAttributeModel;
     SMEventModel    mEventModel;
     SMTimerModel    mTimerModel;
@@ -143,7 +157,7 @@ private:
     SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
     QString         mReadOnlyOrigin;    //!< Non-empty only for a read-only import view.
-    SMValidationController mValidationController; //!< Background structural/reference validation.
+    DocValidationController mValidationController; //!< Background structural/reference validation.
 };
 
 inline bool StateMachineModel::openSucceeded() const
@@ -177,6 +191,11 @@ inline ConstantDataSection& StateMachineModel::getConstantSection()
     return mData->getConstants();
 }
 
+inline DataTypeDataSection& StateMachineModel::getDataTypeSection()
+{
+    return mData->getDataTypes();
+}
+
 inline bool StateMachineModel::isReadOnly() const
 {
     return mUndoStack.isReadOnly();
@@ -207,7 +226,7 @@ inline SMOverviewModel& StateMachineModel::getOverviewModel()
     return mOverviewModel;
 }
 
-inline SMDataTypeModel& StateMachineModel::getDataTypeModel()
+inline DataTypeModel& StateMachineModel::getDataTypeModel()
 {
     return mDataTypeModel;
 }
@@ -247,7 +266,7 @@ inline SMSelectionModel& StateMachineModel::getSelectionModel()
     return mSelectionModel;
 }
 
-inline SMValidationController& StateMachineModel::getValidationController()
+inline DocValidationController& StateMachineModel::getValidationController()
 {
     return mValidationController;
 }

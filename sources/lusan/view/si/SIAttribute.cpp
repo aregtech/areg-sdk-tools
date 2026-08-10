@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIAttribute.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -132,81 +133,54 @@ SIAttribute::~SIAttribute()
     mWidget->mPanels->removeWidget(mDetails);
 }
 
-void SIAttribute::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+void SIAttribute::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
-    blockBasicSignals(true);
-    mTypeModel->dataTypeConverted(oldType, newType);
-    QList<uint32_t> list = mModel.replaceDataType(oldType, newType);
-    if (list.isEmpty() == false)
-    {
-        QTreeWidget* table = mList->ctrlTableList();
-        int count = table->topLevelItemCount();
-        int current = table->indexOfTopLevelItem(table->currentItem());
-        for (int i = 0; i < count; ++i)
-        {
-            AttributeEntry* entry = findAttribute(i);
-            if ((entry != nullptr) && (list.contains(entry->getId())))
-            {
-                QTreeWidgetItem* item = table->topLevelItem(i);
-                item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(newType));
-                if (i == current)
-                {
-                    updateDetails(entry, false);
-                }
-            }
-        }
-    }
-
-    blockBasicSignals(false);
-}
-
-void SIAttribute::dataTypeCreated(DataTypeCustom* dataType)
-{
-    mTypeModel->dataTypeCreated(dataType);
-}
-
-void SIAttribute::dataTypeDeleted(DataTypeCustom* dataType)
-{
-    blockBasicSignals(true);
-    mTypeModel->dataTypeDeleted(dataType);
     QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
-    int current = table->indexOfTopLevelItem(table->currentItem());
+    for (int i = 0; i < table->topLevelItemCount(); ++i)
+    {
+        QTreeWidgetItem* item = table->topLevelItem(i);
+        if (item->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt() != id)
+            continue;
+
+        table->setCurrentItem(item);
+        table->scrollToItem(item);
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+        case eIssueField::Type:         WidgetHighlight::reveal(mDetails->ctrlTypes());       break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+        default:                                                                              break;
+        }
+
+        return;
+    }
+}
+
+void SIAttribute::dataTypesChanged()
+{
+    blockBasicSignals(true);
+    mTypeModel->updateDataTypeLists();
+
+    // Every attribute keeps a resolved pointer to its declared type beside the type name. A type
+    // that is gone, replaced by a conversion or renamed leaves that pointer wrong, so it is
+    // dropped and looked up again by name. A name with nothing behind it stays as typed.
+    const QList<DataTypeCustom*>& customTypes = mModel.getDataTypeData().getCustomDataTypes();
+    QTreeWidget* table = mList->ctrlTableList();
+    const int count = table->topLevelItemCount();
+    const int current = table->indexOfTopLevelItem(table->currentItem());
     for (int i = 0; i < count; ++i)
     {
         AttributeEntry* entry = findAttribute(i);
-        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase*>(dataType))
-        {
-            entry->setParamType(nullptr);
-            setTexts(i, *entry);
-            if (i == current)
-            {
-                updateDetails(entry, false);
-            }
-        }
-    }
+        if (entry == nullptr)
+            continue;
 
-    blockBasicSignals(false);
-}
-
-void SIAttribute::dataTypeUpdated(DataTypeCustom* dataType)
-{
-    blockBasicSignals(true);
-    Q_ASSERT(dataType != nullptr);
-    mTypeModel->dataTypeUpdated(dataType);
-    QTreeWidget* table = mList->ctrlTableList();
-    int count = table->topLevelItemCount();
-    int current = table->indexOfTopLevelItem(table->currentItem());
-    for (int i = 0; i < count; ++i)
-    {
-        AttributeEntry* entry = findAttribute(i);
-        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase*>(dataType))
+        entry->invalidate();
+        entry->validate(customTypes);
+        table->topLevelItem(i)->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry->getParamType()));
+        setTexts(i, *entry);
+        if (i == current)
         {
-            setTexts(i, *entry);
-            if (i == current)
-            {
-                updateDetails(entry, false);
-            }
+            updateDetails(entry, false);
         }
     }
 

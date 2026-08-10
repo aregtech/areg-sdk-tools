@@ -38,7 +38,7 @@
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
@@ -252,7 +252,9 @@ namespace
         issue.severity  = sev;
         issue.rule      = (sev != eSeverity::Error) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
         issue.message   = message;
-        issue.detail    = detail;
+        // A check that explains itself keeps its own words; the rest fall back to what the rule
+        // means, so a finding always reaches the results panel with a reason attached.
+        issue.detail    = detail.isEmpty() ? SMValidator::explainRule(issue.rule, sev) : detail;
         mIssues.append(issue);
     }
 
@@ -2095,6 +2097,53 @@ QList<SMIssue> SMValidator::validate(const StateMachineData& data)
 {
     Ctx ctx(data);
     return ctx.run();
+}
+
+QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
+{
+    if (rule > SMValidator::WARNING_RULE_BASE)
+    {
+        switch (rule - SMValidator::WARNING_RULE_BASE)
+        {
+        case 1:  return vtr("The state cannot be reached by any transition, so its behaviour never runs.");
+        case 2:  return vtr("The state has no way out. Once the machine enters it, it stays there.");
+        case 3:  return vtr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
+        case 4:  return vtr("Nothing in the machine uses this declaration. Keep it if you are about to, or remove it.");
+        case 5:  return vtr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
+        case 6:  return vtr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
+        case 7:  return vtr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
+        case 10: return vtr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
+        case 11: return vtr("The inline code block generates nothing. Write the code, or remove the block.");
+        default: return vtr("Advisory only. The document still generates.");
+        }
+    }
+
+    switch (rule)
+    {
+    case 1:  return vtr("Every machine level needs exactly one Start state; it marks where execution begins.");
+    case 2:  return vtr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
+    case 3:  return vtr("A Final state is terminal and cannot have outgoing transitions.");
+    case 4:  return vtr("Two entries of the same kind share this name. Names are unique per kind, so a trigger, an action and a condition may all be called the same, but two triggers may not.");
+    case 5:  return vtr("Identifiers must be usable in generated code: a letter or underscore first, then letters, digits or underscores.");
+    case 6:  return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
+    case 7:  return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
+    case 8:  return vtr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
+    case 9:  return vtr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");
+    case 10: return vtr("The argument does not match the parameter it is bound to.");
+    case 11: return vtr("The call passes a different number of arguments than the declaration takes.");
+    case 12: return vtr("A Param reference resolves against the stimulus of its own transition; this stimulus declares no such parameter.");
+    case 13: return vtr("The literal cannot be read as a value of the target type.");
+    case 14: return vtr("The two operands have no common type, so the comparison has no defined result.");
+    case 16: return vtr("The declared type is not in the data-type registry.");
+    case 18: return vtr("A submachine belongs on a composite state; Start and Final cannot carry one.");
+    case 20: return vtr("The condition row is incomplete: an operator needs both operands.");
+    case 21: return vtr("A condition that takes parameters may appear as the left operand only. The right side must be a plain value.");
+    case 23: return vtr("The value source and the target disagree; pick a source of a compatible kind.");
+    case 24: return vtr("The element refers to itself, directly or through a cycle.");
+    default: return (severity == DocIssue::eSeverity::Error)
+                        ? vtr("The document will not generate until this is resolved.")
+                        : QString();
+    }
 }
 
 eIssueField SMValidator::fieldOfRule(int rule)

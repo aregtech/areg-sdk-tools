@@ -9,33 +9,33 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/model/sm/SMDataTypeModel.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/model/common/DataTypeModel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page model.
+ *  \brief       Lusan application, the Data Types page model shared by every document editor.
  *
  ************************************************************************/
 
-#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 
-#include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
-#include "lusan/data/common/DataTypeStructure.hpp"
-#include "lusan/data/common/DataTypeImported.hpp"
-#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
-#include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/data/common/DataTypeImported.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/EnumEntry.hpp"
-#include "lusan/data/sm/SMDataTypeData.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
+
+#include <QObject>
 
 namespace
 {
-    //!< Deprecation flag + hint committed as one undo step, matching the single user
-    //!< gesture (toggling the checkbox resets the hint the same way SI's widget does).
+    //!< Deprecation flag and hint committed as one undo step, matching the single user gesture
+    //!< (toggling the checkbox resets the hint).
     struct DeprecationState
     {
         bool    flag { false };
@@ -51,64 +51,83 @@ namespace
     };
 }
 
-SMDataTypeModel::SMDataTypeModel(StateMachineModel& facade)
-    : mFacade(facade)
+DataTypeModel::DataTypeModel(IEDocumentModel& document)
+    : QObject   ( )
+    , mDocument (document)
 {
+    // A structure field and a container key/value keep the type object they resolved to beside
+    // the name they were given, and that object is what tells a valid declaration from a broken
+    // one. Adding, removing, converting or renaming a type changes what those names resolve to,
+    // so they are all looked up again here, once per change. The document facade builds this
+    // model before it builds any page, so the section is coherent by the time a page reads it.
+    DocModelNotifier& notifier = mDocument.getNotifier();
+    auto onTypesChanged = [this](uint32_t, eDocElementKind kind)
+    {
+        if (kind == eDocElementKind::DataType)
+        {
+            types().refreshTypeReferences();
+        }
+    };
+
+    connect(&notifier, &DocModelNotifier::elementAdded  , this, onTypesChanged);
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, onTypesChanged);
+    connect(&notifier, &DocModelNotifier::elementChanged, this, onTypesChanged);
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, [this]() { types().refreshTypeReferences(); });
 }
 
-const SMDataTypeData& SMDataTypeModel::getDataTypeData() const
+const DataTypeDataSection& DataTypeModel::getDataTypeData() const
 {
     return types();
 }
 
-SMDataTypeData& SMDataTypeModel::getDataTypeData()
+DataTypeDataSection& DataTypeModel::getDataTypeData()
 {
     return types();
 }
 
-const QList<DataTypeCustom*>& SMDataTypeModel::getCustomDataTypes() const
+const QList<DataTypeCustom*>& DataTypeModel::getCustomDataTypes() const
 {
     return types().getCustomDataTypes();
 }
 
-int SMDataTypeModel::getDataTypeCount() const
+int DataTypeModel::getDataTypeCount() const
 {
-    return types().getCustomDataTypes().size();
+    return static_cast<int>(types().getCustomDataTypes().size());
 }
 
-DataTypeCustom* SMDataTypeModel::findDataType(const QString& name) const
+DataTypeCustom* DataTypeModel::findDataType(const QString& name) const
 {
     return types().findCustomDataType(name);
 }
 
-DataTypeCustom* SMDataTypeModel::findDataType(uint32_t id) const
+DataTypeCustom* DataTypeModel::findDataType(uint32_t id) const
 {
     return types().findCustomDataType(id);
 }
 
-int SMDataTypeModel::findIndex(uint32_t id) const
+int DataTypeModel::findIndex(uint32_t id) const
 {
     return types().findIndex(id);
 }
 
-int SMDataTypeModel::findIndex(const DataTypeCustom* dataType) const
+int DataTypeModel::findIndex(const DataTypeCustom* dataType) const
 {
     return (dataType != nullptr ? types().findIndex(dataType->getId()) : -1);
 }
 
-const QList<FieldEntry>& SMDataTypeModel::getStructChildren(const DataTypeStructure* dataType) const
+const QList<FieldEntry>& DataTypeModel::getStructChildren(const DataTypeStructure* dataType) const
 {
     static const QList<FieldEntry> _empty;
     return (dataType != nullptr ? dataType->getElements() : _empty);
 }
 
-const QList<EnumEntry>& SMDataTypeModel::getEnumChildren(const DataTypeEnum* dataType) const
+const QList<EnumEntry>& DataTypeModel::getEnumChildren(const DataTypeEnum* dataType) const
 {
     static const QList<EnumEntry> _empty;
     return (dataType != nullptr ? dataType->getElements() : _empty);
 }
 
-ElementBase* SMDataTypeModel::findChild(const DataTypeCustom* dataType, uint32_t childId) const
+ElementBase* DataTypeModel::findChild(const DataTypeCustom* dataType, uint32_t childId) const
 {
     if (dataType == nullptr)
         return nullptr;
@@ -124,7 +143,7 @@ ElementBase* SMDataTypeModel::findChild(const DataTypeCustom* dataType, uint32_t
     }
 }
 
-int SMDataTypeModel::findChildIndex(const DataTypeCustom* dataType, uint32_t childId) const
+int DataTypeModel::findChildIndex(const DataTypeCustom* dataType, uint32_t childId) const
 {
     if (dataType == nullptr)
         return -1;
@@ -140,7 +159,7 @@ int SMDataTypeModel::findChildIndex(const DataTypeCustom* dataType, uint32_t chi
     }
 }
 
-int SMDataTypeModel::findChildIndex(const DataTypeCustom* dataType, const QString& childName) const
+int DataTypeModel::findChildIndex(const DataTypeCustom* dataType, const QString& childName) const
 {
     if (dataType == nullptr)
         return -1;
@@ -156,7 +175,7 @@ int SMDataTypeModel::findChildIndex(const DataTypeCustom* dataType, const QStrin
     }
 }
 
-int SMDataTypeModel::getChildCount(const DataTypeCustom* dataType) const
+int DataTypeModel::getChildCount(const DataTypeCustom* dataType) const
 {
     if (dataType == nullptr)
         return 0;
@@ -172,26 +191,17 @@ int SMDataTypeModel::getChildCount(const DataTypeCustom* dataType) const
     }
 }
 
-DocModelNotifier& SMDataTypeModel::getNotifier() const
+DocModelNotifier& DataTypeModel::getNotifier() const
 {
-    return mFacade.getNotifier();
+    return mDocument.getNotifier();
 }
 
-DataTypeCustom* SMDataTypeModel::createDataType(const QString& name, DataTypeBase::eCategory category)
+IEDocumentModel& DataTypeModel::getDocument() const
 {
-    if (findDataType(name) != nullptr)
-        return nullptr;
-
-    DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(category);
-    if (dataType == nullptr)
-        return nullptr;
-
-    dataType->setName(name);
-    mFacade.getUndoStack().push(new TDocAddCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType, eDocElementKind::DataType, QObject::tr("Add data type")));
-    return dataType;
+    return mDocument;
 }
 
-DataTypeCustom* SMDataTypeModel::insertDataType(int position, const QString& name, DataTypeBase::eCategory category)
+DataTypeCustom* DataTypeModel::createDataType(const QString& name, DataTypeBase::eCategory category)
 {
     if (findDataType(name) != nullptr)
         return nullptr;
@@ -201,19 +211,33 @@ DataTypeCustom* SMDataTypeModel::insertDataType(int position, const QString& nam
         return nullptr;
 
     dataType->setName(name);
-    mFacade.getUndoStack().push(buildInsertCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType, position, 0u, eDocElementKind::DataType, QObject::tr("Insert data type")));
+    mDocument.getUndoStack().push(new TDocAddCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType, eDocElementKind::DataType, QObject::tr("Add data type")));
     return dataType;
 }
 
-void SMDataTypeModel::deleteDataType(DataTypeCustom* dataType)
+DataTypeCustom* DataTypeModel::insertDataType(int position, const QString& name, DataTypeBase::eCategory category)
+{
+    if (findDataType(name) != nullptr)
+        return nullptr;
+
+    DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(category);
+    if (dataType == nullptr)
+        return nullptr;
+
+    dataType->setName(name);
+    mDocument.getUndoStack().push(buildInsertCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType, position, 0u, eDocElementKind::DataType, QObject::tr("Insert data type")));
+    return dataType;
+}
+
+void DataTypeModel::deleteDataType(DataTypeCustom* dataType)
 {
     if (dataType == nullptr)
         return;
 
-    mFacade.getUndoStack().push(new TDocRemoveCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType->getId(), eDocElementKind::DataType, QObject::tr("Delete data type")));
+    mDocument.getUndoStack().push(new TDocRemoveCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType->getId(), eDocElementKind::DataType, QObject::tr("Delete data type")));
 }
 
-DataTypeCustom* SMDataTypeModel::convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category)
+DataTypeCustom* DataTypeModel::convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category)
 {
     if ((dataType == nullptr) || (dataType->getCategory() == category))
         return dataType;
@@ -231,32 +255,39 @@ DataTypeCustom* SMDataTypeModel::convertDataType(DataTypeCustom* dataType, DataT
     DocCompositeCommand* composite = new DocCompositeCommand(getNotifier(), QObject::tr("Convert data type"));
     new TDocRemoveCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), dataType->getId(), eDocElementKind::DataType, QObject::tr("Convert data type"), composite);
     buildInsertCommandAt<DataTypeCustom*, DocumentElem>(getNotifier(), types(), newType, index, appendIndexAfterRemove, 0u, eDocElementKind::DataType, QObject::tr("Convert data type"), composite);
-    mFacade.getUndoStack().push(composite);
+    mDocument.getUndoStack().push(composite);
     return newType;
 }
 
-void SMDataTypeModel::swapDataTypes(uint32_t firstId, uint32_t secondId)
+void DataTypeModel::swapDataTypes(uint32_t firstId, uint32_t secondId)
 {
     const int index1 = types().findIndex(firstId);
     const int index2 = types().findIndex(secondId);
     if ((index1 < 0) || (index2 < 0))
         return;
 
-    mFacade.getUndoStack().push(new TDocReorderCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), index1, index2, 0u, eDocElementKind::DataType, QObject::tr("Reorder data types")));
+    mDocument.getUndoStack().push(new TDocReorderCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), index1, index2, 0u, eDocElementKind::DataType, QObject::tr("Reorder data types")));
 }
 
-void SMDataTypeModel::renameDataType(DataTypeCustom* dataType, const QString& newName)
+void DataTypeModel::renameDataType(DataTypeCustom* dataType, const QString& newName)
 {
     if ((dataType == nullptr) || (newName == dataType->getName()))
         return;
 
     const uint32_t id = dataType->getId();
+    const QString oldName{ dataType->getName() };
     auto getter = [dataType]() -> QString { return dataType->getName(); };
     auto setter = [dataType](const QString& value) { dataType->setName(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, newName, QObject::tr("Rename data type")));
+
+    const QString text{ QObject::tr("Rename data type") };
+    DocCompositeCommand* composite = new DocCompositeCommand(getNotifier(), text);
+    new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, newName, text, composite);
+    // A document that reaches its data types by name repairs those references in the same step.
+    mDocument.createRenameSideEffects(eDocElementKind::DataType, id, oldName, newName, composite);
+    mDocument.getUndoStack().push(composite);
 }
 
-void SMDataTypeModel::setDescription(DataTypeCustom* dataType, const QString& text)
+void DataTypeModel::setDescription(DataTypeCustom* dataType, const QString& text)
 {
     if ((dataType == nullptr) || (text == dataType->getDescription()))
         return;
@@ -264,10 +295,10 @@ void SMDataTypeModel::setDescription(DataTypeCustom* dataType, const QString& te
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getDescription(); };
     auto setter = [dataType](const QString& value) { dataType->setDescription(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, text, QObject::tr("Set description")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, text, QObject::tr("Set description")));
 }
 
-void SMDataTypeModel::setDeprecated(DataTypeCustom* dataType, bool deprecated)
+void DataTypeModel::setDeprecated(DataTypeCustom* dataType, bool deprecated)
 {
     if (dataType == nullptr)
         return;
@@ -276,10 +307,10 @@ void SMDataTypeModel::setDeprecated(DataTypeCustom* dataType, bool deprecated)
     auto getter = [dataType]() -> DeprecationState { return DeprecationState{ dataType->getIsDeprecated(), dataType->getDeprecateHint() }; };
     auto setter = [dataType](const DeprecationState& value) { dataType->setIsDeprecated(value.flag, value.hint); };
     const DeprecationState next{ deprecated, deprecated ? dataType->getDeprecateHint() : QString() };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), id, eDocElementKind::DataType, getter, setter, next, QObject::tr("Set deprecated")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), id, eDocElementKind::DataType, getter, setter, next, QObject::tr("Set deprecated")));
 }
 
-void SMDataTypeModel::setDeprecateHint(DataTypeCustom* dataType, const QString& hint)
+void DataTypeModel::setDeprecateHint(DataTypeCustom* dataType, const QString& hint)
 {
     if ((dataType == nullptr) || (dataType->getIsDeprecated() == false) || (hint == dataType->getDeprecateHint()))
         return;
@@ -287,10 +318,10 @@ void SMDataTypeModel::setDeprecateHint(DataTypeCustom* dataType, const QString& 
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getDeprecateHint(); };
     auto setter = [dataType](const QString& value) { dataType->setDeprecateHint(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, hint, QObject::tr("Set deprecation hint")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, hint, QObject::tr("Set deprecation hint")));
 }
 
-void SMDataTypeModel::setEnumDerived(DataTypeEnum* dataType, const QString& derived)
+void DataTypeModel::setEnumDerived(DataTypeEnum* dataType, const QString& derived)
 {
     if ((dataType == nullptr) || (derived == dataType->getDerived()))
         return;
@@ -298,10 +329,10 @@ void SMDataTypeModel::setEnumDerived(DataTypeEnum* dataType, const QString& deri
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getDerived(); };
     auto setter = [dataType](const QString& value) { dataType->setDerived(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, derived, QObject::tr("Set enumeration derived type")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, derived, QObject::tr("Set enumeration derived type")));
 }
 
-void SMDataTypeModel::setImportLocation(DataTypeImported* dataType, const QString& location)
+void DataTypeModel::setImportLocation(DataTypeImported* dataType, const QString& location)
 {
     if ((dataType == nullptr) || (location == dataType->getLocation()))
         return;
@@ -309,10 +340,10 @@ void SMDataTypeModel::setImportLocation(DataTypeImported* dataType, const QStrin
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getLocation(); };
     auto setter = [dataType](const QString& value) { dataType->setLocation(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, location, QObject::tr("Set import location")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, location, QObject::tr("Set import location")));
 }
 
-void SMDataTypeModel::setImportNamespace(DataTypeImported* dataType, const QString& space)
+void DataTypeModel::setImportNamespace(DataTypeImported* dataType, const QString& space)
 {
     if ((dataType == nullptr) || (space == dataType->getNamespace()))
         return;
@@ -320,10 +351,10 @@ void SMDataTypeModel::setImportNamespace(DataTypeImported* dataType, const QStri
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getNamespace(); };
     auto setter = [dataType](const QString& value) { dataType->setNamespace(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, space, QObject::tr("Set import namespace")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, space, QObject::tr("Set import namespace")));
 }
 
-void SMDataTypeModel::setImportObject(DataTypeImported* dataType, const QString& object)
+void DataTypeModel::setImportObject(DataTypeImported* dataType, const QString& object)
 {
     if ((dataType == nullptr) || (object == dataType->getObject()))
         return;
@@ -331,10 +362,38 @@ void SMDataTypeModel::setImportObject(DataTypeImported* dataType, const QString&
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getObject(); };
     auto setter = [dataType](const QString& value) { dataType->setObject(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, object, QObject::tr("Set import object")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, object, QObject::tr("Set import object")));
 }
 
-void SMDataTypeModel::setContainerObject(DataTypeContainer* dataType, const QString& basicName)
+void DataTypeModel::setImportQualifiedName(DataTypeImported* dataType, const QString& qualified)
+{
+    if (dataType == nullptr)
+        return;
+
+    const int pos = qualified.lastIndexOf(QStringLiteral("::"));
+    const QString space { pos >= 0 ? qualified.left(pos) : QString() };
+    const QString object{ pos >= 0 ? qualified.mid(pos + 2) : qualified };
+    if ((space == dataType->getNamespace()) && (object == dataType->getObject()))
+        return;
+
+    const uint32_t id = dataType->getId();
+    const QString text{ QObject::tr("Set imported type") };
+    DocCompositeCommand* composite = new DocCompositeCommand(getNotifier(), text);
+    {
+        auto getter = [dataType]() -> QString { return dataType->getNamespace(); };
+        auto setter = [dataType](const QString& value) { dataType->setNamespace(value); };
+        new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, space, text, composite);
+    }
+    {
+        auto getter = [dataType]() -> QString { return dataType->getObject(); };
+        auto setter = [dataType](const QString& value) { dataType->setObject(value); };
+        new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, object, text, composite);
+    }
+
+    mDocument.getUndoStack().push(composite);
+}
+
+void DataTypeModel::setContainerObject(DataTypeContainer* dataType, const QString& basicName)
 {
     if ((dataType == nullptr) || (basicName == dataType->getContainer()))
         return;
@@ -348,10 +407,10 @@ void SMDataTypeModel::setContainerObject(DataTypeContainer* dataType, const QStr
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> ContainerObjectState { return ContainerObjectState{ dataType->getContainer(), dataType->getKey() }; };
     auto setter = [dataType](const ContainerObjectState& value) { dataType->setContainer(value.container); dataType->setKey(value.key); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<ContainerObjectState>(getNotifier(), id, eDocElementKind::DataType, getter, setter, ContainerObjectState{ basicName, nextKey }, QObject::tr("Set container object")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<ContainerObjectState>(getNotifier(), id, eDocElementKind::DataType, getter, setter, ContainerObjectState{ basicName, nextKey }, QObject::tr("Set container object")));
 }
 
-void SMDataTypeModel::setContainerKey(DataTypeContainer* dataType, const QString& typeName)
+void DataTypeModel::setContainerKey(DataTypeContainer* dataType, const QString& typeName)
 {
     if ((dataType == nullptr) || (typeName == dataType->getKey()))
         return;
@@ -359,10 +418,10 @@ void SMDataTypeModel::setContainerKey(DataTypeContainer* dataType, const QString
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getKey(); };
     auto setter = [dataType](const QString& value) { dataType->setKey(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set container key type")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set container key type")));
 }
 
-void SMDataTypeModel::setContainerValue(DataTypeContainer* dataType, const QString& typeName)
+void DataTypeModel::setContainerValue(DataTypeContainer* dataType, const QString& typeName)
 {
     if ((dataType == nullptr) || (typeName == dataType->getValue()))
         return;
@@ -370,10 +429,10 @@ void SMDataTypeModel::setContainerValue(DataTypeContainer* dataType, const QStri
     const uint32_t id = dataType->getId();
     auto getter = [dataType]() -> QString { return dataType->getValue(); };
     auto setter = [dataType](const QString& value) { dataType->setValue(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set container value type")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set container value type")));
 }
 
-ElementBase* SMDataTypeModel::createField(DataTypeCustom* dataType, const QString& name)
+ElementBase* DataTypeModel::createField(DataTypeCustom* dataType, const QString& name)
 {
     if (dataType == nullptr)
         return nullptr;
@@ -382,24 +441,24 @@ ElementBase* SMDataTypeModel::createField(DataTypeCustom* dataType, const QStrin
     {
         DataTypeStructure* structType = static_cast<DataTypeStructure*>(dataType);
         FieldEntry field(0, name, structType);
-        // Resolve the type pointer before the command's redo() fires the notifier — a page
+        // Resolve the type pointer before the command's redo() fires the notifier -- a page
         // rebuilds its row synchronously inside push(), before this function regains control.
         field.validate(getCustomDataTypes());
-        mFacade.getUndoStack().push(new TDocAddCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, field, eDocElementKind::DataType, QObject::tr("Add field")));
+        mDocument.getUndoStack().push(new TDocAddCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, field, eDocElementKind::DataType, QObject::tr("Add field")));
         return structType->findElement(name);
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         DataTypeEnum* enumType = static_cast<DataTypeEnum*>(dataType);
         EnumEntry field(0, name, QString(), enumType);
-        mFacade.getUndoStack().push(new TDocAddCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, field, eDocElementKind::DataType, QObject::tr("Add field")));
+        mDocument.getUndoStack().push(new TDocAddCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, field, eDocElementKind::DataType, QObject::tr("Add field")));
         return enumType->findElement(name);
     }
 
     return nullptr;
 }
 
-ElementBase* SMDataTypeModel::insertField(DataTypeCustom* dataType, int position, const QString& name)
+ElementBase* DataTypeModel::insertField(DataTypeCustom* dataType, int position, const QString& name)
 {
     if (dataType == nullptr)
         return nullptr;
@@ -409,36 +468,36 @@ ElementBase* SMDataTypeModel::insertField(DataTypeCustom* dataType, int position
         DataTypeStructure* structType = static_cast<DataTypeStructure*>(dataType);
         FieldEntry field(0, name, structType);
         field.validate(getCustomDataTypes());
-        mFacade.getUndoStack().push(buildInsertCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, field, position, dataType->getId(), eDocElementKind::DataType, QObject::tr("Insert field")));
+        mDocument.getUndoStack().push(buildInsertCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, field, position, dataType->getId(), eDocElementKind::DataType, QObject::tr("Insert field")));
         return structType->findElement(name);
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         DataTypeEnum* enumType = static_cast<DataTypeEnum*>(dataType);
         EnumEntry field(0, name, QString(), enumType);
-        mFacade.getUndoStack().push(buildInsertCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, field, position, dataType->getId(), eDocElementKind::DataType, QObject::tr("Insert field")));
+        mDocument.getUndoStack().push(buildInsertCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, field, position, dataType->getId(), eDocElementKind::DataType, QObject::tr("Insert field")));
         return enumType->findElement(name);
     }
 
     return nullptr;
 }
 
-void SMDataTypeModel::deleteField(DataTypeCustom* dataType, uint32_t fieldId)
+void DataTypeModel::deleteField(DataTypeCustom* dataType, uint32_t fieldId)
 {
     if (dataType == nullptr)
         return;
 
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
     {
-        mFacade.getUndoStack().push(new TDocRemoveCommand<FieldEntry, DataTypeCustom>(getNotifier(), *static_cast<DataTypeStructure*>(dataType), fieldId, eDocElementKind::DataType, QObject::tr("Delete field")));
+        mDocument.getUndoStack().push(new TDocRemoveCommand<FieldEntry, DataTypeCustom>(getNotifier(), *static_cast<DataTypeStructure*>(dataType), fieldId, eDocElementKind::DataType, QObject::tr("Delete field")));
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
-        mFacade.getUndoStack().push(new TDocRemoveCommand<EnumEntry, DataTypeCustom>(getNotifier(), *static_cast<DataTypeEnum*>(dataType), fieldId, eDocElementKind::DataType, QObject::tr("Delete field")));
+        mDocument.getUndoStack().push(new TDocRemoveCommand<EnumEntry, DataTypeCustom>(getNotifier(), *static_cast<DataTypeEnum*>(dataType), fieldId, eDocElementKind::DataType, QObject::tr("Delete field")));
     }
 }
 
-void SMDataTypeModel::swapFields(DataTypeCustom* dataType, uint32_t firstId, uint32_t secondId)
+void DataTypeModel::swapFields(DataTypeCustom* dataType, uint32_t firstId, uint32_t secondId)
 {
     if (dataType == nullptr)
         return;
@@ -451,7 +510,7 @@ void SMDataTypeModel::swapFields(DataTypeCustom* dataType, uint32_t firstId, uin
         const int index2 = structType->findIndex(secondId);
         if ((index1 >= 0) && (index2 >= 0))
         {
-            mFacade.getUndoStack().push(new TDocReorderCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, index1, index2, ownerId, eDocElementKind::DataType, QObject::tr("Reorder fields")));
+            mDocument.getUndoStack().push(new TDocReorderCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, index1, index2, ownerId, eDocElementKind::DataType, QObject::tr("Reorder fields")));
         }
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
@@ -461,12 +520,12 @@ void SMDataTypeModel::swapFields(DataTypeCustom* dataType, uint32_t firstId, uin
         const int index2 = enumType->findIndex(secondId);
         if ((index1 >= 0) && (index2 >= 0))
         {
-            mFacade.getUndoStack().push(new TDocReorderCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, index1, index2, ownerId, eDocElementKind::DataType, QObject::tr("Reorder fields")));
+            mDocument.getUndoStack().push(new TDocReorderCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, index1, index2, ownerId, eDocElementKind::DataType, QObject::tr("Reorder fields")));
         }
     }
 }
 
-void SMDataTypeModel::setFieldName(DataTypeCustom* dataType, uint32_t fieldId, const QString& name)
+void DataTypeModel::setFieldName(DataTypeCustom* dataType, uint32_t fieldId, const QString& name)
 {
     if (dataType == nullptr)
         return;
@@ -476,17 +535,17 @@ void SMDataTypeModel::setFieldName(DataTypeCustom* dataType, uint32_t fieldId, c
     {
         auto getter = [dataType, fieldId]() -> QString { FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); return (f != nullptr ? f->getName() : QString()); };
         auto setter = [dataType, fieldId](const QString& value) { FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); if (f != nullptr) f->setName(value); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, name, QObject::tr("Rename field")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, name, QObject::tr("Rename field")));
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         auto getter = [dataType, fieldId]() -> QString { EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); return (f != nullptr ? f->getName() : QString()); };
         auto setter = [dataType, fieldId](const QString& value) { EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); if (f != nullptr) f->setName(value); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, name, QObject::tr("Rename field")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, name, QObject::tr("Rename field")));
     }
 }
 
-void SMDataTypeModel::setFieldType(DataTypeStructure* dataType, uint32_t fieldId, const QString& typeName)
+void DataTypeModel::setFieldType(DataTypeStructure* dataType, uint32_t fieldId, const QString& typeName)
 {
     if (dataType == nullptr)
         return;
@@ -494,10 +553,10 @@ void SMDataTypeModel::setFieldType(DataTypeStructure* dataType, uint32_t fieldId
     const uint32_t ownerId = dataType->getId();
     auto getter = [dataType, fieldId]() -> QString { FieldEntry* f = dataType->findElement(fieldId); return (f != nullptr ? f->getType() : QString()); };
     auto setter = [this, dataType, fieldId](const QString& value) { FieldEntry* f = dataType->findElement(fieldId); if (f != nullptr) { f->setType(value); f->validate(getCustomDataTypes()); } };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set field type")));
+    mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set field type")));
 }
 
-void SMDataTypeModel::setFieldValue(DataTypeCustom* dataType, uint32_t fieldId, const QString& value)
+void DataTypeModel::setFieldValue(DataTypeCustom* dataType, uint32_t fieldId, const QString& value)
 {
     if (dataType == nullptr)
         return;
@@ -507,17 +566,17 @@ void SMDataTypeModel::setFieldValue(DataTypeCustom* dataType, uint32_t fieldId, 
     {
         auto getter = [dataType, fieldId]() -> QString { FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); return (f != nullptr ? f->getValue() : QString()); };
         auto setter = [dataType, fieldId](const QString& val) { FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); if (f != nullptr) f->setValue(val); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, value, QObject::tr("Set field value")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, value, QObject::tr("Set field value")));
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         auto getter = [dataType, fieldId]() -> QString { EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); return (f != nullptr ? f->getValue() : QString()); };
         auto setter = [dataType, fieldId](const QString& val) { EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); if (f != nullptr) f->setValue(val); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, value, QObject::tr("Set field value")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, value, QObject::tr("Set field value")));
     }
 }
 
-void SMDataTypeModel::setFieldDescription(DataTypeCustom* dataType, uint32_t fieldId, const QString& text)
+void DataTypeModel::setFieldDescription(DataTypeCustom* dataType, uint32_t fieldId, const QString& text)
 {
     if (dataType == nullptr)
         return;
@@ -527,17 +586,17 @@ void SMDataTypeModel::setFieldDescription(DataTypeCustom* dataType, uint32_t fie
     {
         auto getter = [dataType, fieldId]() -> QString { FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); return (f != nullptr ? f->getDescription() : QString()); };
         auto setter = [dataType, fieldId](const QString& val) { FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); if (f != nullptr) f->setDescription(val); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, text, QObject::tr("Set field description")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, text, QObject::tr("Set field description")));
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         auto getter = [dataType, fieldId]() -> QString { EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); return (f != nullptr ? f->getDescription() : QString()); };
         auto setter = [dataType, fieldId](const QString& val) { EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); if (f != nullptr) f->setDescription(val); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, text, QObject::tr("Set field description")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, text, QObject::tr("Set field description")));
     }
 }
 
-void SMDataTypeModel::setFieldDeprecated(DataTypeCustom* dataType, uint32_t fieldId, bool deprecated)
+void DataTypeModel::setFieldDeprecated(DataTypeCustom* dataType, uint32_t fieldId, bool deprecated)
 {
     if (dataType == nullptr)
         return;
@@ -557,7 +616,7 @@ void SMDataTypeModel::setFieldDeprecated(DataTypeCustom* dataType, uint32_t fiel
         };
         FieldEntry* f = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId);
         const DeprecationState next{ deprecated, (deprecated && (f != nullptr)) ? f->getDeprecateHint() : QString() };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, next, QObject::tr("Set field deprecated")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, next, QObject::tr("Set field deprecated")));
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
@@ -573,11 +632,11 @@ void SMDataTypeModel::setFieldDeprecated(DataTypeCustom* dataType, uint32_t fiel
         };
         EnumEntry* f = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId);
         const DeprecationState next{ deprecated, (deprecated && (f != nullptr)) ? f->getDeprecateHint() : QString() };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, next, QObject::tr("Set field deprecated")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, next, QObject::tr("Set field deprecated")));
     }
 }
 
-void SMDataTypeModel::setFieldDeprecateHint(DataTypeCustom* dataType, uint32_t fieldId, const QString& hint)
+void DataTypeModel::setFieldDeprecateHint(DataTypeCustom* dataType, uint32_t fieldId, const QString& hint)
 {
     if (dataType == nullptr)
         return;
@@ -591,7 +650,7 @@ void SMDataTypeModel::setFieldDeprecateHint(DataTypeCustom* dataType, uint32_t f
 
         auto getter = [dataType, fieldId]() -> QString { FieldEntry* fe = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); return (fe != nullptr ? fe->getDeprecateHint() : QString()); };
         auto setter = [dataType, fieldId](const QString& value) { FieldEntry* fe = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId); if (fe != nullptr) fe->setDeprecateHint(value); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, hint, QObject::tr("Set field deprecation hint")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, hint, QObject::tr("Set field deprecation hint")));
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
@@ -601,16 +660,6 @@ void SMDataTypeModel::setFieldDeprecateHint(DataTypeCustom* dataType, uint32_t f
 
         auto getter = [dataType, fieldId]() -> QString { EnumEntry* fe = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); return (fe != nullptr ? fe->getDeprecateHint() : QString()); };
         auto setter = [dataType, fieldId](const QString& value) { EnumEntry* fe = static_cast<DataTypeEnum*>(dataType)->findElement(fieldId); if (fe != nullptr) fe->setDeprecateHint(value); };
-        mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, hint, QObject::tr("Set field deprecation hint")));
+        mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, hint, QObject::tr("Set field deprecation hint")));
     }
-}
-
-const SMDataTypeData& SMDataTypeModel::types() const
-{
-    return mFacade.getData().getDataTypes();
-}
-
-SMDataTypeData& SMDataTypeModel::types()
-{
-    return mFacade.getData().getDataTypes();
 }

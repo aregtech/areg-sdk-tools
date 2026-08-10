@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIInclude.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -108,6 +109,17 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     updateData();
     setupSignals();
     updateDetails(nullptr, true);
+}
+
+void SIInclude::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
+{
+    selectById(id);
+    switch (field)
+    {
+    case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlInclude());     break;
+    case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+    default:                                                                              break;
+    }
 }
 
 SIInclude::~SIInclude()

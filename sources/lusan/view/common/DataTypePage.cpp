@@ -10,14 +10,14 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataType.cpp
+ *  \file        lusan/view/common/DataTypePage.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page.
+ *  \brief       Lusan application, the Data Types page shared by every document editor.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMDataType.hpp"
+#include "lusan/view/common/DataTypePage.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/NELusanCommon.hpp"
@@ -30,8 +30,8 @@
 #include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/EnumEntry.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
-#include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 #include "lusan/view/common/DataTypeDetailsView.hpp"
 #include "lusan/view/common/DataTypeFieldDetailsView.hpp"
@@ -53,6 +53,7 @@
 #include <QRadioButton>
 #include <QShortcut>
 #include <QSignalBlocker>
+#include <QStringListModel>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
@@ -72,40 +73,72 @@ namespace
         hintEdit->setEnabled(deprecated);
         hintEdit->setText(deprecated ? entry->getDeprecateHint() : QString());
     }
+
+    //!< The predefined types a structure field or a container element may be declared with.
+    const QList<DataTypeBase::eCategory>& fieldCategories(void)
+    {
+        static const QList<DataTypeBase::eCategory> _categories
+        {
+              DataTypeBase::eCategory::Primitive
+            , DataTypeBase::eCategory::PrimitiveSint
+            , DataTypeBase::eCategory::PrimitiveUint
+            , DataTypeBase::eCategory::PrimitiveFloat
+            , DataTypeBase::eCategory::BasicObject
+        };
+
+        return _categories;
+    }
+
+    //!< The predefined types an enumeration may derive from.
+    const QList<DataTypeBase::eCategory>& integerCategories(void)
+    {
+        static const QList<DataTypeBase::eCategory> _categories
+        {
+              DataTypeBase::eCategory::PrimitiveSint
+            , DataTypeBase::eCategory::PrimitiveUint
+        };
+
+        return _categories;
+    }
 }
 
-SMDataType::SMDataType(SMDataTypeModel& model, QWidget* parent /*= nullptr*/)
+DataTypePage::DataTypePage(DataTypeModel& model, const QString& headline, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
+    , IEditCommit       ( )
+    , IETableHelper     ( )
     , mModel            (model)
     , mList             (new DataTypeListView(this))
     , mDetails          (new DataTypeDetailsView(this))
     , mFields           (new DataTypeFieldDetailsView(this))
+    , mFieldTypeNames   (new QStringListModel(this))
+    , mIntegerNames     (new QStringListModel(this))
+    , mTableCell        (nullptr)
     , mNameCounter      (0)
     , mCurUrl           ( )
     , mCurFile          ( )
 {
-    buildUi();
+    buildUi(headline);
     setupSignals();
     refreshAll();
 }
 
-DataTypeListView* SMDataType::getList() const
+DataTypeListView* DataTypePage::getList(void) const
 {
     return mList;
 }
 
-void SMDataType::buildUi()
+void DataTypePage::buildUi(const QString& headline)
 {
     QWidget* content = new QWidget(this);
     QVBoxLayout* root = new QVBoxLayout(content);
 
-    QLabel* headline = new QLabel(tr("State Machine Data Type Editor ..."), content);
-    QFont headlineFont{ headline->font() };
-    headlineFont.setPointSize(20);
-    headlineFont.setBold(true);
-    headlineFont.setItalic(true);
-    headline->setFont(headlineFont);
-    root->addWidget(headline);
+    QLabel* title = new QLabel(headline, content);
+    QFont titleFont{ title->font() };
+    titleFont.setPointSize(20);
+    titleFont.setBold(true);
+    titleFont.setItalic(true);
+    title->setFont(titleFont);
+    root->addWidget(title);
 
     QHBoxLayout* columns = new QHBoxLayout();
 
@@ -129,31 +162,46 @@ void SMDataType::buildUi()
     populateIntegerCombo(mDetails->ctrlEnumDerived());
     populateContainerObjectCombo(mDetails->ctrlContainerObject());
 
+    // Name, type and value are editable in the tree as well as in the details panels, so a row
+    // can be filled in without leaving the keyboard. The tree is heterogeneous, so which cells
+    // open, with what editor and with what validation, is decided per cell.
+    QTreeWidget* table = mList->ctrlTableList();
+    mTableCell = new TableCell(table, this, true);
+    mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
+    mTableCell->setEditorModelResolver([this](const QModelIndex& idx) { return editorModelFor(idx); });
+    mTableCell->setValidationResolver([this](const QModelIndex& idx) { return validationFor(idx); });
+    table->setItemDelegateForColumn(static_cast<int>(eColumn::ColName) , mTableCell);
+    table->setItemDelegateForColumn(static_cast<int>(eColumn::ColType) , mTableCell);
+    table->setItemDelegateForColumn(static_cast<int>(eColumn::ColValue), mTableCell);
+
+    populateInlineTypeNames();
+
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setWidgetResizable(true);
     setWidget(content);
 }
 
-void SMDataType::setupSignals()
+void DataTypePage::setupSignals(void)
 {
-    connect(mList->ctrlTableList()         , &QTreeWidget::currentItemChanged , this, &SMDataType::onCurCellChanged);
-    connect(mList->ctrlButtonAdd()         , &QToolButton::clicked            , this, &SMDataType::onAddClicked);
-    connect(mList->ctrlButtonInsert()      , &QToolButton::clicked            , this, &SMDataType::onInsertClicked);
-    connect(mList->ctrlButtonRemove()      , &QToolButton::clicked            , this, &SMDataType::onRemoveClicked);
-    connect(mList->ctrlButtonAddField()    , &QToolButton::clicked            , this, &SMDataType::onAddFieldClicked);
-    connect(mList->ctrlButtonInsertField() , &QToolButton::clicked            , this, &SMDataType::onInsertFieldClicked);
-    connect(mList->ctrlButtonRemoveField() , &QToolButton::clicked            , this, &SMDataType::onRemoveFieldClicked);
-    connect(mList->ctrlButtonMoveUp()      , &QToolButton::clicked            , this, &SMDataType::onMoveUpClicked);
-    connect(mList->ctrlButtonMoveDown()    , &QToolButton::clicked            , this, &SMDataType::onMoveDownClicked);
+    QTreeWidget* table = mList->ctrlTableList();
+
+    connect(table                          , &QTreeWidget::currentItemChanged , this, &DataTypePage::onCurCellChanged);
+    connect(mList->ctrlButtonAdd()         , &QToolButton::clicked            , this, &DataTypePage::onAddClicked);
+    connect(mList->ctrlButtonInsert()      , &QToolButton::clicked            , this, &DataTypePage::onInsertClicked);
+    connect(mList->ctrlButtonRemove()      , &QToolButton::clicked            , this, &DataTypePage::onRemoveClicked);
+    connect(mList->ctrlButtonAddField()    , &QToolButton::clicked            , this, &DataTypePage::onAddFieldClicked);
+    connect(mList->ctrlButtonInsertField() , &QToolButton::clicked            , this, &DataTypePage::onInsertFieldClicked);
+    connect(mList->ctrlButtonRemoveField() , &QToolButton::clicked            , this, &DataTypePage::onRemoveFieldClicked);
+    connect(mList->ctrlButtonMoveUp()      , &QToolButton::clicked            , this, &DataTypePage::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown()    , &QToolButton::clicked            , this, &DataTypePage::onMoveDownClicked);
     connect(mList->actionNewStruct()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Structure); });
     connect(mList->actionNewEnum()         , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Enumeration); });
     connect(mList->actionNewImport()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
     connect(mList->actionNewContainer()    , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
 
-    // List keys mirroring the toolbar buttons: Delete removes the selected row, Insert adds one, F2
-    // puts the caret in its name. The selected level picks which toolbar button the key follows.
-    QTreeWidget* table = mList->ctrlTableList();
+    // Tree keys mirroring the toolbar buttons: Delete removes the selected row, Insert adds one,
+    // F2 puts the caret in its name. The selected level picks which toolbar button the key follows.
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
     QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
@@ -182,48 +230,51 @@ void SMDataType::setupSignals()
             onAddClicked();
         }
     });
-    connect(scRename, &QShortcut::activated, this, &SMDataType::focusNameField);
+    connect(scRename, &QShortcut::activated, this, &DataTypePage::focusNameField);
+
+    // A commit from an inline editor rebuilds the tree. Let the delegate close first.
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &DataTypePage::onEditorDataChanged, Qt::QueuedConnection);
 
     // The identifier validator is installed inside the shared DataTypeDetailsView.
-    connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &SMDataType::onNameCommitted);
+    connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &DataTypePage::onNameCommitted);
     // Live-preview the typed name into the Name column; the real rename commits on editingFinished.
     // Selection sets the field under a QSignalBlocker, so this fires only for genuine user edits.
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged          , this, [this](const QString& text) {
         if ((currentFieldId() == 0) && (currentDataType() != nullptr))
         {
             if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
-                item->setText(0, text);
+                item->setText(static_cast<int>(eColumn::ColName), text);
         }
     });
-    connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked           , this, &SMDataType::onStructSelected);
-    connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked           , this, &SMDataType::onEnumSelected);
-    connect(mDetails->ctrlTypeImport()      , &QRadioButton::clicked           , this, &SMDataType::onImportSelected);
-    connect(mDetails->ctrlTypeContainer()   , &QRadioButton::clicked           , this, &SMDataType::onContainerSelected);
-    connect(mDetails->ctrlEnumDerived()     , &QComboBox::currentIndexChanged  , this, &SMDataType::onEnumDerivedChanged);
-    connect(mDetails->ctrlImportLocation()  , &QLineEdit::editingFinished      , this, &SMDataType::onImportLocationCommitted);
-    connect(mDetails->ctrlImportNamespace() , &QLineEdit::editingFinished      , this, &SMDataType::onImportNamespaceCommitted);
-    connect(mDetails->ctrlImportObject()    , &QLineEdit::editingFinished      , this, &SMDataType::onImportObjectCommitted);
-    connect(mDetails->ctrlButtonBrowse()    , &QPushButton::clicked            , this, &SMDataType::onImportBrowse);
-    connect(mDetails->ctrlContainerObject() , &QComboBox::currentIndexChanged  , this, &SMDataType::onContainerObjectChanged);
-    connect(mDetails->ctrlContainerKey()    , &QComboBox::currentIndexChanged  , this, &SMDataType::onContainerKeyChanged);
-    connect(mDetails->ctrlContainerValue()  , &QComboBox::currentIndexChanged  , this, &SMDataType::onContainerValueChanged);
-    connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled              , this, &SMDataType::onDeprecatedToggled);
-    connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::editingFinished      , this, &SMDataType::onDeprecateHintCommitted);
+    connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked           , this, &DataTypePage::onStructSelected);
+    connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked           , this, &DataTypePage::onEnumSelected);
+    connect(mDetails->ctrlTypeImport()      , &QRadioButton::clicked           , this, &DataTypePage::onImportSelected);
+    connect(mDetails->ctrlTypeContainer()   , &QRadioButton::clicked           , this, &DataTypePage::onContainerSelected);
+    connect(mDetails->ctrlEnumDerived()     , &QComboBox::currentIndexChanged  , this, &DataTypePage::onEnumDerivedChanged);
+    connect(mDetails->ctrlImportLocation()  , &QLineEdit::editingFinished      , this, &DataTypePage::onImportLocationCommitted);
+    connect(mDetails->ctrlImportNamespace() , &QLineEdit::editingFinished      , this, &DataTypePage::onImportNamespaceCommitted);
+    connect(mDetails->ctrlImportObject()    , &QLineEdit::editingFinished      , this, &DataTypePage::onImportObjectCommitted);
+    connect(mDetails->ctrlButtonBrowse()    , &QPushButton::clicked            , this, &DataTypePage::onImportBrowse);
+    connect(mDetails->ctrlContainerObject() , &QComboBox::currentIndexChanged  , this, &DataTypePage::onContainerObjectChanged);
+    connect(mDetails->ctrlContainerKey()    , &QComboBox::currentIndexChanged  , this, &DataTypePage::onContainerKeyChanged);
+    connect(mDetails->ctrlContainerValue()  , &QComboBox::currentIndexChanged  , this, &DataTypePage::onContainerValueChanged);
+    connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled              , this, &DataTypePage::onDeprecatedToggled);
+    connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::editingFinished      , this, &DataTypePage::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
     // The identifier validator is installed inside the shared DataTypeFieldDetailsView.
-    connect(mFields->ctrlName()             , &QLineEdit::editingFinished      , this, &SMDataType::onFieldNameCommitted);
+    connect(mFields->ctrlName()             , &QLineEdit::editingFinished      , this, &DataTypePage::onFieldNameCommitted);
     connect(mFields->ctrlName()             , &QLineEdit::textChanged          , this, [this](const QString& text) {
         if (currentFieldId() != 0)
         {
             if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
-                item->setText(0, text);
+                item->setText(static_cast<int>(eColumn::ColName), text);
         }
     });
-    connect(mFields->ctrlTypes()            , &QComboBox::currentIndexChanged  , this, &SMDataType::onFieldTypeChanged);
-    connect(mFields->ctrlValue()            , &QLineEdit::editingFinished      , this, &SMDataType::onFieldValueCommitted);
-    connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled              , this, &SMDataType::onFieldDeprecatedToggled);
-    connect(mFields->ctrlDeprecateHint()    , &QLineEdit::editingFinished      , this, &SMDataType::onFieldDeprecateHintCommitted);
+    connect(mFields->ctrlTypes()            , &QComboBox::currentIndexChanged  , this, &DataTypePage::onFieldTypeChanged);
+    connect(mFields->ctrlValue()            , &QLineEdit::editingFinished      , this, &DataTypePage::onFieldValueCommitted);
+    connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled              , this, &DataTypePage::onFieldDeprecatedToggled);
+    connect(mFields->ctrlDeprecateHint()    , &QLineEdit::editingFinished      , this, &DataTypePage::onFieldDeprecateHintCommitted);
     mFields->ctrlDescription()->installEventFilter(this);
 
     // Both forms carry document text. Typing in them marks the document changed at once, even
@@ -231,14 +282,15 @@ void SMDataType::setupSignals()
     PendingEditWatcher::watchField(mDetails, mModel.getNotifier());
     PendingEditWatcher::watchField(mFields, mModel.getNotifier());
 
-    connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMDataType::onNotifierChanged);
-    connect(&mModel.getNotifier(), &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
-    connect(&mModel.getNotifier(), &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
-    connect(&mModel.getNotifier(), &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
-    connect(&mModel.getNotifier(), &DocModelNotifier::listReordered, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
+    DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, &DataTypePage::onNotifierChanged);
+    connect(&notifier, &DocModelNotifier::elementAdded  , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
+    connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
+    connect(&notifier, &DocModelNotifier::listReordered , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
 }
 
-void SMDataType::commitPendingEdits(void)
+void DataTypePage::commitPendingEdits(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -253,7 +305,7 @@ void SMDataType::commitPendingEdits(void)
         mModel.setFieldDescription(dataType, fieldId, mFields->ctrlDescription()->toPlainText());
 }
 
-bool SMDataType::eventFilter(QObject* watched, QEvent* event)
+bool DataTypePage::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::FocusOut)
     {
@@ -266,19 +318,30 @@ bool SMDataType::eventFilter(QObject* watched, QEvent* event)
     return QScrollArea::eventFilter(watched, event);
 }
 
-DataTypeCustom* SMDataType::currentDataType() const
+int DataTypePage::getColumnCount(void) const
 {
-    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-    return (item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr);
+    return mList->ctrlTableList()->columnCount();
 }
 
-uint32_t SMDataType::currentFieldId() const
+QString DataTypePage::getCellText(const QModelIndex& cell) const
 {
-    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-    return (item != nullptr ? item->data(1, Qt::ItemDataRole::UserRole).toUInt() : 0u);
+    // The display text already stored on the tree cell seeds the inline editor.
+    return (cell.isValid() ? cell.data(Qt::DisplayRole).toString() : QString());
 }
 
-void SMDataType::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*previous*/)
+DataTypeCustom* DataTypePage::currentDataType(void) const
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    return (item != nullptr ? item->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr);
+}
+
+uint32_t DataTypePage::currentFieldId(void) const
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    return (item != nullptr ? item->data(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole).toUInt() : 0u);
+}
+
+void DataTypePage::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*previous*/)
 {
     if (current == nullptr)
     {
@@ -286,8 +349,8 @@ void SMDataType::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*p
         return;
     }
 
-    DataTypeCustom* dataType = current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    const uint32_t fieldId = current->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    DataTypeCustom* dataType = current->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    const uint32_t fieldId = current->data(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole).toUInt();
     if (dataType == nullptr)
     {
         showClean();
@@ -324,7 +387,7 @@ void SMDataType::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*p
     }
 }
 
-void SMDataType::selectedStruct(DataTypeStructure* dataType)
+void DataTypePage::selectedStruct(DataTypeStructure* dataType)
 {
     activateFields(false);
     mDetails->setEnumRowVisible(false);
@@ -348,7 +411,7 @@ void SMDataType::selectedStruct(DataTypeStructure* dataType)
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
-void SMDataType::selectedEnum(DataTypeEnum* dataType)
+void DataTypePage::selectedEnum(DataTypeEnum* dataType)
 {
     activateFields(false);
     mDetails->setEnumRowVisible(true);
@@ -374,7 +437,7 @@ void SMDataType::selectedEnum(DataTypeEnum* dataType)
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
-void SMDataType::selectedImport(DataTypeImported* dataType)
+void DataTypePage::selectedImport(DataTypeImported* dataType)
 {
     activateFields(false);
     mDetails->setEnumRowVisible(false);
@@ -404,7 +467,7 @@ void SMDataType::selectedImport(DataTypeImported* dataType)
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
-void SMDataType::selectedContainer(DataTypeContainer* dataType)
+void DataTypePage::selectedContainer(DataTypeContainer* dataType)
 {
     activateFields(false);
     mDetails->setEnumRowVisible(false);
@@ -447,7 +510,7 @@ void SMDataType::selectedContainer(DataTypeContainer* dataType)
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
-void SMDataType::selectedStructField(DataTypeStructure* parent, uint32_t fieldId)
+void DataTypePage::selectedStructField(DataTypeStructure* parent, uint32_t fieldId)
 {
     FieldEntry* field = parent->findElement(fieldId);
     if (field == nullptr)
@@ -479,7 +542,7 @@ void SMDataType::selectedStructField(DataTypeStructure* parent, uint32_t fieldId
     updateMoveButtons(parent->findIndex(fieldId), parent->getElementCount());
 }
 
-void SMDataType::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
+void DataTypePage::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
 {
     EnumEntry* field = parent->findElement(fieldId);
     if (field == nullptr)
@@ -508,7 +571,7 @@ void SMDataType::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
     updateMoveButtons(parent->findIndex(fieldId), parent->getElementCount());
 }
 
-void SMDataType::activateFields(bool activate)
+void DataTypePage::activateFields(bool activate)
 {
     if (activate)
     {
@@ -528,7 +591,7 @@ void SMDataType::activateFields(bool activate)
     }
 }
 
-void SMDataType::updateMoveButtons(int row, int rowCount)
+void DataTypePage::updateMoveButtons(int row, int rowCount)
 {
     if ((row < 0) || (row >= rowCount))
     {
@@ -541,7 +604,7 @@ void SMDataType::updateMoveButtons(int row, int rowCount)
     mList->ctrlButtonMoveDown()->setEnabled(row < (rowCount - 1));
 }
 
-void SMDataType::showClean()
+void DataTypePage::showClean(void)
 {
     activateFields(false);
     mDetails->setEnumRowVisible(false);
@@ -560,12 +623,13 @@ void SMDataType::showClean()
     mList->ctrlButtonMoveDown()->setEnabled(false);
 }
 
-QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
+QTreeWidgetItem* DataTypePage::createNode(DataTypeCustom* dataType) const
 {
     QTreeWidgetItem* item = new QTreeWidgetItem();
     setNodeText(item, dataType);
-    item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
-    item->setData(1, Qt::ItemDataRole::UserRole, 0u);
+    item->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
+    item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, 0u);
+    item->setToolTip(static_cast<int>(eColumn::ColType), validateDeclaredType(dataType));
 
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
     {
@@ -576,11 +640,12 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
             const QString reason = validateFieldValue(field.getType(), field.getValue());
             if (reason.isEmpty() == false)
             {
-                child->setIcon(2, NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
-                child->setToolTip(2, reason);
+                child->setIcon(static_cast<int>(eColumn::ColValue), NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
+                child->setToolTip(static_cast<int>(eColumn::ColValue), reason);
             }
-            child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
-            child->setData(1, Qt::ItemDataRole::UserRole, field.getId());
+            child->setToolTip(static_cast<int>(eColumn::ColType), validateDeclaredType(field));
+            child->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
+            child->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, field.getId());
             item->addChild(child);
         }
     }
@@ -590,8 +655,8 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
         {
             QTreeWidgetItem* child = new QTreeWidgetItem();
             setNodeText(child, &field);
-            child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
-            child->setData(1, Qt::ItemDataRole::UserRole, field.getId());
+            child->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
+            child->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, field.getId());
             item->addChild(child);
         }
     }
@@ -599,7 +664,7 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
     return item;
 }
 
-QString SMDataType::validateFieldValue(const QString& typeName, const QString& value) const
+QString DataTypePage::validateFieldValue(const QString& typeName, const QString& value) const
 {
     // No default is always valid, and a declared (enum/structure/container/imported) type is
     // ignored - its literal form, if any, is not this validator's concern.
@@ -609,26 +674,58 @@ QString SMDataType::validateFieldValue(const QString& typeName, const QString& v
     return LiteralValidator::validate(typeName, value);
 }
 
-void SMDataType::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const
+QString DataTypePage::validateDeclaredType(const FieldEntry& field)
 {
-    node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
-    node->setText(0, elem->getString(ElementBase::eDisplay::DisplayName));
-    node->setIcon(1, elem->getIcon(ElementBase::eDisplay::DisplayType));
-    node->setText(1, elem->getString(ElementBase::eDisplay::DisplayType));
-    node->setIcon(2, elem->getIcon(ElementBase::eDisplay::DisplayValue));
-    node->setText(2, elem->getString(ElementBase::eDisplay::DisplayValue));
+    return (field.getParamType() != nullptr) ? QString() : unknownTypeHint(field.getType());
 }
 
-void SMDataType::refreshAll()
+QString DataTypePage::validateDeclaredType(const DataTypeCustom* dataType)
+{
+    // Asks the same question the row's warning marker answers, so the marker and the tooltip can
+    // never disagree: a declared type is either known to the document or it is not.
+    if (dataType->getCategory() != DataTypeBase::eCategory::Container)
+        return QString();
+
+    const DataTypeContainer* container = static_cast<const DataTypeContainer*>(dataType);
+    if (container->canHaveKey() && (container->getKeyDataType() == nullptr))
+        return unknownTypeHint(container->getKey());
+    if (container->getValueDataType() == nullptr)
+        return unknownTypeHint(container->getValue());
+
+    return QString();
+}
+
+QString DataTypePage::unknownTypeHint(const QString& typeName)
+{
+    return typeName.isEmpty()
+            ? QObject::tr("No type is chosen yet.")
+            : QObject::tr("Type '%1' is not declared in this document.").arg(typeName);
+}
+
+void DataTypePage::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const
+{
+    // Tree items are not editable by default, unlike table items, so the flag is set for the
+    // shared delegate. Which columns actually open is decided per cell by isCellEditable().
+    node->setFlags(node->flags() | Qt::ItemIsEditable);
+
+    node->setIcon(static_cast<int>(eColumn::ColName), elem->getIcon(ElementBase::eDisplay::DisplayName));
+    node->setText(static_cast<int>(eColumn::ColName), elem->getString(ElementBase::eDisplay::DisplayName));
+    node->setIcon(static_cast<int>(eColumn::ColType), elem->getIcon(ElementBase::eDisplay::DisplayType));
+    node->setText(static_cast<int>(eColumn::ColType), elem->getString(ElementBase::eDisplay::DisplayType));
+    node->setIcon(static_cast<int>(eColumn::ColValue), elem->getIcon(ElementBase::eDisplay::DisplayValue));
+    node->setText(static_cast<int>(eColumn::ColValue), elem->getString(ElementBase::eDisplay::DisplayValue));
+}
+
+void DataTypePage::refreshAll(void)
 {
     QTreeWidget* table = mList->ctrlTableList();
     uint32_t selType = 0;
     uint32_t selField = 0;
     if (QTreeWidgetItem* cur = table->currentItem())
     {
-        DataTypeCustom* dataType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+        DataTypeCustom* dataType = cur->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
         selType = (dataType != nullptr ? dataType->getId() : 0u);
-        selField = cur->data(1, Qt::ItemDataRole::UserRole).toUInt();
+        selField = cur->data(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole).toUInt();
     }
 
     {
@@ -640,19 +737,21 @@ void SMDataType::refreshAll()
         }
     }
 
+    populateInlineTypeNames();
+
     if ((selType == 0) || (selectDataType(selType, selField) == false))
     {
         showClean();
     }
 }
 
-bool SMDataType::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
+bool DataTypePage::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
 {
     QTreeWidget* table = mList->ctrlTableList();
     for (int i = 0; i < table->topLevelItemCount(); ++i)
     {
         QTreeWidgetItem* top = table->topLevelItem(i);
-        DataTypeCustom* dataType = top->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+        DataTypeCustom* dataType = top->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
         if ((dataType == nullptr) || (dataType->getId() != typeId))
             continue;
 
@@ -665,7 +764,7 @@ bool SMDataType::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
         for (int j = 0; j < top->childCount(); ++j)
         {
             QTreeWidgetItem* child = top->child(j);
-            if (child->data(1, Qt::ItemDataRole::UserRole).toUInt() == fieldId)
+            if (child->data(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole).toUInt() == fieldId)
             {
                 table->setCurrentItem(child);
                 return true;
@@ -679,7 +778,7 @@ bool SMDataType::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
     return false;
 }
 
-void SMDataType::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
+void DataTypePage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
     // A finding about a structure field or an enumeration entry carries the field's own id, so
     // a type lookup that only tries the top-level rows would come back empty and reveal nothing.
@@ -725,19 +824,12 @@ void SMDataType::revealElement(uint32_t id, eIssueField field /*= eIssueField::N
     }
 }
 
-void SMDataType::populateTypeCombo(QComboBox* combo, const DataTypeCustom* exclude) const
+void DataTypePage::populateTypeCombo(QComboBox* combo, const DataTypeCustom* exclude) const
 {
     combo->clear();
 
     QList<DataTypeBase*> predefined;
-    DataTypeFactory::getPredefinedTypes(predefined, QList<DataTypeBase::eCategory>{
-          DataTypeBase::eCategory::Primitive
-        , DataTypeBase::eCategory::PrimitiveSint
-        , DataTypeBase::eCategory::PrimitiveUint
-        , DataTypeBase::eCategory::PrimitiveFloat
-        , DataTypeBase::eCategory::BasicObject
-    });
-
+    DataTypeFactory::getPredefinedTypes(predefined, fieldCategories());
     for (DataTypeBase* type : predefined)
     {
         combo->addItem(type->getName(), QVariant::fromValue(type));
@@ -752,20 +844,20 @@ void SMDataType::populateTypeCombo(QComboBox* combo, const DataTypeCustom* exclu
     }
 }
 
-void SMDataType::populateIntegerCombo(QComboBox* combo) const
+void DataTypePage::populateIntegerCombo(QComboBox* combo) const
 {
     combo->clear();
     combo->addItem(QString(), QVariant::fromValue(static_cast<DataTypeBase*>(nullptr)));
 
     QList<DataTypeBase*> integers;
-    DataTypeFactory::getPredefinedTypes(integers, QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::PrimitiveSint, DataTypeBase::eCategory::PrimitiveUint});
+    DataTypeFactory::getPredefinedTypes(integers, integerCategories());
     for (DataTypeBase* type : integers)
     {
         combo->addItem(type->getName(), QVariant::fromValue(type));
     }
 }
 
-void SMDataType::populateContainerObjectCombo(QComboBox* combo) const
+void DataTypePage::populateContainerObjectCombo(QComboBox* combo) const
 {
     combo->clear();
     for (DataTypeBasicContainer* basic : DataTypeFactory::getContainerTypes())
@@ -774,7 +866,36 @@ void SMDataType::populateContainerObjectCombo(QComboBox* combo) const
     }
 }
 
-QString SMDataType::genTypeName()
+void DataTypePage::populateInlineTypeNames(void)
+{
+    QStringList fieldNames;
+    QList<DataTypeBase*> predefined;
+    DataTypeFactory::getPredefinedTypes(predefined, fieldCategories());
+    for (DataTypeBase* type : predefined)
+    {
+        fieldNames.append(type->getName());
+    }
+
+    for (DataTypeCustom* type : mModel.getCustomDataTypes())
+    {
+        fieldNames.append(type->getName());
+    }
+
+    mFieldTypeNames->setStringList(fieldNames);
+
+    QStringList integerNames;
+    integerNames.append(QString());
+    QList<DataTypeBase*> integers;
+    DataTypeFactory::getPredefinedTypes(integers, integerCategories());
+    for (DataTypeBase* type : integers)
+    {
+        integerNames.append(type->getName());
+    }
+
+    mIntegerNames->setStringList(integerNames);
+}
+
+QString DataTypePage::genTypeName(void)
 {
     static const QString _defName("NewDataType");
     QString name;
@@ -786,7 +907,7 @@ QString SMDataType::genTypeName()
     return name;
 }
 
-QString SMDataType::genFieldName(const DataTypeCustom* dataType) const
+QString DataTypePage::genFieldName(const DataTypeCustom* dataType) const
 {
     static const QString _defName("newField");
     uint32_t count{ 0 };
@@ -799,12 +920,12 @@ QString SMDataType::genFieldName(const DataTypeCustom* dataType) const
     return name;
 }
 
-void SMDataType::onAddClicked()
+void DataTypePage::onAddClicked(void)
 {
     addNewType(DataTypeBase::eCategory::Structure);
 }
 
-void SMDataType::addNewType(DataTypeBase::eCategory category)
+void DataTypePage::addNewType(DataTypeBase::eCategory category)
 {
     const QString name = genTypeName();
     DataTypeCustom* dataType = mModel.createDataType(name, category);
@@ -816,7 +937,7 @@ void SMDataType::addNewType(DataTypeBase::eCategory category)
     }
 }
 
-void SMDataType::onInsertClicked()
+void DataTypePage::onInsertClicked(void)
 {
     DataTypeCustom* current = currentDataType();
     const int position = (current != nullptr ? mModel.findIndex(current) : 0);
@@ -830,7 +951,7 @@ void SMDataType::onInsertClicked()
     }
 }
 
-void SMDataType::focusNameField()
+void DataTypePage::focusNameField(void)
 {
     QLineEdit* name = (currentFieldId() != 0) ? mFields->ctrlName() : mDetails->ctrlName();
     if (currentDataType() != nullptr)
@@ -840,7 +961,7 @@ void SMDataType::focusNameField()
     }
 }
 
-void SMDataType::onRemoveClicked()
+void DataTypePage::onRemoveClicked(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -862,7 +983,7 @@ void SMDataType::onRemoveClicked()
     }
 }
 
-void SMDataType::onAddFieldClicked()
+void DataTypePage::onAddFieldClicked(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -878,7 +999,7 @@ void SMDataType::onAddFieldClicked()
     }
 }
 
-void SMDataType::onInsertFieldClicked()
+void DataTypePage::onInsertFieldClicked(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -896,7 +1017,7 @@ void SMDataType::onInsertFieldClicked()
     }
 }
 
-void SMDataType::onRemoveFieldClicked()
+void DataTypePage::onRemoveFieldClicked(void)
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -930,7 +1051,7 @@ void SMDataType::onRemoveFieldClicked()
     }
 }
 
-void SMDataType::onMoveUpClicked()
+void DataTypePage::onMoveUpClicked(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -964,7 +1085,7 @@ void SMDataType::onMoveUpClicked()
     }
 }
 
-void SMDataType::onMoveDownClicked()
+void DataTypePage::onMoveDownClicked(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -999,7 +1120,7 @@ void SMDataType::onMoveDownClicked()
     }
 }
 
-void SMDataType::onNameCommitted()
+void DataTypePage::onNameCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (currentFieldId() == 0))
@@ -1008,7 +1129,7 @@ void SMDataType::onNameCommitted()
     }
 }
 
-void SMDataType::onStructSelected(bool checked)
+void DataTypePage::onStructSelected(bool checked)
 {
     if (!checked)
         return;
@@ -1020,7 +1141,7 @@ void SMDataType::onStructSelected(bool checked)
     }
 }
 
-void SMDataType::onEnumSelected(bool checked)
+void DataTypePage::onEnumSelected(bool checked)
 {
     if (!checked)
         return;
@@ -1032,7 +1153,7 @@ void SMDataType::onEnumSelected(bool checked)
     }
 }
 
-void SMDataType::onImportSelected(bool checked)
+void DataTypePage::onImportSelected(bool checked)
 {
     if (!checked)
         return;
@@ -1044,7 +1165,7 @@ void SMDataType::onImportSelected(bool checked)
     }
 }
 
-void SMDataType::onContainerSelected(bool checked)
+void DataTypePage::onContainerSelected(bool checked)
 {
     if (!checked)
         return;
@@ -1058,7 +1179,7 @@ void SMDataType::onContainerSelected(bool checked)
     }
 }
 
-void SMDataType::onEnumDerivedChanged(int index)
+void DataTypePage::onEnumDerivedChanged(int index)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType == nullptr) || (dataType->getCategory() != DataTypeBase::eCategory::Enumeration))
@@ -1068,7 +1189,7 @@ void SMDataType::onEnumDerivedChanged(int index)
     mModel.setEnumDerived(static_cast<DataTypeEnum*>(dataType), selected != nullptr ? selected->getName() : QString());
 }
 
-void SMDataType::onImportLocationCommitted()
+void DataTypePage::onImportLocationCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
@@ -1077,7 +1198,7 @@ void SMDataType::onImportLocationCommitted()
     }
 }
 
-void SMDataType::onImportNamespaceCommitted()
+void DataTypePage::onImportNamespaceCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
@@ -1086,7 +1207,7 @@ void SMDataType::onImportNamespaceCommitted()
     }
 }
 
-void SMDataType::onImportObjectCommitted()
+void DataTypePage::onImportObjectCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
@@ -1095,7 +1216,7 @@ void SMDataType::onImportObjectCommitted()
     }
 }
 
-void SMDataType::onImportBrowse()
+void DataTypePage::onImportBrowse(void)
 {
     WorkspaceFileDialog dialog(  true
                                , false
@@ -1137,7 +1258,7 @@ void SMDataType::onImportBrowse()
     }
 }
 
-void SMDataType::onContainerObjectChanged(int index)
+void DataTypePage::onContainerObjectChanged(int index)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType == nullptr) || (dataType->getCategory() != DataTypeBase::eCategory::Container) || (index < 0))
@@ -1162,7 +1283,7 @@ void SMDataType::onContainerObjectChanged(int index)
     }
 }
 
-void SMDataType::onContainerKeyChanged(int index)
+void DataTypePage::onContainerKeyChanged(int index)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType == nullptr) || (dataType->getCategory() != DataTypeBase::eCategory::Container) || (index < 0))
@@ -1175,7 +1296,7 @@ void SMDataType::onContainerKeyChanged(int index)
     }
 }
 
-void SMDataType::onContainerValueChanged(int index)
+void DataTypePage::onContainerValueChanged(int index)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType == nullptr) || (dataType->getCategory() != DataTypeBase::eCategory::Container) || (index < 0))
@@ -1188,7 +1309,7 @@ void SMDataType::onContainerValueChanged(int index)
     }
 }
 
-void SMDataType::onDeprecatedToggled(bool checked)
+void DataTypePage::onDeprecatedToggled(bool checked)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (currentFieldId() == 0))
@@ -1204,7 +1325,7 @@ void SMDataType::onDeprecatedToggled(bool checked)
     }
 }
 
-void SMDataType::onDeprecateHintCommitted()
+void DataTypePage::onDeprecateHintCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (currentFieldId() == 0))
@@ -1213,7 +1334,7 @@ void SMDataType::onDeprecateHintCommitted()
     }
 }
 
-void SMDataType::onFieldNameCommitted()
+void DataTypePage::onFieldNameCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1223,7 +1344,7 @@ void SMDataType::onFieldNameCommitted()
     }
 }
 
-void SMDataType::onFieldTypeChanged(int index)
+void DataTypePage::onFieldTypeChanged(int index)
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1237,7 +1358,7 @@ void SMDataType::onFieldTypeChanged(int index)
     }
 }
 
-void SMDataType::onFieldValueCommitted()
+void DataTypePage::onFieldValueCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1247,7 +1368,7 @@ void SMDataType::onFieldValueCommitted()
     }
 }
 
-void SMDataType::onFieldDeprecatedToggled(bool checked)
+void DataTypePage::onFieldDeprecatedToggled(bool checked)
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1273,7 +1394,7 @@ void SMDataType::onFieldDeprecatedToggled(bool checked)
     }
 }
 
-void SMDataType::onFieldDeprecateHintCommitted()
+void DataTypePage::onFieldDeprecateHintCommitted(void)
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1283,7 +1404,151 @@ void SMDataType::onFieldDeprecateHintCommitted()
     }
 }
 
-void SMDataType::onNotifierChanged()
+bool DataTypePage::isCellEditable(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return false;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), static_cast<int>(eColumn::ColName)).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return false;
+
+    const uint32_t fieldId = index.sibling(index.row(), static_cast<int>(eColumn::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();
+    const int col = index.column();
+    if (fieldId == 0)
+    {
+        // Top-level data type node: which columns are editable depends on the category.
+        switch (dataType->getCategory())
+        {
+        case DataTypeBase::eCategory::Structure:    return (col == static_cast<int>(eColumn::ColName));
+        case DataTypeBase::eCategory::Enumeration:  return (col == static_cast<int>(eColumn::ColName)) || (col == static_cast<int>(eColumn::ColType));
+        case DataTypeBase::eCategory::Imported:     return (col == static_cast<int>(eColumn::ColName)) || (col == static_cast<int>(eColumn::ColType));
+        case DataTypeBase::eCategory::Container:    return (col == static_cast<int>(eColumn::ColName));
+        default:                                    return false;
+        }
+    }
+
+    // Field node: structure fields edit name/type/value; enumeration entries edit name/value.
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        return true;
+    if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        return (col == static_cast<int>(eColumn::ColName)) || (col == static_cast<int>(eColumn::ColValue));
+
+    return false;
+}
+
+QAbstractItemModel* DataTypePage::editorModelFor(const QModelIndex& index) const
+{
+    // The Data Type column is a picker in two cases: an enumeration's derived integer type (top
+    // node) and a structure field's type. An imported type is typed in, as a qualified name.
+    if ((index.isValid() == false) || (index.column() != static_cast<int>(eColumn::ColType)))
+        return nullptr;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), static_cast<int>(eColumn::ColName)).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return nullptr;
+
+    const uint32_t fieldId = index.sibling(index.row(), static_cast<int>(eColumn::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();
+    if (fieldId == 0)
+    {
+        return (dataType->getCategory() == DataTypeBase::eCategory::Enumeration ? mIntegerNames : nullptr);
+    }
+
+    return (dataType->getCategory() == DataTypeBase::eCategory::Structure ? mFieldTypeNames : nullptr);
+}
+
+TableCell::eCellValidation DataTypePage::validationFor(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return TableCell::eCellValidation::NoValidation;
+
+    const int col = index.column();
+    if (col == static_cast<int>(eColumn::ColName))
+        return TableCell::eCellValidation::Identifier;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), static_cast<int>(eColumn::ColName)).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return TableCell::eCellValidation::NoValidation;
+
+    const uint32_t fieldId = index.sibling(index.row(), static_cast<int>(eColumn::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();
+    if (col == static_cast<int>(eColumn::ColType))
+    {
+        if ((fieldId == 0) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
+            return TableCell::eCellValidation::QualifiedName;
+
+        return TableCell::eCellValidation::NoValidation;
+    }
+
+    // The value column: an enumerator is restricted to C++ value characters; a structure field's
+    // default stays unrestricted, it may be a number, a string literal or an expression.
+    if ((fieldId != 0) && (dataType->getCategory() == DataTypeBase::eCategory::Enumeration))
+        return TableCell::eCellValidation::Value;
+
+    return TableCell::eCellValidation::NoValidation;
+}
+
+void DataTypePage::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+{
+    if (index.isValid() == false)
+        return;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), static_cast<int>(eColumn::ColName)).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if ((dataType == nullptr) || (mModel.findDataType(dataType->getId()) != dataType))
+        return;
+
+    const uint32_t fieldId = index.sibling(index.row(), static_cast<int>(eColumn::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();
+    applyCellEdit(dataType, fieldId, index.column(), newValue);
+
+    // The commit above rebuilt the tree; put the details panel back on the edited row.
+    selectDataType(dataType->getId(), fieldId);
+}
+
+void DataTypePage::applyCellEdit(DataTypeCustom* dataType, uint32_t fieldId, int column, const QString& newValue)
+{
+    if (fieldId == 0)
+    {
+        if (column == static_cast<int>(eColumn::ColName))
+        {
+            mModel.renameDataType(dataType, newValue);
+        }
+        else if (column == static_cast<int>(eColumn::ColType))
+        {
+            if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+            {
+                mModel.setEnumDerived(static_cast<DataTypeEnum*>(dataType), newValue);
+            }
+            else if (dataType->getCategory() == DataTypeBase::eCategory::Imported)
+            {
+                mModel.setImportQualifiedName(static_cast<DataTypeImported*>(dataType), newValue);
+            }
+        }
+
+        return;
+    }
+
+    switch (column)
+    {
+    case static_cast<int>(eColumn::ColName):
+        mModel.setFieldName(dataType, fieldId, newValue);
+        break;
+
+    case static_cast<int>(eColumn::ColType):
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            mModel.setFieldType(static_cast<DataTypeStructure*>(dataType), fieldId, newValue);
+        }
+        break;
+
+    case static_cast<int>(eColumn::ColValue):
+        mModel.setFieldValue(dataType, fieldId, newValue);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void DataTypePage::onNotifierChanged(void)
 {
     refreshAll();
 }

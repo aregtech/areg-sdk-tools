@@ -21,8 +21,11 @@
 
 #include <QWidget>
 
+#include "lusan/model/common/DocModelNotifier.hpp"
+
 #include <QDateTime>
 
+class IEDocumentModel;
 class MdiMainWindow;
 class QMdiSubWindow;
 class QTabWidget;
@@ -196,6 +199,23 @@ public:
      **/
     virtual void setToolbarVisible(bool visible);
     virtual bool isToolbarVisible() const;
+
+    /**
+     * \brief   The document behind the window, for the surfaces that work on any editable
+     *          document -- the validation results panel above all. A window that edits no
+     *          document (a log viewer) keeps the nullptr default and is simply not listed.
+     **/
+    virtual IEDocumentModel* documentModel();
+
+    /**
+     * \brief   Brings the offending element of a validation finding into view: switches to the
+     *          page that owns it and puts the selection, and where the check knows it the caret,
+     *          on the thing that has to change.
+     * \param   elementId   The unique ID of the element the finding blames.
+     * \param   kind        The kind of that element, which decides the page.
+     * \param   rule        The check that produced the finding, which often names the field.
+     **/
+    virtual void navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule);
 
     inline bool isModified() const;
     virtual void setModified(bool modified);

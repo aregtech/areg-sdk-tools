@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QScrollArea>
 #include "lusan/data/si/SIMethodBase.hpp"
+#include "lusan/model/common/DocIssue.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
@@ -76,6 +77,12 @@ public:
     explicit SIMethod(SIMethodModel & model, QWidget* parent = nullptr);
 
     virtual ~SIMethod();
+
+    /**
+     * \brief   Selects the method with the given ID and, when the check names one, puts the
+     *          accent on the field at fault. Used by the validation results panel.
+     **/
+    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
     
 //////////////////////////////////////////////////////////////////////////
 // override
@@ -83,33 +90,10 @@ public:
 protected:
 
     /**
-     * \brief   Triggered when new data type is created.
-     * \param   dataType    New created data type object.
-     * \return  Returns true if new created data type is in the list. Otherwise, returns false.
+     * \brief   Rebuilds the type list the page offers and re-resolves every parameter's declared
+     *          type against what the document holds now.
      **/
-    void dataTypeCreated(DataTypeCustom* dataType) override;
-
-    /**
-     * \brief   Triggered when the data type is converted.
-     * \param   oldType     The old data type object.
-     * \param   newType     The new data type object.
-     * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
-     **/
-    void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
-
-    /**
-     * \brief   Triggered when the data type is deleted and invalidated.
-     * \param   dataType    The data type object to be deleted.
-     * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
-     **/
-    void dataTypeDeleted(DataTypeCustom* dataType) override;
-
-    /**
-     * \brief   Triggered when the data type is updated.
-     * \param   dataType    The data type object to update.
-     * \return  Returns true if the data type is updated. Otherwise, returns false.
-     **/
-    void dataTypeUpdated(DataTypeCustom* dataType) override;
+    void dataTypesChanged() override;
 
 //////////////////////////////////////////////////////////////////////////
 // IETableHelper overrides

@@ -838,19 +838,20 @@ void MdiMainWindow::syncDesignWidgets()
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     const bool designCurrent = (stateMachine != nullptr) && (design != nullptr) && stateMachine->isDesignPageCurrent();
 
-    // The output window's Validation tab lists EVERY open State Machine, one tree root each, so
-    // the count on the tab is a workspace total and a finding always names its document.
-    QList<StateMachine*> stateMachines;
+    // The output window's Validation tab lists every open document that carries validation, one
+    // tree root each, so the count on the tab is a workspace total and a finding always names the
+    // document it belongs to.
+    QList<MdiChild*> documents;
     for (QMdiSubWindow* sub : mMdiArea.subWindowList())
     {
-        StateMachine* doc = (sub != nullptr) ? qobject_cast<StateMachine*>(sub->widget()) : nullptr;
-        if ((doc != nullptr) && (doc->isClosing() == false))
+        MdiChild* doc = (sub != nullptr) ? qobject_cast<MdiChild*>(sub->widget()) : nullptr;
+        if ((doc != nullptr) && (doc->isClosing() == false) && (doc->documentModel() != nullptr))
         {
-            stateMachines.append(doc);
+            documents.append(doc);
         }
     }
 
-    mOutputDock.setDocuments(stateMachines);
+    mOutputDock.setDocuments(documents);
 
     // Let the active Design page's context menu render the correct check marks.
     if (design != nullptr)

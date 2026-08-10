@@ -30,7 +30,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-class SIDataTypeData;
+class DataTypeDataSection;
 
  /**
   * \class   SIIncludeData
@@ -81,7 +81,7 @@ public:
      * \brief   Validates the include data.
      * \param   dataTypes   The data type data to validate the includes.
      **/
-    void validate(const SIDataTypeData& dataTypes);
+    void validate(const DataTypeDataSection& dataTypes);
 
     /**
      * \brief   Creates an include entry.

@@ -26,6 +26,7 @@
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMRenameCommands.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
 
 #include <QUndoCommand>
 
@@ -111,7 +112,7 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mSelectionModel(this)
     , mOpenSuccess   (false)
     , mReadOnlyOrigin( )
-    , mValidationController(*mData, mNotifier, this)
+    , mValidationController(*this, [this]() { return SMValidator::validate(getData()); }, this)
 {
     mUndoStack.setUndoLimit(100);
     mAutosaveTimer.setSingleShot(false);
@@ -130,7 +131,7 @@ bool StateMachineModel::createNewDocument(const QString& machineName)
         return false;
     }
 
-    mValidationController.setDocument(*mData);
+    mValidationController.validateNow();
     mUndoStack.clear();
     mUndoStack.setClean();
     mSelectionModel.reset();
@@ -189,7 +190,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
         }
     }
 
-    mValidationController.setDocument(*mData);
+    mValidationController.validateNow();
     mUndoStack.clear();
     mUndoStack.setClean();
     mSelectionModel.reset();
@@ -270,6 +271,30 @@ void StateMachineModel::publishStateNamePreview(uint32_t stateId, const QString&
 const QList<DataTypeCustom*>& StateMachineModel::getCustomDataTypes() const
 {
     return const_cast<StateMachineModel*>(this)->mDataTypeModel.getCustomDataTypes();
+}
+
+QString StateMachineModel::describeElement(uint32_t id, eDocElementKind /*kind*/) const
+{
+    if ((mData == nullptr) || (id == 0))
+    {
+        return QString();
+    }
+
+    if (const SMStateEntry* state = mData->findStateById(id))
+    {
+        return tr("State '%1'").arg(state->getName());
+    }
+
+    if (const SMTransitionEntry* transition = mData->findTransitionById(id))
+    {
+        const SMStateEntry* target = mData->findStateById(transition->getToId());
+        const QString stimulus = transition->getStimulus().isEmpty() ? tr("(initial)") : transition->getStimulus();
+        return (target != nullptr)
+                ? tr("Transition %1 -> %2").arg(stimulus, target->getName())
+                : tr("Transition %1").arg(stimulus);
+    }
+
+    return QString();
 }
 
 QUndoCommand* StateMachineModel::createRenameSideEffects( eDocElementKind kind, uint32_t id

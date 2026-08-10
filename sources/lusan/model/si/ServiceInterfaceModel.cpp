@@ -20,17 +20,19 @@
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/model/si/SIValidator.hpp"
 
 ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString()*/)
     : mSIData           (filePath)
     , mNotifier         ( )
     , mUndoStack        ( )
     , mModelOverview    (mSIData.getOverviewData())
-    , mModelDataType    (mSIData.getDataTypeData())
+    , mModelDataType    (*this)
     , mModelAttributes  (mSIData.getAttributeData() , mSIData.getDataTypeData())
     , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
     , mModelConstant    (*this)
     , mModelInclude     (mSIData.getIncludeData())
+    , mValidation       (*this, [this]() { return SIValidator::validate(mSIData); })
 {
 }
 

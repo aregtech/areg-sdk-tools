@@ -31,7 +31,7 @@
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
-#include "lusan/model/sm/SMValidationController.hpp"
+#include "lusan/model/common/DocValidationController.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMKindGlyph.hpp"
@@ -299,8 +299,8 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
 
     // A shadowed transition (an earlier unconditional one on the same stimulus already answered the
     // stimulus) is a finding the validator makes; the rows wear it as soon as it is recomputed.
-    connect(&mModel.getValidationController(), &SMValidationController::validationUpdated
-           , this, [this](const QList<SMIssue>&) { refresh(); });
+    connect(&mModel.getValidationController(), &DocValidationController::validationUpdated
+           , this, [this](const QList<DocIssue>&) { refresh(); });
 
     mSignature->installEventFilter(this);
 
@@ -331,7 +331,7 @@ void SMInternalEditor::refresh()
     mList->clear();
     const StateMachineData&         data  = mModel.getData();
     const QList<SMTransitionEntry*> list  = internals();
-    const QList<SMIssue>&           found = mModel.getValidationController().issues();
+    const QList<DocIssue>&           found = mModel.getValidationController().issues();
     const int                       total = static_cast<int>(list.size());
     int selectRow = -1;
     for (int index = 0; index < total; ++index)
@@ -342,17 +342,17 @@ void SMInternalEditor::refresh()
         // The chip in the row is a summary; the tooltip is where the guard is read, and where a
         // transition that can never fire says so in the validator's own words.
         QString tip = SMGuardRender::guardText(data, transition->getId(), transition->getGuard(), true);
-        for (const SMIssue& issue : found)
+        for (const DocIssue& issue : found)
         {
             if ((issue.elementId == transition->getId()) && (issue.kind == eDocElementKind::Transition)
-                && (issue.severity != SMIssue::eSeverity::Info))
+                && (issue.severity != DocIssue::eSeverity::Info))
             {
                 // The same two text markers the canvas edge labels wear, so severity survives a
                 // grayscale screen and a colour-blind reader; the sentence itself is the tooltip.
                 label += QLatin1Char(' ')
-                       + ((issue.severity == SMIssue::eSeverity::Error) ? QStringLiteral("(x)") : QStringLiteral("(!)"));
+                       + ((issue.severity == DocIssue::eSeverity::Error) ? QStringLiteral("(x)") : QStringLiteral("(!)"));
                 tip += (tip.isEmpty() ? QString() : QStringLiteral("\n"))
-                     + ((issue.severity == SMIssue::eSeverity::Error) ? tr("err: %1") : tr("warn: %1")).arg(issue.message);
+                     + ((issue.severity == DocIssue::eSeverity::Error) ? tr("err: %1") : tr("warn: %1")).arg(issue.message);
                 break;
             }
         }

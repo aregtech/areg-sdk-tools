@@ -24,9 +24,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
-    ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
-    ${LUSAN}/view/sm/SMDataType.cpp
     ${LUSAN}/view/sm/SMEvent.cpp
     ${LUSAN}/view/sm/SMEventDetails.cpp
     ${LUSAN}/view/sm/SMEventList.cpp
@@ -89,9 +87,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMSignatureCard.hpp
     ${LUSAN}/view/sm/SMRefCompleter.hpp
     ${LUSAN}/view/sm/SMTryStrip.hpp
-    ${LUSAN}/view/sm/SMValidationPanel.hpp
     ${LUSAN}/view/sm/SMConstant.hpp
-    ${LUSAN}/view/sm/SMDataType.hpp
     ${LUSAN}/view/sm/SMEvent.hpp
     ${LUSAN}/view/sm/SMEventDetails.hpp
     ${LUSAN}/view/sm/SMEventList.hpp

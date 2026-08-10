@@ -276,7 +276,9 @@ public:
     inline bool isValid() const;
 
     /**
-     * \brief   Invalidates the type object.
+     * \brief   Drops the resolved object and keeps the name it was reporting, so the next
+     *          \ref validate looks up the name the caller last saw rather than the one the
+     *          object carried when it was first resolved.
      **/
     inline void invalidate();
 
@@ -538,7 +540,14 @@ inline bool TETypeWrap<Type, TypeSearch, Finder>::isValid() const
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
 inline void TETypeWrap<Type, TypeSearch, Finder>::invalidate()
 {
-    mTypeObj = nullptr;
+    // The object is the authority on the name while it is resolved, so take the name over before
+    // letting it go. Dropping the pointer alone would revive whatever name was stored before the
+    // object was renamed, and the reference would then resolve to nothing.
+    if (mTypeObj != nullptr)
+    {
+        mTypeName = mTypeObj->getName();
+        mTypeObj = nullptr;
+    }
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
