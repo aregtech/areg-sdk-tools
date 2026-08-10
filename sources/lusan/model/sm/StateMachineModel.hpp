@@ -96,6 +96,12 @@ public:
     inline ConstantDataSection& getConstantSection() override;
 
     /**
+     * \brief   The document's `Overview` section, read from the data object that is current
+     *          now for the same reason as the constants section above.
+     **/
+    inline OverviewDataSection& getOverviewSection() override;
+
+    /**
      * \brief   The document's `DataTypeList` section, read from the data object that is current
      *          now for the same reason as the constants section above.
      **/
@@ -202,6 +208,11 @@ inline StateMachineData& StateMachineModel::getData()
 inline const StateMachineData& StateMachineModel::getData() const
 {
     return *mData;
+}
+
+inline OverviewDataSection& StateMachineModel::getOverviewSection()
+{
+    return mData->getOverview();
 }
 
 inline ConstantDataSection& StateMachineModel::getConstantSection()

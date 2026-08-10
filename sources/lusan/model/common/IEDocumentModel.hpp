@@ -39,6 +39,7 @@ class DataTypeDataSection;
 class DocValidationController;
 class IncludeDataSection;
 class MethodDataSection;
+class OverviewDataSection;
 class QUndoCommand;
 
 /**
@@ -82,9 +83,16 @@ public:
     virtual const QList<DataTypeCustom*>& getCustomDataTypes() const = 0;
 
     /**
-     * \brief   The document's `ConstantList` section. Answered on every call rather than handed
-     *          out once, because a document that opens or reloads a file replaces the data object
-     *          the section lives in, and a reference taken earlier would outlive it.
+     * \brief   The document's `Overview` section: what the document says about itself. Answered
+     *          on every call rather than handed out once, because a document that opens or
+     *          reloads a file replaces the data object the section lives in, and a reference
+     *          taken earlier would outlive it.
+     **/
+    virtual OverviewDataSection& getOverviewSection() = 0;
+
+    /**
+     * \brief   The document's `ConstantList` section. Answered on every call, for the same
+     *          reason as the overview section above.
      **/
     virtual ConstantDataSection& getConstantSection() = 0;
 

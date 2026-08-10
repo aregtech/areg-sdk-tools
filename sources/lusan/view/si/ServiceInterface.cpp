@@ -64,6 +64,7 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     , mConstant (nullptr)
     , mInclude  (nullptr)
     , mPendingInitTabs( )
+    , mPendingEdits(mModel.getNotifier(), this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     const int pageCount{ static_cast<int>(eSIPages::PageIncludes) + 1 };
@@ -106,7 +107,10 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     // the document was last saved at.
     connect(&mModel.getUndoStack(), &QUndoStack::canUndoChanged, this, &MdiChild::signalCanUndoChanged);
     connect(&mModel.getUndoStack(), &QUndoStack::canRedoChanged, this, &MdiChild::signalCanRedoChanged);
-    connect(&mModel.getUndoStack(), &QUndoStack::cleanChanged  , this, [this](bool clean) { setModified(clean == false); });
+    connect(&mModel.getUndoStack(), &QUndoStack::cleanChanged  , this, &ServiceInterface::refreshModified);
+    // A field gives its text to the document when it loses the focus, so between the first
+    // keystroke and that moment the document is changed while the history still says otherwise.
+    connect(&mPendingEdits, &PendingEditWatcher::signalPendingEditChanged, this, &ServiceInterface::refreshModified);
 
     setAttribute(Qt::WA_DeleteOnClose);
 
@@ -223,9 +227,10 @@ bool ServiceInterface::writeToFile(const QString& filePath)
     if (mModel.saveToFile(filePath))
     {
         mModel.getUndoStack().setClean();
+        // Saving under another file name renames the interface, without going through the history.
         if (mOverview != nullptr)
-            mOverview->setServiceInterfaceName(mModel.getName());
-        
+            mOverview->refreshAll();
+
         return true;
     }
     else
@@ -238,7 +243,6 @@ void ServiceInterface::slotDataTypesChanged()
 {
     // The Data Types page and the Constants page follow the notifier themselves; the rest are
     // told here, because they still hold their own copies of the type list.
-    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypesChanged();
     if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypesChanged();
     if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypesChanged();
 }
@@ -256,6 +260,14 @@ void ServiceInterface::commitPendingEdits(void)
             editor->commitPendingEdits();
         }
     }
+
+    // What the caret still sits in has just been handed over with the rest.
+    mPendingEdits.acceptPendingEdit();
+}
+
+void ServiceInterface::refreshModified(void)
+{
+    setModified(mModel.isDirty() || mPendingEdits.hasPendingEdit());
 }
 
 void ServiceInterface::attachPage(int index, QWidget* page)

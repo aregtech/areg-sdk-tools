@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_APPLICATION_SI_SIOVERVIEW_HPP
+#ifndef LUSAN_APPLICATION_SI_SIOVERVIEW_HPP
 #define LUSAN_APPLICATION_SI_SIOVERVIEW_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIOverview.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,44 +22,22 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/model/common/DocIssue.hpp"
-
-#include <QScrollArea>
-#include <QIntValidator>
-#include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/OverviewPage.hpp"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class SIOverviewDetails;
-class SIOverviewLinks;
-class SIOverviewParamDetails;
 class SIOverviewModel;
-class QHBoxLayout;
-
-/************************************************************************
- * \brief   The helper widget.
- ************************************************************************/
-class SIOverviewWidget : public QWidget
-{
-    friend class SIOverview;
-
-    Q_OBJECT
-
-public:
-    explicit SIOverviewWidget(QWidget* parent);
-
-private:
-    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the details and links panels.
-};
+class QRadioButton;
 
 /**
- * \brief   The widget to display the overview details of the service interface.
- *          The widget contains the information about the service interface, such as
- *          name, version, description, and other details.
+ * \brief   The Service Interface Overview page: the shared \ref OverviewPage plus the service
+ *          category, which only an interface declares.
+ *
+ *          The name is shown but not edited here: an interface is named by the file it lives in,
+ *          and a save writes that name back into the document.
  **/
-class SIOverview : public QScrollArea
-                 , public IEDataTypeConsumer
+class SIOverview : public OverviewPage
 {
     Q_OBJECT
 
@@ -67,146 +45,41 @@ class SIOverview : public QScrollArea
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
+    explicit SIOverview(SIOverviewModel& model, QWidget* parent = nullptr);
 
-    virtual ~SIOverview();
-
-    /**
-     * \brief   Puts the accent on the overview field a validation finding blames.
-     **/
-    void revealField(eIssueField field);
+    virtual ~SIOverview(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operations
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-
     /**
-     * \brief   Sets the service interface name.
+     * \brief   Fills the shared rows and the service category.
      **/
-    void setServiceInterfaceName(const QString & siName);
-
-signals:
-
-    /**
-     * \brief   The signal is triggered when the page link is clicked.
-     * \param   page    The index of the page.
-     **/
-    void signalPageLinkClicked(int page);
+    virtual void refreshAll(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
-protected:
-
-    /**
-     * \brief   The slot is triggered when service interface category is set as Public.
-     * \param   isChecked   The flag indicating whether the radio button is checked or not.
-     **/
-    void onCheckedPublic(bool isChecked);
-
-    /**
-     * \brief   The slot is triggered when service interface category is set as Private.
-     * \param   isChecked   The flag indicating whether the radio button is checked or not.
-     **/
-    void onCheckedPrivate(bool isChecked);
-
-    /**
-     * \brief   The slot is triggered when service interface category is set as Internet.
-     * \param   isChecked   The flag indicating whether the radio button is checked or not.
-     **/
-    void onCheckedInternet(bool isChecked);
-
-
-    void onDeprecatedChecked(bool isChecked);
-
-    /**
-     * \brief   The slot is triggered when the service interface description is changed.
-     **/
-    void onDescriptionChanged();
-
-    /**
-     * \brief   The slot is triggered when the deprecation hint is changed.
-     * \param   newText     The new text of the deprecation hint.
-     **/
-    void onDeprecateHintChanged(const QString& newText);
-
-    /**
-     * \brief   The slot is triggered when the service interface major version is changed.
-     * \param   major   The new major version.
-     **/
-    void onMajorChanged(const QString& major);
-
-    /**
-     * \brief   The slot is triggered when the service interface minor version is changed.
-     * \param   minor   The new minor version.
-     **/
-    void onMinorChanged(const QString& minor);
-
-    /**
-     * \brief   The slot is triggered when the service interface patch version is changed.
-     * \param   patch   The new patch version.
-     **/
-    void onPatchChanged(const QString& patch);
-
-    /**
-     * \brief   The slot is triggered when the link to constants tabbed page is clicked.
-     * \param   checked The flag indicating whether the link is checked or not.
-     **/
-    void onLinkConstantsClicked(bool checked);
-
-    /**
-     * \brief   The slot is triggered when the link to data types tabbed page is clicked.
-     * \param   checked The flag indicating whether the link is checked or not.
-     **/
-    void onLinkDataTypesClicked(bool checked);
-
-    /**
-     * \brief   The slot is triggered when the link to includes tabbed page is clicked.
-     * \param   checked The flag indicating whether the link is checked or not.
-     **/
-    void onLinkIncludesClicked(bool checked);
-
-    /**
-     * \brief   The slot is triggered when the link to methods tabbed page is clicked.
-     * \param   checked The flag indicating whether the link is checked or not.
-     **/
-    void onLinkMethodsClicked(bool checked);
-
-    /**
-     * \brief   The slot is triggered when the link to attributes tabbed page is clicked.
-     * \param   checked The flag indicating whether the link is checked or not.
-     **/
-    void onLinkAttributesClicked(bool checked);
+private slots:
+    void onPublicToggled(bool checked);
+    void onPrivateToggled(bool checked);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    /**
-     * \brief   Initializes the SIConstant object.
-     **/
-    void updateWidgets();
-
-    /**
-     * \brief   Initializes the SIInclude object.
-     **/
-    void updateData();
-
-    /**
-     * \brief   Initializes the signals.
-     **/
-    void setupSignals();
+    //!< Adds the category row under the name, where the interface has always shown it.
+    void buildCategoryRow(void);
 
 //////////////////////////////////////////////////////////////////////////
-// Hidden member variables
+// Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIOverviewModel&    mModel;     //!< The model of the service interface overview.
-    SIOverviewDetails*  mDetails;   //!< The details of the service interface overview.
-    SIOverviewLinks*    mLinks;     //!< The links of the service interface overview.
-    SIOverviewWidget*   mWidget;    //!< The widget of the service interface overview.
-    QIntValidator       mVersionValidator; //!< The validator to validate the version number.
+    SIOverviewModel&    mModel;     //!< The Overview of the interface being edited.
+    QRadioButton*       mPublic;
+    QRadioButton*       mPrivate;
+    QRadioButton*       mInternet;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEW_HPP

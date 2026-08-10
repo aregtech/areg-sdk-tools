@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/SMOverviewModel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,63 +22,31 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/data/sm/SMOverviewData.hpp"
+#include "lusan/model/common/OverviewModel.hpp"
 
-/************************************************************************
- * Dependencies
- ************************************************************************/
-class StateMachineModel;
-class DocModelNotifier;
+#include "lusan/data/sm/SMOverviewData.hpp"
 
 /**
  * \class   SMOverviewModel
- * \brief   The Overview page model. It reads the live Overview section and routes every
- *          edit through an undo command on the document's stack, so the page never mutates
- *          the model directly. It reaches the section through the facade rather than a
- *          captured reference, so a document reload (which replaces the data root and
- *          clears the stack) needs no rebinding.
+ * \brief   The shared Overview page model plus the threading mode, which only a state machine
+ *          declares. The mode is edited through an undo command like every other row.
  **/
-class SMOverviewModel
+class SMOverviewModel : public OverviewModel
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMOverviewModel(StateMachineModel& facade);
+    explicit SMOverviewModel(IEDocumentModel& document);
+
+    virtual ~SMOverviewModel(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    const QString& getName() const;
-    const VersionNumber& getVersion() const;
-    SMOverviewData::eThreading getThreading() const;
-    const QString& getDescription() const;
-    bool getIsDeprecated() const;
-    const QString& getDeprecateHint() const;
-
-    void setName(const QString& name);
-    void setVersion(const VersionNumber& version);
+    SMOverviewData::eThreading getThreading(void) const;
     void setThreading(SMOverviewData::eThreading threading);
-    void setDescription(const QString& description);
-    void setIsDeprecated(bool isDeprecated);
-    void setDeprecateHint(const QString& hint);
-
-    DocModelNotifier& getNotifier() const;
-    uint32_t getOverviewId() const;
-
-//////////////////////////////////////////////////////////////////////////
-// Hidden methods
-//////////////////////////////////////////////////////////////////////////
-private:
-    const SMOverviewData& overview() const;
-    SMOverviewData& overview();
-
-//////////////////////////////////////////////////////////////////////////
-// Member variables
-//////////////////////////////////////////////////////////////////////////
-private:
-    StateMachineModel&  mFacade;
 };
 
 #endif  // LUSAN_MODEL_SM_SMOVERVIEWMODEL_HPP

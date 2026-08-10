@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/SIOverviewData.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -20,6 +20,12 @@
 #include "lusan/data/si/SIOverviewData.hpp"
 #include "lusan/common/XmlSI.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
+
+namespace
+{
+    //!< A service interface writes the description element even when it holds no text.
+    constexpr bool OMIT_EMPTY_DESCRIPTION{ false };
+}
 
 SIOverviewData::eCategory SIOverviewData::fromString(const QString& category)
 {
@@ -57,24 +63,15 @@ const char* SIOverviewData::toString(SIOverviewData::eCategory category)
 }
 
 SIOverviewData::SIOverviewData(ElementBase* parent /*= nullptr*/)
-    : DocumentElem  (parent)
-    , mName         ("NewServiceInterface")
-    , mVersion      (0, 0, 1)
-    , mCategory     (eCategory::InterfacePrivate)
-    , mDescription  ()
-    , mIsDeprecated (false)
-    , mDeprecateHint()
+    : OverviewDataSection   (OMIT_EMPTY_DESCRIPTION, parent)
+    , mCategory             (eCategory::InterfacePrivate)
 {
+    setName(QStringLiteral("NewServiceInterface"));
 }
 
 SIOverviewData::SIOverviewData(uint32_t id, const QString& name, ElementBase* parent)
-    : DocumentElem  (id, parent)
-    , mName         (name)
-    , mVersion      (0, 0, 1)
-    , mCategory     (eCategory::InterfacePrivate)
-    , mDescription  ()
-    , mIsDeprecated (false)
-    , mDeprecateHint()
+    : OverviewDataSection   (id, name, OMIT_EMPTY_DESCRIPTION, parent)
+    , mCategory             (eCategory::InterfacePrivate)
 {
 }
 
@@ -86,82 +83,36 @@ SIOverviewData::SIOverviewData( uint32_t id
                               , bool isDeprecated
                               , const QString& deprecateHint
                               , ElementBase* parent /*= nullptr*/)
-    : DocumentElem  (id, parent)
-    , mName         (name)
-    , mVersion      (version)
-    , mCategory     (category)
-    , mDescription  (description)
-    , mIsDeprecated (isDeprecated)
-    , mDeprecateHint(deprecateHint)
+    : OverviewDataSection   (id, name, OMIT_EMPTY_DESCRIPTION, parent)
+    , mCategory             (category)
 {
+    setVersion(version);
+    setDescription(description);
+    setIsDeprecated(isDeprecated);
+    setDeprecateHint(deprecateHint);
 }
 
-bool SIOverviewData::isValid() const
+void SIOverviewData::readOwnAttributes(const QXmlStreamAttributes& attributes)
 {
-    return true;
-}
-    
-bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
-{
-    if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementOverview))
-        return false;
+    const QString categoryStr = attributes.hasAttribute(XmlSI::xmlSIAttributeCategory)
+                                    ? attributes.value(XmlSI::xmlSIAttributeCategory).toString()
+                                    : QString(STR_CATEGORY_PRIVATE);
+    mCategory = SIOverviewData::fromString(categoryStr);
 
-    ServiceInterfaceData* siData = static_cast<ServiceInterfaceData*>(getParent());
+    const ServiceInterfaceData* siData = static_cast<const ServiceInterfaceData*>(getParent());
     Q_ASSERT(siData != nullptr);
     const VersionNumber& dataVersion = siData->getCurrentDocumentVersion();
-    QXmlStreamAttributes attributes = xml.attributes();
-    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
-    mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-    mVersion = attributes.value(XmlSI::xmlSIAttributeVersion).toString();
-    QString categoryStr = attributes.hasAttribute(XmlSI::xmlSIAttributeCategory) ? attributes.value(XmlSI::xmlSIAttributeCategory).toString() : STR_CATEGORY_PRIVATE;
-    mCategory = SIOverviewData::fromString(categoryStr);
-    
-    QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
-    setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
-
-    if (dataVersion != VersionNumber(ServiceInterfaceData::XML_FORMAT_DEFAULT))
+    if (dataVersion == VersionNumber(ServiceInterfaceData::XML_VERRSION_100))
     {
-        if (dataVersion == VersionNumber(ServiceInterfaceData::XML_VERRSION_100))
-        {
-            QString isRemove = attributes.hasAttribute("isRemote") ? attributes.value("isRemote").toString() : "false";
-            mCategory = isRemove.compare("true", Qt::CaseSensitivity::CaseInsensitive) == 0 ? eCategory::InterfacePublic : eCategory::InterfacePrivate;
-        }
+        // The first published format said `isRemote` instead of naming a category.
+        const QString isRemote = attributes.hasAttribute("isRemote") ? attributes.value("isRemote").toString() : QString("false");
+        mCategory = isRemote.compare("true", Qt::CaseSensitivity::CaseInsensitive) == 0 ? eCategory::InterfacePublic : eCategory::InterfacePrivate;
     }
-
-    while (xml.readNextStartElement())
-    {
-        if (xml.name() == XmlSI::xmlSIElementDescription)
-        {
-            mDescription = xml.readElementText();
-        }
-        else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
-        {
-            setDeprecateHint(xml.readElementText());
-        }
-        else
-        {
-            xml.skipCurrentElement();
-        }
-    }
-
-    return true;
 }
 
-void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
+void SIOverviewData::writeOwnAttributes(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementOverview);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-    xml.writeAttribute(XmlSI::xmlSIAttributeVersion, mVersion.toString());
     xml.writeAttribute(XmlSI::xmlSIAttributeCategory, SIOverviewData::toString(mCategory));
-    if (getIsDeprecated())
-    {
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
-        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
-    }
-
-    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
-    xml.writeEndElement();
 }
 
 void SIOverviewData::validate(const DataTypeDataSection& /*dataTypes*/)

@@ -139,6 +139,11 @@ public:
     const QList<DataTypeCustom*>& getCustomDataTypes() const override;
 
     /**
+     * \brief   The document's `Overview` section.
+     **/
+    inline OverviewDataSection& getOverviewSection() override;
+
+    /**
      * \brief   The document's `ConstantList` section.
      **/
     inline ConstantDataSection& getConstantSection() override;
@@ -231,6 +236,11 @@ inline ConstantModel& ServiceInterfaceModel::getConstantsModel()
 inline IncludeModel& ServiceInterfaceModel::getIncludesModel()
 {
     return mModelInclude;
+}
+
+inline OverviewDataSection& ServiceInterfaceModel::getOverviewSection()
+{
+    return mSIData.getOverviewData();
 }
 
 inline ConstantDataSection& ServiceInterfaceModel::getConstantSection()

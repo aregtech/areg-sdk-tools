@@ -23,6 +23,7 @@
 #include "lusan/view/common/MdiChild.hpp"
 
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
+#include "lusan/view/common/PendingEditWatcher.hpp"
 
 #include <QList>
 #include <QTabWidget>
@@ -205,6 +206,9 @@ private:
     void ensureTabInitialized(int index);
     //!< Places the created page into the tab holder widget at given index.
     void attachPage(int index, QWidget* page);
+    //!< Marks the title as changed while the history stands away from the saved point, or while a
+    //!< field holds text the document has not received yet.
+    void refreshModified(void);
 
 private:
     ServiceInterfaceModel   mModel; //!< The model of the service interface
@@ -216,6 +220,7 @@ private:
     ConstantPage*  mConstant;  //!< The constant widget
     IncludePage* mInclude;   //!< The include widget
     QList<int>   mPendingInitTabs; //!< Background initialization queue
+    PendingEditWatcher  mPendingEdits;  //!< Text typed into a field but not handed over yet.
 };
 
 inline ServiceInterfaceModel& ServiceInterface::getModel()

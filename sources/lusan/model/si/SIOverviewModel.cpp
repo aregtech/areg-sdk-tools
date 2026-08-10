@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/SIOverviewModel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -18,89 +18,27 @@
  ************************************************************************/
 
 #include "lusan/model/si/SIOverviewModel.hpp"
-#include "lusan/data/si/SIOverviewData.hpp"
 
-SIOverviewModel::SIOverviewModel(SIOverviewData& data)
-    : mData(data)
+SIOverviewModel::SIOverviewModel(IEDocumentModel& document)
+    : OverviewModel(document)
 {
 }
 
-uint32_t SIOverviewModel::getId() const
+SIOverviewData::eCategory SIOverviewModel::getCategory(void) const
 {
-    return mData.getId();
-}
-
-void SIOverviewModel::setId(uint32_t id)
-{
-    mData.setId(id);
-}
-
-const QString& SIOverviewModel::getName() const
-{
-    return mData.getName();
-}
-
-void SIOverviewModel::setName(const QString& name)
-{
-    mData.setName(name);
-}
-
-const VersionNumber& SIOverviewModel::getVersion() const
-{
-    return mData.getVersion();
-}
-
-void SIOverviewModel::setVersion(const QString& version)
-{
-    mData.setVersion(version);
-}
-
-void SIOverviewModel::setVersion(const VersionNumber& version)
-{
-    mData.setVersion(version);
-}
-
-void SIOverviewModel::setVersion(uint32_t major, uint32_t minor, uint32_t patch)
-{
-    mData.setVersion(VersionNumber(major, minor, patch));
-}
-
-SIOverviewData::eCategory SIOverviewModel::getCategory() const
-{
-    return mData.getCategory();
+    return static_cast<const SIOverviewData&>(section()).getCategory();
 }
 
 void SIOverviewModel::setCategory(SIOverviewData::eCategory category)
 {
-    mData.setCategory(category);
-}
+    if (category == getCategory())
+        return;
 
-const QString& SIOverviewModel::getDescription() const
-{
-    return mData.getDescription();
-}
-
-void SIOverviewModel::setDescription(const QString& description)
-{
-    mData.setDescription(description);
-}
-
-bool SIOverviewModel::getIsDeprecated() const
-{
-    return mData.getIsDeprecated();
-}
-
-void SIOverviewModel::setIsDeprecated(bool isDeprecated)
-{
-    mData.setIsDeprecated(isDeprecated);
-}
-
-const QString& SIOverviewModel::getDeprecateHint() const
-{
-    return mData.getDeprecateHint();
-}
-
-void SIOverviewModel::setDeprecateHint(const QString& deprecateHint)
-{
-    mData.setDeprecateHint(deprecateHint);
+    IEDocumentModel* document = &getDocument();
+    pushProperty<SIOverviewData::eCategory>
+    (
+          [document]() { return static_cast<SIOverviewData&>(document->getOverviewSection()).getCategory(); }
+        , [document](const SIOverviewData::eCategory& value) { static_cast<SIOverviewData&>(document->getOverviewSection()).setCategory(value); }
+        , category, QObject::tr("Set service category")
+    );
 }

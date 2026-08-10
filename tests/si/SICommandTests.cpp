@@ -299,6 +299,141 @@ namespace
         CHECK(serialize(doc) == empty);
     }
 
+    //!< The `Overview` section is shared with the state machine, and every edit of it reaches the
+    //!< document through the same property command -- which is what gives the interface's Overview
+    //!< page an undo history it never had. What the interface adds to the shared rows, the service
+    //!< category, is written by the interface's own section and by nothing else.
+    void testOverviewSection()
+    {
+        ServiceInterfaceData    doc;
+        DocModelNotifier        notifier;
+        QUndoStack              stack;
+
+        SIOverviewData& overview = doc.getOverviewData();
+        const uint32_t id = overview.getId();
+        const QString built = serialize(doc);
+        CHECK(built.contains(QStringLiteral("Category=\"Private\"")));
+        CHECK(built.contains(QStringLiteral("Threading=")) == false);
+
+        // The description is one undo step, and it round-trips byte for byte.
+        stack.push(new TDocSetPropertyCommand<QString>( notifier, id, eDocElementKind::Overview
+                                                      , [&overview]() { return overview.getDescription(); }
+                                                      , [&overview](const QString& value) { overview.setDescription(value); }
+                                                      , QStringLiteral("What the interface is for."), "Set description"));
+        const QString described = serialize(doc);
+        CHECK(described.contains(QStringLiteral("<Description>What the interface is for.</Description>")));
+        stack.undo();
+        CHECK(serialize(doc) == built);
+        stack.redo();
+        CHECK(serialize(doc) == described);
+
+        // So is the version.
+        stack.push(new TDocSetPropertyCommand<VersionNumber>( notifier, id, eDocElementKind::Overview
+                                                            , [&overview]() { return overview.getVersion(); }
+                                                            , [&overview](const VersionNumber& value) { overview.setVersion(value); }
+                                                            , VersionNumber(2u, 1u, 0u), "Set version"));
+        CHECK(serialize(doc).contains(QStringLiteral("Version=\"2.1.0\"")));
+        stack.undo();
+        CHECK(serialize(doc) == described);
+        stack.redo();
+
+        // And so is the category, which only an interface declares.
+        stack.push(new TDocSetPropertyCommand<SIOverviewData::eCategory>( notifier, id, eDocElementKind::Overview
+                                                                        , [&overview]() { return overview.getCategory(); }
+                                                                        , [&overview](const SIOverviewData::eCategory& value) { overview.setCategory(value); }
+                                                                        , SIOverviewData::eCategory::InterfacePublic, "Set service category"));
+        CHECK(overview.getCategory() == SIOverviewData::eCategory::InterfacePublic);
+        CHECK(serialize(doc).contains(QStringLiteral("Category=\"Public\"")));
+        stack.undo();
+        CHECK(overview.getCategory() == SIOverviewData::eCategory::InterfacePrivate);
+        stack.redo();
+
+        // The deprecation mark and its hint move together, the way the page offers them.
+        overview.setIsDeprecated(true);
+        overview.setDeprecateHint(QStringLiteral("Use the v2 interface."));
+        const QString deprecated = serialize(doc);
+        CHECK(deprecated.contains(QStringLiteral("IsDeprecated=\"true\"")));
+        CHECK(deprecated.contains(QStringLiteral("<DeprecateHint>Use the v2 interface.</DeprecateHint>")));
+        overview.setIsDeprecated(false);
+        CHECK(serialize(doc).contains(QStringLiteral("DeprecateHint")) == false);
+
+        // And back to where it started, from the top of the history down.
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+
+        CHECK(serialize(doc) == built);
+    }
+
+    //!< A published `.siml` keeps its overview across a read and a write, including the category
+    //!< the first format spelled as `isRemote`.
+    void testOverviewRoundTrip()
+    {
+        const QString source = QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            "<ServiceInterface FormatVersion=\"1.1.0\">"
+            "  <Overview ID=\"1\" Name=\"Sample\" Version=\"1.2.3\" Category=\"Public\" IsDeprecated=\"true\">"
+            "    <DeprecateHint>Use the v2 interface.</DeprecateHint>"
+            "    <Description>Sample interface.</Description>"
+            "  </Overview>"
+            "</ServiceInterface>");
+
+        ServiceInterfaceData doc;
+        QXmlStreamReader reader(source);
+        while (reader.readNextStartElement())
+        {
+            CHECK(doc.readFromXml(reader));
+            break;
+        }
+
+        const SIOverviewData& overview = doc.getOverviewData();
+        CHECK(overview.getName() == QStringLiteral("Sample"));
+        CHECK(overview.getVersion() == VersionNumber(1u, 2u, 3u));
+        CHECK(overview.getCategory() == SIOverviewData::eCategory::InterfacePublic);
+        CHECK(overview.getIsDeprecated());
+        CHECK(overview.getDeprecateHint() == QStringLiteral("Use the v2 interface."));
+        CHECK(overview.getDescription() == QStringLiteral("Sample interface."));
+
+        // Written back, it is the overview that was read, and no threading mode appeared.
+        const QString written = serialize(doc);
+        CHECK(written.contains(QStringLiteral("Name=\"Sample\"")));
+        CHECK(written.contains(QStringLiteral("Version=\"1.2.3\"")));
+        CHECK(written.contains(QStringLiteral("Category=\"Public\"")));
+        CHECK(written.contains(QStringLiteral("IsDeprecated=\"true\"")));
+        CHECK(written.contains(QStringLiteral("<DeprecateHint>Use the v2 interface.</DeprecateHint>")));
+        CHECK(written.contains(QStringLiteral("Threading=")) == false);
+
+        // And reading what was written gives the same overview again.
+        ServiceInterfaceData again;
+        QXmlStreamReader back(written);
+        while (back.readNextStartElement())
+        {
+            CHECK(again.readFromXml(back));
+            break;
+        }
+
+        CHECK(serialize(again) == written);
+
+        // The first published format said `isRemote` instead of naming a category.
+        const QString legacy = QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            "<ServiceInterface FormatVersion=\"1.0.0\">"
+            "  <Overview ID=\"1\" Name=\"Legacy\" Version=\"1.0.0\" isRemote=\"true\"/>"
+            "</ServiceInterface>");
+
+        ServiceInterfaceData old;
+        QXmlStreamReader oldReader(legacy);
+        while (oldReader.readNextStartElement())
+        {
+            CHECK(old.readFromXml(oldReader));
+            break;
+        }
+
+        CHECK(old.getOverviewData().getCategory() == SIOverviewData::eCategory::InterfacePublic);
+        CHECK(serialize(old).contains(QStringLiteral("Category=\"Public\"")));
+    }
+
     //!< The `IncludeList` section is shared with the state machine, and every edit of it reaches
     //!< the document through the same commands. The section round-trips byte for byte across an
     //!< undo and a redo of each of them.
@@ -1046,6 +1181,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testComposite();
     testDeepHistory();
     testDataTypeSection();
+    testOverviewSection();
+    testOverviewRoundTrip();
     testIncludeSection();
     testAttributeSection();
     testAttributeRoundTrip();

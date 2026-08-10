@@ -38,6 +38,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/OptionPageLogging.cpp
     ${LUSAN}/view/common/OptionPageProjectDirs.cpp
     ${LUSAN}/view/common/OptionPageWorkspace.cpp
+    ${LUSAN}/view/common/OverviewPage.cpp
     ${LUSAN}/view/common/OutputDock.cpp
     ${LUSAN}/view/common/OutputWindow.cpp
     ${LUSAN}/view/common/PendingEditWatcher.cpp
@@ -90,6 +91,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/OptionPageLogging.hpp
     ${LUSAN}/view/common/OptionPageProjectDirs.hpp
     ${LUSAN}/view/common/OptionPageWorkspace.hpp
+    ${LUSAN}/view/common/OverviewPage.hpp
     ${LUSAN}/view/common/OutputDock.hpp
     ${LUSAN}/view/common/OutputWindow.hpp
     ${LUSAN}/view/common/PendingEditWatcher.hpp

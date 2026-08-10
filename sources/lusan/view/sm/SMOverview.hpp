@@ -22,29 +22,19 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/model/sm/SMValidator.hpp"
-#include "lusan/view/common/IEditCommit.hpp"
-
-#include <QScrollArea>
-#include <QIntValidator>
+#include "lusan/view/common/OverviewPage.hpp"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class SMOverviewModel;
-class QCheckBox;
-class QLabel;
-class QLineEdit;
-class QPlainTextEdit;
 class QRadioButton;
 
 /**
- * \brief   The FSM Overview page: machine name, user version, threading mode and
- *          description. Every edit is committed through the document's undo stack via
- *          SMOverviewModel; the page mutates no model state directly.
+ * \brief   The FSM Overview page: the shared \ref OverviewPage plus the threading mode, which
+ *          only a state machine declares.
  **/
-class SMOverview : public QScrollArea
-                 , public IEditCommit
+class SMOverview : public OverviewPage
 {
     Q_OBJECT
 
@@ -53,81 +43,38 @@ class SMOverview : public QScrollArea
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit SMOverview(SMOverviewModel& model, QWidget* parent = nullptr);
-    virtual ~SMOverview() = default;
 
-//////////////////////////////////////////////////////////////////////////
-// Attributes
-//////////////////////////////////////////////////////////////////////////
-public:
-    /**
-     * \brief   Puts the accent on the field a finding blames. The machine is the page, so there
-     *          is no element to select first; \a eIssueField::None leaves the page as it is.
-     **/
-    void revealField(eIssueField field);
-
-    /**
-     * \brief   Hands over the description text the page is still holding. The box applies its
-     *          text when it loses the focus, which a save from the keyboard never causes.
-     **/
-    void commitPendingEdits(void) override;
-
-//////////////////////////////////////////////////////////////////////////
-// Signals
-//////////////////////////////////////////////////////////////////////////
-signals:
-    /**
-     * \brief   Emitted when a quick-link is clicked, to switch to the given page.
-     * \param   page    The target page index (StateMachine::eSMPages value).
-     **/
-    void signalPageLinkClicked(int page);
+    virtual ~SMOverview(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
+public:
+    /**
+     * \brief   Fills the shared rows and the threading mode.
+     **/
+    virtual void refreshAll(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
 private slots:
-    void onNameEdited(const QString& text);
-    void onNameCommitted();
-    void onVersionEdited();
     void onThreadingToggled(bool checked);
-    void onDeprecatedToggled(bool checked);
-    void onDeprecateHintCommitted();
-    void onOverviewChanged();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    void buildUi();
-    QWidget* buildLinksPanel();
-    void setupSignals();
-    void updateData();
-    void commitDescription();
-    void showNameValid(bool valid);
-    static bool isValidMachineName(const QString& name);
+    //!< Adds the threading row under the name, where the state machine has always shown it.
+    void buildThreadingRow(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SMOverviewModel&    mModel;
-    QLineEdit*          mName;
-    QLabel*             mNameError;
-    QLineEdit*          mMajor;
-    QLineEdit*          mMinor;
-    QLineEdit*          mPatch;
+    SMOverviewModel&    mModel;     //!< The Overview of the state machine being edited.
     QRadioButton*       mShared;
     QRadioButton*       mLocal;
-    QPlainTextEdit*     mDescription;
-    QCheckBox*          mDeprecated;
-    QLineEdit*          mDeprecateHint;
-    QIntValidator       mVersionValidator;
-    bool                mCommitting;    //!< True while a page edit is being pushed, so the resulting notification does not refresh the field being edited.
 };
 
 #endif  // LUSAN_VIEW_SM_SMOVERVIEW_HPP
