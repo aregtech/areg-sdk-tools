@@ -20,7 +20,7 @@
 #include "lusan/model/sm/SMDocumentIndex.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
@@ -124,7 +124,7 @@ const SMTimerEntry* SMDocumentIndex::timer(const QString& name) const
     return mData.getTimers().findElement(name);
 }
 
-const SMAttributeEntry* SMDocumentIndex::attribute(const QString& name) const
+const AttributeEntry* SMDocumentIndex::attribute(const QString& name) const
 {
     return mData.getAttributes().findElement(name);
 }
@@ -154,7 +154,7 @@ const SMTimerEntry* SMDocumentIndex::timer(uint32_t id) const
     return mData.getTimers().findElement(id);
 }
 
-const SMAttributeEntry* SMDocumentIndex::attribute(uint32_t id) const
+const AttributeEntry* SMDocumentIndex::attribute(uint32_t id) const
 {
     return mData.getAttributes().findElement(id);
 }

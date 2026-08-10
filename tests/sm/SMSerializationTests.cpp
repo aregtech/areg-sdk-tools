@@ -487,7 +487,7 @@ namespace
         StateMachineData doc;
         doc.getOverview().setName("DeprecationTest");
 
-        SMAttributeEntry* attr = doc.getAttributes().createAttribute("mCount");
+        AttributeEntry* attr = doc.getAttributes().createAttribute("mCount");
         CHECK(attr != nullptr);
         if (attr != nullptr) { attr->setIsDeprecated(true); attr->setDeprecateHint("use mTotal"); }
 
@@ -517,7 +517,7 @@ namespace
         CHECK(reread.readFromFile(outPath));
         CHECK(reread.openSucceeded());
 
-        SMAttributeEntry* rattr = reread.getAttributes().findElement("mCount");
+        AttributeEntry* rattr = reread.getAttributes().findElement("mCount");
         CHECK((rattr != nullptr) && rattr->getIsDeprecated() && (rattr->getDeprecateHint() == "use mTotal"));
 
         SMEventEntry* rev = reread.getEvents().findEvent("Started");

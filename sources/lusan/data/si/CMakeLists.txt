@@ -1,6 +1,5 @@
 ﻿list(APPEND LUSAN_SRC
     ${LUSAN}/data/si/ServiceInterfaceData.cpp
-    ${LUSAN}/data/si/SIAttributeData.cpp
     ${LUSAN}/data/si/SIMethodBase.cpp
     ${LUSAN}/data/si/SIMethodBroadcast.cpp
     ${LUSAN}/data/si/SIMethodData.cpp
@@ -12,7 +11,6 @@
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/data/si/ServiceInterfaceData.hpp
-    ${LUSAN}/data/si/SIAttributeData.hpp
     ${LUSAN}/data/si/SIMethodBase.hpp
     ${LUSAN}/data/si/SIMethodBroadcast.hpp
     ${LUSAN}/data/si/SIMethodData.cpp

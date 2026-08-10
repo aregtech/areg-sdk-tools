@@ -20,7 +20,7 @@
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
@@ -73,9 +73,9 @@ namespace
     {
         data.getOverview().setName(QStringLiteral("GuardMachine"));
 
-        SMAttributeEntry* walk = data.getAttributes().createAttribute(QStringLiteral("WalkRequested"));
+        AttributeEntry* walk = data.getAttributes().createAttribute(QStringLiteral("WalkRequested"));
         walk->setValue(QStringLiteral("true"));
-        SMAttributeEntry* night = data.getAttributes().createAttribute(QStringLiteral("IsNightMode"));
+        AttributeEntry* night = data.getAttributes().createAttribute(QStringLiteral("IsNightMode"));
         night->setValue(QStringLiteral("false"));
 
         ConstantEntry* konst = data.getConstants().createConstant(QStringLiteral("MIN_WAITING"));

@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -27,7 +27,7 @@
 #include "lusan/model/common/DocUndoStack.hpp"
 #include "lusan/model/common/DocValidationController.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
-#include "lusan/model/si/SIAttributeModel.hpp"
+#include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/common/IncludeModel.hpp"
@@ -60,7 +60,7 @@ public:
     /**
      * \brief   Returns the data attributes model.
      **/
-    inline SIAttributeModel& getAttributeModel();
+    inline AttributeModel& getAttributeModel();
 
     /**
      * \brief   Returns the constant model.
@@ -154,6 +154,11 @@ public:
     inline IncludeDataSection& getIncludeSection() override;
 
     /**
+     * \brief   The document's `AttributeList` section.
+     **/
+    inline AttributeDataSection& getAttributeSection() override;
+
+    /**
      * \brief   The document's validation scheduler, which owns its findings.
      **/
     inline DocValidationController& getValidationController() override;
@@ -173,7 +178,7 @@ private:
     DocUndoStack            mUndoStack;         //!< The document's undo stack.
     SIOverviewModel         mModelOverview;     //!< The overview model.
     DataTypeModel           mModelDataType;     //!< The data type model.
-    SIAttributeModel        mModelAttributes;   //!< The data attributes model.
+    AttributeModel        mModelAttributes;   //!< The data attributes model.
     SIMethodModel           mModelMethods;      //!< The methods model.
     ConstantModel           mModelConstant;     //!< The constant model.
     IncludeModel            mModelInclude;      //!< The include model.
@@ -203,7 +208,7 @@ inline DataTypeModel& ServiceInterfaceModel::getDataTypeModel()
     return mModelDataType;
 }
 
-inline SIAttributeModel& ServiceInterfaceModel::getAttributeModel()
+inline AttributeModel& ServiceInterfaceModel::getAttributeModel()
 {
     return mModelAttributes;
 }
@@ -236,6 +241,11 @@ inline DataTypeDataSection& ServiceInterfaceModel::getDataTypeSection()
 inline IncludeDataSection& ServiceInterfaceModel::getIncludeSection()
 {
     return mSIData.getIncludeData();
+}
+
+inline AttributeDataSection& ServiceInterfaceModel::getAttributeSection()
+{
+    return mSIData.getAttributeData();
 }
 
 inline DocValidationController& ServiceInterfaceModel::getValidationController()

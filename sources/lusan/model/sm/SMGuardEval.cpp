@@ -20,7 +20,7 @@
 #include "lusan/model/sm/SMGuardEval.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMState.hpp"
@@ -330,7 +330,7 @@ QString SMGuardEval::effectiveValue(const StateMachineData& data, SMGuardNode::e
 
     if (kind == eKind::Attr)
     {
-        for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+        for (const AttributeEntry& attr : data.getAttributes().getElements())
         {
             if (attr.getId() == symbolId)
             {

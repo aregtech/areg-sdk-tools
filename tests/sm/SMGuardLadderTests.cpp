@@ -21,7 +21,7 @@
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"

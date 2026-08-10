@@ -25,7 +25,7 @@
 #include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/sm/SMOverviewModel.hpp"
 #include "lusan/model/common/DataTypeModel.hpp"
-#include "lusan/model/sm/SMAttributeModel.hpp"
+#include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
@@ -108,6 +108,12 @@ public:
     inline IncludeDataSection& getIncludeSection() override;
 
     /**
+     * \brief   The document's `AttributeList` section, read from the data object that is current
+     *          now for the same reason as the constants section above.
+     **/
+    inline AttributeDataSection& getAttributeSection() override;
+
+    /**
      * \brief   Builds the command that rewrites whatever refers to a renamed element by name.
      *          A state machine reaches guards, operations and transition stimuli this way, so
      *          unlike a service interface it always has repair work to do.
@@ -126,7 +132,7 @@ public:
 
     inline SMOverviewModel& getOverviewModel();
     inline DataTypeModel& getDataTypeModel();
-    inline SMAttributeModel& getAttributeModel();
+    inline AttributeModel& getAttributeModel();
     inline SMEventModel& getEventModel();
     inline SMTimerModel& getTimerModel();
     inline SMMethodModel& getMethodModel();
@@ -154,7 +160,7 @@ private:
     QTimer          mAutosaveTimer;
     SMOverviewModel mOverviewModel;
     DataTypeModel mDataTypeModel;
-    SMAttributeModel mAttributeModel;
+    AttributeModel mAttributeModel;
     SMEventModel    mEventModel;
     SMTimerModel    mTimerModel;
     SMMethodModel   mMethodModel;
@@ -207,6 +213,11 @@ inline IncludeDataSection& StateMachineModel::getIncludeSection()
     return mData->getIncludes();
 }
 
+inline AttributeDataSection& StateMachineModel::getAttributeSection()
+{
+    return mData->getAttributes();
+}
+
 inline bool StateMachineModel::isReadOnly() const
 {
     return mUndoStack.isReadOnly();
@@ -242,7 +253,7 @@ inline DataTypeModel& StateMachineModel::getDataTypeModel()
     return mDataTypeModel;
 }
 
-inline SMAttributeModel& StateMachineModel::getAttributeModel()
+inline AttributeModel& StateMachineModel::getAttributeModel()
 {
     return mAttributeModel;
 }

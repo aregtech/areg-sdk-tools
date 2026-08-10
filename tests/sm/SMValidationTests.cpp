@@ -33,7 +33,7 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
@@ -1818,7 +1818,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMAttributeEntry* power = doc.getAttributes().createAttribute("Power");
+            AttributeEntry* power = doc.getAttributes().createAttribute("Power");
             power->setType("int32");
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             tr->getGuard().setTree(SMGuardNode::makeCmp(SMGuardNode::eCmpOp::Ne
@@ -2731,7 +2731,7 @@ namespace
         {   // A templated type is its container plus its arguments, and each has to exist.
             StateMachineData doc;
             addStart(doc);
-            SMAttributeEntry* attr = doc.getAttributes().createAttribute("Items");
+            AttributeEntry* attr = doc.getAttributes().createAttribute("Items");
             attr->setType("Array<Foo>");
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(hasRule(issues, 6));
@@ -2747,7 +2747,7 @@ namespace
         {   // Every fragment resolves, so nothing is reported.
             StateMachineData doc;
             addStart(doc);
-            SMAttributeEntry* attr = doc.getAttributes().createAttribute("Counts");
+            AttributeEntry* attr = doc.getAttributes().createAttribute("Counts");
             attr->setType("Array<uint32>");
             CHECK(countRule(SMValidator::validate(doc), 6) == 0);
         }
@@ -2756,7 +2756,7 @@ namespace
             // one, so that is what the message names.
             StateMachineData doc;
             addStart(doc);
-            SMAttributeEntry* attr = doc.getAttributes().createAttribute("Unknown");
+            AttributeEntry* attr = doc.getAttributes().createAttribute("Unknown");
             attr->setType("NEArray<Foo>");
             const QList<SMIssue> issues = SMValidator::validate(doc);
             bool namesContainer = false;
@@ -2771,7 +2771,7 @@ namespace
         {   // A nested argument is reported by name, not as the whole expression.
             StateMachineData doc;
             addStart(doc);
-            SMAttributeEntry* attr = doc.getAttributes().createAttribute("Lookup");
+            AttributeEntry* attr = doc.getAttributes().createAttribute("Lookup");
             attr->setType("Map<String, Foo>");
             const QList<SMIssue> issues = SMValidator::validate(doc);
             bool namesFragment = false;

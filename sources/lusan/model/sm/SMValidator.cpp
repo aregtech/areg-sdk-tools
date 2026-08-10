@@ -34,7 +34,7 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
@@ -387,7 +387,7 @@ namespace
             for (const MethodParameter& p : e->getElements()) counts[p.getId()] += 1;
         }
         for (const SMTimerEntry& t : mData.getTimers().getElements())     counts[t.getId()] += 1;
-        for (const SMAttributeEntry& a : mData.getAttributes().getElements()) counts[a.getId()] += 1;
+        for (const AttributeEntry& a : mData.getAttributes().getElements()) counts[a.getId()] += 1;
         for (const ConstantEntry& c : mData.getConstants().getElements())  counts[c.getId()] += 1;
         for (const IncludeEntry& i : mData.getIncludes().getElements())    counts[i.getId()] += 1;
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
@@ -464,7 +464,7 @@ namespace
         dupWithin(tNames, tIds, eDocElementKind::Timer);
 
         QStringList aNames; QList<uint32_t> aIds;
-        for (const SMAttributeEntry& a : mData.getAttributes().getElements()) { aNames << a.getName(); aIds << a.getId(); }
+        for (const AttributeEntry& a : mData.getAttributes().getElements()) { aNames << a.getName(); aIds << a.getId(); }
         dupWithin(aNames, aIds, eDocElementKind::Attribute);
 
         QStringList cNames; QList<uint32_t> cIds;
@@ -850,7 +850,7 @@ namespace
             case SMOperationBase::eOperation::AttributeSet:
             {
                 SMAttributeSet* set = static_cast<SMAttributeSet*>(op);
-                const SMAttributeEntry* attr = mData.getAttributes().findElement(set->getAttribute());
+                const AttributeEntry* attr = mData.getAttributes().findElement(set->getAttribute());
                 if (attr == nullptr)
                     add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(set->getAttribute()));
                 validateValueSource(id, eDocElementKind::Operation, set->getSource(), set->getValue(), set->getExpression(), scope, true);
@@ -1093,7 +1093,7 @@ namespace
         
         case eValueSource::Attribute:
         {
-            const SMAttributeEntry* a = mData.getAttributes().findElement(ref);
+            const AttributeEntry* a = mData.getAttributes().findElement(ref);
             return (a != nullptr) ? a->getType() : QString();
         }
         
@@ -1298,7 +1298,7 @@ namespace
         }
         for (const SMTimerEntry& t : mData.getTimers().getElements())
             checkIdentifier(t.getId(), eDocElementKind::Timer, t.getName());
-        for (const SMAttributeEntry& a : mData.getAttributes().getElements())
+        for (const AttributeEntry& a : mData.getAttributes().getElements())
         {
             checkIdentifier(a.getId(), eDocElementKind::Attribute, a.getName());
             checkDataType(a.getId(), eDocElementKind::Attribute, a.getType());
@@ -1752,7 +1752,7 @@ namespace
             }
         }
 
-        for (const SMAttributeEntry& a : mData.getAttributes().getElements())
+        for (const AttributeEntry& a : mData.getAttributes().getElements())
             note(a.getId(), eDocElementKind::Attribute, vtr("Attribute '%1' has no description").arg(a.getName()), a.getDescription());
 
         for (SMMethodEntry* m : mData.getMethods().getElements())
@@ -2027,7 +2027,7 @@ namespace
         }
         for (SMEventEntry* e : mData.getEvents().getElements())
             if (e != nullptr) for (const MethodParameter& p : e->getElements()) noteType(p.getType());
-        for (const SMAttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
+        for (const AttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
         for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
 
         // Severity is decided per element kind. An unused method, event, timer, data type or

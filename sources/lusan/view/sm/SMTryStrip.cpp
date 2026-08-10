@@ -21,7 +21,7 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -292,7 +292,7 @@ void SMTryStrip::rebuild()
 
     for (uint32_t id : attrIds)
     {
-        const SMAttributeEntry* attr = index.attribute(id);
+        const AttributeEntry* attr = index.attribute(id);
         if (attr != nullptr)
         {
             flow->addWidget(makeValueField(eKind::Attr, id, attr->getName(), attr->getType()));

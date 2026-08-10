@@ -125,7 +125,7 @@ namespace
             addId(ids, dt->getId());
         }
 
-        for (const SMAttributeEntry& a : doc.getAttributes().getElements())
+        for (const AttributeEntry& a : doc.getAttributes().getElements())
         {
             addId(ids, a.getId());
         }

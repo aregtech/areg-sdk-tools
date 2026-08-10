@@ -32,7 +32,7 @@
  ************************************************************************/
 class ConstantPage;
 class MdiMainWindow;
-class SIAttribute;
+class AttributePage;
 class DataTypePage;
 class IncludePage;
 class SIMethod;
@@ -211,7 +211,7 @@ private:
     QTabWidget  mTabWidget; //!< The tab widget to display the service interface elements
     SIOverview*  mOverview;  //!< The overview widget
     DataTypePage*  mDataType;  //!< The data type widget
-    SIAttribute* mAttribute; //!< The data attribute widget
+    AttributePage* mAttribute; //!< The data attribute widget
     SIMethod*    mMethod;    //!< The method widget
     ConstantPage*  mConstant;  //!< The constant widget
     IncludePage* mInclude;   //!< The include widget

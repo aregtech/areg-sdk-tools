@@ -32,6 +32,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class AttributeDataSection;
 class ConstantDataSection;
 class DataTypeCustom;
 class DataTypeDataSection;
@@ -97,6 +98,12 @@ public:
      *          reason as the constants section above.
      **/
     virtual IncludeDataSection& getIncludeSection() = 0;
+
+    /**
+     * \brief   The document's `AttributeList` section. Answered on every call, for the same
+     *          reason as the constants section above.
+     **/
+    virtual AttributeDataSection& getAttributeSection() = 0;
 
     /**
      * \brief   The document's validation scheduler, which owns its findings and re-runs the

@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/AttributeEntry.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -48,6 +48,8 @@ AttributeEntry::eNotification AttributeEntry::fromString(const QString& value)
 AttributeEntry::AttributeEntry(ElementBase* parent /*= nullptr*/)
     : ParamBase(parent)
     , mNotification(eNotification::NotifyOnChange)
+    , mValue( )
+    , mConfig(DEFAULT_CONFIG)
 {
 }
 
@@ -61,6 +63,8 @@ AttributeEntry::AttributeEntry(   uint32_t id
                                 , ElementBase* parent           /*= nullptr*/)
     : ParamBase(id, name, type, isDeprecated, description, deprecateHint, parent)
     , mNotification(notification)
+    , mValue( )
+    , mConfig(DEFAULT_CONFIG)
 {
 }
 
@@ -70,18 +74,24 @@ AttributeEntry::AttributeEntry(   uint32_t id
                                 , ElementBase* parent           /*= nullptr*/)
     : ParamBase(id, name, XmlSI::xmlSIDefaultType, false, QString(), QString(), parent)
     , mNotification(notification)
+    , mValue( )
+    , mConfig(DEFAULT_CONFIG)
 {
 }
 
 AttributeEntry::AttributeEntry(const AttributeEntry& src)
     : ParamBase(src)
     , mNotification(src.mNotification)
+    , mValue(src.mValue)
+    , mConfig(src.mConfig)
 {
 }
 
 AttributeEntry::AttributeEntry(AttributeEntry&& src) noexcept
     : ParamBase(std::move(src))
     , mNotification(src.mNotification)
+    , mValue(std::move(src.mValue))
+    , mConfig(src.mConfig)
 {
 }
 
@@ -89,6 +99,8 @@ AttributeEntry& AttributeEntry::operator = (const AttributeEntry& other)
 {
     ParamBase::operator = (other);
     mNotification = other.mNotification;
+    mValue = other.mValue;
+    mConfig = other.mConfig;
     return *this;
 }
 
@@ -96,6 +108,8 @@ AttributeEntry& AttributeEntry::operator = (AttributeEntry&& other) noexcept
 {
     ParamBase::operator = (std::move(other));
     mNotification = other.mNotification;
+    mValue = std::move(other.mValue);
+    mConfig = other.mConfig;
     return *this;
 }
 
@@ -117,6 +131,26 @@ bool AttributeEntry::operator > (const AttributeEntry& other) const
 bool AttributeEntry::operator < (const AttributeEntry& other) const
 {
     return getName() < other.getName();
+}
+
+const AttributeConfig& AttributeEntry::getConfig() const
+{
+    return mConfig;
+}
+
+void AttributeEntry::setConfig(const AttributeConfig& config)
+{
+    mConfig = config;
+}
+
+const QString& AttributeEntry::getValue() const
+{
+    return mValue;
+}
+
+void AttributeEntry::setValue(const QString& value)
+{
+    mValue = value;
 }
 
 AttributeEntry::eNotification AttributeEntry::getNotification() const
@@ -153,7 +187,8 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
 
     QString notifyValue = attributes.hasAttribute(XmlSI::xmlSIAttributeNotify) ? attributes.value(XmlSI::xmlSIAttributeNotify).toString() : NOTIFY_ONCHANGE;
     mNotification = fromString(notifyValue);
-    
+    mValue = attributes.value(XmlSI::xmlSIAttributeValue).toString();
+
     QString depValue  = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
     setIsDeprecated( depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
     
@@ -180,11 +215,25 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
 
 void AttributeEntry::writeToXml(QXmlStreamWriter& xml) const
 {
+    writeToXml(xml, mConfig);
+}
+
+void AttributeEntry::writeToXml(QXmlStreamWriter& xml, const AttributeConfig& config) const
+{
     xml.writeStartElement(XmlSI::xmlSIElementAttribute);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
-    xml.writeAttribute(XmlSI::xmlSIAttributeNotify, toString(mNotification));
+    if (config.hasNotification)
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeNotify, toString(mNotification));
+    }
+
+    if (config.hasValue)
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeValue, mValue);
+    }
+
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
@@ -217,8 +266,15 @@ QString AttributeEntry::getString(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayType:
         return getType();
     case ElementBase::eDisplay::DisplayValue:
-        return toString(mNotification);
+        // The third list column: whichever of the two the document's attributes carry.
+        return (mConfig.hasValue ? mValue : toString(mNotification));
     default:
         return QString();
     }
+}
+
+bool AttributeEntry::isValid() const
+{
+    // A declared type that has not been resolved yet still names a type, so the entry is usable.
+    return (mName.isEmpty() == false) && (getType().isEmpty() == false);
 }

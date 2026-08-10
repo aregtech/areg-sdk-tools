@@ -55,7 +55,7 @@ namespace
         }
         case eTarget::Attribute:
         {
-            const SMAttributeEntry* attribute = index.attribute(name);
+            const AttributeEntry* attribute = index.attribute(name);
             return (attribute != nullptr) ? attribute->getId() : 0u;
         }
         case eTarget::Constant:
@@ -85,7 +85,7 @@ namespace
         }
         case eTarget::Attribute:
         {
-            const SMAttributeEntry* attribute = index.attribute(declId);
+            const AttributeEntry* attribute = index.attribute(declId);
             return (attribute != nullptr) ? attribute->getName() : QString();
         }
         case eTarget::Constant:

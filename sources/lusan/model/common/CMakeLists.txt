@@ -1,4 +1,5 @@
 ﻿list(APPEND LUSAN_SRC
+    ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/common/DataTypesModel.cpp
@@ -17,6 +18,7 @@
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/model/common/AttributeModel.hpp
     ${LUSAN}/model/common/ConstantModel.hpp
     ${LUSAN}/model/common/DataTypeModel.hpp
     ${LUSAN}/model/common/DataTypesModel.hpp

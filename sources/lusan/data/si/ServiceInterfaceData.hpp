@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
+#ifndef LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
 #define LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -23,7 +23,7 @@
 
 #include "lusan/data/si/SIOverviewData.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
-#include "lusan/data/si/SIAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/si/SIMethodData.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
@@ -125,8 +125,8 @@ public:
      * \brief   Gets the attribute data.
      * \return  The attribute data.
      **/
-    inline const SIAttributeData& getAttributeData() const;
-    inline SIAttributeData& getAttributeData();
+    inline const AttributeDataSection& getAttributeData() const;
+    inline AttributeDataSection& getAttributeData();
 
     /**
      * \brief   Gets the method data.
@@ -167,7 +167,7 @@ private:
     VersionNumber   mXmlVersion;    //!< The XML document data version.
     SIOverviewData  mOverviewData;  //!< The overview data.
     DataTypeDataSection  mDataTypeData;  //!< The data type data.
-    SIAttributeData mAttributeData; //!< The attribute data.
+    AttributeDataSection mAttributeData; //!< The attribute data.
     SIMethodData    mMethodData;    //!< The method data.
     ConstantDataSection  mConstantData;  //!< The constant data.
     IncludeDataSection mIncludeData; //!< The include data.
@@ -208,12 +208,12 @@ inline DataTypeDataSection& ServiceInterfaceData::getDataTypeData()
     return mDataTypeData;
 }
 
-inline const SIAttributeData& ServiceInterfaceData::getAttributeData() const
+inline const AttributeDataSection& ServiceInterfaceData::getAttributeData() const
 {
     return mAttributeData;
 }
 
-inline SIAttributeData& ServiceInterfaceData::getAttributeData()
+inline AttributeDataSection& ServiceInterfaceData::getAttributeData()
 {
     return mAttributeData;
 }

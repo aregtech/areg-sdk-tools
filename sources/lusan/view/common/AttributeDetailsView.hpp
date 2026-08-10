@@ -20,6 +20,8 @@
  *
  ************************************************************************/
 
+#include "lusan/data/common/AttributeEntry.hpp"
+
 #include <QWidget>
 
 class QCheckBox;
@@ -31,24 +33,12 @@ class QPlainTextEdit;
 class QStringListModel;
 
 /**
- * \brief   The two section-3 differences between the Service Interface and State Machine
- *          Attributes pages, parameterized so a single shared view serves both editors (and
- *          the future Data Type document):
- *          - `hasValue`        : the attribute carries a default value (a line edit with an
- *                                enumerator completer + inline validation hint). State Machine
- *                                attributes have one; Service Interface attributes do not.
- *          - `hasNotification` : the attribute carries an update notification kind (a combo of
- *                                "OnChange" / "Always"). Service Interface attributes have one;
- *                                State Machine attributes do not.
- *
- *          Service Interface: `{ hasValue = false, hasNotification = true }`.
- *          State Machine    : `{ hasValue = true , hasNotification = false }`.
+ * \brief   What the view shows is what the attribute carries, so the page configuration is the
+ *          section's own \ref AttributeConfig: `hasValue` puts the default-value row on the form
+ *          (a line edit with an enumerator completer and an inline validation hint), and
+ *          `hasNotification` puts the "OnChange" / "Always" combo there.
  **/
-struct AttributeViewConfig
-{
-    bool hasValue;          //!< Show the default-value row (line edit + completer + hint).
-    bool hasNotification;   //!< Show the notification-kind combo row.
-};
+using AttributeViewConfig = AttributeConfig;
 
 /**
  * \brief   The shared selected-attribute editor: a "Details:" group with label-beside-control

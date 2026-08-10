@@ -24,7 +24,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include "lusan/model/common/DocModelNotifier.hpp"
-#include "lusan/model/sm/SMAttributeModel.hpp"
+#include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
@@ -1630,7 +1630,7 @@ void SMGuardField::applyFix(const QString& id, const QString& payload)
     }
     else if (id == QStringLiteral("declare"))
     {
-        SMAttributeEntry* created = mModel.getAttributeModel().createAttribute(payload);
+        AttributeEntry* created = mModel.getAttributeModel().createAttribute(payload);
         if (created != nullptr)
         {
             mModel.getAttributeModel().setType(created->getId(), QStringLiteral("bool"));
