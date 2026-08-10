@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/NELusanCommon.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -674,8 +674,15 @@ namespace NELusanCommon
     const QString& identifierPattern();
 
     /**
-     * \brief   Returns true if the given text is a valid, complete C++ identifier.
-     *          Empty text is not valid. Shared by SI and FSM name-commit logic.
+     * \brief   The longest name any editor field accepts. The generated code carries the name
+     *          as written, so a name no compiler would take is refused where it is typed.
+     **/
+    constexpr int MAX_IDENTIFIER_LENGTH { 0xFF };
+
+    /**
+     * \brief   Returns true if the given text is a valid, complete C++ identifier of at most
+     *          \a MAX_IDENTIFIER_LENGTH characters. Empty text is not valid. This is the one
+     *          answer every document editor and every validation engine asks.
      **/
     bool isValidIdentifier(const QString& name);
 

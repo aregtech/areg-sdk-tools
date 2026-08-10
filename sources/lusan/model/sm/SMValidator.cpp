@@ -46,17 +46,16 @@
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
-#include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
 
 #include "lusan/model/sm/SMTypeCompat.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
 #include <QCoreApplication>
 #include <QHash>
-#include <QRegularExpression>
 #include <QSet>
 
 namespace
@@ -166,6 +165,23 @@ namespace
                 ? eDocElementKind::Import : eDocElementKind::Include);
     }
 
+    //!< The numbers this engine has always filed the shared shapes under. An empty name is
+    //!< reported as the identifier fault it is, so both shapes carry rule 5 here.
+    const DocRuleChecks::RuleIds& smRules()
+    {
+        static const DocRuleChecks::RuleIds _rules
+        {
+              SMValidator::RULE_INVALID_IDENTIFIER
+            , SMValidator::RULE_INVALID_IDENTIFIER
+            , SMValidator::RULE_DUPLICATE_NAME
+            , SMValidator::RULE_UNRESOLVED_REFERENCE
+            , SMValidator::RULE_BAD_LITERAL
+            , SMValidator::RULE_UNREFERENCED
+        };
+
+        return _rules;
+    }
+
     /**
      * \class   Ctx
      * \brief   One validation run: holds the document, the accumulated findings, and the
@@ -175,7 +191,9 @@ namespace
     {
     public:
         explicit Ctx(const StateMachineData& data)
-            : mData(data)
+            : mData  (data)
+            , mIssues( )
+            , mChecks(mIssues, data.getDataTypes(), smRules())
         {
         }
 
@@ -188,9 +206,7 @@ namespace
         struct LevelInfo { const SMStateData* level; bool isRoot; uint32_t ownerId; };
         void collectLevels(const SMStateData& level, bool isRoot, uint32_t ownerId, QList<LevelInfo>& out) const;
 
-        void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name);
-        bool fragmentResolves(const QString& fragment) const;
-        QString unresolvedFragment(const QString& typeName) const;
+        void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
         void checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName);
 
         void checkDuplicateIds();
@@ -242,20 +258,15 @@ namespace
     private:
         const StateMachineData& mData;
         QList<SMIssue>          mIssues;
+        DocRuleChecks           mChecks;    //!< The rules every document kind shares.
     };
 
     void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message, const QString& detail)
     {
-        SMIssue issue;
-        issue.elementId = id;
-        issue.kind      = kind;
-        issue.severity  = sev;
-        issue.rule      = (sev != eSeverity::Error) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
-        issue.message   = message;
         // A check that explains itself keeps its own words; the rest fall back to what the rule
         // means, so a finding always reaches the results panel with a reason attached.
-        issue.detail    = detail.isEmpty() ? SMValidator::explainRule(issue.rule, sev) : detail;
-        mIssues.append(issue);
+        mChecks.add(id, kind, sev, rule, message
+                   , detail.isEmpty() ? SMValidator::explainRule(mChecks.ruleId(rule, sev), sev) : detail);
     }
 
     bool Ctx::hasParam(const MethodBase* owner, const QString& name) const
@@ -275,54 +286,16 @@ namespace
         }
     }
 
-    void Ctx::checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name)
+    void Ctx::checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what)
     {
-        if (StateMachineData::isValidIdentifier(name) == false)
-        {
-            add(id, kind, eSeverity::Error, 5, vtr("'%1' is not a valid identifier").arg(name));
-        }
-    }
-
-    bool Ctx::fragmentResolves(const QString& fragment) const
-    {
-        // Anything that is not a plain identifier after trimming is left alone. This is a type
-        // registry lookup, not a C++ parser.
-        if (StateMachineData::isValidIdentifier(fragment) == false)
-            return true;
-        if (DataTypeFactory::fromString(fragment) != DataTypeBase::eCategory::Undefined)
-            return true;
-        return (mData.getDataTypes().findCustomDataType(fragment) != nullptr);
-    }
-
-    QString Ctx::unresolvedFragment(const QString& typeName) const
-    {
-        // A templated type is the container name plus its arguments, and each of those must exist
-        // too. Checking only the whole string let `NEArray<Foo>` through with an undefined Foo.
-        const QStringList fragments = typeName.split(QRegularExpression(QStringLiteral("[<>,]")), Qt::SkipEmptyParts);
-        for (const QString& fragment : fragments)
-        {
-            const QString trimmed = fragment.trimmed();
-            if ((trimmed.isEmpty() == false) && (fragmentResolves(trimmed) == false))
-            {
-                return trimmed;
-            }
-        }
-
-        return QString();
+        mChecks.checkIdentifier(id, kind, name, what);
     }
 
     void Ctx::checkDataType(uint32_t id, eDocElementKind kind, const QString& typeName)
     {
-        if (typeName.isEmpty())
-            return;
-
-        // Report the offending fragment, not the whole string: "Foo does not resolve" is
-        // actionable, "NEMap<String, Foo> does not resolve" is not.
-        const QString unresolved = unresolvedFragment(typeName);
-        if (unresolved.isEmpty() == false)
-        {
-            add(id, kind, eSeverity::Error, 6, vtr("Data type '%1' does not resolve").arg(unresolved));
-        }
+        // A declaration with no type is left alone here: a condition that returns nothing and an
+        // untyped parameter are the concern of the checks that own those declarations.
+        mChecks.checkDeclaredType(id, kind, typeName, QString(), false);
     }
 
     void Ctx::collectIds(const SMStateData& level, QHash<uint32_t, int>& counts) const
@@ -428,73 +401,68 @@ namespace
     {
         // Names must be unique inside each registry, and triggers, events and timers share one
         // stimulus name space, so a name may belong to only one of them.
-        auto dupWithin = [this](const QStringList& names, const QList<uint32_t>& ids, eDocElementKind kind)
-        {
-            QHash<QString, int> seen;
-            for (int i = 0; i < names.size(); ++i)
-            {
-                if (names.at(i).isEmpty())
-                    continue;
-                if (++seen[names.at(i)] > 1)
-                    add(ids.at(i), kind, eSeverity::Error, 4, vtr("Duplicate name '%1' in registry").arg(names.at(i)));
-            }
-        };
 
         // Methods are unique per kind, not per name: a trigger, an action and a condition may all
-        // be called `on`. Qualifying the name with its kind expresses that.
-        QStringList mNames; QList<uint32_t> mIds;
+        // be called `on`. Keying the name by its kind expresses that.
+        DocNameSet methods(mChecks, eDocElementKind::Method);
         for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m != nullptr)
             {
-                mNames << (m->getType() + QLatin1Char(' ') + m->getName());
-                mIds << m->getId();
+                methods.claimKeyed(m->getId(), m->getType() + QLatin1Char(' ') + m->getName()
+                                  , vtr("%1 '%2'").arg(m->kind().label, m->getName()));
             }
         }
 
-        dupWithin(mNames, mIds, eDocElementKind::Method);
-
-        QStringList eNames; QList<uint32_t> eIds;
+        DocNameSet events(mChecks, eDocElementKind::Event);
         for (SMEventEntry* e : mData.getEvents().getElements())
-            if (e != nullptr) { eNames << e->getName(); eIds << e->getId(); }
-        dupWithin(eNames, eIds, eDocElementKind::Event);
+        {
+            if (e != nullptr)
+                events.claim(e->getId(), e->getName(), vtr("Event '%1'").arg(e->getName()));
+        }
 
-        QStringList tNames; QList<uint32_t> tIds;
-        for (const SMTimerEntry& t : mData.getTimers().getElements()) { tNames << t.getName(); tIds << t.getId(); }
-        dupWithin(tNames, tIds, eDocElementKind::Timer);
+        DocNameSet timers(mChecks, eDocElementKind::Timer);
+        for (const SMTimerEntry& t : mData.getTimers().getElements())
+            timers.claim(t.getId(), t.getName(), vtr("Timer '%1'").arg(t.getName()));
 
-        QStringList aNames; QList<uint32_t> aIds;
-        for (const AttributeEntry& a : mData.getAttributes().getElements()) { aNames << a.getName(); aIds << a.getId(); }
-        dupWithin(aNames, aIds, eDocElementKind::Attribute);
+        DocNameSet attributes(mChecks, eDocElementKind::Attribute);
+        for (const AttributeEntry& a : mData.getAttributes().getElements())
+            attributes.claim(a.getId(), a.getName(), vtr("Attribute '%1'").arg(a.getName()));
 
-        QStringList cNames; QList<uint32_t> cIds;
-        for (const ConstantEntry& c : mData.getConstants().getElements()) { cNames << c.getName(); cIds << c.getId(); }
-        dupWithin(cNames, cIds, eDocElementKind::Constant);
+        DocNameSet constants(mChecks, eDocElementKind::Constant);
+        for (const ConstantEntry& c : mData.getConstants().getElements())
+            constants.claim(c.getId(), c.getName(), vtr("Constant '%1'").arg(c.getName()));
 
         // The include registry is keyed by location, so getName() is the path -- the alias is the
         // registry name here, and collecting getName() would quietly check the wrong thing.
-        QStringList iNames; QList<uint32_t> iIds;
-        for (const IncludeEntry* i : mData.machineImports()) { iNames << i->getAlias(); iIds << i->getId(); }
-        dupWithin(iNames, iIds, eDocElementKind::Import);
+        DocNameSet imports(mChecks, eDocElementKind::Import);
+        for (const IncludeEntry* i : mData.machineImports())
+            imports.claim(i->getId(), i->getAlias(), vtr("Import '%1'").arg(i->getAlias()));
 
         // A file listed twice is redundant rather than wrong. The UI cannot create one, so this
-        // only fires on a hand-edited or merged file.
-        QHash<QString, int> seenLocations;
+        // only fires on a hand-edited or merged file. An include is keyed by its location, so the
+        // duplicate rule reads the path here.
+        QSet<QString> seenLocations;
         for (const IncludeEntry& i : mData.getIncludes().getElements())
         {
             if (i.getLocation().isEmpty())
                 continue;
-            if (++seenLocations[i.getLocation()] > 1)
+            if (seenLocations.contains(i.getLocation()))
             {
-                add(i.getId(), kindOfInclude(i), eSeverity::Warning, 4
-                    , vtr("'%1' is included more than once").arg(i.getLocation()));
+                mChecks.add(i.getId(), kindOfInclude(i), eSeverity::Warning, SMValidator::RULE_DUPLICATE_NAME
+                           , vtr("'%1' is included more than once").arg(i.getLocation())
+                           , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName));
             }
+
+            seenLocations.insert(i.getLocation());
         }
 
-        QStringList dNames; QList<uint32_t> dIds;
+        DocNameSet dataTypes(mChecks, eDocElementKind::DataType);
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
-            if (d != nullptr) { dNames << d->getName(); dIds << d->getId(); }
-        dupWithin(dNames, dIds, eDocElementKind::DataType);
+        {
+            if (d != nullptr)
+                dataTypes.claim(d->getId(), d->getName(), vtr("Data type '%1'").arg(d->getName()));
+        }
 
         // The shared stimulus name space: a name used by more than one of trigger/event/timer
         // is reported on each element after the first owner.
@@ -520,13 +488,10 @@ namespace
         auto dupParams = [this](const MethodBase* owner, eDocElementKind kind)
         {
             if (owner == nullptr) return;
-            QHash<QString, int> seen;
+            DocNameSet params(mChecks, kind);
             for (const MethodParameter& p : owner->getElements())
             {
-                if (p.getName().isEmpty())
-                    continue;
-                if (++seen[p.getName()] > 1)
-                    add(p.getId(), kind, eSeverity::Error, 4, vtr("Duplicate parameter name '%1'").arg(p.getName()));
+                params.claim(p.getId(), p.getName(), vtr("Parameter '%1' of '%2'").arg(p.getName(), owner->getName()));
             }
         };
         for (MethodEntry* m : mData.getMethods().getElements()) dupParams(m, eDocElementKind::Method);
@@ -569,7 +534,7 @@ namespace
     void Ctx::validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel)
     {
         const uint32_t id = state.getId();
-        checkIdentifier(id, eDocElementKind::State, state.getName());
+        checkIdentifier(id, eDocElementKind::State, state.getName(), vtr("The state"));
 
         const bool composite = state.isComposite();
         const bool hasSubstates = composite;
@@ -1116,34 +1081,13 @@ namespace
 
     void Ctx::checkLiteral(uint32_t id, eDocElementKind kind, const QString& targetType, const QString& literal, int rule)
     {
-        // An absent literal is never a syntax error (a default may fill it).
-        if (literal.isEmpty())
-            return;
-
-        switch (categorize(targetType))
+        // An unresolved or imported type is not judged: the shared answer is silent on both, and
+        // the rule number stays this engine's because the caller picks the position it fills.
+        const QString reason = DocRuleChecks::literalReason(mData.getDataTypes(), targetType, literal);
+        if (reason.isEmpty() == false)
         {
-        case eTypeCat::Unknown:
-            return;
-        case eTypeCat::Structure:
-        case eTypeCat::Container:
-            add(id, kind, eSeverity::Error, rule, vtr("Type '%1' has no literal form").arg(targetType));
-            break;
-
-        case eTypeCat::Enum:
-        {
-            const DataTypeEnum* e = dynamic_cast<const DataTypeEnum*>(customType(targetType));
-            if ((e != nullptr) && (e->hasElement(literal) == false))
-                add(id, kind, eSeverity::Error, rule, vtr("'%1' is not an enumerator of '%2'").arg(literal, targetType));
-        }
-        break;
-
-        default:
-        {
-            const QString reason = LiteralValidator::validate(targetType, literal);
-            if (reason.isEmpty() == false)
-                add(id, kind, eSeverity::Error, rule, vtr("Invalid %1 literal '%2': %3").arg(targetType, literal, reason));
-        }
-        break;
+            add(id, kind, eSeverity::Error, rule, vtr("Invalid %1 literal '%2': %3").arg(targetType, literal, reason)
+               , DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral));
         }
     }
 
@@ -1271,7 +1215,7 @@ namespace
         for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr) continue;
-            checkIdentifier(m->getId(), eDocElementKind::Method, m->getName());
+            checkIdentifier(m->getId(), eDocElementKind::Method, m->getName(), vtr("The %1").arg(m->kind().label.toLower()));
             // An embedded condition owns its body and must supply one; every other method has none.
             const bool embedded = NESMMethod::isCondition(m) && (m->getImplement() == MethodEntry::eImplement::Embedded);
             if (embedded && m->getBody().trimmed().isEmpty())
@@ -1291,21 +1235,21 @@ namespace
         for (SMEventEntry* e : mData.getEvents().getElements())
         {
             if (e == nullptr) continue;
-            checkIdentifier(e->getId(), eDocElementKind::Event, e->getName());
+            checkIdentifier(e->getId(), eDocElementKind::Event, e->getName(), vtr("The event"));
             for (const MethodParameter& p : e->getElements())
                 checkDataType(p.getId(), eDocElementKind::Event, p.getType());
             checkDefaultOrder(*e, eDocElementKind::Event, e->getName());
         }
         for (const SMTimerEntry& t : mData.getTimers().getElements())
-            checkIdentifier(t.getId(), eDocElementKind::Timer, t.getName());
+            checkIdentifier(t.getId(), eDocElementKind::Timer, t.getName(), vtr("The timer"));
         for (const AttributeEntry& a : mData.getAttributes().getElements())
         {
-            checkIdentifier(a.getId(), eDocElementKind::Attribute, a.getName());
+            checkIdentifier(a.getId(), eDocElementKind::Attribute, a.getName(), vtr("The attribute"));
             checkDataType(a.getId(), eDocElementKind::Attribute, a.getType());
         }
         for (const ConstantEntry& c : mData.getConstants().getElements())
         {
-            checkIdentifier(c.getId(), eDocElementKind::Constant, c.getName());
+            checkIdentifier(c.getId(), eDocElementKind::Constant, c.getName(), vtr("The constant"));
             checkDataType(c.getId(), eDocElementKind::Constant, c.getType());
         }
         for (const IncludeEntry* i : mData.machineImports())
@@ -1314,14 +1258,14 @@ namespace
                 add(i->getId(), eDocElementKind::Import, eSeverity::Error, 18
                     , vtr("Imported machine '%1' has no alias, so no state can host it").arg(i->getLocation()));
             else
-                checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias());
+                checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias(), vtr("The import"));
         }
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {
             if (d == nullptr)
                 continue;
 
-            checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
+            checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName(), vtr("The data type"));
             // A composed type declares types of its own. Without this a structure field or a
             // container element could name a type nothing in the document defines, and the fault
             // only surfaced later, at whatever used the composed type.
@@ -2043,35 +1987,38 @@ namespace
             else if (NESMMethod::isCondition(m))  used = conditionsUsed.contains(m->getName());
             else if (NESMMethod::isTrigger(m))    used = triggersUsed.contains(m->getName());
             if (used == false)
-                add(m->getId(), eDocElementKind::Method, eSeverity::Warning, 4, vtr("Method '%1' is never referenced").arg(m->getName()));
+                mChecks.noteUnreferenced(m->getId(), eDocElementKind::Method, vtr("%1 '%2'").arg(m->kind().label, m->getName()), eSeverity::Warning);
         }
         for (SMEventEntry* e : mData.getEvents().getElements())
         {
             if (e == nullptr)
                 continue;
             if ((eventsSent.contains(e->getName()) == false) && (eventsReacted.contains(e->getName()) == false))
-                add(e->getId(), eDocElementKind::Event, eSeverity::Warning, 4, vtr("Event '%1' is never referenced").arg(e->getName()));
+                mChecks.noteUnreferenced(e->getId(), eDocElementKind::Event, vtr("Event '%1'").arg(e->getName()), eSeverity::Warning);
         }
         for (const SMTimerEntry& t : mData.getTimers().getElements())
         {
             if ((timersStarted.contains(t.getName()) == false) && (timersStopped.contains(t.getName()) == false) && (timersReacted.contains(t.getName()) == false))
-                add(t.getId(), eDocElementKind::Timer, eSeverity::Warning, 4, vtr("Timer '%1' is never referenced").arg(t.getName()));
+                mChecks.noteUnreferenced(t.getId(), eDocElementKind::Timer, vtr("Timer '%1'").arg(t.getName()), eSeverity::Warning);
         }
         for (const ConstantEntry& c : mData.getConstants().getElements())
         {
             if (constsUsed.contains(c.getName()) == false)
-                add(c.getId(), eDocElementKind::Constant, eSeverity::Info, 4, vtr("Constant '%1' is never referenced").arg(c.getName()));
+                mChecks.noteUnreferenced(c.getId(), eDocElementKind::Constant, vtr("Constant '%1'").arg(c.getName()), eSeverity::Info);
         }
         for (const IncludeEntry* i : mData.machineImports())
         {
             // An import is always another `.fsml` machine brought in to serve as a submachine
             if ((i->getAlias().isEmpty() == false) && (importsUsed.contains(i->getAlias()) == false))
-                add(i->getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never used as a submachine").arg(i->getAlias()));
+            {
+                mChecks.noteUnreferenced(i->getId(), eDocElementKind::Import, QString(), eSeverity::Warning
+                                        , vtr("Import '%1' is never used as a submachine").arg(i->getAlias()));
+            }
         }
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {
             if ((d != nullptr) && (typesUsed.contains(d->getName()) == false))
-                add(d->getId(), eDocElementKind::DataType, eSeverity::Warning, 4, vtr("Data type '%1' is never referenced").arg(d->getName()));
+                mChecks.noteUnreferenced(d->getId(), eDocElementKind::DataType, vtr("Data type '%1'").arg(d->getName()), eSeverity::Warning);
         }
 
         // Warning 5: an event reacted to but never sent, or sent but never reacted to.
@@ -2108,7 +2055,8 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
         case 1:  return vtr("The state cannot be reached by any transition, so its behaviour never runs.");
         case 2:  return vtr("The state has no way out. Once the machine enters it, it stays there.");
         case 3:  return vtr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
-        case 4:  return vtr("Nothing in the machine uses this declaration. Keep it if you are about to, or remove it.");
+        case SMValidator::RULE_UNREFERENCED:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
         case 5:  return vtr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
         case 6:  return vtr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
         case 7:  return vtr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
@@ -2123,9 +2071,12 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
     case 1:  return vtr("Every machine level needs exactly one Start state; it marks where execution begins.");
     case 2:  return vtr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
     case 3:  return vtr("A Final state is terminal and cannot have outgoing transitions.");
-    case 4:  return vtr("Two entries of the same kind share this name. Names are unique per kind, so a trigger, an action and a condition may all be called the same, but two triggers may not.");
-    case 5:  return vtr("Identifiers must be usable in generated code: a letter or underscore first, then letters, digits or underscores.");
-    case 6:  return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
+    case SMValidator::RULE_DUPLICATE_NAME:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
+    case SMValidator::RULE_INVALID_IDENTIFIER:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::InvalidIdentifier);
+    case SMValidator::RULE_UNRESOLVED_REFERENCE:
+        return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
     case 7:  return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
     case 8:  return vtr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
     case 9:  return vtr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");

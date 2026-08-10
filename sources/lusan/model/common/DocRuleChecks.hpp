@@ -1,0 +1,255 @@
+#ifndef LUSAN_MODEL_COMMON_DOCRULECHECKS_HPP
+#define LUSAN_MODEL_COMMON_DOCRULECHECKS_HPP
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/model/common/DocRuleChecks.hpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, the validation rules every document kind shares.
+ *
+ ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/model/common/DocIssue.hpp"
+
+#include <QCoreApplication>
+#include <QList>
+#include <QSet>
+#include <QString>
+#include <cstdint>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class DataTypeDataSection;
+
+/**
+ * \class   DocRuleChecks
+ * \brief   The checks that ask the same question of every document: is this name usable in
+ *          generated code, is it taken already, does this declared type exist, does this value
+ *          read as its type, and does anything use this declaration.
+ *
+ *          A document engine holds one of these, tells it which rule number it files each shape
+ *          under, and calls it instead of carrying its own copy. The number stays the engine's,
+ *          because the number is what an author reads and what the code generator files the same
+ *          fault under; the wording and the explanation come from here, so one defect never
+ *          reaches the results panel described two ways.
+ **/
+class DocRuleChecks
+{
+    Q_DECLARE_TR_FUNCTIONS(DocRuleChecks)
+
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   The rule number the host engine files each shared shape under. An engine that
+     *          reports two shapes under one number simply repeats it here.
+     **/
+    struct RuleIds
+    {
+        int missingName         { 0 };  //!< A declaration with no name at all.
+        int invalidIdentifier   { 0 };  //!< A name the generated code could not carry.
+        int duplicateName       { 0 };  //!< A name already taken in the same name space.
+        int unresolvedType      { 0 };  //!< A declared type nothing answers to.
+        int badLiteral          { 0 };  //!< A value that does not read as its declared type.
+        int unreferenced        { 0 };  //!< Advisory: nothing in the document uses the declaration.
+    };
+
+    /**
+     * \brief   The shared shapes, used to look up the one explanation each of them has.
+     **/
+    enum class eShape
+    {
+          MissingName
+        , InvalidIdentifier
+        , DuplicateName
+        , UnresolvedType
+        , BadLiteral
+        , Unreferenced
+    };
+
+    /**
+     * \brief   A warning or an advisory note `n` is reported with the rule id
+     *          (`ADVISORY_RULE_BASE + n`). A band, not a second severity of the same rule.
+     **/
+    static constexpr int ADVISORY_RULE_BASE { 100 };
+
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Binds the checks to the finding list they append to and to the registry every
+     *          type question is answered against.
+     **/
+    DocRuleChecks(QList<DocIssue>& issues, const DataTypeDataSection& types, const RuleIds& rules);
+
+//////////////////////////////////////////////////////////////////////////
+// Operations, engine independent answers
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   True when the text is a name the generated code can carry.
+     **/
+    static bool isIdentifier(const QString& name);
+
+    /**
+     * \brief   Why a finding of the given shape is a finding, and what resolves it.
+     **/
+    static QString explainShape(eShape shape);
+
+    /**
+     * \brief   Why the literal does not fit the declared type, or an empty string when it does.
+     *          An enumeration takes its own enumerators, a structure and a container take no
+     *          literal at all, an imported type is opaque and takes anything, and everything
+     *          else is parsed against the type's syntax.
+     **/
+    static QString literalReason(const DataTypeDataSection& types, const QString& typeName, const QString& literal);
+
+    /**
+     * \brief   True when the name fragment is a predefined type, a declared one, or not a plain
+     *          name at all -- this is a registry lookup, not a C++ parser.
+     **/
+    bool typeResolves(const QString& fragment) const;
+
+    /**
+     * \brief   The first name in a declared type that answers to nothing, or an empty string.
+     *          A templated type is checked fragment by fragment, so `Array<Missing>` reports
+     *          `Missing` rather than the whole string.
+     **/
+    QString unresolvedFragment(const QString& typeName) const;
+
+    /**
+     * \brief   The rule id a finding of this severity carries, advisory band applied.
+     **/
+    int ruleId(int rule, DocIssue::eSeverity severity) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Operations, the shared rules
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Appends a finding, applying the advisory band to the rule number.
+     **/
+    void add(uint32_t id, eDocElementKind kind, DocIssue::eSeverity severity, int rule
+            , const QString& message, const QString& detail);
+
+    /**
+     * \brief   The name has to be there and has to be usable in generated code.
+     * \param   what    The subject of the message, such as `Attribute 'speed'`. Used when the
+     *                  name is missing, which is the case a name cannot describe itself.
+     **/
+    void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
+
+    /**
+     * \brief   The declared type has to exist, and every fragment of a templated one with it.
+     * \param   required    True when the declaration cannot be left without a type.
+     * \return  The fragment that answered to nothing, or an empty string.
+     **/
+    QString checkDeclaredType(uint32_t id, eDocElementKind kind, const QString& typeName
+                             , const QString& what, bool required);
+
+    /**
+     * \brief   The value has to read as a value of the declared type.
+     * \param   what    The subject of the message. Empty where the call site has none, and the
+     *                  message then names the type instead.
+     **/
+    void checkLiteral(uint32_t id, eDocElementKind kind, const QString& typeName
+                     , const QString& literal, const QString& what);
+
+    /**
+     * \brief   Files a name that is already taken.
+     * \param   subject The whole subject, such as `Attribute 'speed'`.
+     **/
+    void reportDuplicate(uint32_t id, eDocElementKind kind, const QString& subject
+                        , DocIssue::eSeverity severity = DocIssue::eSeverity::Error);
+
+    /**
+     * \brief   Files a declaration nothing in the document uses.
+     * \param   message An alternative wording, for a declaration that is used in one named way.
+     **/
+    void noteUnreferenced(uint32_t id, eDocElementKind kind, const QString& subject
+                         , DocIssue::eSeverity severity, const QString& message = QString());
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+private:
+    QList<DocIssue>&            mIssues;    //!< The run's findings.
+    const DataTypeDataSection&  mTypes;     //!< The document's data type registry.
+    RuleIds                     mRules;     //!< The numbers this engine files the shapes under.
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocRuleChecks(void) = delete;
+    DocRuleChecks(const DocRuleChecks& /*src*/) = delete;
+    DocRuleChecks& operator = (const DocRuleChecks& /*src*/) = delete;
+};
+
+/**
+ * \class   DocNameSet
+ * \brief   One name space of a document: the names already taken in it, and the finding filed
+ *          on the second declaration that claims one. A section has one of these; a section
+ *          whose names are unique per kind keys them by kind and still needs only one.
+ **/
+class DocNameSet
+{
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    DocNameSet(DocRuleChecks& checks, eDocElementKind kind
+              , DocIssue::eSeverity severity = DocIssue::eSeverity::Error);
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Claims the name for the element. Files the duplicate rule and returns false when
+     *          the name was claimed before.
+     * \param   subject The whole subject of the message, such as `Attribute 'speed'`.
+     **/
+    bool claim(uint32_t id, const QString& name, const QString& subject);
+
+    /**
+     * \brief   The same, for a name space keyed by something the message does not show, such as
+     *          the kind a method was declared as.
+     **/
+    bool claimKeyed(uint32_t id, const QString& key, const QString& subject);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocRuleChecks&      mChecks;
+    eDocElementKind     mKind;
+    DocIssue::eSeverity mSeverity;
+    QSet<QString>       mTaken;
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocNameSet(void) = delete;
+    DocNameSet(const DocNameSet& /*src*/) = delete;
+    DocNameSet& operator = (const DocNameSet& /*src*/) = delete;
+};
+
+#endif  // LUSAN_MODEL_COMMON_DOCRULECHECKS_HPP

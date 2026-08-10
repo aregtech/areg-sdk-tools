@@ -21,6 +21,8 @@
  ************************************************************************/
 
 #include "lusan/model/sm/SMValidator.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/sm/SMTypeCompat.hpp"
 #include "lusan/model/sm/SMOperationValidation.hpp"
 
@@ -2831,6 +2833,98 @@ namespace
     }
 }
 
+namespace
+{
+    //!< True when the rule was reported at all, and every finding of it carries the one
+    //!< explanation the shape has. The service interface tests assert the same texts, so a
+    //!< defect both engines can find is described once.
+    bool explains(const QList<SMIssue>& issues, int rule, DocRuleChecks::eShape shape)
+    {
+        const QString expected = DocRuleChecks::explainShape(shape);
+        int found = 0;
+        for (const SMIssue& issue : issues)
+        {
+            if (issue.rule != rule)
+                continue;
+            if (issue.detail != expected)
+                return false;
+
+            ++found;
+        }
+
+        return (found > 0);
+    }
+
+    //!< The rule shapes both document engines share now come from one place. The numbers are
+    //!< unchanged -- the emitted id is what an author reads and what the generator files under.
+    void testSharedRuleShapes()
+    {
+        std::printf("- shared rule shapes: one answer, one wording, this engine's numbers\n");
+
+        {   // A name no compiler would take is the identifier fault, and the bound is the one
+            // every editor field caps at.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute(QString(NELusanCommon::MAX_IDENTIFIER_LENGTH + 1, QLatin1Char('a')))
+                              ->setType(QStringLiteral("uint32"));
+            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A declaration with no name at all is the same fault under the same number, and it
+            // now says what is missing instead of quoting an empty string.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getConstants().createConstant(QString());
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, SMValidator::RULE_INVALID_IDENTIFIER) == 1);
+            bool saysMissing = false;
+            for (const SMIssue& issue : issues)
+            {
+                saysMissing = saysMissing || ((issue.rule == SMValidator::RULE_INVALID_IDENTIFIER)
+                                              && issue.message.contains(QStringLiteral("has no name")));
+            }
+
+            CHECK(saysMissing);
+        }
+
+        {   // A duplicate name names the entry the author has to rename, whichever registry it
+            // is in, and keeps its number.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute(QStringLiteral("speed"))->setType(QStringLiteral("uint32"));
+            AttributeEntry* clash = doc.getAttributes().createAttribute(QStringLiteral("velocity"));
+            CHECK(clash != nullptr);
+            clash->setType(QStringLiteral("uint32"));
+            clash->setName(QStringLiteral("speed"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, SMValidator::RULE_DUPLICATE_NAME) == 1);
+            bool namesIt = false;
+            for (const SMIssue& issue : issues)
+            {
+                namesIt = namesIt || ((issue.rule == SMValidator::RULE_DUPLICATE_NAME)
+                                      && issue.message.contains(QStringLiteral("Attribute 'speed'")));
+            }
+
+            CHECK(namesIt);
+        }
+
+        {   // One shape, one explanation. Both engines attach the shared text to the shared
+            // shapes, so the results panel cannot describe one defect two ways.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute(QStringLiteral("shape"))->setType(QStringLiteral("Missing"));
+            doc.getConstants().createConstant(QStringLiteral("Unused"))->setType(QStringLiteral("uint32"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(explains(issues, SMValidator::RULE_UNRESOLVED_REFERENCE, DocRuleChecks::eShape::UnresolvedType));
+            CHECK(explains(issues, SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNREFERENCED
+                          , DocRuleChecks::eShape::Unreferenced));
+        }
+    }
+}
+
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("=== FSM validation engine tests ===\n");
@@ -2865,6 +2959,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testIncludeRegistry();
     testDataTypeGaps();
     testDefaultOrderAndCallableNames();
+    testSharedRuleShapes();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

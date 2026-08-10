@@ -133,6 +133,7 @@ qt_add_executable(lusan_sm_validation_tests
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMValidationTests.cpp
     # Enumeration literal checks (rule 15) load the basic-container/predefined type catalog.
@@ -197,6 +198,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
     # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
@@ -252,6 +254,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
@@ -423,6 +426,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
@@ -634,6 +638,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
@@ -865,6 +870,7 @@ qt_add_executable(lusan_si_command_tests
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/si/SICommand.cpp
     ${LUSAN}/model/si/SIValidator.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/si/SICommandTests.cpp
     # Resolving a declared type against the primitive and basic-container catalogs needs the real

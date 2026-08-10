@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/VersionNumber.hpp"
 
 #include "lusan/data/sm/SMOverviewData.hpp"
@@ -59,7 +60,8 @@ class StateMachineData  : protected QObject
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
 public:
-    static constexpr int MAX_IDENTIFIER_LENGTH { 0xFF };
+    //!< The name length every editor field caps at, one value for every document kind.
+    static constexpr int MAX_IDENTIFIER_LENGTH { NELusanCommon::MAX_IDENTIFIER_LENGTH };
 
     /**
      * \enum    eStimulusType

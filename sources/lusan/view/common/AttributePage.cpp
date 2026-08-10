@@ -29,7 +29,7 @@
 #include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
-#include "lusan/model/common/LiteralValidator.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
 #include "lusan/view/common/AttributeDetailsView.hpp"
 #include "lusan/view/common/PendingEditWatcher.hpp"
 #include "lusan/view/common/WidgetHighlight.hpp"
@@ -393,27 +393,9 @@ void AttributePage::updateValueControl(const AttributeEntry* entry)
 
 QString AttributePage::valueValidationReason(const QString& typeName, const QString& value) const
 {
-    // No default is always valid - a missing value simply means "not set", not "invalid".
-    if (value.isEmpty())
-        return QString();
-
-    DataTypeCustom* custom = findCustomType(typeName);
-    if (custom != nullptr)
-    {
-        if (custom->getCategory() == DataTypeBase::eCategory::Enumeration)
-        {
-            if (static_cast<DataTypeEnum*>(custom)->findElement(value) == nullptr)
-            {
-                return tr("'%1' is not an enumerator of '%2'").arg(value, typeName);
-            }
-        }
-
-        // Structure/Container: the value control is disabled, never reaches here.
-        // Imported: the type is opaque to Lusan - accept any literal as-is.
-        return QString();
-    }
-
-    return LiteralValidator::validate(typeName, value);
+    // The same answer the validation engine gives, so the hint under the field and the finding
+    // in the results panel can never disagree.
+    return DocRuleChecks::literalReason(mModel.getDocument().getDataTypeSection(), typeName, value);
 }
 
 void AttributePage::updateValueValidation(const QString& typeName, const QString& value)

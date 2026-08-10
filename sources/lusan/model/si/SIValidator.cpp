@@ -19,13 +19,11 @@
 
 #include "lusan/model/si/SIValidator.hpp"
 
-#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/AttributeEntry.hpp"
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
-#include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/EnumEntry.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
@@ -33,10 +31,9 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/data/common/MethodDataSection.hpp"
-#include "lusan/model/common/LiteralValidator.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
 
 #include <QCoreApplication>
-#include <QHash>
 #include <QRegularExpression>
 #include <QSet>
 #include <QStringList>
@@ -58,6 +55,22 @@ namespace
         return label.isEmpty() ? vtr("Method") : label;
     }
 
+    //!< The numbers this engine has always filed the shared shapes under.
+    const DocRuleChecks::RuleIds& siRules()
+    {
+        static const DocRuleChecks::RuleIds _rules
+        {
+              SIValidator::RULE_MISSING_NAME
+            , SIValidator::RULE_INVALID_IDENTIFIER
+            , SIValidator::RULE_DUPLICATE_NAME
+            , SIValidator::RULE_UNRESOLVED_TYPE
+            , SIValidator::RULE_BAD_LITERAL
+            , SIValidator::RULE_UNREFERENCED
+        };
+
+        return _rules;
+    }
+
     /**
      * \class   Ctx
      * \brief   One validation run: the document, the findings it produced, and the registry
@@ -69,6 +82,7 @@ namespace
         explicit Ctx(const ServiceInterfaceData& data)
             : mData     (data)
             , mIssues   ( )
+            , mChecks   (mIssues, data.getDataTypeData(), siRules())
             , mTypesUsed( )
             , mConstsUsed( )
         {
@@ -78,12 +92,6 @@ namespace
 
     private:
         void add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message);
-
-        //!< True when the name is a primitive, a basic object/container or a declared custom type.
-        bool typeResolves(const QString& typeName) const;
-
-        //!< The first fragment of a declared type that resolves to nothing, or an empty string.
-        QString unresolvedFragment(const QString& typeName) const;
 
         void checkName(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
         void checkType(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& what);
@@ -104,6 +112,7 @@ namespace
     private:
         const ServiceInterfaceData& mData;
         QList<DocIssue>             mIssues;
+        DocRuleChecks               mChecks;        //!< The rules every document kind shares.
         QSet<QString>               mTypesUsed;     //!< Type names something in the document declares with.
         QSet<QString>               mConstsUsed;    //!< Constant names something in the document reads.
         bool                        mUnresolvedSeen { false };  //!< A declared type answered to nothing here.
@@ -111,41 +120,7 @@ namespace
 
     void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message)
     {
-        DocIssue issue;
-        issue.elementId = id;
-        issue.kind      = kind;
-        issue.severity  = sev;
-        issue.rule      = (sev == eSeverity::Error) ? rule : (SIValidator::ADVISORY_RULE_BASE + rule);
-        issue.message   = message;
-        issue.detail    = SIValidator::explainRule(issue.rule, sev);
-        mIssues.append(issue);
-    }
-
-    bool Ctx::typeResolves(const QString& typeName) const
-    {
-        if (DataTypeFactory::fromString(typeName) != DataTypeBase::eCategory::Undefined)
-            return true;
-
-        return (mData.getDataTypeData().findDataType(typeName) != nullptr);
-    }
-
-    QString Ctx::unresolvedFragment(const QString& typeName) const
-    {
-        // A declared type may be written as a template, and every name in it has to exist. Checking
-        // the whole string only would let `Array<Missing>` through.
-        const QStringList fragments = typeName.split(QRegularExpression(QStringLiteral("[<>,]")), Qt::SkipEmptyParts);
-        for (const QString& fragment : fragments)
-        {
-            const QString name = fragment.trimmed();
-            // Anything that is not a plain name is left alone: this is a registry lookup, not a
-            // C++ parser.
-            if (name.isEmpty() || (NELusanCommon::isValidIdentifier(name) == false))
-                continue;
-            if (typeResolves(name) == false)
-                return name;
-        }
-
-        return QString();
+        mChecks.add(id, kind, sev, rule, message, SIValidator::explainRule(mChecks.ruleId(rule, sev), sev));
     }
 
     void Ctx::noteType(const QString& typeName)
@@ -163,50 +138,27 @@ namespace
 
     void Ctx::checkName(uint32_t id, eDocElementKind kind, const QString& name, const QString& what)
     {
-        if (name.isEmpty())
-        {
-            add(id, kind, eSeverity::Error, SIValidator::RULE_MISSING_NAME, vtr("%1 has no name").arg(what));
-        }
-        else if (NELusanCommon::isValidIdentifier(name) == false)
-        {
-            add(id, kind, eSeverity::Error, SIValidator::RULE_INVALID_IDENTIFIER, vtr("'%1' is not a valid identifier").arg(name));
-        }
+        mChecks.checkIdentifier(id, kind, name, what);
     }
 
     void Ctx::checkType(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& what)
     {
-        if (typeName.isEmpty())
-        {
-            add(id, kind, eSeverity::Error, SIValidator::RULE_UNRESOLVED_TYPE, vtr("%1 declares no type").arg(what));
-            return;
-        }
-
         noteType(typeName);
-        const QString missing = unresolvedFragment(typeName);
-        if (missing.isEmpty() == false)
-        {
-            mUnresolvedSeen = true;
-            add(id, kind, eSeverity::Error, SIValidator::RULE_UNRESOLVED_TYPE, vtr("%1 declares type '%2', which does not exist").arg(what, missing));
-        }
+        const QString missing = mChecks.checkDeclaredType(id, kind, typeName, what, true);
+        // A name this document does not answer to may be one the imported data type document
+        // brings in, which is what keeps the unused-import advisory silent.
+        mUnresolvedSeen = mUnresolvedSeen || (missing.isEmpty() == false);
     }
 
     void Ctx::checkLiteral(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& literal, const QString& what)
     {
-        // A declared type carries its own literal form, which this check does not read.
-        if (literal.isEmpty() || (mData.getDataTypeData().findCustomDataType(typeName) != nullptr))
-            return;
-
-        const QString reason = LiteralValidator::validate(typeName, literal);
-        if (reason.isEmpty() == false)
-        {
-            add(id, kind, eSeverity::Error, SIValidator::RULE_BAD_LITERAL, vtr("%1 has value '%2': %3").arg(what, literal, reason));
-        }
+        mChecks.checkLiteral(id, kind, typeName, literal, what);
     }
 
     void Ctx::checkParameters(const MethodEntry& method)
     {
         const QString kindWord = methodKindWord(method);
-        QSet<QString> names;
+        DocNameSet names(mChecks, eDocElementKind::Method);
         bool defaulted = false;
         for (const MethodParameter& param : method.getElements())
         {
@@ -214,14 +166,7 @@ namespace
             checkName(method.getId(), eDocElementKind::Method, param.getName(), where);
             checkType(method.getId(), eDocElementKind::Method, param.getType(), where);
             checkLiteral(method.getId(), eDocElementKind::Method, param.getType(), param.getValue(), where);
-
-            if (names.contains(param.getName()))
-            {
-                add(method.getId(), eDocElementKind::Method, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                   , vtr("%1 '%2' declares parameter '%3' twice").arg(kindWord, method.getName(), param.getName()));
-            }
-
-            names.insert(param.getName());
+            names.claim(method.getId(), param.getName(), where);
 
             // A caller may only leave out the trailing parameters, so once one carries a default
             // every parameter after it has to carry one too.
@@ -259,7 +204,7 @@ namespace
 
     void Ctx::checkDataTypes()
     {
-        QSet<QString> names;
+        DocNameSet names(mChecks, eDocElementKind::DataType);
         for (DataTypeCustom* dataType : mData.getDataTypeData().getCustomDataTypes())
         {
             if (dataType == nullptr)
@@ -268,31 +213,19 @@ namespace
             const uint32_t id = dataType->getId();
             const QString name = dataType->getName();
             checkName(id, eDocElementKind::DataType, name, vtr("The data type"));
-            if (names.contains(name))
-            {
-                add(id, eDocElementKind::DataType, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                   , vtr("Data type '%1' is declared more than once").arg(name));
-            }
-
-            names.insert(name);
+            names.claim(id, name, vtr("Data type '%1'").arg(name));
 
             if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
             {
                 DataTypeStructure* structType = static_cast<DataTypeStructure*>(dataType);
-                QSet<QString> fields;
+                DocNameSet fields(mChecks, eDocElementKind::DataType);
                 for (const FieldEntry& field : structType->getElements())
                 {
                     const QString where = vtr("Field '%1' of structure '%2'").arg(field.getName(), name);
                     checkName(id, eDocElementKind::DataType, field.getName(), where);
                     checkType(id, eDocElementKind::DataType, field.getType(), where);
                     checkLiteral(id, eDocElementKind::DataType, field.getType(), field.getValue(), where);
-                    if (fields.contains(field.getName()))
-                    {
-                        add(id, eDocElementKind::DataType, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                           , vtr("Structure '%1' declares field '%2' twice").arg(name, field.getName()));
-                    }
-
-                    fields.insert(field.getName());
+                    fields.claim(id, field.getName(), where);
                 }
 
                 if (structType->getElementCount() == 0)
@@ -304,17 +237,12 @@ namespace
             else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
             {
                 DataTypeEnum* enumType = static_cast<DataTypeEnum*>(dataType);
-                QSet<QString> fields;
+                DocNameSet fields(mChecks, eDocElementKind::DataType);
                 for (const EnumEntry& field : enumType->getElements())
                 {
-                    checkName(id, eDocElementKind::DataType, field.getName(), vtr("Value '%1' of enumeration '%2'").arg(field.getName(), name));
-                    if (fields.contains(field.getName()))
-                    {
-                        add(id, eDocElementKind::DataType, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                           , vtr("Enumeration '%1' declares value '%2' twice").arg(name, field.getName()));
-                    }
-
-                    fields.insert(field.getName());
+                    const QString where = vtr("Value '%1' of enumeration '%2'").arg(field.getName(), name);
+                    checkName(id, eDocElementKind::DataType, field.getName(), where);
+                    fields.claim(id, field.getName(), where);
                 }
 
                 if (enumType->getElementCount() == 0)
@@ -343,20 +271,15 @@ namespace
 
     void Ctx::checkAttributes()
     {
-        QSet<QString> names;
+        DocNameSet names(mChecks, eDocElementKind::Attribute);
         for (const AttributeEntry& attribute : mData.getAttributeData().getElements())
         {
             const uint32_t id = attribute.getId();
             const QString name = attribute.getName();
+            const QString where = vtr("Attribute '%1'").arg(name);
             checkName(id, eDocElementKind::Attribute, name, vtr("The attribute"));
-            checkType(id, eDocElementKind::Attribute, attribute.getType(), vtr("Attribute '%1'").arg(name));
-            if (names.contains(name))
-            {
-                add(id, eDocElementKind::Attribute, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                   , vtr("Attribute '%1' is declared more than once").arg(name));
-            }
-
-            names.insert(name);
+            checkType(id, eDocElementKind::Attribute, attribute.getType(), where);
+            names.claim(id, name, where);
         }
     }
 
@@ -364,7 +287,7 @@ namespace
     {
         // Names are unique per method kind: a request, a response and a broadcast may share one
         // name, but two requests may not.
-        QHash<int, QSet<QString> > names;
+        DocNameSet names(mChecks, eDocElementKind::Method);
         for (MethodEntry* method : mData.getMethodData().getElements())
         {
             if (method == nullptr)
@@ -375,15 +298,8 @@ namespace
             const QString kindWord = methodKindWord(*method);
             checkName(id, eDocElementKind::Method, name, vtr("The %1").arg(kindWord.toLower()));
             checkParameters(*method);
-
-            QSet<QString>& taken = names[static_cast<int>(method->getKind())];
-            if (taken.contains(name))
-            {
-                add(id, eDocElementKind::Method, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                   , vtr("%1 '%2' is declared more than once").arg(kindWord, name));
-            }
-
-            taken.insert(name);
+            names.claimKeyed(id, QString::number(method->getKind()) + QLatin1Char(':') + name
+                            , vtr("%1 '%2'").arg(kindWord, name));
         }
 
         // A request either answers with a declared response or answers with nothing at all; a name
@@ -424,21 +340,16 @@ namespace
 
     void Ctx::checkConstants()
     {
-        QSet<QString> names;
+        DocNameSet names(mChecks, eDocElementKind::Constant);
         for (const ConstantEntry& constant : mData.getConstantData().getElements())
         {
             const uint32_t id = constant.getId();
             const QString name = constant.getName();
+            const QString where = vtr("Constant '%1'").arg(name);
             checkName(id, eDocElementKind::Constant, name, vtr("The constant"));
-            checkType(id, eDocElementKind::Constant, constant.getType(), vtr("Constant '%1'").arg(name));
-            checkLiteral(id, eDocElementKind::Constant, constant.getType(), constant.getValue(), vtr("Constant '%1'").arg(name));
-            if (names.contains(name))
-            {
-                add(id, eDocElementKind::Constant, eSeverity::Error, SIValidator::RULE_DUPLICATE_NAME
-                   , vtr("Constant '%1' is declared more than once").arg(name));
-            }
-
-            names.insert(name);
+            checkType(id, eDocElementKind::Constant, constant.getType(), where);
+            checkLiteral(id, eDocElementKind::Constant, constant.getType(), constant.getValue(), where);
+            names.claim(id, name, where);
         }
     }
 
@@ -456,8 +367,10 @@ namespace
             }
             else if (locations.contains(location))
             {
-                add(include.getId(), eDocElementKind::Include, eSeverity::Warning, SIValidator::RULE_DUPLICATE_NAME
-                   , vtr("'%1' is included more than once").arg(location));
+                // An include is keyed by its location, so the duplicate rule reads the path here.
+                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Warning, SIValidator::RULE_DUPLICATE_NAME
+                           , vtr("'%1' is included more than once").arg(location)
+                           , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName));
             }
 
             // A service interface includes no other service interface, so it has no document
@@ -491,8 +404,8 @@ namespace
         {
             if ((dataType != nullptr) && (mTypesUsed.contains(dataType->getName()) == false))
             {
-                add(dataType->getId(), eDocElementKind::DataType, eSeverity::Warning, SIValidator::RULE_UNREFERENCED
-                   , vtr("Data type '%1' is never referenced").arg(dataType->getName()));
+                mChecks.noteUnreferenced(dataType->getId(), eDocElementKind::DataType
+                                        , vtr("Data type '%1'").arg(dataType->getName()), eSeverity::Warning);
             }
         }
 
@@ -500,8 +413,8 @@ namespace
         {
             if (mConstsUsed.contains(constant.getName()) == false)
             {
-                add(constant.getId(), eDocElementKind::Constant, eSeverity::Info, SIValidator::RULE_UNREFERENCED
-                   , vtr("Constant '%1' is never referenced").arg(constant.getName()));
+                mChecks.noteUnreferenced(constant.getId(), eDocElementKind::Constant
+                                        , vtr("Constant '%1'").arg(constant.getName()), eSeverity::Info);
             }
         }
     }
@@ -587,7 +500,7 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         case SIValidator::RULE_EMPTY_TYPE:
             return QCoreApplication::translate("SIValidator", "The type generates an empty declaration. Give it its members, or remove it.");
         case SIValidator::RULE_UNREFERENCED:
-            return QCoreApplication::translate("SIValidator", "Nothing in the interface uses this declaration. Keep it if you are about to, or remove it.");
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
         case SIValidator::RULE_UNBOUND_RESPONSE:
             return QCoreApplication::translate("SIValidator", "A response is what a request answers with. Connect it to the request it belongs to, or remove it.");
         case SIValidator::RULE_EMPTY_INTERFACE:
@@ -602,15 +515,15 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
     switch (rule)
     {
     case SIValidator::RULE_MISSING_NAME:
-        return QCoreApplication::translate("SIValidator", "The generated code is named after this. It cannot be left empty.");
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName);
     case SIValidator::RULE_INVALID_IDENTIFIER:
-        return QCoreApplication::translate("SIValidator", "Names must be usable in generated code: a letter or underscore first, then letters, digits or underscores.");
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::InvalidIdentifier);
     case SIValidator::RULE_DUPLICATE_NAME:
-        return QCoreApplication::translate("SIValidator", "Two declarations reach one generated name this way, and the build then refuses whichever comes second.");
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
     case SIValidator::RULE_UNRESOLVED_TYPE:
-        return QCoreApplication::translate("SIValidator", "The declared type is not in the data type registry. Check the spelling, or declare the type on the Data Types page.");
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
     case SIValidator::RULE_BAD_LITERAL:
-        return QCoreApplication::translate("SIValidator", "The value cannot be read as a value of the declared type.");
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
     case SIValidator::RULE_RESPONSE_LINK:
         return QCoreApplication::translate("SIValidator", "A caller waits for the named response. Declare it, or clear the connection so the request answers with nothing.");
     case SIValidator::RULE_DEFAULT_ORDER:

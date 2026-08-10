@@ -32,7 +32,7 @@
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
-#include "lusan/model/common/LiteralValidator.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
 #include "lusan/view/common/DataTypeDetailsView.hpp"
 #include "lusan/view/common/DataTypeFieldDetailsView.hpp"
 #include "lusan/view/common/DataTypeListView.hpp"
@@ -666,12 +666,9 @@ QTreeWidgetItem* DataTypePage::createNode(DataTypeCustom* dataType) const
 
 QString DataTypePage::validateFieldValue(const QString& typeName, const QString& value) const
 {
-    // No default is always valid, and a declared (enum/structure/container/imported) type is
-    // ignored - its literal form, if any, is not this validator's concern.
-    if (value.isEmpty() || (mModel.findDataType(typeName) != nullptr))
-        return QString();
-
-    return LiteralValidator::validate(typeName, value);
+    // The same answer the validation engine gives, so the marker on the row and the finding in
+    // the results panel can never disagree.
+    return DocRuleChecks::literalReason(mModel.getDocument().getDataTypeSection(), typeName, value);
 }
 
 QString DataTypePage::validateDeclaredType(const FieldEntry& field)

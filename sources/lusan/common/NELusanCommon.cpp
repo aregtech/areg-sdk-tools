@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/NELusanCommon.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -227,7 +227,9 @@ const QString& NELusanCommon::identifierPattern()
 bool NELusanCommon::isValidIdentifier(const QString& name)
 {
     static const QRegularExpression _re{ QStringLiteral("\\A[A-Za-z_][A-Za-z0-9_]*\\z") };
-    return (name.isEmpty() == false) && _re.match(name).hasMatch();
+    return (name.isEmpty() == false)
+        && (name.size() <= NELusanCommon::MAX_IDENTIFIER_LENGTH)
+        && _re.match(name).hasMatch();
 }
 
 QValidator* NELusanCommon::createIdentifierValidator(QObject* parent)
