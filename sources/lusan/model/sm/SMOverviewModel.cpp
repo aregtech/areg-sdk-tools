@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/SMOverviewModel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -19,56 +19,14 @@
 
 #include "lusan/model/sm/SMOverviewModel.hpp"
 
-#include "lusan/model/sm/StateMachineModel.hpp"
-#include "lusan/model/common/DocElementCommands.hpp"
-
-SMOverviewModel::SMOverviewModel(StateMachineModel& facade)
-    : mFacade(facade)
+SMOverviewModel::SMOverviewModel(IEDocumentModel& document)
+    : OverviewModel(document)
 {
 }
 
-const QString& SMOverviewModel::getName() const
+SMOverviewData::eThreading SMOverviewModel::getThreading(void) const
 {
-    return overview().getName();
-}
-
-const VersionNumber& SMOverviewModel::getVersion() const
-{
-    return overview().getVersion();
-}
-
-SMOverviewData::eThreading SMOverviewModel::getThreading() const
-{
-    return overview().getThreading();
-}
-
-const QString& SMOverviewModel::getDescription() const
-{
-    return overview().getDescription();
-}
-
-void SMOverviewModel::setName(const QString& name)
-{
-    if (name == getName())
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    const uint32_t id = getOverviewId();
-    auto getter = [facade]() -> QString { return facade->getData().getOverview().getName(); };
-    auto setter = [facade](const QString& value) { facade->getData().getOverview().setName(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Overview, getter, setter, name, QObject::tr("Set machine name")));
-}
-
-void SMOverviewModel::setVersion(const VersionNumber& version)
-{
-    if (version == getVersion())
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    const uint32_t id = getOverviewId();
-    auto getter = [facade]() -> VersionNumber { return facade->getData().getOverview().getVersion(); };
-    auto setter = [facade](const VersionNumber& value) { facade->getData().getOverview().setVersion(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<VersionNumber>(getNotifier(), id, eDocElementKind::Overview, getter, setter, version, QObject::tr("Set version")));
+    return static_cast<const SMOverviewData&>(section()).getThreading();
 }
 
 void SMOverviewModel::setThreading(SMOverviewData::eThreading threading)
@@ -76,75 +34,11 @@ void SMOverviewModel::setThreading(SMOverviewData::eThreading threading)
     if (threading == getThreading())
         return;
 
-    StateMachineModel* facade = &mFacade;
-    const uint32_t id = getOverviewId();
-    auto getter = [facade]() -> SMOverviewData::eThreading { return facade->getData().getOverview().getThreading(); };
-    auto setter = [facade](const SMOverviewData::eThreading& value) { facade->getData().getOverview().setThreading(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<SMOverviewData::eThreading>(getNotifier(), id, eDocElementKind::Overview, getter, setter, threading, QObject::tr("Set threading mode")));
-}
-
-void SMOverviewModel::setDescription(const QString& description)
-{
-    if (description == getDescription())
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    const uint32_t id = getOverviewId();
-    auto getter = [facade]() -> QString { return facade->getData().getOverview().getDescription(); };
-    auto setter = [facade](const QString& value) { facade->getData().getOverview().setDescription(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Overview, getter, setter, description, QObject::tr("Set description")));
-}
-
-bool SMOverviewModel::getIsDeprecated() const
-{
-    return overview().getIsDeprecated();
-}
-
-const QString& SMOverviewModel::getDeprecateHint() const
-{
-    return overview().getDeprecateHint();
-}
-
-void SMOverviewModel::setIsDeprecated(bool isDeprecated)
-{
-    if (isDeprecated == getIsDeprecated())
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    const uint32_t id = getOverviewId();
-    auto getter = [facade]() -> bool { return facade->getData().getOverview().getIsDeprecated(); };
-    auto setter = [facade](const bool& value) { facade->getData().getOverview().setIsDeprecated(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<bool>(getNotifier(), id, eDocElementKind::Overview, getter, setter, isDeprecated, QObject::tr("Set deprecated flag")));
-}
-
-void SMOverviewModel::setDeprecateHint(const QString& hint)
-{
-    if (hint == getDeprecateHint())
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    const uint32_t id = getOverviewId();
-    auto getter = [facade]() -> QString { return facade->getData().getOverview().getDeprecateHint(); };
-    auto setter = [facade](const QString& value) { facade->getData().getOverview().setDeprecateHint(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Overview, getter, setter, hint, QObject::tr("Set deprecation hint")));
-}
-
-DocModelNotifier& SMOverviewModel::getNotifier() const
-{
-    return mFacade.getNotifier();
-}
-
-uint32_t SMOverviewModel::getOverviewId() const
-{
-    return overview().getId();
-}
-
-const SMOverviewData& SMOverviewModel::overview() const
-{
-    return mFacade.getData().getOverview();
-}
-
-SMOverviewData& SMOverviewModel::overview()
-{
-    return mFacade.getData().getOverview();
+    IEDocumentModel* document = &getDocument();
+    pushProperty<SMOverviewData::eThreading>
+    (
+          [document]() { return static_cast<SMOverviewData&>(document->getOverviewSection()).getThreading(); }
+        , [document](const SMOverviewData::eThreading& value) { static_cast<SMOverviewData&>(document->getOverviewSection()).setThreading(value); }
+        , threading, QObject::tr("Set threading mode")
+    );
 }

@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_DATA_SI_SIOVERVIEWDATA_HPP
+#ifndef LUSAN_DATA_SI_SIOVERVIEWDATA_HPP
 #define LUSAN_DATA_SI_SIOVERVIEWDATA_HPP
 
 /************************************************************************
@@ -12,7 +12,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/SIOverviewData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -20,20 +20,16 @@
  *
  ************************************************************************/
 
-#include "lusan/data/common/DocumentElem.hpp"
-#include "lusan/common/VersionNumber.hpp"
-
-#include <QString>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
+#include "lusan/data/common/OverviewDataSection.hpp"
 
 class DataTypeDataSection;
 
 /**
  * \class   SIOverviewData
- * \brief   Represents the overview data of a service interface in the Lusan application.
+ * \brief   The `Overview` element of a `.siml` document: the shared name, version, description
+ *          and deprecation mark, plus the service category, which only an interface declares.
  **/
-class SIOverviewData    : public DocumentElem
+class SIOverviewData    : public OverviewDataSection
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants.
@@ -111,110 +107,39 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIOverviewData() = default;
+    virtual ~SIOverviewData(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
-public:
-    
+protected:
     /**
-     * \brief   Checks if the parameter is valid.
-     * \return  True if the parameter is valid, false otherwise.
+     * \brief   Reads the service category, accepting the spelling the first published format
+     *          used.
      **/
-    bool isValid() const override;
-    
-    /**
-     * \brief   Reads data from an XML stream.
-     * \param   xml     The XML stream reader.
-     * \return  True if the data was successfully read, false otherwise.
-     **/
-    bool readFromXml(QXmlStreamReader& xml) override;
+    virtual void readOwnAttributes(const QXmlStreamAttributes& attributes) override;
 
     /**
-     * \brief   Writes data to an XML stream.
-     * \param   xml     The XML stream writer.
+     * \brief   Writes the service category.
      **/
-    void writeToXml(QXmlStreamWriter& xml) const override;
-    
+    virtual void writeOwnAttributes(QXmlStreamWriter& xml) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    
-    /**
-     * \brief   Gets the name of the service interface.
-     * \return  The name of the service interface.
-     **/
-    const QString & getName() const;
-
-    /**
-     * \brief   Sets the name of the service interface.
-     * \param   name  The name to set.
-     **/
-    void setName(const QString& name);
-
-    /**
-     * \brief   Gets the version of the service interface.
-     * \return  The version of the service interface.
-     **/
-    const VersionNumber& getVersion() const;
-
-    /**
-     * \brief   Sets the version of the service interface.
-     * \param   version  The version to set.
-     **/
-    void setVersion(const QString& version);
-    void setVersion(const VersionNumber& version);
-    void setVersion(int major, int minor, int patch);
 
     /**
      * \brief   Gets the category of the service interface.
      * \return  The category of the service interface.
      **/
-    eCategory getCategory() const;
+    inline eCategory getCategory(void) const;
 
     /**
      * \brief   Sets the category of the service interface.
      * \param   category  The category to set.
      **/
-    void setCategory(eCategory category);
-
-    /**
-     * \brief   Gets the description of the service interface.
-     * \return  The description of the service interface.
-     **/
-    const QString& getDescription() const;
-
-    /**
-     * \brief   Sets the description of the service interface.
-     * \param   description  The description to set.
-     **/
-    void setDescription(const QString& description);
-
-    /**
-     * \brief   Checks if the service interface is deprecated.
-     * \return  True if the service interface is deprecated, false otherwise.
-     **/
-    bool getIsDeprecated() const;
-
-    /**
-     * \brief   Sets the deprecation status of the service interface.
-     * \param   isDeprecated  The deprecation status to set.
-     **/
-    void setIsDeprecated(bool isDeprecated);
-
-    /**
-     * \brief   Gets the deprecation hint of the service interface.
-     * \return  The deprecation hint of the service interface.
-     **/
-    const QString& getDeprecateHint() const;
-
-    /**
-     * \brief   Sets the deprecation hint of the service interface.
-     * \param   deprecateHint  The deprecation hint to set.
-     **/
-    void setDeprecateHint(const QString& deprecateHint);
+    inline void setCategory(eCategory category);
 
     /**
      * \brief   Validates the service interface data.
@@ -226,49 +151,14 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QString         mName;          //!< The name of the service interface.
-    VersionNumber   mVersion;       //!< The version of the service interface.
     eCategory       mCategory;      //!< The category of the service interface.
-    QString         mDescription;   //!< The description of the service interface.
-    bool            mIsDeprecated;  //!< Flag indicating whether the interface is deprecated.
-    QString         mDeprecateHint; //!< The deprecation hint.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SIOverviewData inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SIOverviewData::getName() const
-{
-    return mName;
-}
-
-inline void SIOverviewData::setName(const QString& name)
-{
-    mName = name;
-}
-
-inline const VersionNumber& SIOverviewData::getVersion() const
-{
-    return mVersion;
-}
-
-inline void SIOverviewData::setVersion(const QString& version)
-{
-    mVersion.fromString(version);
-}
-
-inline void SIOverviewData::setVersion(const VersionNumber& version)
-{
-    mVersion = version;
-}
-
-inline void SIOverviewData::setVersion(int major, int minor, int patch)
-{
-    mVersion = VersionNumber(major, minor, patch);
-}
-
-inline SIOverviewData::eCategory SIOverviewData::getCategory() const
+inline SIOverviewData::eCategory SIOverviewData::getCategory(void) const
 {
     return mCategory;
 }
@@ -276,36 +166,6 @@ inline SIOverviewData::eCategory SIOverviewData::getCategory() const
 inline void SIOverviewData::setCategory(eCategory category)
 {
     mCategory = category;
-}
-
-inline const QString& SIOverviewData::getDescription() const
-{
-    return mDescription;
-}
-
-inline void SIOverviewData::setDescription(const QString& description)
-{
-    mDescription = description;
-}
-
-inline bool SIOverviewData::getIsDeprecated() const
-{
-    return mIsDeprecated;
-}
-
-inline void SIOverviewData::setIsDeprecated(bool isDeprecated)
-{
-    mIsDeprecated = isDeprecated;
-}
-
-inline const QString& SIOverviewData::getDeprecateHint() const
-{
-    return mIsDeprecated ? mDeprecateHint : ElementBase::EmptyString;
-}
-
-inline void SIOverviewData::setDeprecateHint(const QString& deprecateHint)
-{
-    mDeprecateHint = mIsDeprecated ? deprecateHint : ElementBase::EmptyString;
 }
 
 #endif // LUSAN_DATA_SI_SIOVERVIEWDATA_HPP

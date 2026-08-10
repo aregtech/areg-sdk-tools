@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/SIOverviewModel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,114 +22,38 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/OverviewModel.hpp"
+
 #include "lusan/data/si/SIOverviewData.hpp"
 
-class SIOverviewModel
+/**
+ * \class   SIOverviewModel
+ * \brief   The shared Overview page model plus the service category, which only an interface
+ *          declares. The category is edited through an undo command like every other row.
+ **/
+class SIOverviewModel : public OverviewModel
 {
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
-    SIOverviewModel(SIOverviewData& data);
+    explicit SIOverviewModel(IEDocumentModel& document);
 
-    /**
-     * \brief   Gets the ID of the service interface.
-     * \return  The ID of the service interface.
-     **/
-    uint32_t getId() const;
+    virtual ~SIOverviewModel(void) = default;
 
-    /**
-     * \brief   Sets the ID of the service interface.
-     * \param   id  The ID to set.
-     **/
-    void setId(uint32_t id);
-
-    /**
-     * \brief   Gets the name of the service interface.
-     * \return  The name of the service interface.
-     **/
-    const QString& getName() const;
-
-    /**
-     * \brief   Sets the name of the service interface.
-     * \param   name  The name to set.
-     **/
-    void setName(const QString& name);
-
-    /**
-     * \brief   Gets the version of the service interface.
-     * \return  The version of the service interface.
-     **/
-    const VersionNumber& getVersion() const;
-
-    /**
-     * \brief   Sets the version of the service interface.
-     * \param   version  The version to set.
-     **/
-    void setVersion(const QString& version);
-    void setVersion(const VersionNumber& version);
-    void setVersion(uint32_t major, uint32_t minor, uint32_t patch);
-
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
     /**
      * \brief   Gets the category of the service interface.
-     * \return  The category of the service interface.
      **/
-    SIOverviewData::eCategory getCategory() const;
+    SIOverviewData::eCategory getCategory(void) const;
 
     /**
      * \brief   Sets the category of the service interface.
-     * \param   category  The category to set.
      **/
     void setCategory(SIOverviewData::eCategory category);
-
-    /**
-     * \brief   Gets the description of the service interface.
-     * \return  The description of the service interface.
-     **/
-    const QString& getDescription() const;
-
-    /**
-     * \brief   Sets the description of the service interface.
-     * \param   description  The description to set.
-     **/
-    void setDescription(const QString& description);
-
-    /**
-     * \brief   Checks if the service interface is deprecated.
-     * \return  True if the service interface is deprecated, false otherwise.
-     **/
-    bool getIsDeprecated() const;
-
-    /**
-     * \brief   Sets the deprecation status of the service interface.
-     * \param   isDeprecated  The deprecation status to set.
-     **/
-    void setIsDeprecated(bool isDeprecated);
-
-    /**
-     * \brief   Gets the deprecation hint of the service interface.
-     * \return  The deprecation hint of the service interface.
-     **/
-    const QString& getDeprecateHint() const;
-
-    /**
-     * \brief   Sets the deprecation hint of the service interface.
-     * \param   deprecateHint  The deprecation hint to set.
-     **/
-    void setDeprecateHint(const QString& deprecateHint);
-
-//////////////////////////////////////////////////////////////////////////
-// Member variables
-//////////////////////////////////////////////////////////////////////////
-private:
-    SIOverviewData& mData;
-
-//////////////////////////////////////////////////////////////////////////
-// Forbidden calls
-//////////////////////////////////////////////////////////////////////////
-private:
-    SIOverviewModel() = delete;
-    SIOverviewModel(const SIOverviewModel& /*src*/) = delete;
-    SIOverviewModel& operator = (const SIOverviewModel& /*src*/) = delete;
-    SIOverviewModel(SIOverviewModel&& /*src*/) = delete;
-    SIOverviewModel& operator = (SIOverviewModel&& /*src*/) = delete;
 };
 
 #endif  // LUSAN_MODEL_SI_SIOVERVIEWMODEL_HPP

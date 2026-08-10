@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/SMOverviewData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,19 +22,14 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/data/common/DocumentElem.hpp"
-#include "lusan/common/VersionNumber.hpp"
-
-#include <QString>
+#include "lusan/data/common/OverviewDataSection.hpp"
 
 /**
  * \class   SMOverviewData
- * \brief   Represents the `Overview` element of an `.fsml` document.
- *          Holds the machine name, the user-owned document version, the threading
- *          mode and a description. This is the FSM sibling of SIOverviewData; it does
- *          not carry the service-interface category.
+ * \brief   The `Overview` element of an `.fsml` document: the shared name, version, description
+ *          and deprecation mark, plus the threading mode, which only a state machine declares.
  **/
-class SMOverviewData : public DocumentElem
+class SMOverviewData : public OverviewDataSection
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
@@ -83,92 +78,41 @@ public:
      **/
     SMOverviewData(uint32_t id, const QString& name, ElementBase* parent = nullptr);
 
-    virtual ~SMOverviewData() = default;
+    virtual ~SMOverviewData(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
-public:
+protected:
     /**
-     * \brief   Checks whether the overview is valid (has a non-empty machine name).
+     * \brief   Reads the threading mode.
      **/
-    bool isValid() const override;
+    virtual void readOwnAttributes(const QXmlStreamAttributes& attributes) override;
 
     /**
-     * \brief   Reads data from an XML stream.
+     * \brief   Writes the threading mode.
      **/
-    bool readFromXml(QXmlStreamReader& xml) override;
-
-    /**
-     * \brief   Writes data to an XML stream.
-     **/
-    void writeToXml(QXmlStreamWriter& xml) const override;
+    virtual void writeOwnAttributes(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getName() const;
-    inline void setName(const QString& name);
-
-    inline const VersionNumber& getVersion() const;
-    inline void setVersion(const VersionNumber& version);
-    inline void setVersion(const QString& version);
-
-    inline eThreading getThreading() const;
+    inline eThreading getThreading(void) const;
     inline void setThreading(eThreading threading);
-
-    inline const QString& getDescription() const;
-    inline void setDescription(const QString& description);
-
-    inline bool getIsDeprecated() const;
-    inline void setIsDeprecated(bool isDeprecated);
-
-    inline const QString& getDeprecateHint() const;
-    inline void setDeprecateHint(const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QString         mName;          //!< The state machine name.
-    VersionNumber   mVersion;       //!< The user-owned document version (Overview@Version).
     eThreading      mThreading;     //!< The threading mode.
-    QString         mDescription;   //!< The description text.
-    bool            mIsDeprecated;  //!< The flag indicating that the whole machine is deprecated.
-    QString         mDeprecateHint; //!< The hint shown when the machine is deprecated.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SMOverviewData inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMOverviewData::getName() const
-{
-    return mName;
-}
-
-inline void SMOverviewData::setName(const QString& name)
-{
-    mName = name;
-}
-
-inline const VersionNumber& SMOverviewData::getVersion() const
-{
-    return mVersion;
-}
-
-inline void SMOverviewData::setVersion(const VersionNumber& version)
-{
-    mVersion = version;
-}
-
-inline void SMOverviewData::setVersion(const QString& version)
-{
-    mVersion.fromString(version);
-}
-
-inline SMOverviewData::eThreading SMOverviewData::getThreading() const
+inline SMOverviewData::eThreading SMOverviewData::getThreading(void) const
 {
     return mThreading;
 }
@@ -176,36 +120,6 @@ inline SMOverviewData::eThreading SMOverviewData::getThreading() const
 inline void SMOverviewData::setThreading(SMOverviewData::eThreading threading)
 {
     mThreading = threading;
-}
-
-inline const QString& SMOverviewData::getDescription() const
-{
-    return mDescription;
-}
-
-inline void SMOverviewData::setDescription(const QString& description)
-{
-    mDescription = description;
-}
-
-inline bool SMOverviewData::getIsDeprecated() const
-{
-    return mIsDeprecated;
-}
-
-inline void SMOverviewData::setIsDeprecated(bool isDeprecated)
-{
-    mIsDeprecated = isDeprecated;
-}
-
-inline const QString& SMOverviewData::getDeprecateHint() const
-{
-    return mDeprecateHint;
-}
-
-inline void SMOverviewData::setDeprecateHint(const QString& hint)
-{
-    mDeprecateHint = hint;
 }
 
 #endif  // LUSAN_DATA_SM_SMOVERVIEWDATA_HPP

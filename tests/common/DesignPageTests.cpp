@@ -15,9 +15,10 @@
  *  \author      Artak Avetyan
  *  \brief       The shared editor pages, built over both document kinds and driven offscreen.
  *
- *               The Constants, Data Types, Includes, Attributes and Methods pages are one class
- *               each, used by the service interface editor and by the state machine editor alike.
- *               What is proved here, for all ten combinations:
+ *               The Overview, Constants, Data Types, Includes, Attributes and Methods pages are
+ *               one class each, used by the service interface editor and by the state machine
+ *               editor alike. The Overview page edits the document itself and is driven by its
+ *               own sweep, below; what is proved for the five list pages, over both documents:
  *
  *                 1. The page builds over the document's model and shows what the document holds.
  *                 2. Its Add button reaches the document through a command, and the row appears.
@@ -58,16 +59,20 @@
 #include "lusan/view/common/MethodDetailsView.hpp"
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/common/MethodPage.hpp"
+#include "lusan/view/common/OverviewPage.hpp"
+#include "lusan/view/si/SIOverview.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/sm/SMInclude.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
+#include "lusan/view/sm/SMOverview.hpp"
 
 #include <QApplication>
 #include <QDir>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QPixmap>
+#include <QPlainTextEdit>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -258,6 +263,90 @@ namespace
         CHECK(treeShows(probe.tree, typedName) == false);
     }
 
+    /**
+     * \brief   The Overview page has no list and no rows: the document itself is what it edits.
+     *          What is proved is the same, in the terms this page has -- a committed edit reaches
+     *          the document as one undo step, the fields follow undo and redo, and the text a
+     *          field still holds is handed over when the document is saved.
+     * \param   nameEditable    False for a document named by its file, whose name row is shown
+     *                          but not edited.
+     **/
+    void exerciseOverview( const char* label, OverviewPage* page, DocUndoStack& stack, bool nameEditable
+                         , std::function<QString()> name, std::function<QString()> description
+                         , std::function<uint32_t()> major, const QString& outDir, const QString& picture)
+    {
+        std::printf("--- %s\n", label);
+        QLineEdit* nameField = page->findChild<QLineEdit*>(QStringLiteral("overviewName"));
+        QLineEdit* majorField = page->findChild<QLineEdit*>(QStringLiteral("overviewMajor"));
+        QPlainTextEdit* descriptionBox = page->findChild<QPlainTextEdit*>(QStringLiteral("overviewDescription"));
+        CHECK(nameField != nullptr);
+        CHECK(majorField != nullptr);
+        CHECK(descriptionBox != nullptr);
+        if ((nameField == nullptr) || (majorField == nullptr) || (descriptionBox == nullptr))
+            return;
+
+        // 1. The page shows what the document holds.
+        CHECK(nameField->text() == name());
+        CHECK(descriptionBox->toPlainText() == description());
+        CHECK(nameField->isReadOnly() == (nameEditable == false));
+
+        // 2. A version typed in reaches the document when the field is done with, not before:
+        //    one undo step for the whole number rather than one per digit.
+        const uint32_t majorBefore = major();
+        majorField->setFocus();
+        majorField->selectAll();
+        typeText(majorField, QStringLiteral("7"));
+        CHECK(major() == majorBefore);
+        pressReturn(majorField);
+        CHECK(major() == 7u);
+        CHECK(stack.canUndo());
+
+        // 3. A name typed in behaves the same, where the document's name is its own.
+        const QString nameBefore = name();
+        if (nameEditable)
+        {
+            nameField->setFocus();
+            nameField->selectAll();
+            typeText(nameField, QStringLiteral("ProbedMachine"));
+            CHECK(name() == nameBefore);
+            pressReturn(nameField);
+            CHECK(name() == QStringLiteral("ProbedMachine"));
+        }
+
+        // 4. The description box gives its text to the document when the document is saved, with
+        //    the caret still in it.
+        const QString descriptionBefore = description();
+        descriptionBox->setFocus();
+        descriptionBox->clear();
+        typeText(descriptionBox, QStringLiteral("Probed overview."));
+        page->commitPendingEdits();
+        CHECK(description() == QStringLiteral("Probed overview."));
+
+        savePicture(page, outDir, picture);
+
+        // 5. Undo and redo both reach the fields, because the page refills from the model.
+        stack.undo();
+        QApplication::processEvents();
+        CHECK(description() == descriptionBefore);
+        CHECK(descriptionBox->toPlainText() == descriptionBefore);
+        stack.redo();
+        QApplication::processEvents();
+        CHECK(description() == QStringLiteral("Probed overview."));
+        CHECK(descriptionBox->toPlainText() == QStringLiteral("Probed overview."));
+
+        // 6. All the way back: the document stands exactly where it started.
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+
+        QApplication::processEvents();
+        CHECK(major() == majorBefore);
+        CHECK(name() == nameBefore);
+        CHECK(majorField->text() == QString::number(majorBefore));
+        CHECK(nameField->text() == nameBefore);
+    }
+
     //!< Puts a page into a shown, active window, so the fields can take the focus.
     QWidget* showPage(QWidget* page)
     {
@@ -285,6 +374,18 @@ namespace
         std::printf("=== the shared pages over a service interface ===\n");
         ServiceInterfaceModel model;
         DocUndoStack& stack = model.getUndoStack();
+
+        {
+            // The interface is named by its file, so its name row is shown and not edited.
+            SIOverview* page = new SIOverview(model.getOverviewModel());
+            QWidget* window = showPage(page);
+            exerciseOverview( "service interface / Overview", page, stack, false
+                            , [&model]() { return model.getData().getOverviewData().getName(); }
+                            , [&model]() { return model.getData().getOverviewData().getDescription(); }
+                            , [&model]() { return model.getData().getOverviewData().getVersion().getMajor(); }
+                            , outDir, QStringLiteral("si-overview"));
+            delete window;
+        }
 
         {
             ConstantPage* page = new ConstantPage(model.getConstantsModel(), QStringLiteral("Constants"));
@@ -397,6 +498,17 @@ namespace
         }
 
         DocUndoStack& stack = model.getUndoStack();
+
+        {
+            SMOverview* page = new SMOverview(model.getOverviewModel());
+            QWidget* window = showPage(page);
+            exerciseOverview( "state machine / Overview", page, stack, true
+                            , [&model]() { return model.getData().getOverview().getName(); }
+                            , [&model]() { return model.getData().getOverview().getDescription(); }
+                            , [&model]() { return model.getData().getOverview().getVersion().getMajor(); }
+                            , outDir, QStringLiteral("sm-overview"));
+            delete window;
+        }
 
         {
             SMConstant* page = new SMConstant(model.getConstantModel(), model);

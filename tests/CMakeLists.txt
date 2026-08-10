@@ -53,6 +53,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMLayoutData.cpp
     ${LUSAN}/data/common/MethodDataSection.cpp
     ${LUSAN}/data/sm/SMOperation.cpp
+    ${LUSAN}/data/common/OverviewDataSection.cpp
     ${LUSAN}/data/sm/SMOverviewData.cpp
     ${LUSAN}/data/sm/SMReferences.cpp
     ${LUSAN}/data/sm/SMState.cpp
@@ -182,6 +183,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
+    ${LUSAN}/model/common/OverviewModel.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/common/AttributeModel.cpp
@@ -237,6 +239,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/common/OverviewModel.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/common/AttributeModel.cpp
@@ -432,6 +435,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/common/OverviewModel.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/common/AttributeModel.cpp
@@ -644,6 +648,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/common/OverviewModel.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/common/AttributeModel.cpp
@@ -773,9 +778,11 @@ set_target_properties(lusan_sm_guard_u4_sweep PROPERTIES WIN32_EXECUTABLE OFF)
 #   lusan_design_pages <TrafficLight.fsml> [output directory]
 # ---------------------------------------------------------------------------
 set(LUSAN_SI_MODEL_SRC
+    ${LUSAN}/data/common/OverviewDataSection.cpp
     ${LUSAN}/data/si/SIOverviewData.cpp
     ${LUSAN}/data/si/ServiceInterfaceData.cpp
     ${LUSAN}/model/si/SICommand.cpp
+    ${LUSAN}/model/common/OverviewModel.cpp
     ${LUSAN}/model/si/SIOverviewModel.cpp
     ${LUSAN}/model/si/SIValidator.cpp
     ${LUSAN}/model/si/ServiceInterfaceModel.cpp
@@ -801,13 +808,16 @@ set(LUSAN_EDITOR_PAGE_SRC
     ${LUSAN}/view/common/MethodListView.cpp
     ${LUSAN}/view/common/MethodPage.cpp
     ${LUSAN}/view/common/MethodParamDetailsView.cpp
+    ${LUSAN}/view/common/OverviewPage.cpp
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/common/WidgetHighlight.cpp
     ${LUSAN}/view/common/WorkspaceFileDialog.cpp
+    ${LUSAN}/view/si/SIOverview.cpp
     ${LUSAN}/view/sm/SMAttribute.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
     ${LUSAN}/view/sm/SMInclude.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
+    ${LUSAN}/view/sm/SMOverview.cpp
 )
 
 qt_add_executable(lusan_design_pages
@@ -861,6 +871,7 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/common/IncludeDataSection.cpp
     ${LUSAN}/data/common/MethodDataSection.cpp
     ${LUSAN}/data/common/MethodEntry.cpp
+    ${LUSAN}/data/common/OverviewDataSection.cpp
     ${LUSAN}/data/si/SIOverviewData.cpp
     ${LUSAN}/data/si/ServiceInterfaceData.cpp
 )

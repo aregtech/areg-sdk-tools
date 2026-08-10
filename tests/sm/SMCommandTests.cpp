@@ -50,6 +50,7 @@
 #include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/common/MethodModel.hpp"
+#include "lusan/model/sm/SMOverviewModel.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
@@ -1474,6 +1475,89 @@ namespace
         CHECK(model.getData().getAttributes().getElementCount() == 2);
     }
 
+    //!< The Overview page model edits whatever document is open now, not the one that was open
+    //!< when it was built. `File / New` and a save-and-reload each replace the data object the
+    //!< section lives in.
+    void testOverviewSurvivesDocumentSwap()
+    {
+        StateMachineModel model;
+        SMOverviewModel& overview = model.getOverviewModel();
+
+        overview.setName(QStringLiteral("Before"));
+        CHECK(overview.getName() == QStringLiteral("Before"));
+
+        // What "File / New" does.
+        CHECK(model.createNewDocument(QStringLiteral("Swapped")));
+        CHECK(overview.getName() == QStringLiteral("Swapped"));
+        CHECK(model.getData().getOverview().getName() == overview.getName());
+
+        // The edit landed in the new document, and undo takes it back out of that same one.
+        overview.setDescription(QStringLiteral("The machine that was swapped in."));
+        CHECK(model.getData().getOverview().getDescription() == QStringLiteral("The machine that was swapped in."));
+        model.getUndoStack().undo();
+        CHECK(model.getData().getOverview().getDescription().isEmpty());
+        model.getUndoStack().redo();
+
+        // And again after a reload, which swaps the data object a second time.
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = dir.filePath(QStringLiteral("swap-overview.fsml"));
+        CHECK(model.saveToFile(path));
+        CHECK(model.loadFromFile(path));
+        CHECK(overview.getName() == QStringLiteral("Swapped"));
+        CHECK(overview.getDescription() == QStringLiteral("The machine that was swapped in."));
+
+        overview.setThreading(SMOverviewData::eThreading::Local);
+        CHECK(model.getData().getOverview().getThreading() == SMOverviewData::eThreading::Local);
+    }
+
+    //!< A state machine declares a threading mode and no service category, so the section writes a
+    //!< `Threading` and never a `Category`; and every row of the page is one undo step.
+    void testOverviewSectionShape()
+    {
+        StateMachineModel model;
+        SMOverviewModel& overview = model.getOverviewModel();
+
+        overview.setName(QStringLiteral("Blinker"));
+        overview.setVersion(VersionNumber(2u, 1u, 0u));
+        overview.setThreading(SMOverviewData::eThreading::Local);
+
+        QString text;
+        QXmlStreamWriter writer(&text);
+        model.getData().getOverview().writeToXml(writer);
+        CHECK(text.contains(QStringLiteral("Name=\"Blinker\"")));
+        CHECK(text.contains(QStringLiteral("Version=\"2.1.0\"")));
+        CHECK(text.contains(QStringLiteral("Threading=\"Local\"")));
+        CHECK(text.contains(QStringLiteral("Category=")) == false);
+        CHECK(text.contains(QStringLiteral("<Description")) == false);   // an empty one is left out
+
+        // Undo takes the threading mode back, and redo puts it again.
+        model.getUndoStack().undo();
+        CHECK(overview.getThreading() == SMOverviewData::eThreading::Shared);
+        model.getUndoStack().redo();
+        CHECK(overview.getThreading() == SMOverviewData::eThreading::Local);
+
+        // The deprecation mark and its hint move as one gesture, so taking the mark off takes the
+        // hint with it, and one undo brings both back.
+        overview.setIsDeprecated(true);
+        overview.setDeprecateHint(QStringLiteral("Use Blinker2."));
+        overview.setIsDeprecated(false);
+        CHECK(overview.getIsDeprecated() == false);
+        CHECK(overview.getDeprecateHint().isEmpty());
+        model.getUndoStack().undo();
+        CHECK(overview.getIsDeprecated());
+        CHECK(overview.getDeprecateHint() == QStringLiteral("Use Blinker2."));
+
+        // And back to where it started, from the top of the history down.
+        while (model.getUndoStack().canUndo())
+        {
+            model.getUndoStack().undo();
+        }
+
+        CHECK(overview.getName() != QStringLiteral("Blinker"));
+        CHECK(overview.getThreading() == SMOverviewData::eThreading::Shared);
+    }
+
     //!< A state machine attribute carries a value and no notification, so the section writes a
     //!< `Value` and never a `Notify`, and a reload gets the same entry back.
     void testAttributeSectionShape()
@@ -1715,6 +1799,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testConstantsSurviveDocumentSwap();
     testDataTypesSurviveDocumentSwap();
     testIncludesSurviveDocumentSwap();
+    testOverviewSurvivesDocumentSwap();
+    testOverviewSectionShape();
     testAttributesSurviveDocumentSwap();
     testAttributeSectionShape();
     testMethodsSurviveDocumentSwap();

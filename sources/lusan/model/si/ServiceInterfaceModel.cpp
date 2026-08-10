@@ -26,7 +26,7 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
     : mSIData           (filePath)
     , mNotifier         ( )
     , mUndoStack        ( )
-    , mModelOverview    (mSIData.getOverviewData())
+    , mModelOverview    (*this)
     , mModelDataType    (*this)
     , mModelAttributes  (*this)
     , mModelMethods     (*this)
