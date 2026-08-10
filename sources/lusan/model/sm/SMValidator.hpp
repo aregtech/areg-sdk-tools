@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/common/DocIssue.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
 
 #include <QList>
 #include <QString>
@@ -63,7 +64,7 @@ public:
     /**
      * \brief   A warning `n` is reported with the rule id (`WARNING_RULE_BASE + n`)
      **/
-    static constexpr int WARNING_RULE_BASE { 100 };
+    static constexpr int WARNING_RULE_BASE { DocRuleChecks::ADVISORY_RULE_BASE };
 
     /**
      * \brief   An information `n` is reported with the rule id (`INFORMATION_RULE_BASE + n`).
@@ -88,9 +89,31 @@ public:
 
     /**
      * \brief   A name the generated code could not carry: it must start with a letter or an
-     *          underscore and continue with letters, digits or underscores.
+     *          underscore and continue with letters, digits or underscores. A declaration with
+     *          no name at all is the same fault and carries the same number.
      **/
     static constexpr int RULE_INVALID_IDENTIFIER { 5 };
+
+    /**
+     * \brief   A name referenced here and declared nowhere of that kind: a target, a stimulus,
+     *          an action, a timer, an event, an attribute, a constant, a condition operand, or
+     *          a declared data type.
+     **/
+    static constexpr int RULE_UNRESOLVED_REFERENCE { 6 };
+
+    /**
+     * \brief   A value that does not read as its declared type: a malformed literal, a name
+     *          that is not an enumerator of its enumeration, or a literal on a type that has
+     *          no literal form.
+     **/
+    static constexpr int RULE_BAD_LITERAL { 15 };
+
+    /**
+     * \brief   Advisory: nothing in the machine uses the declaration. Reported in the advisory
+     *          band, so the emitted id is `WARNING_RULE_BASE + RULE_UNREFERENCED` and never
+     *          the bare number, which belongs to \a RULE_DUPLICATE_NAME.
+     **/
+    static constexpr int RULE_UNREFERENCED { 4 };
 
     /**
      * \brief   An element with no description. Advisory: the document still generates, but the

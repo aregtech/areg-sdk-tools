@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/common/DocIssue.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
 
 #include <QList>
 #include <QString>
@@ -56,7 +57,7 @@ public:
      *          A band, not a second severity of the same rule: the id the author reads is the
      *          rule identity, so `n` and `ADVISORY_RULE_BASE + n` are two unrelated rules.
      **/
-    static constexpr int ADVISORY_RULE_BASE { 100 };
+    static constexpr int ADVISORY_RULE_BASE { DocRuleChecks::ADVISORY_RULE_BASE };
 
     static constexpr int RULE_MISSING_NAME          { 1 };  //!< The interface, or an entry, has no name.
     static constexpr int RULE_INVALID_IDENTIFIER    { 2 };  //!< A name the generated code could not carry.

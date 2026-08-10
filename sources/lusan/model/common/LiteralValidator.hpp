@@ -1,5 +1,5 @@
-#ifndef LUSAN_MODEL_SM_SMLITERALVALIDATOR_HPP
-#define LUSAN_MODEL_SM_SMLITERALVALIDATOR_HPP
+#ifndef LUSAN_MODEL_COMMON_LITERALVALIDATOR_HPP
+#define LUSAN_MODEL_COMMON_LITERALVALIDATOR_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,11 +11,11 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/LiteralValidator.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM literal value syntax validator
+ *  \brief       Lusan application, literal value syntax validator shared by every document
  *
  ************************************************************************/
 
@@ -25,7 +25,7 @@
  * \brief   Validates a literal against a primitive data type's syntax: bool,
  *          char, signed/unsigned integers (decimal or `0x` hexadecimal, range-checked per
  *          bit width), float/double, and String (unrestricted). Enumeration, structure,
- *          container and imported types have no literal syntax of their own — callers
+ *          container and imported types have no literal syntax of their own -- callers
  *          resolve an enumeration literal against the declared type's enumerators and
  *          disable literal entry entirely for structure/container/imported types.
  **/
@@ -37,7 +37,7 @@ public:
      * \param   typeName    One of the `.siml` primitive names (bool, char, int8..int64,
      *                      uint8..uint64, float, double, String). Any other name (a declared
      *                      enumeration/structure/container/imported type) always validates.
-     * \param   literal     The literal text to check. An empty literal always validates — a
+     * \param   literal     The literal text to check. An empty literal always validates -- a
      *                      default/value is optional, so absence is not a syntax error.
      * \return  An empty string if the literal is valid; otherwise a short, user-facing reason.
      **/
@@ -51,4 +51,4 @@ private:
     static QString validateFloatingPoint(const QString& literal);
 };
 
-#endif  // LUSAN_MODEL_SM_SMLITERALVALIDATOR_HPP
+#endif  // LUSAN_MODEL_COMMON_LITERALVALIDATOR_HPP

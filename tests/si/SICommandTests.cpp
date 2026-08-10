@@ -38,6 +38,9 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/common/MethodDataSection.hpp"
 #include "lusan/model/si/SIValidator.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
 
 #include <QUndoStack>
 #include <QXmlStreamReader>
@@ -714,6 +717,25 @@ namespace
         return count;
     }
 
+    //!< True when the rule was reported at all, and every finding of it carries the one
+    //!< explanation the shape has.
+    bool explains(const QList<DocIssue>& issues, int rule, DocRuleChecks::eShape shape)
+    {
+        const QString expected = DocRuleChecks::explainShape(shape);
+        int found = 0;
+        for (const DocIssue& issue : issues)
+        {
+            if (issue.rule != rule)
+                continue;
+            if (issue.detail != expected)
+                return false;
+
+            ++found;
+        }
+
+        return (found > 0);
+    }
+
     //!< True when some finding carries the rule and quotes the text.
     bool namesIt(const QList<DocIssue>& issues, int rule, const QString& text)
     {
@@ -930,6 +952,87 @@ namespace
             CHECK(allExplained);
         }
     }
+
+    //!< The rule shapes both document engines share now come from one place: the same answer,
+    //!< the same wording and the same explanation, filed under the number this engine has
+    //!< always used. The state machine side asserts the same explanations.
+    void testValidatorSharedShapes()
+    {
+        {   // A declared enumeration has a literal form of its own: its enumerators. Before the
+            // shapes were shared the service interface skipped every declared type here.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            DataTypeEnum* colors = doc.getDataTypeData().addEnum(QStringLiteral("Color"));
+            CHECK(colors != nullptr);
+            CHECK(colors->addField(QStringLiteral("Red")) != nullptr);
+            CHECK(colors->addField(QStringLiteral("Green")) != nullptr);
+
+            ConstantEntry* wrong = doc.getConstantData().createConstant(QStringLiteral("Accent"));
+            CHECK(wrong != nullptr);
+            wrong->setType(QStringLiteral("Color"));
+            wrong->setValue(QStringLiteral("Blue"));
+
+            QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, SIValidator::RULE_BAD_LITERAL) == 1);
+            CHECK(namesIt(issues, SIValidator::RULE_BAD_LITERAL, QStringLiteral("enumerator")));
+
+            // The same constant with a declared enumerator is silent.
+            wrong->setValue(QStringLiteral("Green"));
+            CHECK(countRule(SIValidator::validate(doc), SIValidator::RULE_BAD_LITERAL) == 0);
+        }
+
+        {   // A structure carries no literal at all, and a name longer than a compiler would
+            // take is the identifier fault it is.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            DataTypeStructure* record = doc.getDataTypeData().addStructure(QStringLiteral("Record"));
+            CHECK(record != nullptr);
+            record->addField(QStringLiteral("id"))->setType(QStringLiteral("uint32"));
+
+            ConstantEntry* bad = doc.getConstantData().createConstant(QStringLiteral("Seed"));
+            CHECK(bad != nullptr);
+            bad->setType(QStringLiteral("Record"));
+            bad->setValue(QStringLiteral("0"));
+
+            AttributeEntry* longName = doc.getAttributeData().createAttribute(QStringLiteral("counter"));
+            CHECK(longName != nullptr);
+            longName->setType(QStringLiteral("uint32"));
+            longName->setName(QString(NELusanCommon::MAX_IDENTIFIER_LENGTH + 1, QLatin1Char('a')));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, SIValidator::RULE_BAD_LITERAL) == 1);
+            CHECK(namesIt(issues, SIValidator::RULE_BAD_LITERAL, QStringLiteral("no literal form")));
+            CHECK(countRule(issues, SIValidator::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // One shape, one explanation: a finding of a shared shape carries the shared text,
+            // whichever document it came from, so the results panel cannot describe one defect
+            // two ways.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            AttributeEntry* unnamed = doc.getAttributeData().createAttribute(QStringLiteral("temporary"));
+            CHECK(unnamed != nullptr);
+            unnamed->setType(QStringLiteral("Missing"));
+            unnamed->setName(QString());
+
+            ConstantEntry* twice = doc.getConstantData().createConstant(QStringLiteral("Limit"));
+            CHECK(twice != nullptr);
+            twice->setType(QStringLiteral("uint32"));
+            twice->setValue(QStringLiteral("nine"));
+            ConstantEntry* clash = doc.getConstantData().createConstant(QStringLiteral("Other"));
+            CHECK(clash != nullptr);
+            clash->setType(QStringLiteral("uint32"));
+            clash->setName(QStringLiteral("Limit"));
+
+            const int unreferenced = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNREFERENCED;
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(explains(issues, SIValidator::RULE_MISSING_NAME, DocRuleChecks::eShape::MissingName));
+            CHECK(explains(issues, SIValidator::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
+            CHECK(explains(issues, SIValidator::RULE_DUPLICATE_NAME, DocRuleChecks::eShape::DuplicateName));
+            CHECK(explains(issues, SIValidator::RULE_BAD_LITERAL, DocRuleChecks::eShape::BadLiteral));
+            CHECK(explains(issues, unreferenced, DocRuleChecks::eShape::Unreferenced));
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -953,6 +1056,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testValidatorUnreferenced();
     testValidatorUnusedImport();
     testValidatorDeclarations();
+    testValidatorSharedShapes();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

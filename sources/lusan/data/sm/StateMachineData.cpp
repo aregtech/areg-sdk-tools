@@ -970,8 +970,7 @@ const QString& StateMachineData::identifierPattern()
 
 bool StateMachineData::isValidIdentifier(const QString& name)
 {
-    static const QRegularExpression _identifier{ StateMachineData::identifierPattern() };
-    return (name.size() <= StateMachineData::MAX_IDENTIFIER_LENGTH) && _identifier.match(name).hasMatch();
+    return NELusanCommon::isValidIdentifier(name);
 }
 
 int StateMachineData::getStateCount() const
