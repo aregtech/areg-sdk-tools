@@ -374,7 +374,7 @@ position", not an edge case.
 </State>
 ```
 
-The schema (`.claude/fsml.xsd`) declares it as a closed enumeration:
+The schema (`fsml.xsd` in `areg-sdk` repo) declares it as a closed enumeration:
 
 ```xml
 <xs:simpleType name="tHistory">

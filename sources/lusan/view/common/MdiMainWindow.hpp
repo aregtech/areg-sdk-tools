@@ -36,6 +36,7 @@
 class MdiChild;
 class ServiceInterface;
 class StateMachine;
+class DataTypeDocument;
 class SMDesign;
 class LiveLogsModel;
 class NaviFileSystem;
@@ -389,6 +390,11 @@ private slots:
     void onFileNewFSM();
 
     /**
+     * \brief   Creates a new, empty data type document and shows it.
+     **/
+    void onFileNewDT();
+
+    /**
      * \brief   Slot for creating a new log file.
      **/
     void onFileNewLiveLog();
@@ -540,6 +546,11 @@ private:
      * \return  A pointer to the new State Machine View.
      **/
     StateMachine* createStateMachineView(const QString& filePath = QString());
+
+    /**
+     * \brief   Opens a data type document window, reading \p filePath when one is given.
+     **/
+    DataTypeDocument* createDataTypeView(const QString& filePath = QString());
 
     /**
      * \brief   Creates a new Log Viewer View.
@@ -751,6 +762,7 @@ private:
     QAction         mActNewWorkspace;
     QAction         mActFileNewSI;
     QAction         mActFileNewFSM;
+    QAction         mActFileNewDT;
     QAction         mActFileNewLog;
     QAction         mActFileOfflineLog;
     QAction         mActFileOpen;

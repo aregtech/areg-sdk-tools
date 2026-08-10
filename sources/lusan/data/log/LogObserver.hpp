@@ -108,7 +108,7 @@ public:
     static uint16_t getConnectedPort();
 
     /**
-     *\brief    The function returns the path to the database, which is used to log messages.
+     * \brief    The function returns the path to the database, which is used to log messages.
      **/
     static QString getActiveDatabase();
 

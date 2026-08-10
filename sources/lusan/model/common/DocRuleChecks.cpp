@@ -26,6 +26,7 @@
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
+#include <QHash>
 #include <QRegularExpression>
 #include <QStringList>
 
@@ -74,6 +75,18 @@ QString DocRuleChecks::explainShape(eShape shape)
     case eShape::Unreferenced:
         return tr("Nothing in the document uses this declaration. Keep it if you are about to, or remove it.");
 
+    case eShape::DuplicateEnumValue:
+        return tr("Two enumerators counting the same cannot be told apart once a value is read back. Give one of them a value of its own. An enumerator with no value written counts on from the one before it.");
+
+    case eShape::Deprecated:
+        return tr("The author marked this deprecated. What still uses it keeps working, but it is meant to go.");
+
+    case eShape::BrokenImport:
+        return tr("A data type document contributes its types under its own file name, so a row that leads nowhere leaves every '<name>::<type>' in this document unresolved. Point the row at the file, or remove it.");
+
+    case eShape::UnusedImport:
+        return tr("Including a data type document pulls its generated header in. Take a type from it, writing '<name>::<type>', or drop the row.");
+
     default:
         return QString();
     }
@@ -108,6 +121,15 @@ QString DocRuleChecks::literalReason(const DataTypeDataSection& types, const QSt
 
 bool DocRuleChecks::typeResolves(const QString& fragment) const
 {
+    // A qualified name whose first part is a data type document this one includes has to name a
+    // type that document declares
+    const qsizetype scope = fragment.indexOf(QStringLiteral("::"));
+    if (scope > 0)
+    {
+        return (mTypes.hasImportSpace(fragment.left(scope)) == false)
+            || (mTypes.findCustomDataType(fragment) != nullptr);
+    }
+
     // Anything that is not a plain name is left alone: this is a registry lookup, not a parser.
     if (isIdentifier(fragment) == false)
         return true;
@@ -222,6 +244,118 @@ void DocRuleChecks::noteUnreferenced(uint32_t id, eDocElementKind kind, const QS
     add(id, kind, severity, mRules.unreferenced
        , message.isEmpty() ? tr("%1 is never referenced").arg(subject) : message
        , explainShape(eShape::Unreferenced));
+}
+
+void DocRuleChecks::checkEnumeratorValues(eDocElementKind kind, const QString& typeName
+                                         , const QList<EnumEntry>& entries)
+{
+    // The counting follows C++: an enumerator with no value of its own is one past the previous.
+    QHash<qint64, QString> taken;
+    qint64 next{ 0 };
+    bool known{ true };
+
+    for (const EnumEntry& entry : entries)
+    {
+        qint64 value{ next };
+        const QString written = entry.getValue().trimmed();
+        if (written.isEmpty() == false)
+        {
+            bool parsed{ false };
+            // Written the way the author wrote it: 0x10 and 16 are one value, and both count.
+            value = written.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)
+                        ? written.mid(2).toLongLong(&parsed, 16)
+                        : written.toLongLong(&parsed, 10);
+            known = parsed;
+        }
+
+        if (known == false)
+            continue;
+
+        const auto found = taken.constFind(value);
+        if (found != taken.constEnd())
+        {
+            add(entry.getId(), kind, DocIssue::eSeverity::Error, mRules.duplicateEnumValue
+               , tr("Value '%1' of enumeration '%2' counts %3, the same as '%4'")
+                    .arg(entry.getName(), typeName).arg(value).arg(found.value())
+               , explainShape(eShape::DuplicateEnumValue));
+        }
+        else
+        {
+            taken.insert(value, entry.getName());
+        }
+
+        next = value + 1;
+    }
+}
+
+void DocRuleChecks::noteDeprecated(uint32_t id, eDocElementKind kind, const QString& subject
+                                  , DocIssue::eSeverity severity, const QString& hint)
+{
+    add(id, kind, severity, mRules.deprecated
+       , hint.trimmed().isEmpty() ? tr("%1 is deprecated").arg(subject)
+                                  : tr("%1 is deprecated: %2").arg(subject, hint.trimmed())
+       , explainShape(eShape::Deprecated));
+}
+
+void DocRuleChecks::checkImportedDocuments(eDocElementKind kind, int rule)
+{
+    for (const DataTypeDataSection::ImportedTypes& group : mTypes.getImports())
+    {
+        switch (group.state)
+        {
+        case DataTypeDataSection::eImportState::NotFound:
+            add(group.id, kind, DocIssue::eSeverity::Error, rule
+               , tr("The data type document '%1' is not there").arg(group.location)
+               , explainShape(eShape::BrokenImport));
+            break;
+
+        case DataTypeDataSection::eImportState::ParseFailed:
+            add(group.id, kind, DocIssue::eSeverity::Error, rule
+               , tr("'%1' does not read as a data type document").arg(group.location)
+               , explainShape(eShape::BrokenImport));
+            break;
+
+        case DataTypeDataSection::eImportState::DuplicateSpace:
+            add(group.id, kind, DocIssue::eSeverity::Error, mRules.duplicateName
+               , tr("'%1' and an earlier include both carry the name '%2', so both generate one namespace")
+                    .arg(group.location, group.space)
+               , explainShape(eShape::DuplicateName));
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+void DocRuleChecks::noteUnusedImports(eDocElementKind kind, int rule, const QSet<QString>& typesUsed)
+{
+    for (const DataTypeDataSection::ImportedTypes& group : mTypes.getImports())
+    {
+        if (group.isResolved() == false)
+            continue;
+
+        const QString prefix = group.space + QStringLiteral("::");
+        bool used = false;
+        for (const QString& name : typesUsed)
+        {
+            // Anywhere in the spelling, not only at the front: a container declares its element
+            // type inside its own name, as `Array<Shared::Reading>` does.
+            if (name.contains(prefix))
+            {
+                used = true;
+                break;
+            }
+        }
+
+        if (used == false)
+        {
+            add(group.id, kind, DocIssue::eSeverity::Warning, rule
+               , tr("Data types are imported from '%1', but nothing here declares with '%2'")
+                    .arg(group.location, prefix)
+               , explainShape(eShape::UnusedImport));
+        }
+    }
 }
 
 DocNameSet::DocNameSet(DocRuleChecks& checks, eDocElementKind kind, DocIssue::eSeverity severity)

@@ -210,7 +210,7 @@ namespace
 
     // The coverage fixture carries every persisted element and attribute, so a writer that
     // forgets one is caught here rather than by a user losing data. The other two reference
-    // documents ride along: every `.claude` fixture is kept in canonical writer form.
+    // documents ride along: every `tests/data` fixture is kept in canonical writer form.
     void testFullFeatureRoundTrip()
     {
         std::printf("[SM-27] byte-identical round-trip (reference documents)\n");

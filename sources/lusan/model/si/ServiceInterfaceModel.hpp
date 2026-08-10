@@ -174,6 +174,16 @@ public:
     inline DocValidationController& getValidationController() override;
 
     /**
+     * \brief   The file the interface lives in, empty while it has never been saved.
+     **/
+    inline QString getDocumentPath() const override;
+
+    /**
+     * \brief   Re-resolves every declared type of the interface against the registry.
+     **/
+    void refreshTypeReferences() override;
+
+    /**
      * \brief   True while the document holds edits that have not been saved.
      **/
     inline bool isDirty() const;
@@ -271,6 +281,11 @@ inline MethodDataSection& ServiceInterfaceModel::getMethodSection()
 inline DocValidationController& ServiceInterfaceModel::getValidationController()
 {
     return mValidation;
+}
+
+inline QString ServiceInterfaceModel::getDocumentPath() const
+{
+    return mSIData.getFilePath();
 }
 
 inline DocModelNotifier& ServiceInterfaceModel::getNotifier()

@@ -66,6 +66,8 @@ namespace
             , SIValidator::RULE_UNRESOLVED_TYPE
             , SIValidator::RULE_BAD_LITERAL
             , SIValidator::RULE_UNREFERENCED
+            , SIValidator::RULE_DUPLICATE_ENUM_VALUE
+            , SIValidator::RULE_DEPRECATED
         };
 
         return _rules;
@@ -115,7 +117,6 @@ namespace
         DocRuleChecks               mChecks;        //!< The rules every document kind shares.
         QSet<QString>               mTypesUsed;     //!< Type names something in the document declares with.
         QSet<QString>               mConstsUsed;    //!< Constant names something in the document reads.
-        bool                        mUnresolvedSeen { false };  //!< A declared type answered to nothing here.
     };
 
     void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message)
@@ -144,10 +145,7 @@ namespace
     void Ctx::checkType(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& what)
     {
         noteType(typeName);
-        const QString missing = mChecks.checkDeclaredType(id, kind, typeName, what, true);
-        // A name this document does not answer to may be one the imported data type document
-        // brings in, which is what keeps the unused-import advisory silent.
-        mUnresolvedSeen = mUnresolvedSeen || (missing.isEmpty() == false);
+        mChecks.checkDeclaredType(id, kind, typeName, what, true);
     }
 
     void Ctx::checkLiteral(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& literal, const QString& what)
@@ -193,6 +191,12 @@ namespace
                , vtr("The service interface has no version"));
         }
 
+        if (overview.getIsDeprecated())
+        {
+            mChecks.noteDeprecated(overview.getId(), eDocElementKind::Overview
+                                  , vtr("The service interface"), eSeverity::Warning, overview.getDeprecateHint());
+        }
+
         // An interface a client cannot do anything with is worth saying out loud, but it is a
         // perfectly good starting point for a document being written.
         if (mData.getAttributeData().getElementCount() == 0 && mData.getMethodData().getElements().isEmpty())
@@ -214,6 +218,12 @@ namespace
             const QString name = dataType->getName();
             checkName(id, eDocElementKind::DataType, name, vtr("The data type"));
             names.claim(id, name, vtr("Data type '%1'").arg(name));
+
+            if (dataType->getIsDeprecated())
+            {
+                mChecks.noteDeprecated(id, eDocElementKind::DataType, vtr("Data type '%1'").arg(name)
+                                      , eSeverity::Info, dataType->getDeprecateHint());
+            }
 
             if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
             {
@@ -244,6 +254,8 @@ namespace
                     checkName(id, eDocElementKind::DataType, field.getName(), where);
                     fields.claim(id, field.getName(), where);
                 }
+
+                mChecks.checkEnumeratorValues(eDocElementKind::DataType, name, enumType->getElements());
 
                 if (enumType->getElementCount() == 0)
                 {
@@ -356,7 +368,6 @@ namespace
     void Ctx::checkIncludes()
     {
         QSet<QString> locations;
-        QList<const IncludeEntry*> dataTypeDocuments;
         for (const IncludeEntry& include : mData.getIncludeData().getElements())
         {
             const QString location = include.getLocation();
@@ -373,27 +384,13 @@ namespace
                            , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName));
             }
 
-            // A service interface includes no other service interface, so it has no document
-            // extension of its own to classify against.
-            if (includeKindOf(location, QString()) == eIncludeKind::DataType)
-            {
-                dataTypeDocuments.append(&include);
-            }
-
             locations.insert(location);
         }
 
-        // A type an imported data type document declares is not declared here, so it reaches the
-        // interface as a name that answers to nothing in this registry. When every declared type
-        // does answer, no type of the imported document is in use.
-        if (mUnresolvedSeen == false)
-        {
-            for (const IncludeEntry* include : dataTypeDocuments)
-            {
-                add(include->getId(), eDocElementKind::Include, eSeverity::Warning, SIValidator::RULE_UNUSED_IMPORT
-                   , vtr("Data types are imported from '%1', but the interface uses none of them").arg(include->getLocation()));
-            }
-        }
+        // The type-use record is complete by now, so an imported document that contributes
+        // nothing is known rather than guessed at.
+        mChecks.checkImportedDocuments(eDocElementKind::Include, SIValidator::RULE_BROKEN_IMPORT);
+        mChecks.noteUnusedImports(eDocElementKind::Include, SIValidator::RULE_UNUSED_IMPORT, mTypesUsed);
     }
 
     void Ctx::checkUnreferenced()
@@ -481,6 +478,7 @@ eIssueField SIValidator::fieldOfRule(int rule)
         return eIssueField::Type;
 
     case SIValidator::RULE_BAD_LITERAL:
+    case SIValidator::RULE_DUPLICATE_ENUM_VALUE:
         return eIssueField::Value;
 
     case SIValidator::RULE_RESPONSE_LINK:
@@ -506,7 +504,9 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         case SIValidator::RULE_EMPTY_INTERFACE:
             return QCoreApplication::translate("SIValidator", "A client reaches an interface through its attributes and methods. Until there is one, there is nothing to generate.");
         case SIValidator::RULE_UNUSED_IMPORT:
-            return QCoreApplication::translate("SIValidator", "Every type the interface declares with is either built in or declared here, so nothing comes from the imported document. Use a type from it, or remove the include.");
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnusedImport);
+        case SIValidator::RULE_DEPRECATED:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
         default:
             return QCoreApplication::translate("SIValidator", "Advisory only. The interface still generates.");
         }
@@ -524,10 +524,14 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
     case SIValidator::RULE_BAD_LITERAL:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
+    case SIValidator::RULE_DUPLICATE_ENUM_VALUE:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case SIValidator::RULE_RESPONSE_LINK:
         return QCoreApplication::translate("SIValidator", "A caller waits for the named response. Declare it, or clear the connection so the request answers with nothing.");
     case SIValidator::RULE_DEFAULT_ORDER:
         return QCoreApplication::translate("SIValidator", "A caller may only leave out trailing arguments, so every parameter after a defaulted one needs a default too.");
+    case SIValidator::RULE_BROKEN_IMPORT:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::BrokenImport);
     default:
         return (severity == DocIssue::eSeverity::Error)
                     ? QCoreApplication::translate("SIValidator", "The interface will not generate until this is resolved.")

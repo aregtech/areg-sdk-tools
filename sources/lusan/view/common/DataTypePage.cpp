@@ -288,6 +288,7 @@ void DataTypePage::setupSignals(void)
     connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
     connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
     connect(&notifier, &DocModelNotifier::listReordered , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onNotifierChanged(); });
+    connect(&mModel   , &DataTypeModel::importsChanged  , this, &DataTypePage::onNotifierChanged);
 }
 
 void DataTypePage::commitPendingEdits(void)
@@ -331,6 +332,14 @@ QString DataTypePage::getCellText(const QModelIndex& cell) const
 
 DataTypeCustom* DataTypePage::currentDataType(void) const
 {
+    // The type this page may edit. A type read out of an included data type document belongs to
+    // that document, so it answers nothing here and every editing path stops at the first line.
+    DataTypeCustom* dataType = selectedDataType();
+    return (((dataType != nullptr) && dataType->isDocumentImport()) ? nullptr : dataType);
+}
+
+DataTypeCustom* DataTypePage::selectedDataType(void) const
+{
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
     return (item != nullptr ? item->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr);
 }
@@ -353,6 +362,7 @@ void DataTypePage::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /
     const uint32_t fieldId = current->data(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole).toUInt();
     if (dataType == nullptr)
     {
+        // The heading of an imported group: it names a document, not a declaration.
         showClean();
         return;
     }
@@ -385,6 +395,11 @@ void DataTypePage::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /
     {
         selectedEnumField(static_cast<DataTypeEnum*>(dataType), fieldId);
     }
+
+    // Last, because the calls above enable the row tools for the category they filled in. The
+    // forms stay filled so an imported declaration can be read; what changes is that nothing in
+    // them, and no tool beside them, can be touched.
+    lockDetails(dataType->isDocumentImport());
 }
 
 void DataTypePage::selectedStruct(DataTypeStructure* dataType)
@@ -623,6 +638,54 @@ void DataTypePage::showClean(void)
     mList->ctrlButtonMoveDown()->setEnabled(false);
 }
 
+void DataTypePage::lockDetails(bool locked)
+{
+    // Greying the two forms out is the whole read-only presentation: the text stays legible, and
+    // no widget in them can take a keystroke.
+    mDetails->setEnabled(locked == false);
+    mFields->setEnabled(locked == false);
+    if (locked)
+    {
+        mList->ctrlButtonRemove()->setEnabled(false);
+        mList->ctrlButtonAddField()->setEnabled(false);
+        mList->ctrlButtonInsertField()->setEnabled(false);
+        mList->ctrlButtonRemoveField()->setEnabled(false);
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+    }
+}
+
+QTreeWidgetItem* DataTypePage::createImportNode(const DataTypeDataSection::ImportedTypes& group) const
+{
+    QTreeWidgetItem* item = new QTreeWidgetItem();
+    item->setIcon(static_cast<int>(eColumn::ColName), NELusanCommon::iconLocked(NELusanCommon::SizeSmall));
+    item->setText(static_cast<int>(eColumn::ColName), group.space);
+    item->setText(static_cast<int>(eColumn::ColType), tr("Imported data types"));
+    item->setText(static_cast<int>(eColumn::ColValue), group.location);
+    item->setToolTip(static_cast<int>(eColumn::ColName)
+                    , tr("Declared in '%1'. Write '%2::' before a name to declare with one of these.")
+                        .arg(group.location, group.space));
+    item->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole
+                 , QVariant::fromValue(static_cast<DataTypeCustom*>(nullptr)));
+    item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, 0u);
+
+    for (DataTypeCustom* type : group.types)
+    {
+        if (type == nullptr)
+            continue;
+
+        QTreeWidgetItem* child = createNode(type);
+        child->setIcon(static_cast<int>(eColumn::ColName), NELusanCommon::iconLocked(NELusanCommon::SizeSmall));
+        // The spelling the author has to write, which is the one thing a borrowed type has to say
+        // for itself that its own document does not.
+        child->setText(static_cast<int>(eColumn::ColValue), type->getQualifiedName());
+        child->setToolTip(static_cast<int>(eColumn::ColValue), tr("Declared in '%1' and read only here").arg(group.location));
+        item->addChild(child);
+    }
+
+    return item;
+}
+
 QTreeWidgetItem* DataTypePage::createNode(DataTypeCustom* dataType) const
 {
     QTreeWidgetItem* item = new QTreeWidgetItem();
@@ -718,11 +781,19 @@ void DataTypePage::refreshAll(void)
     QTreeWidget* table = mList->ctrlTableList();
     uint32_t selType = 0;
     uint32_t selField = 0;
+    QString  selImported;
     if (QTreeWidgetItem* cur = table->currentItem())
     {
         DataTypeCustom* dataType = cur->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
         selType = (dataType != nullptr ? dataType->getId() : 0u);
         selField = cur->data(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole).toUInt();
+        // An imported type carries the ID it has in its own document, which says nothing here and
+        // may well be a type of this one. Its qualified name is what identifies it across a rebuild.
+        if ((dataType != nullptr) && dataType->isDocumentImport())
+        {
+            selImported = dataType->getQualifiedName();
+            selType = 0;
+        }
     }
 
     {
@@ -732,14 +803,55 @@ void DataTypePage::refreshAll(void)
         {
             table->addTopLevelItem(createNode(entry));
         }
+
+        // Only the documents that resolved: one that does not is reported on the Includes page,
+        // where the row the author has to repair lives.
+        for (const DataTypeDataSection::ImportedTypes& group : mModel.getImports())
+        {
+            if (group.isResolved())
+            {
+                QTreeWidgetItem* node = createImportNode(group);
+                table->addTopLevelItem(node);
+                node->setExpanded(false);
+            }
+        }
     }
 
     populateInlineTypeNames();
 
-    if ((selType == 0) || (selectDataType(selType, selField) == false))
+    if (selImported.isEmpty() == false)
+    {
+        if (selectImportedType(selImported) == false)
+        {
+            showClean();
+        }
+    }
+    else if ((selType == 0) || (selectDataType(selType, selField) == false))
     {
         showClean();
     }
+}
+
+bool DataTypePage::selectImportedType(const QString& qualifiedName)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    for (int i = 0; i < table->topLevelItemCount(); ++i)
+    {
+        QTreeWidgetItem* top = table->topLevelItem(i);
+        for (int j = 0; j < top->childCount(); ++j)
+        {
+            QTreeWidgetItem* child = top->child(j);
+            DataTypeCustom* dataType = child->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+            if ((dataType != nullptr) && dataType->isDocumentImport() && (dataType->getQualifiedName() == qualifiedName))
+            {
+                top->setExpanded(true);
+                table->setCurrentItem(child);
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 bool DataTypePage::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
@@ -839,6 +951,14 @@ void DataTypePage::populateTypeCombo(QComboBox* combo, const DataTypeCustom* exc
             combo->addItem(type->getName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
         }
     }
+
+    for (DataTypeCustom* type : mModel.getDataTypeData().getImportedTypes())
+    {
+        if (type != exclude)
+        {
+            combo->addItem(type->getQualifiedName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
+        }
+    }
 }
 
 void DataTypePage::populateIntegerCombo(QComboBox* combo) const
@@ -876,6 +996,11 @@ void DataTypePage::populateInlineTypeNames(void)
     for (DataTypeCustom* type : mModel.getCustomDataTypes())
     {
         fieldNames.append(type->getName());
+    }
+
+    for (DataTypeCustom* type : mModel.getDataTypeData().getImportedTypes())
+    {
+        fieldNames.append(type->getQualifiedName());
     }
 
     mFieldTypeNames->setStringList(fieldNames);
@@ -1407,7 +1532,7 @@ bool DataTypePage::isCellEditable(const QModelIndex& index) const
         return false;
 
     DataTypeCustom* dataType = index.sibling(index.row(), static_cast<int>(eColumn::ColName)).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    if (dataType == nullptr)
+    if ((dataType == nullptr) || dataType->isDocumentImport())
         return false;
 
     const uint32_t fieldId = index.sibling(index.row(), static_cast<int>(eColumn::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();

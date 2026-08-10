@@ -163,6 +163,19 @@ public:
     virtual bool hasTypeName(const QString& typeName) const;
 
     /**
+     * \brief   The spelling a document has to write to reach this type. The name itself for a
+     *          built-in type and for one the document declares; a type read out of an included
+     *          data type document is reached through its namespace and nowhere else.
+     **/
+    virtual QString getQualifiedName() const;
+
+    /**
+     * \brief   True for a type read out of an included data type document. Such a type is shown
+     *          and declared with, but never edited, by the document that reads it.
+     **/
+    virtual bool isDocumentImport() const;
+
+    /**
      * \brief   Sets the name of the data type.
      * \param   name    The name of the data type.
      **/

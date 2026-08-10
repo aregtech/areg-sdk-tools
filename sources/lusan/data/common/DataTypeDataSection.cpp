@@ -163,6 +163,16 @@ void DataTypeDataSection::getDataType(QList<DataTypeBase*>& out_dataTypes, const
     {
         NELusanCommon::sortById<const DataTypeBase *>(out_dataTypes.begin() + begin, out_dataTypes.end(), true);
     }
+
+    // The imported types come last and keep include order: they are a second, borrowed group,
+    // and sorting them in among the document's own would hide where each one comes from.
+    for (DataTypeCustom* dataType : mImportedTypes)
+    {
+        if (exists<DataTypeBase>(excludes, dataType->getName()) == false)
+        {
+            out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
+        }
+    }
 }
 
 DataTypeBase* DataTypeDataSection::findDataType(const QString& typeName) const
@@ -170,7 +180,7 @@ DataTypeBase* DataTypeDataSection::findDataType(const QString& typeName) const
     if (typeName.isEmpty())
         return nullptr;
 
-    if (DataTypeCustom* dataType = findTypeByName(getElements(), typeName); dataType != nullptr)
+    if (DataTypeCustom* dataType = findCustomDataType(typeName); dataType != nullptr)
         return static_cast<DataTypeBase*>(dataType);
 
     if (DataTypePrimitive* primitive = findTypeByName(getPrimitiveDataTypes(), typeName); primitive != nullptr)
@@ -207,7 +217,16 @@ DataTypeBase* DataTypeDataSection::findDataType(uint32_t id) const
 
 DataTypeCustom* DataTypeDataSection::findCustomDataType(const QString& typeName) const
 {
-    return (typeName.isEmpty() == false ? findTypeByName(getElements(), typeName) : nullptr);
+    if (typeName.isEmpty())
+        return nullptr;
+
+    // The document's own types answer first. An imported type is reachable only through its
+    // qualified spelling, so the two can never both answer to one name anyway, but asking the
+    // document first is what makes that rule readable here.
+    if (DataTypeCustom* own = findTypeByName(getElements(), typeName); own != nullptr)
+        return own;
+
+    return (mImportedTypes.isEmpty() ? nullptr : findTypeByName(mImportedTypes, typeName));
 }
 
 DataTypeCustom* DataTypeDataSection::findCustomDataType(uint32_t typeId) const
@@ -268,7 +287,7 @@ void DataTypeDataSection::validate(const DataTypeDataSection& dataTypes)
 
 void DataTypeDataSection::normalizeType(DataTypeCustom* dataType) const
 {
-    const QList<DataTypeCustom *>& customTypes{ getCustomDataTypes() };
+    const QList<DataTypeCustom *>& customTypes{ getResolutionTypes() };
     if (dataType->isStructure())
     {
         static_cast<DataTypeStructure *>(dataType)->validate(customTypes);
@@ -279,10 +298,62 @@ void DataTypeDataSection::normalizeType(DataTypeCustom* dataType) const
     }
 }
 
+const QList<DataTypeCustom*>& DataTypeDataSection::getResolutionTypes() const
+{
+    const QList<DataTypeCustom*>& own{ getCustomDataTypes() };
+    if (mImportedTypes.isEmpty())
+        return own;
+
+    mScope.clear();
+    mScope.reserve(own.size() + mImportedTypes.size());
+    mScope.append(own);
+    mScope.append(mImportedTypes);
+    return mScope;
+}
+
+void DataTypeDataSection::setImports(QList<ImportedTypes>&& imports)
+{
+    mImports = std::move(imports);
+    mImportedTypes.clear();
+    mScope.clear();
+    for (const ImportedTypes& group : mImports)
+    {
+        mImportedTypes.append(group.types);
+    }
+}
+
+bool DataTypeDataSection::hasImportSpace(const QString& space) const
+{
+    return (findImport(space) != nullptr);
+}
+
+const DataTypeDataSection::ImportedTypes* DataTypeDataSection::findImport(const QString& space) const
+{
+    if (space.isEmpty() == false)
+    {
+        for (const ImportedTypes& group : mImports)
+        {
+            if (group.space == space)
+                return &group;
+        }
+    }
+
+    return nullptr;
+}
+
+void DataTypeDataSection::clearImports()
+{
+    mImports.clear();
+    mImportedTypes.clear();
+    mScope.clear();
+}
+
 void DataTypeDataSection::refreshTypeReferences()
 {
-    const QList<DataTypeCustom *>& customTypes{ getCustomDataTypes() };
-    for (DataTypeCustom* dataType : customTypes)
+    // The document's own types are re-resolved; the imported ones were resolved by the document
+    // they came from and are not this document's to touch.
+    const QList<DataTypeCustom *>& customTypes{ getResolutionTypes() };
+    for (DataTypeCustom* dataType : getElements())
     {
         if (dataType == nullptr)
             continue;

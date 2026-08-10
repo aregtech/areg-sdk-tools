@@ -452,6 +452,12 @@ namespace NELusanCommon
     //<! Loads state-machine icon and sets the specified size
     inline QIcon iconStateMachine(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads data type document icon and sets the specified size
+    inline QIcon iconDataTypeDocument(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the padlock icon, which marks a row this document shows but does not own
+    inline QIcon iconLocked(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads live logging connected icon and sets the specified size
     inline QIcon iconLiveLogConnected(const QSize & size = QSize{ 32, 32 });
 
@@ -1146,6 +1152,16 @@ inline QIcon NELusanCommon::iconServiceInterface(const QSize & size /*= QSize{32
 inline QIcon NELusanCommon::iconStateMachine(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/workflow-algorithm", size);
+}
+
+inline QIcon NELusanCommon::iconDataTypeDocument(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/new-datatype", size);
+}
+
+inline QIcon NELusanCommon::iconLocked(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/locked", size);
 }
 
 inline QIcon NELusanCommon::iconLiveLogConnected(const QSize & size)

@@ -8,7 +8,16 @@
 # (the data layer uses areg headers for platform macros, no linked symbols).
 # ---------------------------------------------------------------------------
 
+# A service interface and a state machine both resolve their `.dtml` includes as they load, so
+# every headless target that carries one of them carries the data type document with it.
+set(LUSAN_DT_DATA_SRC
+    ${LUSAN}/data/dt/DTDocumentCache.cpp
+    ${LUSAN}/data/dt/DataTypeDocumentData.cpp
+    ${LUSAN}/data/dt/DataTypeImportResolver.cpp
+)
+
 set(LUSAN_TEST_SUPPORT_SRC
+    ${LUSAN_DT_DATA_SRC}
     # common
     ${LUSAN}/common/DocElementTable.cpp
     ${LUSAN}/common/DocReservedNames.cpp
@@ -83,8 +92,7 @@ target_link_libraries(lusan_sm_tests PRIVATE
 # A console test, not a windowed app - keep stdout for the harness.
 set_target_properties(lusan_sm_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
-# SM-26: the reference walker (where-used completeness + rename reference-rewrite
-# round-trip). Headless: the data layer only, exercising every reference kind.
+# SM-26: the reference walker
 qt_add_executable(lusan_sm_reference_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_ROOT}/tests/sm/SMReferenceTests.cpp
@@ -100,8 +108,7 @@ target_link_libraries(lusan_sm_reference_tests PRIVATE
 )
 set_target_properties(lusan_sm_reference_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
-# SM-02: deterministic XML round-trip + parse robustness. Reuses the same headless
-# support sources; the reference documents live next to the spec in .claude/.
+# deterministic XML round-trip + parse robustness
 qt_add_executable(lusan_sm_serialization_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_ROOT}/tests/sm/SMSerializationTests.cpp
@@ -111,7 +118,7 @@ target_include_directories(lusan_sm_serialization_tests PRIVATE ${LUSAN_BASE} ${
 target_compile_definitions(lusan_sm_serialization_tests PRIVATE
     ${COMMON_COMPILE_DEF}
     IMP_LOGGER_DLL
-    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/.claude"
+    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/tests/data"
 )
 target_link_libraries(lusan_sm_serialization_tests PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
@@ -145,7 +152,7 @@ target_compile_definitions(lusan_sm_validation_tests PRIVATE
     ${COMMON_COMPILE_DEF}
     IMP_LOGGER_DLL
     # The reference-fixture sweep validates the documents that ship next to the spec.
-    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/.claude"
+    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/tests/data"
 )
 target_link_libraries(lusan_sm_validation_tests PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
@@ -777,6 +784,11 @@ set_target_properties(lusan_sm_guard_u4_sweep PROPERTIES WIN32_EXECUTABLE OFF)
 # can also be run manually for the pictures:
 #   lusan_design_pages <TrafficLight.fsml> [output directory]
 # ---------------------------------------------------------------------------
+set(LUSAN_DT_MODEL_SRC
+    ${LUSAN}/model/dt/DTValidator.cpp
+    ${LUSAN}/model/dt/DataTypeDocumentModel.cpp
+)
+
 set(LUSAN_SI_MODEL_SRC
     ${LUSAN}/data/common/OverviewDataSection.cpp
     ${LUSAN}/data/si/SIOverviewData.cpp
@@ -823,6 +835,7 @@ set(LUSAN_EDITOR_PAGE_SRC
 qt_add_executable(lusan_design_pages
     ${LUSAN_DESIGN_PAGE_SRC}
     ${LUSAN_SI_MODEL_SRC}
+    ${LUSAN_DT_MODEL_SRC}
     ${LUSAN_EDITOR_PAGE_SRC}
     ${LUSAN_ROOT}/tests/common/AppEnvStub.cpp
     ${LUSAN_ROOT}/tests/common/DesignPageTests.cpp
@@ -841,6 +854,7 @@ set_target_properties(lusan_design_pages PROPERTIES WIN32_EXECUTABLE OFF)
 
 # The Service Interface headless data layer.
 set(LUSAN_SI_SUPPORT_SRC
+    ${LUSAN_DT_DATA_SRC}
     ${LUSAN}/common/ElementBase.cpp
     ${LUSAN}/common/VersionNumber.cpp
     ${LUSAN}/common/NELusanCommon.cpp
@@ -900,6 +914,63 @@ target_link_libraries(lusan_si_command_tests PRIVATE
 )
 set_target_properties(lusan_si_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
+# ---------------------------------------------------------------------------
+# The Data Type document (.dtml): the file format, the name that follows the file,
+# and the validation engine. Headless -- the document is the shared data sections
+# plus a root, so it reuses the service interface support list and adds its own.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_dt_document_tests
+    ${LUSAN_SI_SUPPORT_SRC}
+    ${LUSAN}/model/dt/DTValidator.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
+    ${LUSAN_ROOT}/tests/dt/DTDocumentTests.cpp
+    # Resolving uint32 and the basic containers needs the real predefined-type catalog,
+    # which DataTypeFactory loads from the "Predefined Types" resource at runtime.
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_dt_document_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_dt_document_tests PRIVATE
+    ${COMMON_COMPILE_DEF}
+    IMP_LOGGER_DLL
+    # The reference document that ships beside the spec is validated by the same run.
+    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/tests/data"
+)
+target_link_libraries(lusan_dt_document_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_dt_document_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# A service interface reading types out of an included data type document:
+# qualified resolution, shadowing, the duplicate namespace, a broken include,
+# and the re-read after the included file changes. Headless.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_dt_import_tests
+    ${LUSAN_SI_SUPPORT_SRC}
+    ${LUSAN}/model/si/SIValidator.cpp
+    ${LUSAN}/model/common/DocRuleChecks.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
+    ${LUSAN_ROOT}/tests/dt/DTImportTests.cpp
+    # Resolving uint32 and the basic containers needs the real predefined-type catalog,
+    # which DataTypeFactory loads from the "Predefined Types" resource at runtime.
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_dt_import_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_dt_import_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_dt_import_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_dt_import_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
 enable_testing()
 add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
 add_test(NAME sm_reference_tests COMMAND lusan_sm_reference_tests)
@@ -913,31 +984,33 @@ add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
 add_test(NAME sm_mapping_tests COMMAND lusan_sm_mapping_tests)
 add_test(NAME sm_validation_tests COMMAND lusan_sm_validation_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)
+add_test(NAME dt_document_tests COMMAND lusan_dt_document_tests)
+add_test(NAME dt_import_tests COMMAND lusan_dt_import_tests)
 
 # The two standalone guard-editor harnesses run to completion (no app.exec) and
 # return 0 on success, so they are safe ctest entries. Force the offscreen QPA
 # platform so they never need a real display on CI or a headless run.
 add_test(NAME sm_guard_ui_shots COMMAND lusan_sm_guard_ui_shots
-         ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-shots)
+         ${LUSAN_ROOT}/tests/data/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-shots)
 add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
-         ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-sweep)
+         ${LUSAN_ROOT}/tests/data/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-sweep)
 
 # The canvas harness is the widest regression guard in the tree (toolbar/menu parity,
 # panel placement, tools, search, kind marks). It has to be in the gate, or the features
 # it protects regress unnoticed.
 add_test(NAME sm_canvas_tests COMMAND lusan_sm_canvas_tests
-         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/canvas-shots)
+         ${LUSAN_ROOT}/tests/data/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/canvas-shots)
 
 # The drawn graph must be the document's graph. FullFeature.fsml is the acceptance document
 # because eight of its eleven transitions carry no persisted route, so the audit lands on the
 # auto-routed case.
 add_test(NAME sm_l8_proof COMMAND lusan_sm_l8_proof
-         ${LUSAN_ROOT}/.claude/FullFeature.fsml ${CMAKE_CURRENT_BINARY_DIR}/l8-shots)
+         ${LUSAN_ROOT}/tests/data/FullFeature.fsml ${CMAKE_CURRENT_BINARY_DIR}/l8-shots)
 
 # The title must say "changed" from the first keystroke on, and say it again exactly when the
 # document stands away from the point it was last written from.
 add_test(NAME sm_dirty_mark COMMAND lusan_sm_dirty_mark
-         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/dirty-mark)
+         ${LUSAN_ROOT}/tests/data/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/dirty-mark)
 
 # The responsiveness gate. Its budgets are generous enough for a debug build on a loaded
 # machine, so a failure means a real algorithmic regression, not timing noise.
@@ -946,7 +1019,7 @@ add_test(NAME sm_perf COMMAND lusan_sm_perf ${CMAKE_CURRENT_BINARY_DIR}/perf)
 # The four merged pages, over both document kinds. Guards the merges no window was ever
 # free to look at, and leaves a picture of each page behind.
 add_test(NAME design_pages COMMAND lusan_design_pages
-         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/design-pages)
+         ${LUSAN_ROOT}/tests/data/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/design-pages)
 
 set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_dirty_mark sm_perf design_pages PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

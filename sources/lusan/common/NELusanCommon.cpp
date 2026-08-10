@@ -36,6 +36,7 @@ const QStringList NELusanCommon::FILTERS
 {
       QStringLiteral("Service Interface Files (*.siml)")
     , QStringLiteral("State Machine Files (*.fsml)")
+    , QStringLiteral("Data Type Files (*.dtml)")
     , QStringLiteral("Log Files (*.logs)")
     , QStringLiteral("All Files (*.*)")
 };

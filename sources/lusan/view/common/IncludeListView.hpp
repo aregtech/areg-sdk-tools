@@ -45,6 +45,9 @@ class QTreeWidgetItem;
  *                             import another machine.
  *          Service Interface: all empty -- an interface is an API contract and includes no
  *                             other contract, so the page shows no document group at all.
+ *
+ *          \a takesDataTypes is the second answer: a data type document is itself a leaf and
+ *          includes C++ headers only, so its page shows no Data Types group either.
  **/
 struct IncludeTypeConfig
 {
@@ -52,9 +55,13 @@ struct IncludeTypeConfig
     QString docTypeLabel;   //!< The Type column label for that extension, e.g. "State Machine".
     QString groupDocLabel;  //!< The heading of the group that collects those documents.
     QIcon   docIcon;        //!< The mark of that document kind, on its heading and its rows.
+    bool    takesDataTypes{ true }; //!< False where the host includes no `.dtml` at all.
 
     //!< True when the host document may include a document of its own kind.
     inline bool hasDocuments() const { return (docExtension.isEmpty() == false); }
+
+    //!< True when the host document may include a data type document.
+    inline bool hasDataTypes() const { return takesDataTypes; }
 };
 
 /**

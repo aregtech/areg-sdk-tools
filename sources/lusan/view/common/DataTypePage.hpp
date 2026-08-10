@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/model/common/DocIssue.hpp"
 #include "lusan/view/common/IEditCommit.hpp"
 #include "lusan/view/common/TableCell.hpp"
@@ -186,10 +187,18 @@ private:
     void refreshAll(void);
     //!< Selects the data type / field by ID; returns false if not found (and selects nothing).
     bool selectDataType(uint32_t typeId, uint32_t fieldId = 0);
+    //!< Selects an imported type by its qualified name; returns false if no group carries it.
+    bool selectImportedType(const QString& qualifiedName);
     //!< Clears the details/fields panels and disables the field-only tool buttons.
     void showClean(void);
 
     QTreeWidgetItem* createNode(DataTypeCustom* dataType) const;
+    //!< Builds the heading of one included data type document with its types beneath it, every
+    //!< row lock-marked to say it is declared elsewhere.
+    QTreeWidgetItem* createImportNode(const DataTypeDataSection::ImportedTypes& group) const;
+    //!< Greys the two detail forms out and disables the row tools, for a row this document reads
+    //!< but does not own.
+    void lockDetails(bool locked);
     void setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const;
     //!< Empty string if a structure field's default is valid for its type (a missing value,
     //!< or a declared enum/structure/container/imported type, is always valid), otherwise a
@@ -218,8 +227,11 @@ private:
     //!< Refreshes the name lists the inline editors of the Data Type column offer.
     void populateInlineTypeNames(void);
 
-    //!< The data type / field currently selected in the tree, or nullptr / 0.
+    //!< The data type this page may edit, or nullptr. An imported row answers nullptr, which is
+    //!< what keeps every editing path off a declaration another document owns.
     DataTypeCustom* currentDataType(void) const;
+    //!< The data type of the selected row whether it is editable here or not.
+    DataTypeCustom* selectedDataType(void) const;
     uint32_t currentFieldId(void) const;
 
     QString genTypeName(void);

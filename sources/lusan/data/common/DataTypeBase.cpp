@@ -91,6 +91,16 @@ void DataTypeBase::setName(const QString& name)
     mName = name;
 }
 
+QString DataTypeBase::getQualifiedName() const
+{
+    return mName;
+}
+
+bool DataTypeBase::isDocumentImport() const
+{
+    return false;
+}
+
 bool DataTypeBase::hasTypeName(const QString& typeName) const
 {
     return (mName == typeName);

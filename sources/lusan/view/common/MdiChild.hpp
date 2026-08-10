@@ -50,6 +50,7 @@ public:
           MdiUnknown            = 0 //!< Unknown MDI Window type
         , MdiServiceInterface       //!< Service Interface MDI Window type
         , MdiStateMachine           //!< State Machine MDI Window type
+        , MdiDataType               //!< Data Type document MDI Window type
         , MdiLogViewer              //!< Log Viewer MDI Window type
         , MdiOfflineLogViewer       //!< Offline Log Viewer MDI window type
         , MdiSourceViewer           //!< Read-only text / source file MDI window type
@@ -88,6 +89,12 @@ public:
      * \return  True if it is a State Machine window, false otherwise.
      **/
     inline bool isStateMachineWindow() const;
+
+    /**
+     * \brief   Checks if the MDI child is a Data Type document window.
+     * \return  True if it is a Data Type document window, false otherwise.
+     **/
+    inline bool isDataTypeWindow() const;
 
     /**
      * \brief   Checks if the MDI child is a Log Viewer window.
@@ -443,6 +450,11 @@ inline bool MdiChild::isServiceInterfaceWindow() const
 inline bool MdiChild::isStateMachineWindow() const
 {
     return (mMdiWindowType == MdiStateMachine);
+}
+
+inline bool MdiChild::isDataTypeWindow() const
+{
+    return (mMdiWindowType == MdiDataType);
 }
 
 inline bool MdiChild::isLogViewerWindow() const

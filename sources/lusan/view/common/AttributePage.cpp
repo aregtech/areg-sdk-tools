@@ -306,7 +306,7 @@ DataTypeCustom* AttributePage::findCustomType(const QString& typeName) const
 {
     for (DataTypeCustom* type : mModel.getDocument().getCustomDataTypes())
     {
-        if ((type != nullptr) && (type->getName() == typeName))
+        if ((type != nullptr) && type->hasTypeName(typeName))
             return type;
     }
 
@@ -331,8 +331,8 @@ void AttributePage::populateTypes(void)
 
     for (DataTypeCustom* type : mModel.getDocument().getCustomDataTypes())
     {
-        combo->addItem(type->getName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
-        names.append(type->getName());
+        combo->addItem(type->getQualifiedName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
+        names.append(type->getQualifiedName());
     }
 
     combo->setCurrentText(current);

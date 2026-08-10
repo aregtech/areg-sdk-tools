@@ -194,7 +194,7 @@ QList<MethodEntry*> MethodDataSection::methodsOfKind(int kind) const
 
 void MethodDataSection::validate(const DataTypeDataSection& dataTypes)
 {
-    const QList<DataTypeCustom*>& customTypes = dataTypes.getCustomDataTypes();
+    const QList<DataTypeCustom*>& customTypes = dataTypes.getResolutionTypes();
     for (MethodEntry* entry : getElements())
     {
         if (entry != nullptr)

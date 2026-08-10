@@ -429,7 +429,7 @@ bool TETypeWrap<Type, TypeSearch, Finder>::operator == (const QString& typeName)
 {
     if (mTypeObj != nullptr)
     {
-        return (mTypeObj->getName() == typeName);
+        return mTypeObj->hasTypeName(typeName);
     }
     else
     {
@@ -479,13 +479,13 @@ inline void TETypeWrap<Type, TypeSearch, Finder>::setType(Type* objType)
     if (objType != nullptr)
     {
         mTypeObj = objType;
-        mTypeName = mTypeObj->getName();
+        mTypeName = mTypeObj->getQualifiedName();
     }
     else
     {
         if (mTypeObj != nullptr)
         {
-            mTypeName = mTypeObj->getName();
+            mTypeName = mTypeObj->getQualifiedName();
         }
 
         mTypeObj = nullptr;
@@ -522,7 +522,10 @@ inline void TETypeWrap<Type, TypeSearch, Finder>::setName(const QString& typeNam
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
 inline const QString& TETypeWrap<Type, TypeSearch, Finder>::getName() const
 {
-    return (mTypeObj != nullptr ? mTypeObj->getName() : mTypeName);
+    // A type read out of an included document is reached through its namespace and nowhere else,
+    // and the stored spelling is the one that carries it. For every other type the object is the
+    // authority, which is what keeps a reference in step with a rename.
+    return (((mTypeObj != nullptr) && (mTypeObj->isDocumentImport() == false)) ? mTypeObj->getName() : mTypeName);
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
@@ -545,7 +548,7 @@ inline void TETypeWrap<Type, TypeSearch, Finder>::invalidate()
     // object was renamed, and the reference would then resolve to nothing.
     if (mTypeObj != nullptr)
     {
-        mTypeName = mTypeObj->getName();
+        mTypeName = mTypeObj->getQualifiedName();
         mTypeObj = nullptr;
     }
 }

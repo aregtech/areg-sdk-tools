@@ -108,7 +108,7 @@ AttributeEntry* AttributeDataSection::insertAttribute(int position, const QStrin
 
 void AttributeDataSection::validate(const DataTypeDataSection& dataTypes)
 {
-    const QList<DataTypeCustom*>& customTypes = dataTypes.getCustomDataTypes();
+    const QList<DataTypeCustom*>& customTypes = dataTypes.getResolutionTypes();
     for (AttributeEntry& entry : getElements())
     {
         entry.validate(customTypes);

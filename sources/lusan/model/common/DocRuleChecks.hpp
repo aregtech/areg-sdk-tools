@@ -22,6 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/data/common/EnumEntry.hpp"
 #include "lusan/model/common/DocIssue.hpp"
 
 #include <QCoreApplication>
@@ -67,6 +68,19 @@ public:
         int unresolvedType      { 0 };  //!< A declared type nothing answers to.
         int badLiteral          { 0 };  //!< A value that does not read as its declared type.
         int unreferenced        { 0 };  //!< Advisory: nothing in the document uses the declaration.
+        int duplicateEnumValue  { 0 };  //!< Two enumerators of one enumeration counting the same.
+        int deprecated          { 0 };  //!< Advisory: the declaration is marked deprecated.
+    };
+
+    /**
+     * \brief   The rule numbers the host engine files the two data type document shapes under.
+     *          Kept apart from \ref RuleIds because only a document that reads types from
+     *          elsewhere has them.
+     **/
+    struct ImportRuleIds
+    {
+        int brokenImport { 0 };  //!< An included data type document that contributes nothing.
+        int unusedImport { 0 };  //!< Advisory: the document reads no type out of it.
     };
 
     /**
@@ -80,6 +94,10 @@ public:
         , UnresolvedType
         , BadLiteral
         , Unreferenced
+        , DuplicateEnumValue
+        , Deprecated
+        , BrokenImport
+        , UnusedImport
     };
 
     /**
@@ -184,6 +202,46 @@ public:
      **/
     void noteUnreferenced(uint32_t id, eDocElementKind kind, const QString& subject
                          , DocIssue::eSeverity severity, const QString& message = QString());
+
+    /**
+     * \brief   Two enumerators of one enumeration have to count differently, otherwise a value
+     *          read back cannot be told apart from the other one.
+     *
+     *          Enumerators without a value of their own count on from the one before, as they do
+     *          in C++, so `{ one, two = 0 }` collides just as `{ one = 1, two = 1 }` does. An
+     *          enumerator whose value is not a plain number -- a constant name, say -- is left
+     *          out, and so is everything counting on from it, because what it counts is not
+     *          knowable here.
+     * \param   typeName    The enumeration, for the message.
+     * \param   entries     Its enumerators, in declaration order.
+     **/
+    void checkEnumeratorValues(eDocElementKind kind, const QString& typeName, const QList<EnumEntry>& entries);
+
+    /**
+     * \brief   Notes a declaration its author marked deprecated, so what still uses it is worth
+     *          a second look.
+     * \param   subject The whole subject, such as `Data type 'Unit'`.
+     * \param   hint    The author's own note about what to use instead. Left out when empty.
+     **/
+    void noteDeprecated(uint32_t id, eDocElementKind kind, const QString& subject
+                       , DocIssue::eSeverity severity, const QString& hint = QString());
+
+    /**
+     * \brief   Every data type document the host includes has to lead to a file that reads as
+     *          one, and no two of them may carry one namespace: the namespace is the file's base
+     *          name, and two files of that name generate one namespace twice.
+     * \param   kind    The element kind a finding on an include row carries.
+     * \param   rule    The number this engine files a broken import under.
+     **/
+    void checkImportedDocuments(eDocElementKind kind, int rule);
+
+    /**
+     * \brief   Notes an included data type document the host takes no type from. Including one
+     *          costs a generated include and a namespace, so an unused one is worth removing.
+     * \param   typesUsed   Every type name the document declares with, qualified ones included.
+     * \param   rule        The number this engine files an unused import under.
+     **/
+    void noteUnusedImports(eDocElementKind kind, int rule, const QSet<QString>& typesUsed);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes

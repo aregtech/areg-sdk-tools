@@ -19,6 +19,8 @@
 
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 
+#include "lusan/data/dt/DataTypeImportResolver.hpp"
+
 #include "lusan/common/XmlSI.hpp"
 
 #include <QFile>
@@ -71,11 +73,14 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
         if (xml.hasError() == false)
         {
             mOpenSuccess = true;
+            // Before anything is resolved: a declaration may name a type an included data type
+            // document brings in, and that type has to be in the registry by then.
+            DataTypeImportResolver::refresh(mDataTypeData, mFilePath, mIncludeData);
             mOverviewData.validate(mDataTypeData);
             mDataTypeData.validate(mDataTypeData);
             mAttributeData.validate(mDataTypeData);
             mMethodData.validate(mDataTypeData);
-            mConstantData.validate(mDataTypeData.getCustomDataTypes());
+            mConstantData.validate(mDataTypeData.getResolutionTypes());
         }
     }
 

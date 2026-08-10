@@ -341,9 +341,9 @@ void SMEvent::populateTypeCombo()
         combo->addItem(type->getName(), QVariant::fromValue(type));
     }
 
-    for (DataTypeCustom* type : mEventModel.getDataTypeModel().getCustomDataTypes())
+    for (DataTypeCustom* type : mEventModel.getDataTypeModel().getDataTypeData().getResolutionTypes())
     {
-        combo->addItem(type->getName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
+        combo->addItem(type->getQualifiedName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
     }
 
     combo->setCurrentText(current);

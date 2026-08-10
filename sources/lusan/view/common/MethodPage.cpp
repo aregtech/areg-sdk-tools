@@ -868,7 +868,7 @@ void MethodPage::populateReturnCombo(void)
     }
     for (DataTypeCustom* type : mModel.getCustomDataTypes())
     {
-        combo->addItem(type->getName());
+        combo->addItem(type->getQualifiedName());
     }
 
     combo->setCurrentText(current.isEmpty() ? QString::fromLatin1(MethodEntry::DEFAULT_RETURN) : current);
@@ -889,7 +889,7 @@ void MethodPage::populateParamTypeCombo(void)
     }
     for (DataTypeCustom* type : mModel.getCustomDataTypes())
     {
-        combo->addItem(type->getName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
+        combo->addItem(type->getQualifiedName(), QVariant::fromValue(static_cast<DataTypeBase*>(type)));
     }
 
     combo->setCurrentText(current);
