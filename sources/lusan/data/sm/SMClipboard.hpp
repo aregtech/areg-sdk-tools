@@ -29,7 +29,7 @@
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
-#include "lusan/data/sm/SMIncludeData.hpp"
+#include "lusan/data/common/IncludeDataSection.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMState.hpp"
@@ -104,7 +104,7 @@ public:
     SMTimerData     mTimers;            //!< Explicitly copied timers.
     SMMethodData    mMethods;           //!< Explicitly copied methods.
     ConstantDataSection  mConstants;         //!< Explicitly copied constants.
-    SMIncludeData   mIncludes;          //!< Explicitly copied includes.
+    IncludeDataSection mIncludes;       //!< Explicitly copied includes.
     SMAttributeData mRefAttributes;     //!< Attributes referenced by the copied states.
     SMEventData     mRefEvents;         //!< Events referenced by the copied states.
     SMTimerData     mRefTimers;         //!< Timers referenced by the copied states.

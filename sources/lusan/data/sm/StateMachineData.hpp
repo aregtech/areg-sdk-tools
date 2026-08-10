@@ -32,7 +32,7 @@
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/sm/SMIncludeData.hpp"
+#include "lusan/data/common/IncludeDataSection.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
 #include "lusan/model/common/DocUnknownScan.hpp"
@@ -165,8 +165,8 @@ public:
     inline const ConstantDataSection& getConstants() const;
     inline ConstantDataSection& getConstants();
 
-    inline const SMIncludeData& getIncludes() const;
-    inline SMIncludeData& getIncludes();
+    inline const IncludeDataSection& getIncludes() const;
+    inline IncludeDataSection& getIncludes();
 
     /**
      * \brief   The include entries that name another state machine, in document order.
@@ -357,7 +357,7 @@ private:
     SMTimerData     mTimers;        //!< The TimerList section.
     SMMethodData    mMethods;       //!< The MethodList section.
     ConstantDataSection  mConstants;     //!< The ConstantList section.
-    SMIncludeData   mIncludes;      //!< The IncludeList section, machine imports included.
+    IncludeDataSection mIncludes;   //!< The IncludeList section, machine imports included.
     SMStateData     mStates;        //!< The root StateList (level 0).
     SMLayoutData    mLayout;        //!< The Layout section.
     QVector<UnknownAttribute> mUnknownRootAttributes; //!< Unknown root attributes preserved on round-trip.
@@ -475,12 +475,12 @@ inline ConstantDataSection& StateMachineData::getConstants()
     return mConstants;
 }
 
-inline const SMIncludeData& StateMachineData::getIncludes() const
+inline const IncludeDataSection& StateMachineData::getIncludes() const
 {
     return mIncludes;
 }
 
-inline SMIncludeData& StateMachineData::getIncludes()
+inline IncludeDataSection& StateMachineData::getIncludes()
 {
     return mIncludes;
 }

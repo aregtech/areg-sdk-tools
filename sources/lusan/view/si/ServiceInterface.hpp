@@ -12,7 +12,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/ServiceInterface.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -34,7 +34,7 @@ class ConstantPage;
 class MdiMainWindow;
 class SIAttribute;
 class DataTypePage;
-class SIInclude;
+class IncludePage;
 class SIMethod;
 class SIOverview;
 
@@ -179,6 +179,12 @@ protected:
     bool writeToFile(const QString& filePath) override;
 
     /**
+     * \brief   Collects the text every open page is still holding in a field that has the focus,
+     *          so a save from the keyboard writes what the author already typed.
+     **/
+    void commitPendingEdits(void) override;
+
+    /**
      * \brief   Returns the page tab host, enabling the shared Ctrl+PageDown / Ctrl+PageUp cycling.
      **/
     QTabWidget* pageTabWidget() override;
@@ -208,7 +214,7 @@ private:
     SIAttribute* mAttribute; //!< The data attribute widget
     SIMethod*    mMethod;    //!< The method widget
     ConstantPage*  mConstant;  //!< The constant widget
-    SIInclude*   mInclude;   //!< The include widget
+    IncludePage* mInclude;   //!< The include widget
     QList<int>   mPendingInitTabs; //!< Background initialization queue
 };
 

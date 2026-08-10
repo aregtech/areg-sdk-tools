@@ -17,6 +17,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/IncludeDetailsView.cpp
     ${LUSAN}/view/common/IncludeListView.cpp
+    ${LUSAN}/view/common/IncludePage.cpp
     ${LUSAN}/view/common/MdiArea.cpp
     ${LUSAN}/view/common/MdiChild.cpp
     ${LUSAN}/view/common/MdiMainWindow.cpp
@@ -66,6 +67,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/IEDataTypeConsumer.hpp
     ${LUSAN}/view/common/IncludeDetailsView.hpp
     ${LUSAN}/view/common/IncludeListView.hpp
+    ${LUSAN}/view/common/IncludePage.hpp
     ${LUSAN}/view/common/MdiArea.hpp
     ${LUSAN}/view/common/MdiChild.hpp
     ${LUSAN}/view/common/MdiMainWindow.hpp

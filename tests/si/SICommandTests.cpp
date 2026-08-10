@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        tests/si/SICommandTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -30,6 +30,8 @@
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/data/common/IncludeDataSection.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/si/SICommand.hpp"
@@ -296,6 +298,76 @@ namespace
         CHECK(serialize(doc) == empty);
     }
 
+    //!< The `IncludeList` section is shared with the state machine, and every edit of it reaches
+    //!< the document through the same commands. The section round-trips byte for byte across an
+    //!< undo and a redo of each of them.
+    void testIncludeSection()
+    {
+        ServiceInterfaceData    doc;
+        DocModelNotifier        notifier;
+        QUndoStack              stack;
+
+        IncludeDataSection& includes = doc.getIncludeData();
+        const QString empty = serialize(doc);
+
+        stack.push(new TDocAddCommand<IncludeEntry, DocumentElem>(notifier, includes, IncludeEntry(0u, QStringLiteral("common/Global.hpp"), &includes), eDocElementKind::Include, "Add header"));
+        stack.push(new TDocAddCommand<IncludeEntry, DocumentElem>(notifier, includes, IncludeEntry(0u, QStringLiteral("shared/Types.dtml"), &includes), eDocElementKind::Include, "Add data types"));
+        CHECK(includes.getElementCount() == 2);
+        CHECK(includes.findElement(QStringLiteral("common/Global.hpp")) != nullptr);
+
+        // The location is the include's unique name, so the same file cannot be registered twice.
+        CHECK(includes.createInclude(QStringLiteral("common/Global.hpp")) == nullptr);
+
+        const QString built = serialize(doc);
+
+        // An insert lands where it was asked to, and takes the whole list back on undo.
+        stack.push(buildInsertCommand<IncludeEntry, DocumentElem>(notifier, includes, IncludeEntry(0u, QStringLiteral("common/First.hpp"), &includes), 0, 0u, eDocElementKind::Include, "Insert header"));
+        CHECK(includes.getElementCount() == 3);
+        CHECK(includes.getElements().at(0).getLocation() == QStringLiteral("common/First.hpp"));
+        stack.undo();
+        CHECK(serialize(doc) == built);
+        stack.redo();
+        const QString inserted = serialize(doc);
+        stack.undo();
+
+        // A reorder is one step and round-trips.
+        stack.push(new TDocReorderCommand<IncludeEntry, DocumentElem>(notifier, includes, 0, 1, 0u, eDocElementKind::Include, "Reorder includes"));
+        const QString reordered = serialize(doc);
+        CHECK(reordered != built);
+        stack.undo();
+        CHECK(serialize(doc) == built);
+        stack.redo();
+        CHECK(serialize(doc) == reordered);
+        stack.undo();
+
+        // Removing a row keeps it alive in the command, so undo restores it whole -- description
+        // and deprecation included.
+        IncludeEntry* header = includes.findElement(QStringLiteral("common/Global.hpp"));
+        CHECK(header != nullptr);
+        header->setDescription(QStringLiteral("Project-wide declarations."));
+        header->deprecateEntry(QStringLiteral("Use Global2.hpp"));
+        const QString described = serialize(doc);
+        CHECK(described != built);
+
+        const uint32_t headerId = header->getId();
+        stack.push(new TDocRemoveCommand<IncludeEntry, DocumentElem>(notifier, includes, headerId, eDocElementKind::Include, "Delete header"));
+        CHECK(includes.getElementCount() == 1);
+        stack.undo();
+        CHECK(includes.getElementCount() == 2);
+        CHECK(serialize(doc) == described);
+        CHECK(inserted != described);
+
+        // And back to nothing, from the top of the history down. The description and deprecation
+        // were set on the entry directly, so the empty section is all that is left to compare.
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+
+        CHECK(includes.getElementCount() == 0);
+        CHECK(serialize(doc) == empty);
+    }
+
     //!< The first published `.siml` format spelled two categories differently. A document that
     //!< still uses those names must load with the same categories, not be skipped.
     void testLegacyTypeNames()
@@ -497,6 +569,46 @@ namespace
         }
     }
 
+    //!< A `.dtml` include contributes a type only when the interface declares with a name this
+    //!< document does not answer to. When every declared type resolves here, the import is dead
+    //!< weight and is reported.
+    void testValidatorUnusedImport()
+    {
+        const int unusedImport = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT;
+
+        {   // A header is not a data type document, so it is never reported by this rule.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            CHECK(doc.getIncludeData().createInclude(QStringLiteral("common/Global.hpp")) != nullptr);
+            CHECK(countRule(SIValidator::validate(doc), unusedImport) == 0);
+        }
+
+        {   // Every type the interface uses is a primitive declared nowhere but in the catalog,
+            // so nothing can be coming from the imported document.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            CHECK(doc.getIncludeData().createInclude(QStringLiteral("shared/Types.dtml")) != nullptr);
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, unusedImport) == 1);
+            CHECK(namesIt(issues, unusedImport, QStringLiteral("'shared/Types.dtml'")));
+        }
+
+        {   // A declared type this document does not answer to may be the imported one, so the
+            // import is left alone. The unresolved name itself is still reported.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            CHECK(doc.getIncludeData().createInclude(QStringLiteral("shared/Types.dtml")) != nullptr);
+            AttributeEntry* imported = doc.getAttributeData().createAttribute(QStringLiteral("shape"));
+            CHECK(imported != nullptr);
+            imported->setType(QStringLiteral("Polygon"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, unusedImport) == 0);
+            CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 1);
+        }
+    }
+
     void testValidatorDeclarations()
     {
         {   // A declared type the registry does not answer to, on an attribute and inside a
@@ -591,9 +703,11 @@ int main(int /*argc*/, char* /*argv*/[])
     testComposite();
     testDeepHistory();
     testDataTypeSection();
+    testIncludeSection();
     testLegacyTypeNames();
     testTypeReferenceRefresh();
     testValidatorUnreferenced();
+    testValidatorUnusedImport();
     testValidatorDeclarations();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

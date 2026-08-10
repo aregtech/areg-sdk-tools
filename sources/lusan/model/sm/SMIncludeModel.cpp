@@ -27,48 +27,18 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QObject>
 
 namespace
 {
     //!< The host document's own extension; what makes a `.fsml` include an imported machine.
     const QString FsmExtension{ QStringLiteral("fsml") };
-
-    //!< Deprecation flag + hint committed as one undo step, matching the single user gesture.
-    struct DeprecationState
-    {
-        bool    flag { false };
-        QString hint { };
-    };
 }
 
 SMIncludeModel::SMIncludeModel(StateMachineModel& facade)
-    : mFacade(facade)
+    : IncludeModel  (facade)
+    , mFacade       (facade)
 {
-}
-
-const QList<IncludeEntry>& SMIncludeModel::getIncludes() const
-{
-    return includes().getElements();
-}
-
-int SMIncludeModel::getIncludeCount() const
-{
-    return includes().getElementCount();
-}
-
-IncludeEntry* SMIncludeModel::findInclude(const QString& location) const
-{
-    return includes().findElement(location);
-}
-
-IncludeEntry* SMIncludeModel::findInclude(uint32_t id) const
-{
-    return includes().findElement(id);
-}
-
-int SMIncludeModel::findIndex(uint32_t id) const
-{
-    return includes().findIndex(id);
 }
 
 const IncludeEntry* SMIncludeModel::findByAlias(const QString& alias) const
@@ -82,7 +52,7 @@ eIncludeKind SMIncludeModel::kindOf(uint32_t id) const
     return includeKindOf(entry != nullptr ? entry->getLocation() : QString(), FsmExtension);
 }
 
-QStringList SMIncludeModel::getAliases() const
+QStringList SMIncludeModel::getAliases(void) const
 {
     QStringList result;
     for (const IncludeEntry* entry : mFacade.getData().machineImports())
@@ -96,12 +66,7 @@ QStringList SMIncludeModel::getAliases() const
     return result;
 }
 
-DocModelNotifier& SMIncludeModel::getNotifier() const
-{
-    return mFacade.getNotifier();
-}
-
-bool SMIncludeModel::isReadOnly() const
+bool SMIncludeModel::isReadOnly(void) const
 {
     return mFacade.isReadOnly();
 }
@@ -188,68 +153,19 @@ QString SMIncludeModel::uniqueAlias(const QString& baseName) const
     return candidate;
 }
 
-IncludeEntry* SMIncludeModel::createInclude(const QString& location)
+void SMIncludeModel::prepareNewEntry(IncludeEntry& entry) const
 {
-    if (findInclude(location) != nullptr)
-        return nullptr;
+    if (includeKindOf(entry.getLocation(), FsmExtension) != eIncludeKind::Document)
+        return;
 
-    IncludeEntry entry(0, location, nullptr);
-    if (includeKindOf(location, FsmExtension) == eIncludeKind::Document)
+    // One registration per file, hosted by as many states as the user likes. The alias is what
+    // those states name, so it is filled in here rather than left to a follow-up edit.
+    entry.setAlias(uniqueAlias(QFileInfo(entry.getLocation()).completeBaseName()));
+    const SMImportResolver::Resolution resolution = SMImportResolver::resolve(mFacade.getData(), entry);
+    if (resolution.isResolved())
     {
-        // One registration per file, hosted by as many states as the user likes. The alias is
-        // what those states name, so it is filled in here rather than left to a follow-up edit.
-        entry.setAlias(uniqueAlias(QFileInfo(location).completeBaseName()));
-        const SMImportResolver::Resolution resolution = SMImportResolver::resolve(mFacade.getData(), entry);
-        if (resolution.isResolved())
-        {
-            entry.setVersion(resolution.actualVersion);
-        }
+        entry.setVersion(resolution.actualVersion);
     }
-
-    mFacade.getUndoStack().push(new TDocAddCommand<IncludeEntry, DocumentElem>(getNotifier(), includes(), std::move(entry), kindFor(location), QObject::tr("Add include")));
-    return findInclude(location);
-}
-
-IncludeEntry* SMIncludeModel::insertInclude(int position, const QString& location)
-{
-    if (findInclude(location) != nullptr)
-        return nullptr;
-
-    IncludeEntry entry(0, location, nullptr);
-    mFacade.getUndoStack().push(buildInsertCommand<IncludeEntry, DocumentElem>(getNotifier(), includes(), std::move(entry), position, 0u, kindFor(location), QObject::tr("Insert include")));
-    return findInclude(location);
-}
-
-void SMIncludeModel::deleteInclude(uint32_t id)
-{
-    mFacade.getUndoStack().push(new TDocRemoveCommand<IncludeEntry, DocumentElem>(getNotifier(), includes(), id, kindFor(id), QObject::tr("Delete include")));
-}
-
-void SMIncludeModel::swapIncludes(uint32_t firstId, uint32_t secondId)
-{
-    const int index1 = includes().findIndex(firstId);
-    const int index2 = includes().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mFacade.getUndoStack().push(new TDocReorderCommand<IncludeEntry, DocumentElem>(getNotifier(), includes(), index1, index2, 0u, kindFor(firstId), QObject::tr("Reorder includes")));
-}
-
-void SMIncludeModel::setLocation(uint32_t id, const QString& location)
-{
-    IncludeEntry* entry = findInclude(id);
-    if ((entry == nullptr) || (location == entry->getLocation()))
-        return;
-
-    // A location edit can move a row between groups. Announce it as Import whenever either side
-    // is a machine, so the submachine picker rebuilds on the way in and on the way out.
-    const eDocElementKind kind = ((kindFor(id) == eDocElementKind::Import) || (kindFor(location) == eDocElementKind::Import))
-                                 ? eDocElementKind::Import : eDocElementKind::Include;
-
-    StateMachineModel* facade = &mFacade;
-    auto getter = [facade, id]() -> QString { IncludeEntry* e = facade->getData().getIncludes().findElement(id); return (e != nullptr ? e->getLocation() : QString()); };
-    auto setter = [facade, id](const QString& value) { IncludeEntry* e = facade->getData().getIncludes().findElement(id); if (e != nullptr) e->setLocation(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, kind, getter, setter, location, QObject::tr("Set include location")));
 }
 
 void SMIncludeModel::setAlias(uint32_t id, const QString& alias)
@@ -269,51 +185,6 @@ void SMIncludeModel::setAlias(uint32_t id, const QString& alias)
     mFacade.getUndoStack().push(composite);
 }
 
-void SMIncludeModel::setDescription(uint32_t id, const QString& text)
-{
-    IncludeEntry* entry = findInclude(id);
-    if ((entry == nullptr) || (text == entry->getDescription()))
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    auto getter = [facade, id]() -> QString { IncludeEntry* e = facade->getData().getIncludes().findElement(id); return (e != nullptr ? e->getDescription() : QString()); };
-    auto setter = [facade, id](const QString& value) { IncludeEntry* e = facade->getData().getIncludes().findElement(id); if (e != nullptr) e->setDescription(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, kindFor(id), getter, setter, text, QObject::tr("Set description")));
-}
-
-void SMIncludeModel::setDeprecated(uint32_t id, bool deprecated)
-{
-    IncludeEntry* entry = findInclude(id);
-    if (entry == nullptr)
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    auto getter = [facade, id]() -> DeprecationState
-    {
-        IncludeEntry* e = facade->getData().getIncludes().findElement(id);
-        return (e != nullptr ? DeprecationState{ e->getIsDeprecated(), e->getDeprecateHint() } : DeprecationState{});
-    };
-    auto setter = [facade, id](const DeprecationState& value)
-    {
-        IncludeEntry* e = facade->getData().getIncludes().findElement(id);
-        if (e != nullptr) { e->setIsDeprecated(value.flag); e->setDeprecateHint(value.hint); }
-    };
-    const DeprecationState next{ deprecated, deprecated ? entry->getDeprecateHint() : QString() };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), id, kindFor(id), getter, setter, next, QObject::tr("Set deprecated")));
-}
-
-void SMIncludeModel::setDeprecateHint(uint32_t id, const QString& hint)
-{
-    IncludeEntry* entry = findInclude(id);
-    if ((entry == nullptr) || (entry->getIsDeprecated() == false) || (hint == entry->getDeprecateHint()))
-        return;
-
-    StateMachineModel* facade = &mFacade;
-    auto getter = [facade, id]() -> QString { IncludeEntry* e = facade->getData().getIncludes().findElement(id); return (e != nullptr ? e->getDeprecateHint() : QString()); };
-    auto setter = [facade, id](const QString& value) { IncludeEntry* e = facade->getData().getIncludes().findElement(id); if (e != nullptr) e->setDeprecateHint(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, kindFor(id), getter, setter, hint, QObject::tr("Set deprecation hint")));
-}
-
 bool SMIncludeModel::updateVersion(uint32_t id)
 {
     const IncludeEntry* entry = findInclude(id);
@@ -331,24 +202,8 @@ bool SMIncludeModel::updateVersion(uint32_t id)
     return true;
 }
 
-eDocElementKind SMIncludeModel::kindFor(const QString& location)
+eDocElementKind SMIncludeModel::kindOfLocation(const QString& location) const
 {
     return (includeKindOf(location, FsmExtension) == eIncludeKind::Document
             ? eDocElementKind::Import : eDocElementKind::Include);
-}
-
-eDocElementKind SMIncludeModel::kindFor(uint32_t id) const
-{
-    const IncludeEntry* entry = findInclude(id);
-    return kindFor(entry != nullptr ? entry->getLocation() : QString());
-}
-
-const SMIncludeData& SMIncludeModel::includes() const
-{
-    return mFacade.getData().getIncludes();
-}
-
-SMIncludeData& SMIncludeModel::includes()
-{
-    return mFacade.getData().getIncludes();
 }

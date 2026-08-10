@@ -36,6 +36,7 @@ class ConstantDataSection;
 class DataTypeCustom;
 class DataTypeDataSection;
 class DocValidationController;
+class IncludeDataSection;
 class QUndoCommand;
 
 /**
@@ -90,6 +91,12 @@ public:
      *          reason as the constants section above.
      **/
     virtual DataTypeDataSection& getDataTypeSection() = 0;
+
+    /**
+     * \brief   The document's `IncludeList` section. Answered on every call, for the same
+     *          reason as the constants section above.
+     **/
+    virtual IncludeDataSection& getIncludeSection() = 0;
 
     /**
      * \brief   The document's validation scheduler, which owns its findings and re-runs the

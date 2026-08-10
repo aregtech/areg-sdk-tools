@@ -47,7 +47,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMGuardTree.cpp
     ${LUSAN}/data/sm/SMDocumentCache.cpp
     ${LUSAN}/data/sm/SMImportResolver.cpp
-    ${LUSAN}/data/sm/SMIncludeData.cpp
+    ${LUSAN}/data/common/IncludeDataSection.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
     ${LUSAN}/data/sm/SMMethodData.cpp
     ${LUSAN}/data/sm/SMOperation.cpp
@@ -186,6 +186,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
+    ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
@@ -239,6 +240,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
+    ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
@@ -431,6 +433,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
+    ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
@@ -641,6 +644,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
+    ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
@@ -780,7 +784,7 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/si/SIAttributeData.cpp
     ${LUSAN}/data/common/ConstantDataSection.cpp
     ${LUSAN}/data/common/DataTypeDataSection.cpp
-    ${LUSAN}/data/si/SIIncludeData.cpp
+    ${LUSAN}/data/common/IncludeDataSection.cpp
     ${LUSAN}/data/si/SIMethodBase.cpp
     ${LUSAN}/data/si/SIMethodBroadcast.cpp
     ${LUSAN}/data/si/SIMethodData.cpp

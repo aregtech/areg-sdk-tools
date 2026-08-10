@@ -114,7 +114,9 @@ void IncludeListView::buildUi()
 
     mGroupSource   = new QTreeWidgetItem(mTable);
     mGroupDataType = new QTreeWidgetItem(mTable);
-    mGroupDocument = new QTreeWidgetItem(mTable);
+    // A host that includes no document of its own kind gets no heading for one: an empty group
+    // that can never fill reads as a place to put something, and there is nothing to put there.
+    mGroupDocument = (mConfig.hasDocuments() ? new QTreeWidgetItem(mTable) : nullptr);
     for (eIncludeKind kind : { eIncludeKind::Source, eIncludeKind::DataType, eIncludeKind::Document })
     {
         QTreeWidgetItem* item = ctrlGroup(kind);
@@ -144,37 +146,52 @@ void IncludeListView::decorateGroup(QTreeWidgetItem* group)
     group->setBackground(static_cast<int>(eColumn::ColLocation), tint);
 }
 
+QList<QTreeWidgetItem*> IncludeListView::groups() const
+{
+    QList<QTreeWidgetItem*> result{ mGroupSource, mGroupDataType };
+    if (mGroupDocument != nullptr)
+    {
+        result.append(mGroupDocument);
+    }
+
+    return result;
+}
+
 void IncludeListView::updateGroupCounts(int sourceCount, int dataTypeCount, int documentCount)
 {
     // Re-applied on every refresh: removing the last child otherwise takes the expand indicator
     // with it, and an empty heading has to keep reading as a place to put something.
-    for (QTreeWidgetItem* group : { mGroupSource, mGroupDataType, mGroupDocument })
+    for (QTreeWidgetItem* group : groups())
     {
         group->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
+        decorateGroup(group);
     }
 
     mGroupSource->setText(static_cast<int>(eColumn::ColLocation), tr("Include Files (%1)").arg(sourceCount));
     // The Data Types group is a placeholder until `.dtml` becomes a real document type: entries are
     // listed and classified, never resolved, version-checked or validated.
     mGroupDataType->setText(static_cast<int>(eColumn::ColLocation), tr("Data Types (%1)").arg(dataTypeCount));
-    mGroupDocument->setText(static_cast<int>(eColumn::ColLocation), QStringLiteral("%1 (%2)").arg(mConfig.groupDocLabel).arg(documentCount));
-    decorateGroup(mGroupSource);
-    decorateGroup(mGroupDataType);
-    decorateGroup(mGroupDocument);
+    if (mGroupDocument != nullptr)
+    {
+        mGroupDocument->setText(static_cast<int>(eColumn::ColLocation), QStringLiteral("%1 (%2)").arg(mConfig.groupDocLabel).arg(documentCount));
+    }
 }
 
 void IncludeListView::refreshGroupCounts()
 {
-    updateGroupCounts(mGroupSource->childCount(), mGroupDataType->childCount(), mGroupDocument->childCount());
+    updateGroupCounts(mGroupSource->childCount()
+                      , mGroupDataType->childCount()
+                      , (mGroupDocument != nullptr ? mGroupDocument->childCount() : 0));
 }
 
 void IncludeListView::changeEvent(QEvent* event)
 {
     if ((event->type() == QEvent::PaletteChange) && (mGroupSource != nullptr))
     {
-        decorateGroup(mGroupSource);
-        decorateGroup(mGroupDataType);
-        decorateGroup(mGroupDocument);
+        for (QTreeWidgetItem* group : groups())
+        {
+            decorateGroup(group);
+        }
     }
 
     QWidget::changeEvent(event);
@@ -182,7 +199,7 @@ void IncludeListView::changeEvent(QEvent* event)
 
 void IncludeListView::clearRows()
 {
-    for (QTreeWidgetItem* group : { mGroupSource, mGroupDataType, mGroupDocument })
+    for (QTreeWidgetItem* group : groups())
     {
         while (group->childCount() > 0)
         {
@@ -224,7 +241,7 @@ QTreeWidgetItem* IncludeListView::findRow(uint32_t id) const
         return nullptr;
     }
 
-    for (QTreeWidgetItem* group : { mGroupSource, mGroupDataType, mGroupDocument })
+    for (QTreeWidgetItem* group : groups())
     {
         for (int i = 0; i < group->childCount(); ++i)
         {
@@ -247,7 +264,7 @@ uint32_t IncludeListView::rowId(const QTreeWidgetItem* item)
 
 bool IncludeListView::isGroup(const QTreeWidgetItem* item) const
 {
-    return (item == mGroupSource) || (item == mGroupDataType) || (item == mGroupDocument);
+    return (item != nullptr) && ((item == mGroupSource) || (item == mGroupDataType) || (item == mGroupDocument));
 }
 
 QTreeWidgetItem* IncludeListView::itemAt(const QModelIndex& index) const
@@ -272,7 +289,7 @@ QTreeWidgetItem* IncludeListView::ctrlGroup(eIncludeKind kind) const
     switch (kind)
     {
     case eIncludeKind::DataType:    return mGroupDataType;
-    case eIncludeKind::Document:    return mGroupDocument;
+    case eIncludeKind::Document:    return (mGroupDocument != nullptr ? mGroupDocument : mGroupSource);
     default:                        return mGroupSource;
     }
 }

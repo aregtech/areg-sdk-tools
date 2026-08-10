@@ -16,6 +16,7 @@
     ${LUSAN}/data/common/DocumentElem.cpp
     ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/FieldEntry.cpp
+    ${LUSAN}/data/common/IncludeDataSection.cpp
     ${LUSAN}/data/common/IncludeEntry.cpp
     ${LUSAN}/data/common/MethodBase.cpp
     ${LUSAN}/data/common/MethodParameter.cpp
@@ -43,6 +44,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/DocumentElem.hpp
     ${LUSAN}/data/common/EnumEntry.hpp
     ${LUSAN}/data/common/FieldEntry.hpp
+    ${LUSAN}/data/common/IncludeDataSection.hpp
     ${LUSAN}/data/common/IncludeEntry.hpp
     ${LUSAN}/data/common/MethodBase.hpp
     ${LUSAN}/data/common/MethodParameter.hpp

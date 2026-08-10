@@ -22,7 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/data/sm/SMIncludeData.hpp"
+#include "lusan/model/common/IncludeModel.hpp"
+
 #include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
 
@@ -35,25 +36,20 @@
  * Dependencies
  ************************************************************************/
 class StateMachineModel;
-class DocModelNotifier;
-enum class eDocElementKind;
 
 /**
  * \class   SMIncludeModel
- * \brief   The Includes page model and the single owner of the `IncludeList` section: header
- *          files, data type documents and imported state machines all live in it. Every edit
- *          goes through an undo command, so the page never mutates an `IncludeEntry` directly.
- *
- *          An include is identified by its location, which is also its unique name. An imported
- *          machine additionally carries an alias -- the name a state's `Submachine` attribute
- *          uses -- and the version pinned when it was registered. Alias lookup is an explicit
- *          scan, never findElement(): the container matches on the location.
+ * \brief   The FSM Includes page model: the shared \ref IncludeModel plus what only a state
+ *          machine can say about a row. A `.fsml` include is an imported machine, so it carries
+ *          an alias -- the name a state's `Submachine` attribute uses -- and the version pinned
+ *          when it was registered. Alias lookup is an explicit scan, never findInclude(): the
+ *          container matches on the location.
  *
  *          Resolution (does the file exist, does it parse, what version is in it) is asked of
  *          the shared resolver on demand and never cached: the file lives outside the document
  *          and can change while the editor is open.
  **/
-class SMIncludeModel
+class SMIncludeModel : public IncludeModel
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types
@@ -79,17 +75,12 @@ public:
 public:
     explicit SMIncludeModel(StateMachineModel& facade);
 
+    virtual ~SMIncludeModel(void) = default;
+
 //////////////////////////////////////////////////////////////////////////
 // Reads
 //////////////////////////////////////////////////////////////////////////
 public:
-    const QList<IncludeEntry>& getIncludes() const;
-    int getIncludeCount() const;
-
-    IncludeEntry* findInclude(const QString& location) const;
-    IncludeEntry* findInclude(uint32_t id) const;
-    int findIndex(uint32_t id) const;
-
     //!< The machine include registered under \p alias, or nullptr.
     const IncludeEntry* findByAlias(const QString& alias) const;
 
@@ -97,12 +88,7 @@ public:
     eIncludeKind kindOf(uint32_t id) const;
 
     //!< The aliases of every registered machine, in document order (the submachine picker's list).
-    QStringList getAliases() const;
-
-    DocModelNotifier& getNotifier() const;
-
-    //!< True while the document refuses every change (a read-only import view).
-    bool isReadOnly() const;
+    QStringList getAliases(void) const;
 
     /**
      * \brief   What the imported machine currently points at: the resolved file, its parsed
@@ -134,27 +120,13 @@ public:
      **/
     eImportRefusal canImport(const QString& absoluteFilePath, QStringList& chain) const;
 
+    //!< A unique, identifier-safe alias for a newly registered file, derived from its base name.
+    QString uniqueAlias(const QString& baseName) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Mutations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Registers an include. A `.fsml` location also gets a default alias derived from
-     *          the file name and, when the file resolves, the version pinned from it -- the one
-     *          automatic pin; every later change of the pin is the user's explicit Update.
-     * \return  The created entry, or nullptr when the location is already registered.
-     **/
-    IncludeEntry* createInclude(const QString& location);
-    IncludeEntry* insertInclude(int position, const QString& location);
-    void deleteInclude(uint32_t id);
-    void swapIncludes(uint32_t firstId, uint32_t secondId);
-
-    //!< The location is the include's unique name, so this is both the rename and the path edit.
-    void setLocation(uint32_t id, const QString& location);
-    void setDescription(uint32_t id, const QString& text);
-    void setDeprecated(uint32_t id, bool deprecated);
-    void setDeprecateHint(uint32_t id, const QString& hint);
-
     //!< Renames the alias and rewrites every hosting state's `Submachine` in the same undo step.
     void setAlias(uint32_t id, const QString& alias);
 
@@ -165,20 +137,25 @@ public:
      **/
     bool updateVersion(uint32_t id);
 
-    //!< A unique, identifier-safe alias for a newly registered file, derived from its base name.
-    QString uniqueAlias(const QString& baseName) const;
-
 //////////////////////////////////////////////////////////////////////////
-// Hidden methods
+// Overrides
 //////////////////////////////////////////////////////////////////////////
-private:
-    const SMIncludeData& includes() const;
-    SMIncludeData& includes();
+public:
+    virtual bool isReadOnly(void) const override;
 
-    //!< The notifier kind of one row: a machine import announces itself as Import, everything
-    //!< else as Include. The kind follows the row, not the container that now holds both.
-    static eDocElementKind kindFor(const QString& location);
-    eDocElementKind kindFor(uint32_t id) const;
+protected:
+    /**
+     * \brief   A machine import announces itself as Import, everything else as Include. The kind
+     *          follows the row, not the container that now holds both.
+     **/
+    virtual eDocElementKind kindOfLocation(const QString& location) const override;
+
+    /**
+     * \brief   A new `.fsml` row gets a default alias derived from the file name and, when the
+     *          file resolves, the version pinned from it -- the one automatic pin; every later
+     *          change of the pin is the user's explicit Update.
+     **/
+    virtual void prepareNewEntry(IncludeEntry& entry) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

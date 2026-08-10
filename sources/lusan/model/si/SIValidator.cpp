@@ -114,6 +114,7 @@ namespace
         QList<DocIssue>             mIssues;
         QSet<QString>               mTypesUsed;     //!< Type names something in the document declares with.
         QSet<QString>               mConstsUsed;    //!< Constant names something in the document reads.
+        bool                        mUnresolvedSeen { false };  //!< A declared type answered to nothing here.
     };
 
     void Ctx::add(uint32_t id, eDocElementKind kind, eSeverity sev, int rule, const QString& message)
@@ -192,6 +193,7 @@ namespace
         const QString missing = unresolvedFragment(typeName);
         if (missing.isEmpty() == false)
         {
+            mUnresolvedSeen = true;
             add(id, kind, eSeverity::Error, SIValidator::RULE_UNRESOLVED_TYPE, vtr("%1 declares type '%2', which does not exist").arg(what, missing));
         }
     }
@@ -449,6 +451,7 @@ namespace
     void Ctx::checkIncludes()
     {
         QSet<QString> locations;
+        QList<const IncludeEntry*> dataTypeDocuments;
         for (const IncludeEntry& include : mData.getIncludeData().getElements())
         {
             const QString location = include.getLocation();
@@ -463,7 +466,26 @@ namespace
                    , vtr("'%1' is included more than once").arg(location));
             }
 
+            // A service interface includes no other service interface, so it has no document
+            // extension of its own to classify against.
+            if (includeKindOf(location, QString()) == eIncludeKind::DataType)
+            {
+                dataTypeDocuments.append(&include);
+            }
+
             locations.insert(location);
+        }
+
+        // A type an imported data type document declares is not declared here, so it reaches the
+        // interface as a name that answers to nothing in this registry. When every declared type
+        // does answer, no type of the imported document is in use.
+        if (mUnresolvedSeen == false)
+        {
+            for (const IncludeEntry* include : dataTypeDocuments)
+            {
+                add(include->getId(), eDocElementKind::Include, eSeverity::Warning, SIValidator::RULE_UNUSED_IMPORT
+                   , vtr("Data types are imported from '%1', but the interface uses none of them").arg(include->getLocation()));
+            }
         }
     }
 
@@ -573,6 +595,8 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
             return QCoreApplication::translate("SIValidator", "A response is what a request answers with. Connect it to the request it belongs to, or remove it.");
         case SIValidator::RULE_EMPTY_INTERFACE:
             return QCoreApplication::translate("SIValidator", "A client reaches an interface through its attributes and methods. Until there is one, there is nothing to generate.");
+        case SIValidator::RULE_UNUSED_IMPORT:
+            return QCoreApplication::translate("SIValidator", "Every type the interface declares with is either built in or declared here, so nothing comes from the imported document. Use a type from it, or remove the include.");
         default:
             return QCoreApplication::translate("SIValidator", "Advisory only. The interface still generates.");
         }

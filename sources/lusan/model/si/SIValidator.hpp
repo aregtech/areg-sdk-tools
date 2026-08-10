@@ -38,7 +38,8 @@ class ServiceInterfaceData;
  *          interface name and version, identifier syntax and uniqueness across the registries,
  *          resolution of every declared type (attribute, method parameter, constant, structure
  *          field, container key and value), constant literals against their declared type,
- *          request-to-response wiring, and the declarations nothing in the document uses.
+ *          request-to-response wiring, the declarations nothing in the document uses, and the
+ *          imported data type documents nothing in the document takes a type from.
  *
  *          Like the state machine engine it is a pure, headless transform -- input a
  *          `const ServiceInterfaceData&`, output a `QList<DocIssue>` -- with no widget, model or
@@ -68,6 +69,7 @@ public:
     static constexpr int RULE_UNREFERENCED         { 10 };  //!< Advisory: nothing in the document uses the declaration.
     static constexpr int RULE_UNBOUND_RESPONSE     { 11 };  //!< Advisory: no request leads to this response.
     static constexpr int RULE_EMPTY_INTERFACE      { 12 };  //!< Advisory: the interface offers nothing to a client.
+    static constexpr int RULE_UNUSED_IMPORT        { 13 };  //!< Advisory: an imported data type document contributes nothing.
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
