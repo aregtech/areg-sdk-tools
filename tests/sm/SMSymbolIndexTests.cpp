@@ -18,7 +18,7 @@
  *
  ************************************************************************/
 
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
@@ -64,7 +64,7 @@ namespace
 
         Fixture()
         {
-            SMAttributeEntry* speed = data.getAttributes().createAttribute("Speed");
+            AttributeEntry* speed = data.getAttributes().createAttribute("Speed");
             speed->setType("uint32");
             data.getConstants().createConstant("MAX_SPEED");
 

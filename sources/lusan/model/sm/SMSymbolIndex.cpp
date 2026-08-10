@@ -21,7 +21,7 @@
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
@@ -254,7 +254,7 @@ QList<SMSymbolIndex::KnownSymbol> SMSymbolIndex::machineSymbols(const StateMachi
 {
     QList<KnownSymbol> result;
 
-    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+    for (const AttributeEntry& attr : data.getAttributes().getElements())
     {
         result.append({ attr.getName(), eSymbolKind::Attribute });
     }
@@ -329,7 +329,7 @@ QStringList SMSymbolIndex::completionWords(const StateMachineData& data, uint32_
     QStringList words;
 
     // Attributes are read through their generated getter; offer the call form.
-    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+    for (const AttributeEntry& attr : data.getAttributes().getElements())
     {
         words.append(attr.getName() + QStringLiteral("()"));
     }

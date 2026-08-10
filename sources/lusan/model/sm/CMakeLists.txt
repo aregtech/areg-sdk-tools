@@ -1,7 +1,6 @@
-list(APPEND LUSAN_SRC
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
-    ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMDocumentIndex.cpp
@@ -39,7 +38,6 @@ list(APPEND LUSAN_SRC
 list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/StateMachineModel.hpp
     ${LUSAN}/model/sm/SMArgumentCommands.hpp
-    ${LUSAN}/model/sm/SMAttributeModel.hpp
     ${LUSAN}/model/sm/SMCommand.hpp
     ${LUSAN}/model/sm/SMConditionText.hpp
     ${LUSAN}/model/sm/SMDocumentIndex.hpp

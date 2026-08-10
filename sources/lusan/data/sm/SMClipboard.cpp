@@ -240,13 +240,13 @@ SMClipboardContent::SMClipboardContent()
     , mStates       (&mRoot)
     , mLayout       (&mRoot)
     , mDataTypes    (&mRoot)
-    , mAttributes   (&mRoot)
+    , mAttributes   (NEAttribute::StateMachine, &mRoot)
     , mEvents       (&mRoot)
     , mTimers       (&mRoot)
     , mMethods      (&mRoot)
     , mConstants    (&mRoot)
     , mIncludes     (&mRoot)
-    , mRefAttributes(&mRoot)
+    , mRefAttributes(NEAttribute::StateMachine, &mRoot)
     , mRefEvents    (&mRoot)
     , mRefTimers    (&mRoot)
     , mRefMethods   (&mRoot)
@@ -278,7 +278,7 @@ QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t
     QList<const SMStateEntry*>      states;
     QList<uint32_t>                 noteIds;
     QList<const DataTypeCustom*>    dataTypes;
-    QList<const SMAttributeEntry*>  attributes;
+    QList<const AttributeEntry*>  attributes;
     QList<const SMEventEntry*>      events;
     QList<const SMTimerEntry*>      timers;
     QList<const SMMethodEntry*>     methods;
@@ -308,7 +308,7 @@ QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t
         {
             dataTypes.append(*dataType);
         }
-        else if (const SMAttributeEntry* attribute = doc.getAttributes().findElement(id); attribute != nullptr)
+        else if (const AttributeEntry* attribute = doc.getAttributes().findElement(id); attribute != nullptr)
         {
             attributes.append(attribute);
         }
@@ -415,11 +415,11 @@ QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t
             , [&doc](const QString& name) { return doc.getMethods().findMethod(name); });
 
     explicitNames.clear();
-    for (const SMAttributeEntry* entry : attributes)
+    for (const AttributeEntry* entry : attributes)
     {
         explicitNames.insert(entry->getName());
     }
-    const QList<const SMAttributeEntry*> refAttributes = _resolveReferences<SMAttributeEntry>(references.attributes, explicitNames
+    const QList<const AttributeEntry*> refAttributes = _resolveReferences<AttributeEntry>(references.attributes, explicitNames
             , [&doc](const QString& name) { return doc.getAttributes().findElement(name); });
 
     explicitNames.clear();

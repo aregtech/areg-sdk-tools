@@ -5,6 +5,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/AttributeListView.cpp
     ${LUSAN}/view/common/ConstantDetailsView.cpp
     ${LUSAN}/view/common/ConstantListView.cpp
+    ${LUSAN}/view/common/AttributePage.cpp
     ${LUSAN}/view/common/ConstantPage.cpp
     ${LUSAN}/view/common/DocValidationPanel.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
@@ -54,6 +55,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/AttributeListView.hpp
     ${LUSAN}/view/common/ConstantDetailsView.hpp
     ${LUSAN}/view/common/ConstantListView.hpp
+    ${LUSAN}/view/common/AttributePage.hpp
     ${LUSAN}/view/common/ConstantPage.hpp
     ${LUSAN}/view/common/DocValidationPanel.hpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.hpp

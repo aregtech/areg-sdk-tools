@@ -28,7 +28,7 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
     , mUndoStack        ( )
     , mModelOverview    (mSIData.getOverviewData())
     , mModelDataType    (*this)
-    , mModelAttributes  (mSIData.getAttributeData() , mSIData.getDataTypeData())
+    , mModelAttributes  (*this)
     , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
     , mModelConstant    (*this)
     , mModelInclude     (*this)

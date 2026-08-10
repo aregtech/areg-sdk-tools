@@ -2,7 +2,6 @@
 
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/si/ServiceInterface.cpp
-    ${LUSAN}/view/si/SIAttribute.cpp
     ${LUSAN}/view/si/SIMethod.cpp
     ${LUSAN}/view/si/SIOverview.cpp
     ${LUSAN}/view/si/SIOverviewDetails.cpp
@@ -11,7 +10,6 @@ list(APPEND LUSAN_SRC
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/si/ServiceInterface.hpp
-    ${LUSAN}/view/si/SIAttribute.hpp
     ${LUSAN}/view/si/SIMethod.hpp
     ${LUSAN}/view/si/SIOverview.hpp
     ${LUSAN}/view/si/SIOverviewDetails.hpp

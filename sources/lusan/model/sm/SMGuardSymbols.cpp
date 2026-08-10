@@ -24,7 +24,7 @@
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -160,7 +160,7 @@ SMGuardSymbols::BareResult SMGuardSymbols::bindBare(const StateMachineData& data
 
 uint32_t SMGuardSymbols::attributeId(const StateMachineData& data, const QString& name)
 {
-    const SMAttributeEntry* attribute = SMDocumentIndex(data).attribute(name);
+    const AttributeEntry* attribute = SMDocumentIndex(data).attribute(name);
     return (attribute != nullptr) ? attribute->getId() : 0u;
 }
 
@@ -194,7 +194,7 @@ QStringList SMGuardSymbols::paramTypes(const StateMachineData& data, uint32_t tr
 
 QString SMGuardSymbols::attributeName(const StateMachineData& data, uint32_t id)
 {
-    const SMAttributeEntry* attribute = SMDocumentIndex(data).attribute(id);
+    const AttributeEntry* attribute = SMDocumentIndex(data).attribute(id);
     return (attribute != nullptr) ? attribute->getName() : QString();
 }
 
@@ -212,7 +212,7 @@ QString SMGuardSymbols::paramName(const StateMachineData& data, uint32_t transit
 
 QString SMGuardSymbols::attributeType(const StateMachineData& data, uint32_t id)
 {
-    const SMAttributeEntry* attribute = SMDocumentIndex(data).attribute(id);
+    const AttributeEntry* attribute = SMDocumentIndex(data).attribute(id);
     return (attribute != nullptr) ? attribute->getType() : QString();
 }
 

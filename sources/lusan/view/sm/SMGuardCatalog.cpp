@@ -21,7 +21,7 @@
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
@@ -145,7 +145,7 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
     }
 
     // FSM -- attributes (#), constants (K), all teal.
-    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+    for (const AttributeEntry& attr : data.getAttributes().getElements())
     {
         SMGuardSymbol sym;
         sym.name        = attr.getName();

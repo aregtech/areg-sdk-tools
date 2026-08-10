@@ -47,8 +47,9 @@
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
+#include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
@@ -1433,6 +1434,80 @@ namespace
         CHECK(model.getData().getIncludes().getElementCount() == 2);
     }
 
+    //!< The Attributes page model edits whatever document is open now, not the one that was open
+    //!< when it was built. `File / New` and a save-and-reload each replace the data object the
+    //!< section lives in.
+    void testAttributesSurviveDocumentSwap()
+    {
+        StateMachineModel model;
+        AttributeModel& attributes = model.getAttributeModel();
+
+        CHECK(attributes.createAttribute(QStringLiteral("mBefore")) != nullptr);
+        CHECK(attributes.getAttributeCount() == 1);
+
+        // What "File / New" does.
+        CHECK(model.createNewDocument(QStringLiteral("Swapped")));
+        CHECK(attributes.getAttributeCount() == 0);
+        CHECK(&model.getData().getAttributes().getElements() == &attributes.getAttributes());
+
+        AttributeEntry* added = attributes.createAttribute(QStringLiteral("mCounter"));
+        CHECK(added != nullptr);
+        CHECK(model.getData().getAttributes().getElementCount() == 1);
+
+        // The edit landed in the new document, and undo takes it back out of that same one.
+        const uint32_t id = added->getId();
+        attributes.setValue(id, QStringLiteral("7"));
+        CHECK(model.getData().getAttributes().findElement(id)->getValue() == QStringLiteral("7"));
+        model.getUndoStack().undo();
+        CHECK(model.getData().getAttributes().findElement(id)->getValue().isEmpty());
+
+        // And again after a reload, which swaps the data object a second time.
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = dir.filePath(QStringLiteral("swap-attributes.fsml"));
+        CHECK(model.saveToFile(path));
+        CHECK(model.loadFromFile(path));
+        CHECK(attributes.getAttributeCount() == 1);
+        CHECK(attributes.findAttribute(QStringLiteral("mCounter")) != nullptr);
+        CHECK(attributes.createAttribute(QStringLiteral("mRetries")) != nullptr);
+        CHECK(model.getData().getAttributes().getElementCount() == 2);
+    }
+
+    //!< A state machine attribute carries a value and no notification, so the section writes a
+    //!< `Value` and never a `Notify`, and a reload gets the same entry back.
+    void testAttributeSectionShape()
+    {
+        StateMachineModel model;
+        AttributeModel& attributes = model.getAttributeModel();
+
+        AttributeEntry* entry = attributes.createAttribute(QStringLiteral("mRetries"));
+        CHECK(entry != nullptr);
+        CHECK(entry->getConfig().hasValue);
+        CHECK(entry->getConfig().hasNotification == false);
+
+        const uint32_t id = entry->getId();
+        attributes.setType(id, QStringLiteral("uint32"));
+        attributes.setValue(id, QStringLiteral("3"));
+
+        QString text;
+        QXmlStreamWriter writer(&text);
+        model.getData().getAttributes().writeToXml(writer);
+        CHECK(text.contains(QStringLiteral("Value=\"3\"")));
+        CHECK(text.contains(QStringLiteral("Notify=")) == false);
+
+        // Undo takes the value back out, and redo puts it in again.
+        model.getUndoStack().undo();
+        CHECK(attributes.findAttribute(id)->getValue().isEmpty());
+        model.getUndoStack().redo();
+        CHECK(attributes.findAttribute(id)->getValue() == QStringLiteral("3"));
+
+        // A rename repairs what the guards refer to, in the same undo step.
+        attributes.renameAttribute(id, QStringLiteral("mAttempts"));
+        CHECK(attributes.findAttribute(QStringLiteral("mAttempts")) != nullptr);
+        model.getUndoStack().undo();
+        CHECK(attributes.findAttribute(QStringLiteral("mRetries")) != nullptr);
+    }
+
     //!< A `.fsml` row is an imported machine and announces itself as such; everything else is an
     //!< ordinary include. The kind follows the row's location, so an edit that changes the
     //!< extension changes what the row reports.
@@ -1546,6 +1621,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testConstantsSurviveDocumentSwap();
     testDataTypesSurviveDocumentSwap();
     testIncludesSurviveDocumentSwap();
+    testAttributesSurviveDocumentSwap();
+    testAttributeSectionShape();
     testIncludeKindFollowsLocation();
     testDeclaredTypesStayResolved();
 

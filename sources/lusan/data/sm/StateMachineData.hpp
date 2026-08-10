@@ -27,7 +27,7 @@
 
 #include "lusan/data/sm/SMOverviewData.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
@@ -150,8 +150,8 @@ public:
     inline const DataTypeDataSection& getDataTypes() const;
     inline DataTypeDataSection& getDataTypes();
 
-    inline const SMAttributeData& getAttributes() const;
-    inline SMAttributeData& getAttributes();
+    inline const AttributeDataSection& getAttributes() const;
+    inline AttributeDataSection& getAttributes();
 
     inline const SMEventData& getEvents() const;
     inline SMEventData& getEvents();
@@ -352,7 +352,7 @@ private:
     VersionNumber   mFormatVersion; //!< The editor-owned file format version.
     SMOverviewData  mOverview;      //!< The Overview section.
     DataTypeDataSection  mDataTypes;     //!< The DataTypeList section.
-    SMAttributeData mAttributes;    //!< The AttributeList section.
+    AttributeDataSection mAttributes;    //!< The AttributeList section.
     SMEventData     mEvents;        //!< The EventList section.
     SMTimerData     mTimers;        //!< The TimerList section.
     SMMethodData    mMethods;       //!< The MethodList section.
@@ -425,12 +425,12 @@ inline DataTypeDataSection& StateMachineData::getDataTypes()
     return mDataTypes;
 }
 
-inline const SMAttributeData& StateMachineData::getAttributes() const
+inline const AttributeDataSection& StateMachineData::getAttributes() const
 {
     return mAttributes;
 }
 
-inline SMAttributeData& StateMachineData::getAttributes()
+inline AttributeDataSection& StateMachineData::getAttributes()
 {
     return mAttributes;
 }

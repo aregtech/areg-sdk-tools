@@ -1,5 +1,4 @@
-list(APPEND LUSAN_SRC
-    ${LUSAN}/data/sm/SMAttributeData.cpp
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/data/sm/SMClipboard.cpp
     ${LUSAN}/data/sm/SMCondition.cpp
     ${LUSAN}/data/sm/SMDocumentCache.cpp
@@ -18,7 +17,6 @@ list(APPEND LUSAN_SRC
 )
 
 list(APPEND LUSAN_HDR
-    ${LUSAN}/data/sm/SMAttributeData.hpp
     ${LUSAN}/data/sm/SMClipboard.hpp
     ${LUSAN}/data/sm/SMCondition.hpp
     ${LUSAN}/data/sm/SMDocumentCache.hpp

@@ -96,7 +96,7 @@ namespace
     }
 
     /**
-     * \brief   The typed registry insertion: works for value entries (SMAttributeEntry,
+     * \brief   The typed registry insertion: works for value entries (AttributeEntry,
      *          SMTimerEntry, ConstantEntry, IncludeEntry) and owning-pointer entries
      *          (SMEventEntry*, SMMethodEntry*, DataTypeCustom*).
      **/
@@ -165,7 +165,7 @@ namespace
 
     // Section accessors passed into the typed plan entries.
     TEDataContainer<DataTypeCustom*, DocumentElem>&  _dataTypesOf(StateMachineData& data)  { return data.getDataTypes(); }
-    TEDataContainer<SMAttributeEntry, DocumentElem>& _attributesOf(StateMachineData& data) { return data.getAttributes(); }
+    TEDataContainer<AttributeEntry, DocumentElem>& _attributesOf(StateMachineData& data) { return data.getAttributes(); }
     TEDataContainer<SMEventEntry*, DocumentElem>&    _eventsOf(StateMachineData& data)     { return data.getEvents(); }
     TEDataContainer<SMTimerEntry, DocumentElem>&     _timersOf(StateMachineData& data)     { return data.getTimers(); }
     TEDataContainer<SMMethodEntry*, DocumentElem>&   _methodsOf(StateMachineData& data)    { return data.getMethods(); }
@@ -344,12 +344,12 @@ void SMPasteCommand::buildRegistryPlan(SMClipboardContent& content)
         section.removeAllElements();
     };
 
-    const auto planAttributes = [&](SMAttributeData& section, bool referenced)
+    const auto planAttributes = [&](AttributeDataSection& section, bool referenced)
     {
-        for (SMAttributeEntry& entry : section.getElements())
+        for (AttributeEntry& entry : section.getElements())
         {
             const QString& name = entry.getName();
-            const SMAttributeEntry* existing = doc.getAttributes().findElement(name);
+            const AttributeEntry* existing = doc.getAttributes().findElement(name);
             if (referenced && (existing != nullptr) && SMClipboard::structurallyEqual(*existing, entry))
             {
                 continue;
@@ -361,7 +361,7 @@ void SMPasteCommand::buildRegistryPlan(SMClipboardContent& content)
                 claimedAttributes.insert(name);
             }
 
-            mRegistry.append(new TPasteRegistryEntry<SMAttributeEntry>(entry, &_attributesOf, eDocElementKind::Attribute
+            mRegistry.append(new TPasteRegistryEntry<AttributeEntry>(entry, &_attributesOf, eDocElementKind::Attribute
                                                                        , eRenameRole::Attribute, conflict));
         }
 

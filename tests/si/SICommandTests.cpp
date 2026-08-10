@@ -116,7 +116,7 @@ namespace
             checkpoints << serialize(doc);
         };
 
-        SIAttributeData& attrs = doc.getAttributeData();
+        AttributeDataSection& attrs = doc.getAttributeData();
         pushAndSnap(new TDocAddCommand<AttributeEntry, DocumentElem>(notifier, attrs, makeAttribute("speed", &attrs), eDocElementKind::Attribute, "Add speed"));
         pushAndSnap(new TDocAddCommand<AttributeEntry, DocumentElem>(notifier, attrs, makeAttribute("gear",  &attrs), eDocElementKind::Attribute, "Add gear"));
 
@@ -172,7 +172,7 @@ namespace
         DocModelNotifier        notifier;
         QUndoStack              stack;
 
-        SIAttributeData& attrs = doc.getAttributeData();
+        AttributeDataSection& attrs = doc.getAttributeData();
         attrs.createAttribute("alpha");
         attrs.createAttribute("beta");
         // Read IDs from the container: createAttribute returns a pointer into the value
@@ -212,7 +212,7 @@ namespace
         DocModelNotifier        notifier;
         QUndoStack              stack;
 
-        SIAttributeData& attrs = doc.getAttributeData();
+        AttributeDataSection& attrs = doc.getAttributeData();
         const int count = 120;
         for (int i = 0; i < count; ++i)
         {
@@ -366,6 +366,147 @@ namespace
 
         CHECK(includes.getElementCount() == 0);
         CHECK(serialize(doc) == empty);
+    }
+
+    //!< The `AttributeList` section is shared with the state machine, and every edit of it reaches
+    //!< the document through the same commands. A service interface attribute carries a
+    //!< notification kind and no value, so the section writes a `Notify` and never a `Value`, and
+    //!< it round-trips byte for byte across an undo and a redo of each edit.
+    void testAttributeSection()
+    {
+        ServiceInterfaceData    doc;
+        DocModelNotifier        notifier;
+        QUndoStack              stack;
+
+        AttributeDataSection& attributes = doc.getAttributeData();
+        const QString empty = serialize(doc);
+
+        stack.push(new TDocAddCommand<AttributeEntry, DocumentElem>(notifier, attributes, makeAttribute(QStringLiteral("IsConnected"), &attributes), eDocElementKind::Attribute, "Add attribute"));
+        stack.push(new TDocAddCommand<AttributeEntry, DocumentElem>(notifier, attributes, makeAttribute(QStringLiteral("RetryCount"), &attributes), eDocElementKind::Attribute, "Add attribute"));
+        CHECK(attributes.getElementCount() == 2);
+        CHECK(attributes.findElement(QStringLiteral("IsConnected")) != nullptr);
+
+        // The name is the attribute's unique name, so it cannot be declared twice.
+        CHECK(attributes.createAttribute(QStringLiteral("IsConnected")) == nullptr);
+
+        const QString built = serialize(doc);
+        CHECK(built.contains(QStringLiteral("Notify=\"OnChange\"")));
+        CHECK(built.contains(QStringLiteral("Value=")) == false);
+
+        // An insert lands where it was asked to, and takes the whole list back on undo.
+        stack.push(buildInsertCommand<AttributeEntry, DocumentElem>(notifier, attributes, makeAttribute(QStringLiteral("Uptime"), &attributes), 0, 0u, eDocElementKind::Attribute, "Insert attribute"));
+        CHECK(attributes.getElementCount() == 3);
+        CHECK(attributes.getElements().at(0).getName() == QStringLiteral("Uptime"));
+        stack.undo();
+        CHECK(serialize(doc) == built);
+        stack.redo();
+        const QString inserted = serialize(doc);
+        stack.undo();
+
+        // A reorder is one step and round-trips.
+        stack.push(new TDocReorderCommand<AttributeEntry, DocumentElem>(notifier, attributes, 0, 1, 0u, eDocElementKind::Attribute, "Reorder attributes"));
+        const QString reordered = serialize(doc);
+        CHECK(reordered != built);
+        stack.undo();
+        CHECK(serialize(doc) == built);
+        stack.redo();
+        CHECK(serialize(doc) == reordered);
+        stack.undo();
+
+        // A notification kind is stored and written as the canonical string.
+        AttributeEntry* connected = attributes.findElement(QStringLiteral("IsConnected"));
+        CHECK(connected != nullptr);
+        connected->setNotification(AttributeEntry::eNotification::NotifyAlways);
+        connected->setDescription(QStringLiteral("True while the link is up."));
+        connected->setIsDeprecated(true);
+        connected->setDeprecateHint(QStringLiteral("Use LinkState"));
+        const QString described = serialize(doc);
+        CHECK(described.contains(QStringLiteral("Notify=\"Always\"")));
+        CHECK(described != built);
+
+        // Removing a row keeps it alive in the command, so undo restores it whole -- notification,
+        // description and deprecation included.
+        const uint32_t connectedId = connected->getId();
+        stack.push(new TDocRemoveCommand<AttributeEntry, DocumentElem>(notifier, attributes, connectedId, eDocElementKind::Attribute, "Delete attribute"));
+        CHECK(attributes.getElementCount() == 1);
+        stack.undo();
+        CHECK(attributes.getElementCount() == 2);
+        CHECK(serialize(doc) == described);
+        CHECK(inserted != described);
+
+        // A value the section does not carry never reaches the file, even when the entry holds one.
+        attributes.findElement(QStringLiteral("RetryCount"))->setValue(QStringLiteral("5"));
+        CHECK(serialize(doc).contains(QStringLiteral("Value=")) == false);
+
+        // And back to nothing, from the top of the history down.
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+
+        CHECK(attributes.getElementCount() == 0);
+        CHECK(serialize(doc) == empty);
+    }
+
+    //!< A published `.siml` keeps its attribute section across a read and a write: same fields,
+    //!< same spelling, nothing gained and nothing lost.
+    void testAttributeRoundTrip()
+    {
+        const QString source = QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            "<ServiceInterface FormatVersion=\"1.1.0\">"
+            "  <Overview ID=\"1\" Name=\"Sample\" Version=\"1.0.0\" isRemote=\"true\"/>"
+            "  <AttributeList>"
+            "    <Attribute DataType=\"uint16\" ID=\"15\" Name=\"SomeAttr1\" Notify=\"OnChange\">"
+            "      <Description>Notify only when the value changed.</Description>"
+            "    </Attribute>"
+            "    <Attribute DataType=\"bool\" ID=\"16\" Name=\"SomeAttr2\" Notify=\"Always\"/>"
+            "    <Attribute DataType=\"uint16\" ID=\"44\" Name=\"Old\" Notify=\"OnChange\" IsDeprecated=\"true\">"
+            "      <Description>Marked as deprecated.</Description>"
+            "      <DeprecateHint>Example to deprecate data.</DeprecateHint>"
+            "    </Attribute>"
+            "  </AttributeList>"
+            "</ServiceInterface>");
+
+        ServiceInterfaceData doc;
+        QXmlStreamReader reader(source);
+        while (reader.readNextStartElement())
+        {
+            CHECK(doc.readFromXml(reader));
+            break;
+        }
+
+        const AttributeDataSection& attributes = doc.getAttributeData();
+        CHECK(attributes.getElementCount() == 3);
+
+        const AttributeEntry* always = attributes.findElement(QStringLiteral("SomeAttr2"));
+        CHECK(always != nullptr);
+        CHECK(always->getNotification() == AttributeEntry::eNotification::NotifyAlways);
+
+        const AttributeEntry* old = attributes.findElement(QStringLiteral("Old"));
+        CHECK(old != nullptr);
+        CHECK(old->getIsDeprecated());
+        CHECK(old->getDeprecateHint() == QStringLiteral("Example to deprecate data."));
+
+        // Written back, every attribute is the one that was read, and no `Value` appeared.
+        const QString written = serialize(doc);
+        CHECK(written.contains(QStringLiteral("Name=\"SomeAttr1\"")));
+        CHECK(written.contains(QStringLiteral("Notify=\"Always\"")));
+        CHECK(written.contains(QStringLiteral("IsDeprecated=\"true\"")));
+        CHECK(written.contains(QStringLiteral("<DeprecateHint>Example to deprecate data.</DeprecateHint>")));
+        CHECK(written.contains(QStringLiteral("Value=")) == false);
+
+        // And reading what was written gives the same section again.
+        ServiceInterfaceData again;
+        QXmlStreamReader back(written);
+        while (back.readNextStartElement())
+        {
+            CHECK(again.readFromXml(back));
+            break;
+        }
+
+        CHECK(again.getAttributeData().getElementCount() == 3);
+        CHECK(serialize(again) == written);
     }
 
     //!< The first published `.siml` format spelled two categories differently. A document that
@@ -631,10 +772,15 @@ namespace
         }
 
         {   // Two attributes cannot share a name, and a constant's value has to read as its type.
+            // The section refuses to declare the same name twice, so the collision is built the
+            // way it actually happens: the second attribute is renamed onto the first.
             ServiceInterfaceData doc;
             makeUsable(doc);
             doc.getAttributeData().createAttribute(QStringLiteral("speed"))->setType(QStringLiteral("uint32"));
-            doc.getAttributeData().createAttribute(QStringLiteral("speed"))->setType(QStringLiteral("uint32"));
+            AttributeEntry* renamed = doc.getAttributeData().createAttribute(QStringLiteral("velocity"));
+            CHECK(renamed != nullptr);
+            renamed->setType(QStringLiteral("uint32"));
+            renamed->setName(QStringLiteral("speed"));
 
             ConstantEntry* bad = doc.getConstantData().createConstant(QStringLiteral("Limit"));
             CHECK(bad != nullptr);
@@ -704,6 +850,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testDeepHistory();
     testDataTypeSection();
     testIncludeSection();
+    testAttributeSection();
+    testAttributeRoundTrip();
     testLegacyTypeNames();
     testTypeReferenceRefresh();
     testValidatorUnreferenced();

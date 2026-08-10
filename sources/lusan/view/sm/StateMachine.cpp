@@ -816,7 +816,7 @@ void StateMachine::ensureTabInitialized(int index)
     }
     else if (index == static_cast<int>(PageAttributes))
     {
-        page = new SMAttribute(mModel.getAttributeModel(), &mTabWidget);
+        page = new SMAttribute(mModel.getAttributeModel(), mModel, &mTabWidget);
     }
     else if (index == static_cast<int>(PageEvents))
     {

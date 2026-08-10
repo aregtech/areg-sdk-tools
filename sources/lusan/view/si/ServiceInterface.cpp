@@ -21,7 +21,7 @@
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/view/common/IEditCommit.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
-#include "lusan/view/si/SIAttribute.hpp"
+#include "lusan/view/common/AttributePage.hpp"
 #include "lusan/view/common/ConstantPage.hpp"
 #include "lusan/view/common/DataTypePage.hpp"
 #include "lusan/view/common/IncludePage.hpp"
@@ -343,7 +343,7 @@ void ServiceInterface::ensureTabInitialized(int index)
     case eSIPages::PageAttributes:
         if (mAttribute == nullptr)
         {
-            mAttribute = new SIAttribute(mModel.getAttributeModel(), &mTabWidget);
+            mAttribute = new AttributePage(mModel.getAttributeModel(), tr("Service Interface Data Attribute Editor ..."), &mTabWidget);
             attachPage(index, mAttribute);
         }
         break;

@@ -23,7 +23,7 @@
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
@@ -671,7 +671,7 @@ static void testRenameByID()
     {
         if (p.getName() == QStringLiteral("param")) { p.setName(QStringLiteral("count2")); }
     }
-    for (SMAttributeEntry& a : data.getAttributes().getElements())
+    for (AttributeEntry& a : data.getAttributes().getElements())
     {
         if (a.getName() == QStringLiteral("my_attribute")) { a.setName(QStringLiteral("Backlog")); }
     }
@@ -899,7 +899,7 @@ static void testAdvisoryName()
     }
 
     // A rename re-resolves the advisory name on the next refresh -- it can never go stale.
-    for (SMAttributeEntry& a : data.getAttributes().getElements())
+    for (AttributeEntry& a : data.getAttributes().getElements())
     {
         if (a.getName() == QStringLiteral("WalkRequested")) { a.setName(QStringLiteral("Crossing")); }
     }
@@ -976,7 +976,7 @@ static void testScopedValues()
 
     data.getDataTypes().addImported(QStringLiteral("NEService"));
 
-    SMAttributeEntry* number = data.getAttributes().createAttribute(QStringLiteral("number"));
+    AttributeEntry* number = data.getAttributes().createAttribute(QStringLiteral("number"));
     number->setType(QStringLiteral("Numbers"));
 
     // The reported case: an attribute compared with a value of its own enumeration.

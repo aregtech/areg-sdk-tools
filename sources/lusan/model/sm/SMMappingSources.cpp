@@ -20,7 +20,7 @@
 #include "lusan/model/sm/SMMappingSources.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -57,7 +57,7 @@ QList<SMSourceEntry> SMMappingSources::candidates( const StateMachineData& data
         break;
 
     case SMArgumentEntry::eValueSource::Attribute:
-        for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+        for (const AttributeEntry& attr : data.getAttributes().getElements())
         {
             offer(result, attr.getName(), attr.getType(), targetType);
         }
@@ -115,7 +115,7 @@ QString SMMappingSources::referencedType( const StateMachineData& data
 
     case SMArgumentEntry::eValueSource::Attribute:
     {
-        const SMAttributeEntry* attr = index.attribute(name);
+        const AttributeEntry* attr = index.attribute(name);
         return (attr != nullptr) ? attr->getType() : QString();
     }
 

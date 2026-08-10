@@ -222,7 +222,7 @@ void SMOutlinePanel::rebuild()
     }
 
     QTreeWidgetItem* attributes = addGroup(tr("Attributes"));
-    for (const SMAttributeEntry& attribute : data.getAttributes().getElements())
+    for (const AttributeEntry& attribute : data.getAttributes().getElements())
     {
         addRegistry(attributes, attribute.getId(), attribute.getName());
     }

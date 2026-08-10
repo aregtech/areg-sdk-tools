@@ -22,7 +22,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/MethodParameter.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
@@ -543,7 +543,7 @@ static void sweepItem17(const QString& docPath, const QString& tmpDir)
     }
     model.getNotifier().notifyElementChanged(trigger->getId(), eDocElementKind::Method);
 
-    SMAttributeEntry* night = data.getAttributes().findElement(QStringLiteral("IsNightMode"));
+    AttributeEntry* night = data.getAttributes().findElement(QStringLiteral("IsNightMode"));
     night->setName(QStringLiteral("Night"));
     model.getNotifier().notifyElementChanged(night->getId(), eDocElementKind::Attribute);
 
@@ -1127,7 +1127,7 @@ static void sweepActionsLiveRefresh(const QString& docPath)
     pump(20);
 
     // Create the attribute on the shared model, as the Attributes page would.
-    SMAttributeEntry* attr = data.getAttributes().createAttribute(newAttr);
+    AttributeEntry* attr = data.getAttributes().createAttribute(newAttr);
     check(attr != nullptr, "the attribute is created");
     if (attr != nullptr)
     {

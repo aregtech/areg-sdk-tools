@@ -25,7 +25,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
@@ -99,13 +99,13 @@ public:
     SMStateData     mStates;            //!< The copied top-level states with their subtrees.
     SMLayoutData    mLayout;            //!< The Node/Edge entries of the copied set and the copied notes.
     DataTypeDataSection  mDataTypes;         //!< Explicitly copied data types.
-    SMAttributeData mAttributes;        //!< Explicitly copied attributes.
+    AttributeDataSection mAttributes;        //!< Explicitly copied attributes.
     SMEventData     mEvents;            //!< Explicitly copied events.
     SMTimerData     mTimers;            //!< Explicitly copied timers.
     SMMethodData    mMethods;           //!< Explicitly copied methods.
     ConstantDataSection  mConstants;         //!< Explicitly copied constants.
     IncludeDataSection mIncludes;       //!< Explicitly copied includes.
-    SMAttributeData mRefAttributes;     //!< Attributes referenced by the copied states.
+    AttributeDataSection mRefAttributes;     //!< Attributes referenced by the copied states.
     SMEventData     mRefEvents;         //!< Events referenced by the copied states.
     SMTimerData     mRefTimers;         //!< Timers referenced by the copied states.
     SMMethodData    mRefMethods;        //!< Methods referenced by the copied states.

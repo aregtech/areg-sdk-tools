@@ -1,4 +1,4 @@
-# ---------------------------------------------------------------------------
+﻿# ---------------------------------------------------------------------------
 # Lusan unit tests (opt-in: -DLUSAN_BUILD_TESTS=ON).
 #
 # This is additive and OFF by default, so the normal `lusan` application build
@@ -37,8 +37,9 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/common/DataTypeFactory.cpp
     ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/FieldEntry.cpp
+    ${LUSAN}/data/common/AttributeEntry.cpp
     # data/sm (the model under test)
-    ${LUSAN}/data/sm/SMAttributeData.cpp
+    ${LUSAN}/data/common/AttributeDataSection.cpp
     ${LUSAN}/data/sm/SMClipboard.cpp
     ${LUSAN}/data/sm/SMCondition.cpp
     ${LUSAN}/data/common/ConstantDataSection.cpp
@@ -181,7 +182,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
-    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
@@ -235,7 +236,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
-    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
@@ -428,7 +429,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
-    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
@@ -639,7 +640,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/common/DataTypeModel.cpp
-    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
@@ -781,7 +782,7 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/common/DataTypeFactory.cpp
     ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/FieldEntry.cpp
-    ${LUSAN}/data/si/SIAttributeData.cpp
+    ${LUSAN}/data/common/AttributeDataSection.cpp
     ${LUSAN}/data/common/ConstantDataSection.cpp
     ${LUSAN}/data/common/DataTypeDataSection.cpp
     ${LUSAN}/data/common/IncludeDataSection.cpp

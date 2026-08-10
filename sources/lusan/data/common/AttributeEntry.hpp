@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/AttributeEntry.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -20,6 +20,26 @@
  ************************************************************************/
 
 #include "lusan/data/common/ParamBase.hpp"
+
+/**
+ * \brief   What an attribute carries beyond a name, a type and a description, decided by the
+ *          document that owns the section:
+ *          - `hasValue`        : the attribute carries a default value. State machine attributes
+ *                                have one, service interface attributes do not.
+ *          - `hasNotification` : the attribute carries an update notification kind. Service
+ *                                interface attributes have one, state machine attributes do not.
+ *
+ *          Service interface: `{ hasValue = false, hasNotification = true }`.
+ *          State machine    : `{ hasValue = true , hasNotification = false }`.
+ *
+ *          The entry keeps a copy of its section's setting, so it writes the same shape wherever
+ *          it is serialized -- the document, the clipboard, or a paste fragment.
+ **/
+struct AttributeConfig
+{
+    bool hasValue;          //!< The attribute carries a default value.
+    bool hasNotification;   //!< The attribute carries an update notification kind.
+};
 
 /**
  * \class   AttributeEntry
@@ -56,6 +76,9 @@ public:
     static eNotification fromString(const QString& value);
 
 private:
+    //!< What an entry carries until a section stamps it: everything it holds, so a stray entry
+    //!< never silently drops a field on the way to a file.
+    static constexpr AttributeConfig DEFAULT_CONFIG { true, true };
     static constexpr eNotification DEFAULT_NOTIFICATION { eNotification::NotifyOnChange };  //!< The default notification type of the attribute.
     static constexpr const char* const NOTIFY_ONCHANGE  { "OnChange" }; //!< The string value of the notification type.
     static constexpr const char* const NOTIFY_ALWAYS    { "Always" };   //!< The string value of the notification type.
@@ -164,6 +187,28 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
+     * \brief   Returns what this attribute carries besides name, type and description.
+     **/
+    const AttributeConfig& getConfig() const;
+
+    /**
+     * \brief   Sets what this attribute carries. The section stamps every entry it creates or
+     *          reads, so an entry written anywhere keeps its document's shape.
+     **/
+    void setConfig(const AttributeConfig& config);
+
+    /**
+     * \brief   Gets the default value of the attribute. Empty in a document whose attributes
+     *          carry no value.
+     **/
+    const QString& getValue() const;
+
+    /**
+     * \brief   Sets the default value of the attribute.
+     **/
+    void setValue(const QString& value);
+
+    /**
      * \brief   Gets the notification type of the attribute.
      * \return  The notification type of the attribute.
      **/
@@ -193,10 +238,19 @@ public:
     bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
-     * \brief   Writes data to an XML stream.
+     * \brief   Writes data to an XML stream, in the shape this entry was stamped with.
      * \param   xml     The XML stream writer.
      **/
     void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief   Writes data to an XML stream in the shape the caller asks for. The section that
+     *          holds the entry uses this, so what reaches the file is the document's shape even
+     *          if the entry itself was never stamped.
+     * \param   xml     The XML stream writer.
+     * \param   config  What to write besides name, type, description and deprecation.
+     **/
+    void writeToXml(QXmlStreamWriter& xml, const AttributeConfig& config) const;
 
     /**
      * \brief Returns the icon to display for specific display type.
@@ -210,11 +264,18 @@ public:
      */
     QString getString(ElementBase::eDisplay display) const override;
 
+    /**
+     * \brief   Checks if the attribute is valid.
+     **/
+    bool isValid() const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    eNotification mNotification; //!< The notification type of the attribute.
+    eNotification   mNotification;  //!< The notification type of the attribute.
+    QString         mValue;         //!< The default value of the attribute.
+    AttributeConfig mConfig;        //!< What this attribute carries, from the section it lives in.
 };
 
 #endif // LUSAN_DATA_COMMON_ATTRIBUTEENTRY_HPP
