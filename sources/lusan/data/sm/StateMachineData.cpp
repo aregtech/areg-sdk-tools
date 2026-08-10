@@ -18,6 +18,8 @@
  ************************************************************************/
 
 #include "lusan/data/sm/StateMachineData.hpp"
+
+#include "lusan/data/dt/DataTypeImportResolver.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QByteArray>
@@ -431,17 +433,11 @@ bool StateMachineData::readFromFile(const QString& filePath)
         mOpenSuccess = (xml.hasError() == false);
         if (mOpenSuccess)
         {
-            // The readers build no element they do not recognize, so by the time the model
-            // exists the name and the line are gone. The text is read once more to keep both,
-            // and to keep the block itself for the save. It runs after the parse because
-            // reading the document clears what the last one left behind.
             mUnknownElements = DocUnknownScan::scan(content);
-
-            // A freshly parsed entry only carries its type name; resolve the cached type
-            // pointer now so icons/pickers match an interactively edited document.
+            DataTypeImportResolver::refresh(mDataTypes, mFilePath, mIncludes);
             mDataTypes.validate(mDataTypes);
             mAttributes.validate(mDataTypes);
-            mConstants.validate(mDataTypes.getCustomDataTypes());
+            mConstants.validate(mDataTypes.getResolutionTypes());
         }
     }
 

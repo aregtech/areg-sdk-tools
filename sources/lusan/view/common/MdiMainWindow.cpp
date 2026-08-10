@@ -28,6 +28,7 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
+#include "lusan/view/dt/DataTypeDocument.hpp"
 #include "lusan/view/common/NaviDesignPanel.hpp"
 #include "lusan/view/common/NaviFsmToolbar.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
@@ -157,6 +158,7 @@ MdiMainWindow::MdiMainWindow()
     , mActNewWorkspace(this)
     , mActFileNewSI (this)
     , mActFileNewFSM(this)
+    , mActFileNewDT (this)
     , mActFileNewLog(this)
     , mActFileOfflineLog(this)
     , mActFileOpen  (this)
@@ -220,9 +222,10 @@ MdiMainWindow::MdiMainWindow()
 const QString& MdiMainWindow::fileFilters() const
 {
     static const QString _filter {
-        "Areg SDK Files (*.siml *.fsml *.sqlog)\n"
+        "Areg SDK Files (*.siml *.fsml *.dtml *.sqlog)\n"
         "Service Interface Files (*.siml)\n"
         "State Machine Files (*.fsml)\n"
+        "Data Type Files (*.dtml)\n"
         "Log Files (*.sqlog)\n"
         "All Files (*.*)"
     };
@@ -444,6 +447,16 @@ void MdiMainWindow::onFileNewSI()
 void MdiMainWindow::onFileNewFSM()
 {
     StateMachine* child = createStateMachineView();
+    if (child != nullptr)
+    {
+        child->newFile();
+        child->show();
+    }
+}
+
+void MdiMainWindow::onFileNewDT()
+{
+    DataTypeDocument* child = createDataTypeView();
     if (child != nullptr)
     {
         child->newFile();
@@ -1310,6 +1323,10 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     {
         result = createStateMachineView(filePath);
     }
+    else if (ext == DataTypeDocument::fileExtension())
+    {
+        result = createDataTypeView(filePath);
+    }
     else if (ext == OfflineLogViewer::fileExtension())
     {
         result = createOfflineLogViewer(filePath, false);
@@ -1401,6 +1418,27 @@ StateMachine* MdiMainWindow::createStateMachineView(const QString& filePath /*= 
     return child;
 }
 
+DataTypeDocument* MdiMainWindow::createDataTypeView(const QString& filePath /*= QString()*/)
+{
+    DataTypeDocument* child = new DataTypeDocument(this, filePath, &mMdiArea);
+    if ((filePath.isEmpty() == false) && (child->openSucceeded() == false))
+    {
+        delete child;
+        QMessageBox::warning( this
+                            , tr("Invalid Data Type Document")
+                            , tr("Failed to read the data type file:\n%1\nThe file is not accessible or has invalid format.").arg(filePath));
+        return nullptr;
+    }
+
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
+    mdiSub->setWindowIcon(NELusanCommon::iconDataTypeDocument(NELusanCommon::SizeSmall));
+    child->setCurrentFile(filePath);
+    mMdiArea.setActiveSubWindow(mdiSub);
+    mdiSub->showMaximized();
+    return child;
+}
+
 LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QString()*/)
 {
     LiveLogViewer* child = new LiveLogViewer(this, &mMdiArea);
@@ -1480,6 +1518,13 @@ void MdiMainWindow::_createActions()
     mActFileNewFSM.setShortcut(QKeyCombination(Qt::Modifier::CTRL | Qt::Modifier::SHIFT, Qt::Key::Key_M));
     mActFileNewFSM.setStatusTip(tr("Create a new state machine file"));
     connect(&mActFileNewFSM, &QAction::triggered, this, &MdiMainWindow::onFileNewFSM);
+
+    initAction(mActFileNewDT, NELusanCommon::iconDataTypeDocument(NELusanCommon::SizeBig), tr("New &Data Types"));
+    // Ctrl+Shift+D and Ctrl+Shift+T already belong to the Data Types page toolbar (delete and
+    // insert a field), and a window shortcut that repeats one of those fires neither.
+    mActFileNewDT.setShortcut(QKeyCombination(Qt::Modifier::CTRL | Qt::Modifier::SHIFT, Qt::Key::Key_Y));
+    mActFileNewDT.setStatusTip(tr("Create a new data type document"));
+    connect(&mActFileNewDT, &QAction::triggered, this, &MdiMainWindow::onFileNewDT);
 
     initAction(mActFileNewLog, NELusanCommon::iconNewLiveLogs(NELusanCommon::SizeBig), tr("New &Live Logs"));
     mActFileNewLog.setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_L));
@@ -1631,6 +1676,7 @@ void MdiMainWindow::_createMenus()
     mFileMenu->addAction(&mActNewWorkspace);
     mFileMenu->addAction(&mActFileNewSI);
     mFileMenu->addAction(&mActFileNewFSM);
+    mFileMenu->addAction(&mActFileNewDT);
     mFileMenu->addAction(&mActFileNewLog);
     mFileMenu->addAction(&mActFileOpen);
     mFileMenu->addAction(&mActFileOfflineLog);
@@ -1812,6 +1858,7 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar = addToolBar(tr("File"));
     mFileToolBar->addAction(&mActFileNewSI);
     mFileToolBar->addAction(&mActFileNewFSM);
+    mFileToolBar->addAction(&mActFileNewDT);
     mFileToolBar->addAction(&mActFileNewLog);
     mFileToolBar->addAction(&mActFileOpen);
     mFileToolBar->addAction(&mActFileOfflineLog);

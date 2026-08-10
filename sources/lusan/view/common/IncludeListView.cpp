@@ -113,13 +113,16 @@ void IncludeListView::buildUi()
     mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColVersion) , QHeaderView::ResizeToContents);
 
     mGroupSource   = new QTreeWidgetItem(mTable);
-    mGroupDataType = new QTreeWidgetItem(mTable);
-    // A host that includes no document of its own kind gets no heading for one: an empty group
+    // A host that includes no document of a given kind gets no heading for it: an empty group
     // that can never fill reads as a place to put something, and there is nothing to put there.
+    mGroupDataType = (mConfig.hasDataTypes() ? new QTreeWidgetItem(mTable) : nullptr);
     mGroupDocument = (mConfig.hasDocuments() ? new QTreeWidgetItem(mTable) : nullptr);
     for (eIncludeKind kind : { eIncludeKind::Source, eIncludeKind::DataType, eIncludeKind::Document })
     {
         QTreeWidgetItem* item = ctrlGroup(kind);
+        if (item == nullptr)
+            continue;
+
         item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         // Show the expand indicator even while empty, so a heading reads as a container.
         item->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
@@ -148,7 +151,12 @@ void IncludeListView::decorateGroup(QTreeWidgetItem* group)
 
 QList<QTreeWidgetItem*> IncludeListView::groups() const
 {
-    QList<QTreeWidgetItem*> result{ mGroupSource, mGroupDataType };
+    QList<QTreeWidgetItem*> result{ mGroupSource };
+    if (mGroupDataType != nullptr)
+    {
+        result.append(mGroupDataType);
+    }
+
     if (mGroupDocument != nullptr)
     {
         result.append(mGroupDocument);
@@ -168,9 +176,11 @@ void IncludeListView::updateGroupCounts(int sourceCount, int dataTypeCount, int 
     }
 
     mGroupSource->setText(static_cast<int>(eColumn::ColLocation), tr("Include Files (%1)").arg(sourceCount));
-    // The Data Types group is a placeholder until `.dtml` becomes a real document type: entries are
-    // listed and classified, never resolved, version-checked or validated.
-    mGroupDataType->setText(static_cast<int>(eColumn::ColLocation), tr("Data Types (%1)").arg(dataTypeCount));
+    if (mGroupDataType != nullptr)
+    {
+        mGroupDataType->setText(static_cast<int>(eColumn::ColLocation), tr("Data Types (%1)").arg(dataTypeCount));
+    }
+
     if (mGroupDocument != nullptr)
     {
         mGroupDocument->setText(static_cast<int>(eColumn::ColLocation), QStringLiteral("%1 (%2)").arg(mConfig.groupDocLabel).arg(documentCount));
@@ -180,7 +190,7 @@ void IncludeListView::updateGroupCounts(int sourceCount, int dataTypeCount, int 
 void IncludeListView::refreshGroupCounts()
 {
     updateGroupCounts(mGroupSource->childCount()
-                      , mGroupDataType->childCount()
+                      , (mGroupDataType != nullptr ? mGroupDataType->childCount() : 0)
                       , (mGroupDocument != nullptr ? mGroupDocument->childCount() : 0));
 }
 
@@ -288,7 +298,7 @@ QTreeWidgetItem* IncludeListView::ctrlGroup(eIncludeKind kind) const
 {
     switch (kind)
     {
-    case eIncludeKind::DataType:    return mGroupDataType;
+    case eIncludeKind::DataType:    return (mGroupDataType != nullptr ? mGroupDataType : mGroupSource);
     case eIncludeKind::Document:    return (mGroupDocument != nullptr ? mGroupDocument : mGroupSource);
     default:                        return mGroupSource;
     }
@@ -306,7 +316,10 @@ QIcon IncludeListView::iconForKind(eIncludeKind kind) const
 
 eIncludeKind IncludeListView::kindForLocation(const QString& location) const
 {
-    return includeKindOf(location, mConfig.docExtension);
+    const eIncludeKind kind = includeKindOf(location, mConfig.docExtension);
+    // Where the host takes no data type document, a `.dtml` typed into the location field is
+    // just a file it does not know: one answer for the group, the icon and the Type column.
+    return ((kind == eIncludeKind::DataType) && (mConfig.hasDataTypes() == false)) ? eIncludeKind::Source : kind;
 }
 
 QString IncludeListView::typeForLocation(const QString& location) const

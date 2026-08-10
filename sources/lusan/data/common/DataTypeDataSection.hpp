@@ -30,11 +30,15 @@
 #include <QList>
 #include <QString>
 
+#include <memory>
+
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class QXmlStreamReader;
 class QXmlStreamWriter;
+
+class DataTypeDocumentData;
 
 class DataTypeCustom;
 class DataTypeBasicContainer;
@@ -58,6 +62,44 @@ class DataTypeStructure;
   **/
 class DataTypeDataSection : public TEDataContainer<DataTypeCustom*, DocumentElem>
 {
+//////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \enum    eImportState
+     * \brief   What one data type document the host includes currently amounts to.
+     **/
+    enum class eImportState
+    {
+          Resolved          //!< The file was read and its types are in use here.
+        , NotFound          //!< The location does not lead to a file.
+        , ParseFailed       //!< The file is there but does not read as a data type document.
+        , DuplicateSpace    //!< An earlier include already brought this namespace in.
+    };
+
+    /**
+     * \struct  ImportedTypes
+     * \brief   The types one included data type document contributes, and what happened while
+     *          it was being resolved. The namespace is the included file's base name, which is
+     *          also the namespace the generated code puts those types in.
+     *
+     *          The types are owned by the parsed document, which the group holds a handle on for
+     *          exactly as long as the group lives.
+     **/
+    struct ImportedTypes
+    {
+        uint32_t                                    id { 0 };   //!< The include row that brought the group in.
+        QString                                     location;   //!< The location as the document stores it.
+        QString                                     absolutePath;
+        QString                                     space;      //!< The namespace, taken from the file's base name.
+        eImportState                                state { eImportState::NotFound };
+        QList<DataTypeCustom*>                      types;      //!< Read-only; owned by \a document.
+        std::shared_ptr<const DataTypeDocumentData> document;
+
+        inline bool isResolved() const { return (state == eImportState::Resolved); }
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -213,6 +255,55 @@ public:
     void refreshTypeReferences();
 
 //////////////////////////////////////////////////////////////////////////
+// Attributes and operations, imported data type documents
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Replaces what the included data type documents contribute. Built by the resolver,
+     *          never by an editing command: these types belong to the documents they came from.
+     **/
+    void setImports(QList<ImportedTypes>&& imports);
+
+    /**
+     * \brief   The included data type documents, in include order, resolved or not.
+     **/
+    inline const QList<ImportedTypes>& getImports() const;
+
+    /**
+     * \brief   Every imported type, flattened, in include order. The scope a declared type name
+     *          is resolved against on top of the document's own types.
+     **/
+    inline const QList<DataTypeCustom*>& getImportedTypes() const;
+
+    /**
+     * \brief   True when an included data type document contributed a namespace of this name.
+     *          Tells a qualified name that has to resolve here from a C++ name that is none of
+     *          this registry's business.
+     **/
+    bool hasImportSpace(const QString& space) const;
+
+    /**
+     * \brief   The included document of the given namespace, or nullptr.
+     **/
+    const ImportedTypes* findImport(const QString& space) const;
+
+    /**
+     * \brief   Drops every imported group.
+     **/
+    void clearImports();
+
+    /**
+     * \brief   The types a declared type name resolves against: the document's own, and behind
+     *          them the ones its included data type documents contribute. This, not
+     *          \ref getCustomDataTypes, is what a field, a parameter, an attribute or a constant
+     *          is resolved against; \ref getCustomDataTypes stays the document's own declarations,
+     *          which is what a page lists and an author edits.
+     *
+     *          A document that imports nothing gets its own list back untouched.
+     **/
+    const QList<DataTypeCustom*>& getResolutionTypes() const;
+
+//////////////////////////////////////////////////////////////////////////
 // Hidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -230,6 +321,17 @@ private:
     inline DataType* findById(const QList<DataType*>& dataTypes, uint32_t id) const;
 
 //////////////////////////////////////////////////////////////////////////
+// Member variables.
+//////////////////////////////////////////////////////////////////////////
+private:
+    QList<ImportedTypes>            mImports;       //!< The included data type documents, in include order.
+    QList<DataTypeCustom*>          mImportedTypes; //!< Every type of \a mImports, flattened.
+    //!< Own types followed by the imported ones. Rebuilt on demand rather than kept in step:
+    //!< the document's own list is replaced whole by an edit, an undo or a reload, and a copy
+    //!< kept across one of those would hand out a pointer to a type that is gone.
+    mutable QList<DataTypeCustom*>  mScope;
+
+//////////////////////////////////////////////////////////////////////////
 // Forbidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -242,6 +344,16 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // DataTypeDataSection class inline methods.
 //////////////////////////////////////////////////////////////////////////
+
+inline const QList<DataTypeDataSection::ImportedTypes>& DataTypeDataSection::getImports() const
+{
+    return mImports;
+}
+
+inline const QList<DataTypeCustom*>& DataTypeDataSection::getImportedTypes() const
+{
+    return mImportedTypes;
+}
 
 template<class DataType>
 inline bool DataTypeDataSection::exists(const QList<DataType*>& dataTypes, const QString& typeName) const

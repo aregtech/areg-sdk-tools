@@ -253,10 +253,6 @@ document that is clean here is a document it will accept.
   the one case where saving does not reproduce the file byte for byte -- the migration is
   one-way, and the second save is byte-identical again.
 
-A schema for editors and validators is available at `.claude/fsml.xsd`, and
-`.claude/FullFeature.fsml` is a reference document that exercises every element the format
-defines.
-
 ---
 
 ## Not in this version

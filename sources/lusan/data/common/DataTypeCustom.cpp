@@ -24,6 +24,7 @@ DataTypeCustom::DataTypeCustom(ElementBase * parent /*= nullptr*/)
     , mDescription  ()
     , mDeprecateHint()
     , mIsDeprecated (false)
+    , mImportSpace  ()
 {
 }
 
@@ -32,6 +33,7 @@ DataTypeCustom::DataTypeCustom(uint32_t id, ElementBase* parent)
     , mDescription  ()
     , mDeprecateHint()
     , mIsDeprecated (false)
+    , mImportSpace  ()
 {
 }
 
@@ -40,6 +42,7 @@ DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, ElementBase* pa
     , mDescription  ()
     , mDeprecateHint()
     , mIsDeprecated (false)
+    , mImportSpace  ()
 {
 }
 
@@ -48,6 +51,7 @@ DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, co
     , mDescription  ()
     , mDeprecateHint()
     , mIsDeprecated (false)
+    , mImportSpace  ()
 {
 }
 
@@ -56,6 +60,7 @@ DataTypeCustom::DataTypeCustom(const DataTypeCustom& src)
     , mDescription  (src.mDescription)
     , mDeprecateHint(src.mDeprecateHint)
     , mIsDeprecated (src.mIsDeprecated)
+    , mImportSpace  (src.mImportSpace)
 {
 }
 
@@ -64,6 +69,7 @@ DataTypeCustom::DataTypeCustom(DataTypeCustom&& src) noexcept
     , mDescription  (std::move(src.mDescription))
     , mDeprecateHint(std::move(src.mDeprecateHint))
     , mIsDeprecated (src.mIsDeprecated)
+    , mImportSpace  (std::move(src.mImportSpace))
 {
 }
 
@@ -79,6 +85,7 @@ DataTypeCustom& DataTypeCustom::operator = (const DataTypeCustom& other)
         mDescription    = other.mDescription;
         mDeprecateHint  = other.mDeprecateHint;
         mIsDeprecated   = other.mIsDeprecated;
+        mImportSpace    = other.mImportSpace;
     }
 
     return *this;
@@ -92,6 +99,7 @@ DataTypeCustom& DataTypeCustom::operator = (DataTypeCustom&& other) noexcept
         mDescription    = std::move(other.mDescription);
         mDeprecateHint  = std::move(other.mDeprecateHint);
         mIsDeprecated   = other.mIsDeprecated;
+        mImportSpace    = std::move(other.mImportSpace);
     }
 
     return *this;
@@ -110,6 +118,38 @@ void DataTypeCustom::setDescription(const QString& description)
 bool DataTypeCustom::isValid() const
 {
     return (getId() != 0) && DataTypeBase::isValid();
+}
+
+bool DataTypeCustom::hasTypeName(const QString& typeName) const
+{
+    if (mImportSpace.isEmpty())
+    {
+        return DataTypeBase::hasTypeName(typeName);
+    }
+
+    // Compared in place rather than by building `Space::Name`: every lookup of every declared
+    // type walks this, and a temporary string per candidate is a cost the editor would feel.
+    const qsizetype split = mImportSpace.size();
+    return (typeName.size() == (split + 2 + mName.size()))
+        && (typeName.at(split) == QLatin1Char(':'))
+        && (typeName.at(split + 1) == QLatin1Char(':'))
+        && typeName.startsWith(mImportSpace)
+        && typeName.endsWith(mName);
+}
+
+void DataTypeCustom::setImportSpace(const QString& space)
+{
+    mImportSpace = space;
+}
+
+bool DataTypeCustom::isDocumentImport() const
+{
+    return (mImportSpace.isEmpty() == false);
+}
+
+QString DataTypeCustom::getQualifiedName() const
+{
+    return (mImportSpace.isEmpty() ? mName : (mImportSpace + QStringLiteral("::") + mName));
 }
 
 bool DataTypeCustom::getIsDeprecated() const

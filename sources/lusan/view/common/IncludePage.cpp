@@ -90,18 +90,22 @@ QString IncludePage::getCellText(const QModelIndex& cell) const
 QStringList IncludePage::getSupportedExtensions(void) const
 {
     // A data type document belongs to no editor in particular and is shared, so `.dtml` is
-    // always offered. Whether a document of the host's own kind may be included is the one
-    // configured difference between the editors.
+    // offered wherever the host takes one. Whether a document of the host's own kind may be
+    // included is the other configured difference between the editors.
     const IncludeTypeConfig& config = mList->getConfig();
     QStringList exts{};
     exts.append(LusanApplication::getExternalFileExtensions());
     if (config.hasDocuments())
     {
-        exts.append(LusanApplication::buildFileFilter(tr("%1 Files").arg(config.docTypeLabel)
-                                                     , QStringList{ QStringLiteral("*.") + config.docExtension
-                                                                  , QStringLiteral("*.dtml") }));
+        QStringList docExts{ QStringLiteral("*.") + config.docExtension };
+        if (config.hasDataTypes())
+        {
+            docExts.append(QStringLiteral("*.dtml"));
+        }
+
+        exts.append(LusanApplication::buildFileFilter(tr("%1 Files").arg(config.docTypeLabel), docExts));
     }
-    else
+    else if (config.hasDataTypes())
     {
         exts.append(LusanApplication::buildFileFilter(tr("Data Type Files"), QStringList{ QStringLiteral("*.dtml") }));
     }

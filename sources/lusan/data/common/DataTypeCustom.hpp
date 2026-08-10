@@ -122,6 +122,14 @@ public:
      **/
     bool isValid() const override;
 
+    /**
+     * \brief   A type read out of an included data type document answers to its qualified
+     *          spelling and to nothing else, so a bare name always stays the reading document's
+     *          own. A type the document declares itself answers as it always has.
+     * \param   typeName    The spelling as written in the document.
+     **/
+    bool hasTypeName(const QString& typeName) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
@@ -153,6 +161,30 @@ public:
      **/
     QString getType() const;
 
+    /**
+     * \brief   The namespace of the data type document this type was read from, empty for a type
+     *          the document declares itself.
+     **/
+    inline const QString& getImportSpace() const;
+
+    /**
+     * \brief   Marks the type as read out of the data type document of the given namespace.
+     *          Set once, when the document is parsed, and never by an editing command: the
+     *          reading document shows such a type but does not own it.
+     **/
+    void setImportSpace(const QString& space);
+
+    /**
+     * \brief   True for a type that came out of an included data type document.
+     **/
+    bool isDocumentImport() const override;
+
+    /**
+     * \brief   The spelling a document has to write to reach this type: `Space::Name` for a type
+     *          out of an included document, the plain name for one declared here.
+     **/
+    QString getQualifiedName() const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -160,7 +192,17 @@ protected:
     QString     mDescription;   //!< The description of the data type.
     QString     mDeprecateHint; //!< The data type deprication reason.
     bool        mIsDeprecated;  //!< Flag, indicating the data type is deprecated.
+    QString     mImportSpace;   //!< The document this type was imported from; empty when declared here.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypeCustom class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const QString& DataTypeCustom::getImportSpace() const
+{
+    return mImportSpace;
+}
 
 #endif // LUSAN_DATA_COMMON_DATATYPECUSTOM_HPP
 

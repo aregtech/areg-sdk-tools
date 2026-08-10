@@ -177,6 +177,8 @@ namespace
             , SMValidator::RULE_UNRESOLVED_REFERENCE
             , SMValidator::RULE_BAD_LITERAL
             , SMValidator::RULE_UNREFERENCED
+            , SMValidator::RULE_DUPLICATE_ENUM_VALUE
+            , SMValidator::RULE_DEPRECATED
         };
 
         return _rules;
@@ -1260,12 +1262,26 @@ namespace
             else
                 checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias(), vtr("The import"));
         }
+        if (mData.getOverview().getIsDeprecated())
+        {
+            mChecks.noteDeprecated(mData.getOverview().getId(), eDocElementKind::Overview
+                                  , vtr("The state machine"), eSeverity::Warning
+                                  , mData.getOverview().getDeprecateHint());
+        }
+
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {
             if (d == nullptr)
                 continue;
 
             checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName(), vtr("The data type"));
+            if (d->getIsDeprecated())
+            {
+                mChecks.noteDeprecated(d->getId(), eDocElementKind::DataType
+                                      , vtr("Data type '%1'").arg(d->getName())
+                                      , eSeverity::Info, d->getDeprecateHint());
+            }
+
             // A composed type declares types of its own. Without this a structure field or a
             // container element could name a type nothing in the document defines, and the fault
             // only surfaced later, at whatever used the composed type.
@@ -1273,6 +1289,11 @@ namespace
             {
                 for (const FieldEntry& f : static_cast<const DataTypeStructure*>(d)->getElements())
                     checkDataType(f.getId(), eDocElementKind::DataType, f.getType());
+            }
+            else if (d->isEnumeration())
+            {
+                mChecks.checkEnumeratorValues(eDocElementKind::DataType, d->getName()
+                                             , static_cast<const DataTypeEnum*>(d)->getElements());
             }
             else if (d->isContainer())
             {
@@ -1294,6 +1315,10 @@ namespace
 
     void Ctx::checkImports(const QList<LevelInfo>& levels)
     {
+        // A data type document is included, not instantiated: it has no alias, hosts no state and
+        // pins no version. All it has to do is lead to a file that reads as one.
+        mChecks.checkImportedDocuments(eDocElementKind::Include, SMValidator::RULE_BROKEN_IMPORT);
+
         QSet<QString> brokenAliases;
         for (const IncludeEntry* import : mData.machineImports())
         {
@@ -2020,6 +2045,7 @@ namespace
             if ((d != nullptr) && (typesUsed.contains(d->getName()) == false))
                 mChecks.noteUnreferenced(d->getId(), eDocElementKind::DataType, vtr("Data type '%1'").arg(d->getName()), eSeverity::Warning);
         }
+        mChecks.noteUnusedImports(eDocElementKind::Include, SMValidator::RULE_UNUSED_IMPORT, typesUsed);
 
         // Warning 5: an event reacted to but never sent, or sent but never reacted to.
         for (const Use& u : reactedEvents)
@@ -2062,6 +2088,10 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
         case 7:  return vtr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
         case 10: return vtr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
         case 11: return vtr("The inline code block generates nothing. Write the code, or remove the block.");
+        case SMValidator::RULE_DEPRECATED:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
+        case SMValidator::RULE_UNUSED_IMPORT:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnusedImport);
         default: return vtr("Advisory only. The document still generates.");
         }
     }
@@ -2091,6 +2121,10 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
     case 21: return vtr("A condition that takes parameters may appear as the left operand only. The right side must be a plain value.");
     case 23: return vtr("The value source and the target disagree; pick a source of a compatible kind.");
     case 24: return vtr("The element refers to itself, directly or through a cycle.");
+    case SMValidator::RULE_DUPLICATE_ENUM_VALUE:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
+    case SMValidator::RULE_BROKEN_IMPORT:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::BrokenImport);
     default: return (severity == DocIssue::eSeverity::Error)
                         ? vtr("The document will not generate until this is resolved.")
                         : QString();
@@ -2114,6 +2148,9 @@ eIssueField SMValidator::fieldOfRule(int rule)
     case SMValidator::RULE_DUPLICATE_NAME:
     case SMValidator::RULE_INVALID_IDENTIFIER:
         return eIssueField::Name;
+
+    case SMValidator::RULE_DUPLICATE_ENUM_VALUE:
+        return eIssueField::Value;
 
     default:
         return eIssueField::None;

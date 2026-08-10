@@ -32,6 +32,7 @@
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/data/dt/DataTypeImportResolver.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/si/SICommand.hpp"
@@ -961,39 +962,54 @@ namespace
         }
     }
 
-    //!< A `.dtml` include contributes a type only when the interface declares with a name this
-    //!< document does not answer to. When every declared type resolves here, the import is dead
-    //!< weight and is reported.
+    //!< What the engine says about a `.dtml` row. The rows here point at files that are not on
+    //!< disk, which is the broken-import shape; a row that does resolve, and the advisory on one
+    //!< nothing declares with, are exercised over real files by the import tests.
     void testValidatorUnusedImport()
     {
         const int unusedImport = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT;
 
-        {   // A header is not a data type document, so it is never reported by this rule.
+        //!< The rows are classified as they load a file; a document built in memory has to be
+        //!< asked, which is what the editor does on every include edit.
+        auto resolveImports = [](ServiceInterfaceData& doc)
+        {
+            DataTypeImportResolver::refresh(doc.getDataTypeData(), doc.getFilePath(), doc.getIncludeData());
+        };
+
+        {   // A header is not a data type document, so neither import rule ever looks at it.
             ServiceInterfaceData doc;
             makeUsable(doc);
             CHECK(doc.getIncludeData().createInclude(QStringLiteral("common/Global.hpp")) != nullptr);
-            CHECK(countRule(SIValidator::validate(doc), unusedImport) == 0);
+            resolveImports(doc);
+            CHECK(doc.getDataTypeData().getImports().isEmpty());
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, unusedImport) == 0);
+            CHECK(countRule(issues, SIValidator::RULE_BROKEN_IMPORT) == 0);
         }
 
-        {   // Every type the interface uses is a primitive declared nowhere but in the catalog,
-            // so nothing can be coming from the imported document.
+        {   // The row names a file nothing can be read from, so it contributes no type and is
+            // reported for that, not for going unused.
             ServiceInterfaceData doc;
             makeUsable(doc);
             CHECK(doc.getIncludeData().createInclude(QStringLiteral("shared/Types.dtml")) != nullptr);
+            resolveImports(doc);
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, unusedImport) == 1);
-            CHECK(namesIt(issues, unusedImport, QStringLiteral("'shared/Types.dtml'")));
+            CHECK(countRule(issues, SIValidator::RULE_BROKEN_IMPORT) == 1);
+            CHECK(namesIt(issues, SIValidator::RULE_BROKEN_IMPORT, QStringLiteral("'shared/Types.dtml'")));
+            CHECK(countRule(issues, unusedImport) == 0);
         }
 
-        {   // A declared type this document does not answer to may be the imported one, so the
-            // import is left alone. The unresolved name itself is still reported.
+        {   // A bare name is the interface's own whatever it includes, so an undeclared one is
+            // reported as the unresolved type it is.
             ServiceInterfaceData doc;
             makeUsable(doc);
             CHECK(doc.getIncludeData().createInclude(QStringLiteral("shared/Types.dtml")) != nullptr);
             AttributeEntry* imported = doc.getAttributeData().createAttribute(QStringLiteral("shape"));
             CHECK(imported != nullptr);
             imported->setType(QStringLiteral("Polygon"));
+            resolveImports(doc);
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(countRule(issues, unusedImport) == 0);

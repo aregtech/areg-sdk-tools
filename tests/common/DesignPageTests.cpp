@@ -41,6 +41,7 @@
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
 #include "lusan/data/common/MethodDataSection.hpp"
+#include "lusan/model/dt/DataTypeDocumentModel.hpp"
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -67,13 +68,17 @@
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
+#include <QAbstractButton>
 #include <QApplication>
 #include <QDir>
+#include <QFile>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QToolButton>
+#include <QTemporaryDir>
+#include <QTextStream>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -603,6 +608,228 @@ namespace
     }
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+// The data type document
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testDataTypeDocumentPages(const QString& outDir)
+    {
+        std::printf("=== the shared pages over a data type document ===\n");
+        DataTypeDocumentModel model;
+        DocUndoStack& stack = model.getUndoStack();
+
+        {
+            // A data type document is named by its file, the way a service interface is, so its
+            // name row is shown and not edited. It has neither a category nor a threading row.
+            OverviewPageConfig config;
+            config.headline        = QStringLiteral("Data Type Document Overview");
+            config.versionTitle    = QStringLiteral("Document Version:");
+            config.descriptionHint = QStringLiteral("Describe the data types collected here");
+            config.nameEditable    = false;
+            config.links           =
+            {
+                  { 1, QStringLiteral("linkDataTypes"), QStringLiteral("Data Types ...")
+                  , QStringLiteral("Click to open the Data Types page"), QStringLiteral("Open Data Types Page ...") }
+                , { 2, QStringLiteral("linkIncludes") , QStringLiteral("Includes ...")
+                  , QStringLiteral("Click to open the Includes page"), QStringLiteral("Open Includes Page ...") }
+            };
+
+            OverviewPage* page = new OverviewPage(model.getOverviewModel(), config);
+            page->refreshAll();
+            QWidget* window = showPage(page);
+
+            // Exactly two quick links, and neither of the rows the other two documents add.
+            CHECK(page->findChild<QAbstractButton*>(QStringLiteral("linkDataTypes")) != nullptr);
+            CHECK(page->findChild<QAbstractButton*>(QStringLiteral("linkIncludes")) != nullptr);
+            CHECK(page->findChild<QAbstractButton*>(QStringLiteral("overviewCategoryPublic")) == nullptr);
+            CHECK(page->findChild<QAbstractButton*>(QStringLiteral("overviewThreadingShared")) == nullptr);
+
+            exerciseOverview( "data type document / Overview", page, stack, false
+                            , [&model]() { return model.getData().getOverviewData().getName(); }
+                            , [&model]() { return model.getData().getOverviewData().getDescription(); }
+                            , [&model]() { return model.getData().getOverviewData().getVersion().getMajor(); }
+                            , outDir, QStringLiteral("dt-overview"));
+            delete window;
+        }
+
+        {
+            DataTypePage* page = new DataTypePage(model.getDataTypeModel(), QStringLiteral("Data Types"));
+            QWidget* window = showPage(page);
+            DataTypeDetailsView* details = page->findChild<DataTypeDetailsView*>();
+            PageProbe probe
+            {
+                  page
+                , page->getList()->ctrlTableList()
+                , page->getList()->ctrlButtonAdd()
+                , (details != nullptr ? details->ctrlName() : nullptr)
+                , [&model]() { return static_cast<int>(model.getDataTypeSection().getElements().size()); }
+                , [&model](int at) { return model.getDataTypeSection().getElements().at(at)->getName(); }
+            };
+
+            exercisePage("data type document / Data Types", probe, stack, QStringLiteral("ProbedType"), outDir, QStringLiteral("dt-datatypes"));
+            delete window;
+        }
+
+        {
+            // A data type document is a leaf: C++ headers only, so its Includes page shows one
+            // group -- neither a document group nor the Data Types group the other two have.
+            IncludeTypeConfig config{};
+            config.takesDataTypes = false;
+            IncludePage* page = new IncludePage(model.getIncludesModel(), config, QStringLiteral("Includes"));
+            QWidget* window = showPage(page);
+            IncludeListView* list = page->findChild<IncludeListView*>();
+            IncludeDetailsView* details = page->findChild<IncludeDetailsView*>();
+            CHECK(list != nullptr);
+            if (list != nullptr)
+            {
+                CHECK(list->ctrlTableList()->topLevelItemCount() == 1);
+                CHECK(treeShows(list->ctrlTableList(), QStringLiteral("Data Types (0)")) == false);
+            }
+
+            PageProbe probe
+            {
+                  page
+                , (list != nullptr ? list->ctrlTableList() : nullptr)
+                , (list != nullptr ? list->ctrlButtonAdd() : nullptr)
+                , (details != nullptr ? details->ctrlInclude() : nullptr)
+                , [&model]() { return static_cast<int>(model.getIncludeSection().getElements().size()); }
+                , [&model](int at) { return model.getIncludeSection().getElements().at(at).getName(); }
+            };
+
+            exercisePage("data type document / Includes", probe, stack, QStringLiteral("probe/Verified.hpp"), outDir, QStringLiteral("dt-includes"));
+            delete window;
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// The Data Types page of a document that reads types out of an included one
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< Writes \p content to \p path, reporting the failure rather than going on quietly.
+    bool writeFixture(const QString& path, const QString& content)
+    {
+        QFile file(path);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text) == false)
+        {
+            return false;
+        }
+
+        QTextStream stream(&file);
+        stream << content;
+        file.close();
+        return true;
+    }
+
+    void testImportedTypesPage(const QString& outDir)
+    {
+        std::printf("=== the Data Types page over an included data type document ===\n");
+
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        if (dir.isValid() == false)
+        {
+            return;
+        }
+
+        const bool wroteTypes = writeFixture(dir.filePath(QStringLiteral("Shared.dtml")),
+            QStringLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                           "<DataTypeDocument FormatVersion=\"1.0.0\">\n"
+                           "    <Overview ID=\"50\" Name=\"Shared\" Version=\"1.0.0\"/>\n"
+                           "    <DataTypeList>\n"
+                           "        <DataType ID=\"51\" Name=\"Unit\" Type=\"Enumeration\" Values=\"uint16\">\n"
+                           "            <FieldList>\n"
+                           "                <EnumEntry ID=\"52\" Name=\"Celsius\" Value=\"0\"/>\n"
+                           "            </FieldList>\n"
+                           "        </DataType>\n"
+                           "        <DataType ID=\"53\" Name=\"Reading\" Type=\"Structure\">\n"
+                           "            <FieldList>\n"
+                           "                <Field ID=\"54\" Name=\"value\" DataType=\"uint32\"/>\n"
+                           "            </FieldList>\n"
+                           "        </DataType>\n"
+                           "    </DataTypeList>\n"
+                           "</DataTypeDocument>\n"));
+        CHECK(wroteTypes);
+
+        const QString hostPath = dir.filePath(QStringLiteral("Sensor.siml"));
+        const bool wroteHost = writeFixture(hostPath,
+            QStringLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                           "<ServiceInterface FormatVersion=\"1.1.0\">\n"
+                           "    <Overview ID=\"1\" Name=\"Sensor\" Version=\"1.0.0\" Category=\"Public\"/>\n"
+                           "    <DataTypeList>\n"
+                           "        <DataType ID=\"5\" Name=\"Local\" Type=\"Structure\">\n"
+                           "            <FieldList>\n"
+                           "                <Field ID=\"6\" Name=\"unit\" DataType=\"Shared::Unit\"/>\n"
+                           "            </FieldList>\n"
+                           "        </DataType>\n"
+                           "    </DataTypeList>\n"
+                           "    <IncludeList>\n"
+                           "        <Location ID=\"20\" Name=\"./Shared.dtml\"/>\n"
+                           "    </IncludeList>\n"
+                           "</ServiceInterface>\n"));
+        CHECK(wroteHost);
+
+        ServiceInterfaceModel model(hostPath);
+        CHECK(model.openSucceeded());
+
+        DataTypePage* page = new DataTypePage(model.getDataTypeModel(), QStringLiteral("Data Types"));
+        QWidget* window = showPage(page);
+        QTreeWidget* tree = page->getList()->ctrlTableList();
+        DataTypeDetailsView* details = page->findChild<DataTypeDetailsView*>();
+        CHECK(details != nullptr);
+
+        // The document's own type first, then one heading per included document.
+        CHECK(tree->topLevelItemCount() == 2);
+        CHECK(treeShows(tree, QStringLiteral("Local")));
+        CHECK(treeShows(tree, QStringLiteral("Shared")));
+
+        QTreeWidgetItem* group = (tree->topLevelItemCount() == 2 ? tree->topLevelItem(1) : nullptr);
+        CHECK((group != nullptr) && (group->childCount() == 2));
+
+        // The heading names a document, not a declaration, so nothing is selected through it.
+        if (group != nullptr)
+        {
+            tree->setCurrentItem(group);
+            QApplication::processEvents();
+            CHECK(page->getList()->ctrlButtonRemove()->isEnabled() == false);
+        }
+
+        // An imported row shows what it declares and lets none of it be touched.
+        QTreeWidgetItem* importedRow = ((group != nullptr) && (group->childCount() == 2)) ? group->child(0) : nullptr;
+        CHECK(importedRow != nullptr);
+        if (importedRow != nullptr)
+        {
+            group->setExpanded(true);
+            tree->setCurrentItem(importedRow);
+            QApplication::processEvents();
+
+            // The value column carries the spelling the author has to write.
+            CHECK(importedRow->text(2) == QStringLiteral("Shared::Unit"));
+            CHECK((details != nullptr) && (details->isEnabled() == false));
+            CHECK(page->getList()->ctrlButtonRemove()->isEnabled() == false);
+            CHECK(page->getList()->ctrlButtonAddField()->isEnabled() == false);
+
+            // Neither the document's own types nor the borrowed ones moved.
+            CHECK(model.getDataTypeSection().getElements().size() == 1);
+            CHECK(model.getDataTypeSection().getImportedTypes().size() == 2);
+        }
+
+        // Back on the document's own type, everything is editable again.
+        tree->setCurrentItem(tree->topLevelItem(0));
+        QApplication::processEvents();
+        CHECK((details != nullptr) && details->isEnabled());
+        CHECK(page->getList()->ctrlButtonRemove()->isEnabled());
+
+        savePicture(page, outDir, QStringLiteral("si-imported-datatypes"));
+        delete window;
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
@@ -624,6 +851,8 @@ int main(int argc, char* argv[])
 
     testServiceInterfacePages(outDir);
     testStateMachinePages(documentPath, outDir);
+    testDataTypeDocumentPages(outDir);
+    testImportedTypesPage(outDir);
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

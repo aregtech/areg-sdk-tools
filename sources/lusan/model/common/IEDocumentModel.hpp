@@ -127,6 +127,38 @@ public:
     virtual DocValidationController& getValidationController() = 0;
 
     /**
+     * \brief   The file the document lives in, empty while it has never been saved. An included
+     *          location is measured from the directory of this file, so a document that has none
+     *          resolves only what it names absolutely.
+     **/
+    virtual QString getDocumentPath() const
+    {
+        return QString();
+    }
+
+    /**
+     * \brief   Whether a data type document in the include list contributes types here. True for
+     *          a document that reads types from elsewhere, false for a data type document, which
+     *          is a leaf and includes C++ headers only.
+     **/
+    virtual bool takesDataTypeImports() const
+    {
+        return true;
+    }
+
+    /**
+     * \brief   Re-resolves every declared type of the document against the registry as it stands
+     *          now: every attribute, method parameter, constant, structure field and container
+     *          element drops the type object it holds and looks its name up again.
+     *
+     *          Needed when the registry changes underneath the document rather than through it.
+     *          An included data type document saved in another window replaces every type object
+     *          it contributed, and a reference still pointing at a previous one is stale. An
+     *          ordinary edit does not need this: it re-resolves what it touched.
+     **/
+    virtual void refreshTypeReferences() = 0;
+
+    /**
      * \brief   Names the element a finding blames, in the document's own words, so a results row
      *          says where before it says what. Answer an empty string when the element's kind is
      *          the whole answer -- a registry entry whose message already quotes its name needs

@@ -19,7 +19,10 @@
 
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 
+#include "lusan/data/common/AttributeEntry.hpp"
+#include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/MethodEntry.hpp"
 #include "lusan/model/si/SIValidator.hpp"
 
 ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString()*/)
@@ -36,7 +39,37 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
 {
 }
 
+void ServiceInterfaceModel::refreshTypeReferences()
+{
+    DataTypeDataSection& types = mSIData.getDataTypeData();
+    types.refreshTypeReferences();
+
+    // Dropped before being looked up again: validate() only fills an empty slot, so a reference
+    // to a type that has been replaced would otherwise survive as it is.
+    for (AttributeEntry& entry : mSIData.getAttributeData().getElements())
+    {
+        entry.invalidate();
+    }
+
+    for (MethodEntry* entry : mSIData.getMethodData().getElements())
+    {
+        if (entry != nullptr)
+        {
+            entry->invalidate();
+        }
+    }
+
+    for (ConstantEntry& entry : mSIData.getConstantData().getElements())
+    {
+        entry.invalidate();
+    }
+
+    mSIData.getAttributeData().validate(types);
+    mSIData.getMethodData().validate(types);
+    mSIData.getConstantData().validate(types.getResolutionTypes());
+}
+
 const QList<DataTypeCustom*>& ServiceInterfaceModel::getCustomDataTypes() const
 {
-    return mSIData.getDataTypeData().getCustomDataTypes();
+    return mSIData.getDataTypeData().getResolutionTypes();
 }

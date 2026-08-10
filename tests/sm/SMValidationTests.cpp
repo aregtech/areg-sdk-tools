@@ -40,6 +40,7 @@
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMDocumentCache.hpp"
+#include "lusan/data/dt/DTDocumentCache.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 
 #include "lusan/data/common/DataTypeContainer.hpp"
@@ -2923,6 +2924,92 @@ namespace
                           , DocRuleChecks::eShape::Unreferenced));
         }
     }
+
+    //!< A machine reads types out of an included data type document the same way an interface
+    //!< does: qualified, under the included file's base name.
+    void testDataTypeDocumentImport()
+    {
+        std::printf("- data type documents included by a machine\n");
+
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        if (dir.isValid() == false)
+        {
+            return;
+        }
+
+        const QString shared = QDir(dir.path()).absoluteFilePath(QStringLiteral("Shared.dtml"));
+        QFile types(shared);
+        CHECK(types.open(QIODevice::WriteOnly | QIODevice::Text));
+        types.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    "<DataTypeDocument FormatVersion=\"1.0.0\">\n"
+                    "    <Overview ID=\"50\" Name=\"Shared\" Version=\"1.0.0\"/>\n"
+                    "    <DataTypeList>\n"
+                    "        <DataType ID=\"51\" Name=\"Unit\" Type=\"Enumeration\" Values=\"uint16\">\n"
+                    "            <FieldList>\n"
+                    "                <EnumEntry ID=\"52\" Name=\"Celsius\" Value=\"0\"/>\n"
+                    "            </FieldList>\n"
+                    "        </DataType>\n"
+                    "    </DataTypeList>\n"
+                    "</DataTypeDocument>\n");
+        types.close();
+
+        const QString hostPath = QDir(dir.path()).absoluteFilePath(QStringLiteral("Machine.fsml"));
+
+        {   // The attribute declares with the imported enumeration and resolves.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getIncludes().createInclude(QStringLiteral("./Shared.dtml"));
+            doc.getAttributes().createAttribute(QStringLiteral("unit"))->setType(QStringLiteral("Shared::Unit"));
+            CHECK(doc.writeToFile(hostPath));
+
+            DTDocumentCache::getInstance().clear();
+            StateMachineData reloaded;
+            CHECK(reloaded.readFromFile(hostPath));
+
+            const DataTypeDataSection& registry = reloaded.getDataTypes();
+            CHECK(registry.getImports().size() == 1);
+            CHECK((registry.getImports().size() == 1) && registry.getImports().first().isResolved());
+            CHECK(registry.hasImportSpace(QStringLiteral("Shared")));
+            CHECK(registry.findCustomDataType(QStringLiteral("Shared::Unit")) != nullptr);
+            // A bare name is the machine's own, and it declares none.
+            CHECK(registry.findCustomDataType(QStringLiteral("Unit")) == nullptr);
+
+            const QList<SMIssue> issues = SMValidator::validate(reloaded);
+            CHECK(countRule(issues, SMValidator::RULE_UNRESOLVED_REFERENCE) == 0);
+            CHECK(countRule(issues, SMValidator::RULE_BROKEN_IMPORT) == 0);
+            CHECK(countRule(issues, SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNUSED_IMPORT) == 0);
+        }
+
+        {   // The document is included but nothing declares with it.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getIncludes().createInclude(QStringLiteral("./Shared.dtml"));
+            CHECK(doc.writeToFile(hostPath));
+
+            DTDocumentCache::getInstance().clear();
+            StateMachineData reloaded;
+            CHECK(reloaded.readFromFile(hostPath));
+            CHECK(countRule(SMValidator::validate(reloaded)
+                           , SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNUSED_IMPORT) == 1);
+        }
+
+        {   // The row leads nowhere, so it contributes no type and is reported for that.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getIncludes().createInclude(QStringLiteral("./Gone.dtml"));
+            CHECK(doc.writeToFile(hostPath));
+
+            DTDocumentCache::getInstance().clear();
+            StateMachineData reloaded;
+            CHECK(reloaded.readFromFile(hostPath));
+            CHECK(reloaded.openSucceeded());
+
+            const QList<SMIssue> issues = SMValidator::validate(reloaded);
+            CHECK(countRule(issues, SMValidator::RULE_BROKEN_IMPORT) == 1);
+            CHECK(countRule(issues, SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNUSED_IMPORT) == 0);
+        }
+    }
 }
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -2960,6 +3047,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testDataTypeGaps();
     testDefaultOrderAndCallableNames();
     testSharedRuleShapes();
+    testDataTypeDocumentImport();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

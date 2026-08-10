@@ -44,7 +44,7 @@ class OverviewDataSection : public DocumentElem
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
-protected:
+public:
     /**
      * \brief   Creates the section.
      * \param   omitEmptyDescription    True where the document leaves an empty description out
@@ -58,7 +58,6 @@ protected:
      **/
     OverviewDataSection(uint32_t id, const QString& name, bool omitEmptyDescription, ElementBase* parent);
 
-public:
     virtual ~OverviewDataSection(void) = default;
 
 //////////////////////////////////////////////////////////////////////////

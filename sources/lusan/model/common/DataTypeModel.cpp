@@ -29,7 +29,11 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/EnumEntry.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/data/dt/DTDocumentCache.hpp"
+#include "lusan/data/dt/DataTypeImportResolver.hpp"
+#include "lusan/model/common/DocValidationController.hpp"
 
+#include <QFileSystemWatcher>
 #include <QObject>
 
 namespace
@@ -52,14 +56,27 @@ namespace
 }
 
 DataTypeModel::DataTypeModel(IEDocumentModel& document)
-    : QObject   ( )
-    , mDocument (document)
+    : QObject     ( )
+    , mDocument   (document)
+    , mImportWatch(new QFileSystemWatcher(this))
 {
-    // A structure field and a container key/value keep the type object they resolved to beside
-    // the name they were given, and that object is what tells a valid declaration from a broken
-    // one. Adding, removing, converting or renaming a type changes what those names resolve to,
-    // so they are all looked up again here, once per change. The document facade builds this
-    // model before it builds any page, so the section is coherent by the time a page reads it.
+    // The include list decides which data type documents this one reads types out of, so an
+    // include added, dropped or repointed changes the registry as surely as a type would.
+    auto onIncludesChanged = [this](uint32_t, eDocElementKind kind)
+    {
+        if (kind == eDocElementKind::Include)
+        {
+            refreshImports();
+        }
+    };
+
+    connect(mImportWatch, &QFileSystemWatcher::fileChanged, this, [this](const QString& path)
+    {
+        // The file on disk is not what was parsed any more, whoever wrote it.
+        DTDocumentCache::getInstance().invalidate(path);
+        refreshImports();
+    });
+
     DocModelNotifier& notifier = mDocument.getNotifier();
     auto onTypesChanged = [this](uint32_t, eDocElementKind kind)
     {
@@ -72,7 +89,57 @@ DataTypeModel::DataTypeModel(IEDocumentModel& document)
     connect(&notifier, &DocModelNotifier::elementAdded  , this, onTypesChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, onTypesChanged);
     connect(&notifier, &DocModelNotifier::elementChanged, this, onTypesChanged);
-    connect(&notifier, &DocModelNotifier::documentReloaded, this, [this]() { types().refreshTypeReferences(); });
+    connect(&notifier, &DocModelNotifier::elementAdded  , this, onIncludesChanged);
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, onIncludesChanged);
+    connect(&notifier, &DocModelNotifier::elementChanged, this, onIncludesChanged);
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, [this]()
+    {
+        types().refreshTypeReferences();
+        refreshImports();
+    });
+
+    // The document was read before this model was built, so the groups are already there; only
+    // the watch on them is not.
+    rearmImportWatch();
+}
+
+const QList<DataTypeDataSection::ImportedTypes>& DataTypeModel::getImports() const
+{
+    return types().getImports();
+}
+
+void DataTypeModel::refreshImports()
+{
+    if (mDocument.takesDataTypeImports() == false)
+    {
+        return;
+    }
+
+    if (DataTypeImportResolver::refresh(types(), mDocument.getDocumentPath(), mDocument.getIncludeSection()) == false)
+    {
+        return;
+    }
+
+    mDocument.refreshTypeReferences();
+    rearmImportWatch();
+
+    emit importsChanged();
+    mDocument.getValidationController().scheduleValidation();
+}
+
+void DataTypeModel::rearmImportWatch()
+{
+    const QStringList watched = mImportWatch->files();
+    if (watched.isEmpty() == false)
+    {
+        mImportWatch->removePaths(watched);
+    }
+
+    const QStringList paths = DataTypeImportResolver::resolvedPaths(types());
+    if (paths.isEmpty() == false)
+    {
+        mImportWatch->addPaths(paths);
+    }
 }
 
 const DataTypeDataSection& DataTypeModel::getDataTypeData() const
@@ -443,7 +510,7 @@ ElementBase* DataTypeModel::createField(DataTypeCustom* dataType, const QString&
         FieldEntry field(0, name, structType);
         // Resolve the type pointer before the command's redo() fires the notifier -- a page
         // rebuilds its row synchronously inside push(), before this function regains control.
-        field.validate(getCustomDataTypes());
+        field.validate(types().getResolutionTypes());
         mDocument.getUndoStack().push(new TDocAddCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, field, eDocElementKind::DataType, QObject::tr("Add field")));
         return structType->findElement(name);
     }
@@ -467,7 +534,7 @@ ElementBase* DataTypeModel::insertField(DataTypeCustom* dataType, int position, 
     {
         DataTypeStructure* structType = static_cast<DataTypeStructure*>(dataType);
         FieldEntry field(0, name, structType);
-        field.validate(getCustomDataTypes());
+        field.validate(types().getResolutionTypes());
         mDocument.getUndoStack().push(buildInsertCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, field, position, dataType->getId(), eDocElementKind::DataType, QObject::tr("Insert field")));
         return structType->findElement(name);
     }
@@ -552,7 +619,7 @@ void DataTypeModel::setFieldType(DataTypeStructure* dataType, uint32_t fieldId, 
 
     const uint32_t ownerId = dataType->getId();
     auto getter = [dataType, fieldId]() -> QString { FieldEntry* f = dataType->findElement(fieldId); return (f != nullptr ? f->getType() : QString()); };
-    auto setter = [this, dataType, fieldId](const QString& value) { FieldEntry* f = dataType->findElement(fieldId); if (f != nullptr) { f->setType(value); f->validate(getCustomDataTypes()); } };
+    auto setter = [this, dataType, fieldId](const QString& value) { FieldEntry* f = dataType->findElement(fieldId); if (f != nullptr) { f->setType(value); f->validate(types().getResolutionTypes()); } };
     mDocument.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::DataType, getter, setter, typeName, QObject::tr("Set field type")));
 }
 

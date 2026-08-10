@@ -19,7 +19,10 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 
+#include "lusan/data/common/AttributeEntry.hpp"
+#include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMImportResolver.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -268,9 +271,55 @@ void StateMachineModel::publishStateNamePreview(uint32_t stateId, const QString&
     emit signalStateNamePreview(stateId, text);
 }
 
+void StateMachineModel::refreshTypeReferences()
+{
+    if (mData == nullptr)
+    {
+        return;
+    }
+
+    DataTypeDataSection& types = mData->getDataTypes();
+    types.refreshTypeReferences();
+
+    // Dropped before being looked up again: validate() only fills an empty slot, so a reference
+    // to a type that has been replaced would otherwise survive as it is.
+    for (AttributeEntry& entry : mData->getAttributes().getElements())
+    {
+        entry.invalidate();
+    }
+
+    for (ConstantEntry& entry : mData->getConstants().getElements())
+    {
+        entry.invalidate();
+    }
+
+    for (SMEventEntry* event : mData->getEvents().getElements())
+    {
+        if (event != nullptr)
+        {
+            event->invalidate();
+        }
+    }
+
+    mData->getAttributes().validate(types);
+    mData->getConstants().validate(types.getResolutionTypes());
+    for (SMEventEntry* event : mData->getEvents().getElements())
+    {
+        if (event != nullptr)
+        {
+            event->validate(types.getResolutionTypes());
+        }
+    }
+}
+
+QString StateMachineModel::getDocumentPath() const
+{
+    return (mData != nullptr ? mData->getFilePath() : QString());
+}
+
 const QList<DataTypeCustom*>& StateMachineModel::getCustomDataTypes() const
 {
-    return const_cast<StateMachineModel*>(this)->mDataTypeModel.getCustomDataTypes();
+    return const_cast<StateMachineModel*>(this)->mDataTypeModel.getDataTypeData().getResolutionTypes();
 }
 
 QString StateMachineModel::describeElement(uint32_t id, eDocElementKind /*kind*/) const

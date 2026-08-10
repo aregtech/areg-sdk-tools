@@ -42,6 +42,7 @@ class DataTypeStructure;
 class ElementBase;
 class EnumEntry;
 class FieldEntry;
+class QFileSystemWatcher;
 
 /**
  * \class   DataTypeModel
@@ -103,6 +104,31 @@ public:
     IEDocumentModel& getDocument() const;
 
 //////////////////////////////////////////////////////////////////////////
+// Imported data type documents
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   What the included data type documents currently contribute, in include order.
+     **/
+    const QList<DataTypeDataSection::ImportedTypes>& getImports() const;
+
+    /**
+     * \brief   Rebuilds the imported groups from the document's include list and, when that
+     *          changed anything, re-resolves the declared types, re-arms the file watch and
+     *          announces it. Called on every include edit and whenever an included file changes
+     *          on disk, so a data type document saved in one window reaches the others at once.
+     **/
+    void refreshImports();
+
+signals:
+    /**
+     * \brief   The imported groups are not what they were: a document was included, dropped,
+     *          repointed, or changed on disk. Not routed through the document notifier, which
+     *          carries what a command did to the document itself.
+     **/
+    void importsChanged();
+
+//////////////////////////////////////////////////////////////////////////
 // Mutations -- data type level
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -161,11 +187,17 @@ public:
 private:
     inline DataTypeDataSection& types() const;
 
+    //!< Points the watch at the files the imports currently resolve to. A watch is dropped by
+    //!< the system when the file is replaced rather than written in place, which is how most
+    //!< editors save, so the whole set is re-armed on every rebuild.
+    void rearmImportWatch();
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     IEDocumentModel&    mDocument;
+    QFileSystemWatcher* mImportWatch;   //!< Watches the included data type documents; owned by this.
 };
 
 //////////////////////////////////////////////////////////////////////////

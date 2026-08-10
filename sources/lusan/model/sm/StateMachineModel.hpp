@@ -120,7 +120,7 @@ public:
     inline AttributeDataSection& getAttributeSection() override;
 
     /**
-     * rief   The document's `MethodList` section, read from the data object that is current
+     * \brief   The document's `MethodList` section, read from the data object that is current
      *          now for the same reason as the constants section above.
      **/
     inline MethodDataSection& getMethodSection() override;
@@ -152,6 +152,16 @@ public:
     inline SMIncludeModel& getIncludeModel();
     inline SMSelectionModel& getSelectionModel();
     inline DocValidationController& getValidationController() override;
+
+    /**
+     * \brief   The file the machine lives in, empty while it has never been saved.
+     **/
+    QString getDocumentPath() const override;
+
+    /**
+     * \brief   Re-resolves every declared type of the machine against the registry.
+     **/
+    void refreshTypeReferences() override;
 
 signals:
     void signalDirtyChanged(bool dirty);

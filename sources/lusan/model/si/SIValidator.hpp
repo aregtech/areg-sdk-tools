@@ -67,10 +67,13 @@ public:
     static constexpr int RULE_RESPONSE_LINK         { 6 };  //!< A request bound to a response that is not there.
     static constexpr int RULE_EMPTY_TYPE            { 7 };  //!< A structure or enumeration with no fields.
     static constexpr int RULE_DEFAULT_ORDER         { 8 };  //!< A defaulted parameter before one without a default.
+    static constexpr int RULE_DUPLICATE_ENUM_VALUE  { 9 };  //!< Two enumerators of one enumeration counting the same.
     static constexpr int RULE_UNREFERENCED         { 10 };  //!< Advisory: nothing in the document uses the declaration.
     static constexpr int RULE_UNBOUND_RESPONSE     { 11 };  //!< Advisory: no request leads to this response.
     static constexpr int RULE_EMPTY_INTERFACE      { 12 };  //!< Advisory: the interface offers nothing to a client.
     static constexpr int RULE_UNUSED_IMPORT        { 13 };  //!< Advisory: an imported data type document contributes nothing.
+    static constexpr int RULE_DEPRECATED           { 14 };  //!< Advisory: the interface, or a declaration in it, is marked deprecated.
+    static constexpr int RULE_BROKEN_IMPORT        { 15 };  //!< An included data type document that could not be read.
 
 //////////////////////////////////////////////////////////////////////////
 // Operations

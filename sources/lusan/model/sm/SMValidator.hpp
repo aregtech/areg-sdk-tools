@@ -122,6 +122,28 @@ public:
     static constexpr int RULE_MISSING_DESCRIPTION { 14 };
 
     /**
+     * \brief   Two enumerators of one enumeration counting the same, so a value read back
+     *          cannot be told apart from the other one.
+     **/
+    static constexpr int RULE_DUPLICATE_ENUM_VALUE { 40 };
+
+    /**
+     * \brief   Advisory: the machine, or a declaration in it, is marked deprecated.
+     **/
+    static constexpr int RULE_DEPRECATED { 41 };
+
+    /**
+     * \brief   An included data type document that could not be read, so every type it was to
+     *          contribute is missing here.
+     **/
+    static constexpr int RULE_BROKEN_IMPORT { 42 };
+
+    /**
+     * \brief   Advisory: an included data type document the machine takes no type from.
+     **/
+    static constexpr int RULE_UNUSED_IMPORT { 43 };
+
+    /**
      * \brief   The rule guard findings are filed under. The guard checker owns the grammar and
      *          the symbol binding, but its findings are collected into the one document run.
      **/

@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="VendingMachine" Version="2.1.0" Threading="Shared">
+        <Description>Coverage document for the `.fsml` format: every element and attribute the
+            editor can persist appears at least once. It is the determinism fixture (SM-27) and
+            the worked reference for authoring agents. Keep it loadable and keep it complete --
+            when the format gains an element, add it here in the same commit.</Description>
+    </Overview>
+    <DataTypeList>
+        <DataType ID="2" Name="eCoin" Type="Enumeration" Values="default">
+            <Description>The coin denominations the machine accepts.</Description>
+            <FieldList>
+                <EnumEntry ID="3" Name="Nickel">
+                    <Description>Five cents.</Description>
+                </EnumEntry>
+                <EnumEntry ID="4" Name="Dime">
+                    <Description>Ten cents.</Description>
+                </EnumEntry>
+                <EnumEntry ID="5" Name="Quarter">
+                    <Description>Twenty-five cents.</Description>
+                </EnumEntry>
+            </FieldList>
+        </DataType>
+        <DataType ID="6" Name="sSelection" Type="Structure">
+            <Description>One product selection: the slot and the price charged for it.</Description>
+            <FieldList>
+                <Field ID="7" Name="slot" DataType="uint16">
+                    <Value IsDefault="true">0</Value>
+                    <Description>The slot number.</Description>
+                </Field>
+                <Field ID="8" Name="price" DataType="uint32">
+                    <Description>The price in cents.</Description>
+                </Field>
+            </FieldList>
+        </DataType>
+        <DataType ID="9" Name="SlotList" Type="Imported">
+            <Location>vending/NEVending.hpp</Location>
+            <Namespace>NEVending</Namespace>
+            <ImportedObject>SlotList</ImportedObject>
+            <Description>The externally declared list of slots.</Description>
+        </DataType>
+        <DataType ID="10" Name="PriceMap" Type="Container">
+            <Container>HashMap</Container>
+            <BaseTypeValue>uint32</BaseTypeValue>
+            <BaseTypeKey>String</BaseTypeKey>
+            <Description>Slot name to price in cents.</Description>
+        </DataType>
+    </DataTypeList>
+    <AttributeList>
+        <Attribute ID="11" Name="Credit" DataType="uint32" Value="0">
+            <Description>The credit inserted so far, in cents.</Description>
+        </Attribute>
+        <Attribute ID="12" Name="SelectedSlot" DataType="uint16" Value="0">
+            <Description>The slot the user selected, zero when nothing is selected.</Description>
+        </Attribute>
+        <Attribute ID="13" Name="Maintenance" DataType="bool" Value="false">
+            <Description>Whether the machine is under maintenance.</Description>
+        </Attribute>
+        <Attribute ID="14" Name="LegacyFlag" DataType="bool" Value="false" IsDeprecated="true">
+            <DeprecateHint>Replaced by Maintenance in version 2.0.0.</DeprecateHint>
+            <Description>Kept so older documents still resolve the name.</Description>
+        </Attribute>
+    </AttributeList>
+    <EventList>
+        <Event ID="15" Name="CoinInserted">
+            <Description>A coin was accepted by the coin unit.</Description>
+            <ParamList>
+                <Parameter ID="16" Name="coin" DataType="eCoin">
+                    <Description>The denomination that was inserted.</Description>
+                </Parameter>
+                <Parameter ID="17" Name="amount" DataType="uint32" Default="5">
+                    <Description>The value of the coin in cents.</Description>
+                </Parameter>
+            </ParamList>
+        </Event>
+        <Event ID="18" Name="Dispensed">
+            <Description>Completion event raised when the dispensing submachine finishes.</Description>
+        </Event>
+    </EventList>
+    <TimerList>
+        <Timer ID="19" Name="IdleTimeout" Timeout="30000" Repeat="1">
+            <Description>How long the machine waits before refunding an abandoned selection.</Description>
+        </Timer>
+        <Timer ID="20" Name="BlinkTimer" Timeout="500" Repeat="0" IsDeprecated="true">
+            <DeprecateHint>The maintenance lamp is driven by the firmware since 2.0.0.</DeprecateHint>
+            <Description>Blink cadence of the maintenance lamp.</Description>
+        </Timer>
+    </TimerList>
+    <MethodList>
+        <Method ID="21" Name="power_on" MethodType="Trigger">
+            <Description>Powers the machine on.</Description>
+        </Method>
+        <Method ID="22" Name="select_slot" MethodType="Trigger">
+            <Description>The user pressed a slot button.</Description>
+            <ParamList>
+                <Parameter ID="23" Name="slot" DataType="uint16">
+                    <Description>The slot that was pressed.</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="24" Name="cancel" MethodType="Trigger">
+            <Description>The user cancelled the purchase.</Description>
+        </Method>
+        <Method ID="25" Name="service_mode" MethodType="Trigger" IsDeprecated="true">
+            <DeprecateHint>Service mode is entered from the panel, not from a trigger.</DeprecateHint>
+            <Description>Puts the machine into maintenance.</Description>
+        </Method>
+        <Method ID="26" Name="dispense" MethodType="Action">
+            <Description>Releases the product of one slot.</Description>
+            <ParamList>
+                <Parameter ID="27" Name="slot" DataType="uint16" Default="0">
+                    <Description>The slot to release.</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="28" Name="refund_credit" MethodType="Action">
+            <Description>Returns the remaining credit to the user.</Description>
+        </Method>
+        <Method ID="29" Name="show_message" MethodType="Action">
+            <Description>Writes one line on the customer display.</Description>
+            <ParamList>
+                <Parameter ID="30" Name="text" DataType="String">
+                    <Description>The line to display.</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="31" Name="has_enough_credit" MethodType="Condition" Return="bool" Implement="Handler">
+            <Description>Handler condition: whether the inserted credit covers the price.</Description>
+            <ParamList>
+                <Parameter ID="32" Name="credit" DataType="uint32">
+                    <Description>The credit inserted so far.</Description>
+                </Parameter>
+                <Parameter ID="33" Name="price" DataType="uint32">
+                    <Description>The price of the selection.</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="34" Name="is_maintenance" MethodType="Condition" Return="bool" Implement="Embedded">
+            <Description>Embedded condition evaluated inline by the generated code.</Description>
+            <Body><![CDATA[return Maintenance;]]></Body>
+        </Method>
+    </MethodList>
+    <ConstantList>
+        <Constant ID="35" Name="MAX_CREDIT" DataType="uint32" Value="1000">
+            <Description>The largest credit the machine holds before refusing coins.</Description>
+        </Constant>
+        <Constant ID="36" Name="CURRENCY" DataType="String" Value="EUR">
+            <Description>The currency shown on the display.</Description>
+        </Constant>
+    </ConstantList>
+    <IncludeList>
+        <Location ID="37" Name="areg/base/GEGlobal.h">
+            <Description>The AREG global declarations.</Description>
+        </Location>
+        <Location ID="38" Name="vending/private/VendingHelpers.hpp" IsDeprecated="true">
+            <DeprecateHint>The helpers moved into the generated base class.</DeprecateHint>
+            <Description>Local helper declarations.</Description>
+        </Location>
+        <Location ID="39" Name="./Payment.fsml" Alias="Payment" Version="1.2.0">
+            <Description>The card-payment submachine, instantiated by the Dispensing state.</Description>
+        </Location>
+    </IncludeList>
+    <StateList>
+        <State ID="84" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="85" Kind="Initial" To="40"/>
+            </TransitionList>
+        </State>
+        <State ID="40" Name="Off" Kind="Normal">
+            <Description>The machine is powered down. All credit has been refunded.</Description>
+            <EntryList>
+                <ActionCall ID="41" Action="refund_credit"/>
+            </EntryList>
+            <TransitionList>
+                <Transition ID="42" Kind="External" StimulusKind="Trigger" Stimulus="power_on" To="43">
+                    <Description>Power on and enter the operational composite state.</Description>
+                </Transition>
+            </TransitionList>
+        </State>
+        <State ID="43" Name="Operational" Kind="Normal" History="Shallow" OnFinal="Dispensed">
+            <Description>The machine serves customers. Shallow history restores the substate
+                that was active when maintenance interrupted the sale.</Description>
+            <EntryList>
+                <ActionCall ID="44" Action="show_message">
+                    <ArgumentList>
+                        <Argument ID="45" Name="text" Source="Constant" Value="CURRENCY"/>
+                    </ArgumentList>
+                </ActionCall>
+            </EntryList>
+            <ExitList>
+                <TimerStop ID="46" Timer="IdleTimeout"/>
+            </ExitList>
+            <TransitionList>
+                <Transition ID="48" Kind="External" StimulusKind="Trigger" Stimulus="service_mode" To="76">
+                    <Description>Composite-owned: fires while any descendant is active.</Description>
+                    <Guard state="ok">
+                        <Expr>
+                            <Call id="34" name="is_maintenance"/>
+                        </Expr>
+                        <Rendered>is_maintenance()</Rendered>
+                    </Guard>
+                </Transition>
+                <Transition ID="49" Kind="External" StimulusKind="Event" Stimulus="Dispensed" To="40">
+                    <Description>The completion event of the nested final state powers down.</Description>
+                </Transition>
+            </TransitionList>
+            <StateList>
+                <State ID="86" Name="Start1" Kind="Start">
+                    <TransitionList>
+                        <Transition ID="87" Kind="Initial" To="50"/>
+                    </TransitionList>
+                </State>
+                <State ID="50" Name="Idle" Kind="Normal">
+                    <Description>Waiting for a selection.</Description>
+                    <EntryList>
+                        <TimerStart ID="51" Timer="IdleTimeout"/>
+                    </EntryList>
+                    <ExitList>
+                        <TimerStop ID="52" Timer="IdleTimeout"/>
+                    </ExitList>
+                    <TransitionList>
+                        <Transition ID="54" Kind="External" StimulusKind="Trigger" Stimulus="select_slot" To="60">
+                            <Description>A slot was chosen and the machine holds enough credit.</Description>
+                            <Guard state="ok">
+                                <Expr>
+                                    <And>
+                                        <Cmp op="ge">
+                                            <Attr id="11" name="Credit"/>
+                                            <Const id="35" name="MAX_CREDIT"/>
+                                        </Cmp>
+                                        <Not brk="1" indent="1">
+                                            <Attr id="13" name="Maintenance"/>
+                                        </Not>
+                                    </And>
+                                </Expr>
+                                <Rendered>Credit &gt;= MAX_CREDIT &amp;&amp; !Maintenance</Rendered>
+                            </Guard>
+                            <OperationList>
+                                <AttributeSet ID="55" Attribute="SelectedSlot" Source="Param" Value="slot"/>
+                                <TimerStart ID="56" Timer="IdleTimeout" Timeout="45000" Repeat="2"/>
+                            </OperationList>
+                        </Transition>
+                        <Transition ID="57" Kind="Internal" StimulusKind="Timer" Stimulus="IdleTimeout">
+                            <Description>Internal: nothing was selected, remind the customer.</Description>
+                            <OperationList>
+                                <ActionCall ID="58" Action="show_message">
+                                    <ArgumentList>
+                                        <Argument ID="59" Name="text" Source="Value" Value="Please select"/>
+                                    </ArgumentList>
+                                </ActionCall>
+                            </OperationList>
+                        </Transition>
+                    </TransitionList>
+                </State>
+                <State ID="60" Name="Paying" Kind="Normal">
+                    <Description>Coins are accepted until the price is covered.</Description>
+                    <TransitionList>
+                        <Transition ID="61" Kind="External" StimulusKind="Event" Stimulus="CoinInserted" To="70">
+                            <Description>Enough credit: hand over to the dispensing submachine.</Description>
+                            <Guard state="ok">
+                                <Expr>
+                                    <Or>
+                                        <Call id="31" name="has_enough_credit">
+                                            <Arg id="32">
+                                                <Attr id="11" name="Credit"/>
+                                            </Arg>
+                                            <Arg id="33">
+                                                <Lit>250</Lit>
+                                            </Arg>
+                                        </Call>
+                                        <Cmp op="lt" brk="1">
+                                            <Param id="17" name="amount"/>
+                                            <Lit>25</Lit>
+                                        </Cmp>
+                                        <Lambda brk="1">[](uint32_t c) { return c &gt; 0; }(Credit)</Lambda>
+                                        <Raw brk="1" indent="2">legacyCoinCheck()</Raw>
+                                    </Or>
+                                </Expr>
+                                <Rendered>has_enough_credit(Credit, 250) || amount &lt; 25 || [](uint32_t c) { return c &gt; 0; }(Credit) || legacyCoinCheck()</Rendered>
+                            </Guard>
+                            <OperationList>
+                                <EventSend ID="62" Event="CoinInserted">
+                                    <ArgumentList>
+                                        <Argument ID="63" Name="coin" Source="Value" Value="Quarter"/>
+                                        <Argument ID="64" Name="amount" Source="Attribute" Value="Credit"/>
+                                    </ArgumentList>
+                                </EventSend>
+                            </OperationList>
+                        </Transition>
+                        <Transition ID="65" Kind="External" StimulusKind="Trigger" Stimulus="cancel" To="50">
+                            <Description>The purchase was cancelled; every value source appears once
+                                in the refund message arguments.</Description>
+                            <Guard state="draft">
+                                <Draft>Credit &gt; </Draft>
+                            </Guard>
+                            <OperationList>
+                                <ActionCall ID="66" Action="dispense">
+                                    <ArgumentList>
+                                        <Argument ID="67" Name="slot" Source="Expression">
+                                            <Expression><![CDATA[SelectedSlot > 0 ? SelectedSlot : 1]]></Expression>
+                                        </Argument>
+                                    </ArgumentList>
+                                </ActionCall>
+                                <ActionCall ID="68" Action="show_message">
+                                    <ArgumentList>
+                                        <Argument ID="69" Name="text" Source="Lambda" Value="[]() { return &quot;cancelled&quot;; }()"/>
+                                    </ArgumentList>
+                                </ActionCall>
+                            </OperationList>
+                        </Transition>
+                    </TransitionList>
+                </State>
+                <State ID="70" Name="Dispensing" Kind="Normal" Submachine="Payment">
+                    <Description>Sealed instance of the imported Payment machine.</Description>
+                    <TransitionList>
+                        <Transition ID="71" Kind="External" StimulusKind="Event" Stimulus="Dispensed" To="72">
+                            <Description>The submachine reported completion.</Description>
+                        </Transition>
+                    </TransitionList>
+                </State>
+                <State ID="72" Name="Complete" Kind="Final">
+                    <Description>The sale finished; the composite raises its OnFinal event.</Description>
+                    <EntryList>
+                        <ActionCall ID="73" Action="dispense">
+                            <ArgumentList>
+                                <Argument ID="74" Name="slot" Source="Attribute" Value="SelectedSlot"/>
+                            </ArgumentList>
+                        </ActionCall>
+                        <TimerStop ID="75" Timer="BlinkTimer"/>
+                    </EntryList>
+                </State>
+            </StateList>
+        </State>
+        <State ID="76" Name="Maintenance" Kind="Normal" History="Deep">
+            <Description>Service personnel took the machine over. Deep history restores the whole
+                nested configuration when the machine returns to service.</Description>
+            <EntryList>
+                <TimerStart ID="77" Timer="BlinkTimer" Repeat="0"/>
+            </EntryList>
+            <ExitList>
+                <TimerStop ID="78" Timer="BlinkTimer"/>
+                <InlineCode ID="79">
+                    <Body><![CDATA[clearFaults();
+resetCoinBox();]]></Body>
+                </InlineCode>
+            </ExitList>
+            <TransitionList>
+                <Transition ID="80" Kind="External" StimulusKind="Trigger" Stimulus="power_on" To="43">
+                    <Description>Back to service; shallow history reopens the interrupted sale.</Description>
+                    <OperationList>
+                        <AttributeSet ID="81" Attribute="Maintenance" Source="Value" Value="false"/>
+                    </OperationList>
+                </Transition>
+            </TransitionList>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+            <View Owner="43" Zoom="90" X="40" Y="20"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="40" X="80" Y="160" Width="160" Height="64"/>
+            <Node Owner="43" X="380" Y="120" Width="260" Height="140" Color="#2E7D32" HeaderColor="#1B5E20"/>
+            <Node Owner="50" X="80" Y="100" Width="180" Height="64"/>
+            <Node Owner="60" X="340" Y="100" Width="180" Height="64" Color="#F9A825"/>
+            <Node Owner="70" X="600" Y="100" Width="200" Height="64" Expanded="false"/>
+            <Node Owner="72" X="860" Y="100" Width="160" Height="64"/>
+            <Node Owner="76" X="780" Y="160" Width="200" Height="64" Color="#C62828"/>
+            <Node Owner="84" X="80" Y="80" Width="64" Height="32"/>
+            <Node Owner="86" X="80" Y="20" Width="64" Height="32"/>
+        </NodeList>
+        <EdgeList>
+            <Edge Owner="42">
+                <Point X="240" Y="192"/>
+                <Point X="380" Y="192"/>
+                <Label X="290" Y="172"/>
+            </Edge>
+            <Edge Owner="48" Shape="Arc" Bulge="0.35" Color="#8E1B1B">
+                <Point X="640" Y="180"/>
+                <Point X="780" Y="192"/>
+                <Label X="700" Y="150"/>
+            </Edge>
+            <Edge Owner="54">
+                <Point X="260" Y="132"/>
+                <Point X="340" Y="132"/>
+            </Edge>
+        </EdgeList>
+        <NoteList>
+            <Note ID="82" Level="1" X="80" Y="320" Width="280" Height="72">
+                <Text>Coverage fixture: every persisted element appears once.
+Do not prune it -- the byte-identical resave test reads this file.</Text>
+            </Note>
+            <Note ID="83" Level="43" Owner="60" X="340" Y="220" Width="240" Height="64" Color="#FFF59D">
+                <Text>The Paying guard exercises every guard node kind.</Text>
+            </Note>
+        </NoteList>
+    </Layout>
+</StateMachine>
