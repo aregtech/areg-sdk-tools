@@ -102,6 +102,12 @@ public:
     inline DataTypeDataSection& getDataTypeSection() override;
 
     /**
+     * \brief   The document's `IncludeList` section, read from the data object that is current
+     *          now for the same reason as the constants section above.
+     **/
+    inline IncludeDataSection& getIncludeSection() override;
+
+    /**
      * \brief   Builds the command that rewrites whatever refers to a renamed element by name.
      *          A state machine reaches guards, operations and transition stimuli this way, so
      *          unlike a service interface it always has repair work to do.
@@ -194,6 +200,11 @@ inline ConstantDataSection& StateMachineModel::getConstantSection()
 inline DataTypeDataSection& StateMachineModel::getDataTypeSection()
 {
     return mData->getDataTypes();
+}
+
+inline IncludeDataSection& StateMachineModel::getIncludeSection()
+{
+    return mData->getIncludes();
 }
 
 inline bool StateMachineModel::isReadOnly() const

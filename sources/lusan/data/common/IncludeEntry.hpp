@@ -41,9 +41,9 @@ enum class eIncludeKind
 };
 
 /**
- * \brief   Classifies an include location. \p docExtension is the host document's own
- *          extension without the dot ("fsml" or "siml") -- a state machine including a
- *          `.siml`, or the reverse, is not a Document include and never resolves.
+ * \brief   Classifies an include location. \p docExtension is the extension, without the dot,
+ *          of the document kind the host may include ("fsml" for a state machine). It is empty
+ *          for a host that includes no document of any kind, and then nothing is a Document.
  **/
 eIncludeKind includeKindOf(const QString& location, const QString& docExtension);
 

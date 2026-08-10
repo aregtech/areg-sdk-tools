@@ -6,6 +6,7 @@
     ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/common/DocModelNotifier.cpp
     ${LUSAN}/model/common/DocUnknownScan.cpp
+    ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/common/FileSystemEntry.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN}/model/common/FileSystemFilter.cpp
@@ -26,6 +27,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/common/DocUndoStack.hpp
     ${LUSAN}/model/common/DocUnknownScan.hpp
     ${LUSAN}/model/common/FileSystemEntry.hpp
+    ${LUSAN}/model/common/IncludeModel.hpp
     ${LUSAN}/model/common/IEDocumentModel.hpp
     ${LUSAN}/model/common/LiteralValidator.hpp
     ${LUSAN}/model/common/FileSystemFilter.hpp

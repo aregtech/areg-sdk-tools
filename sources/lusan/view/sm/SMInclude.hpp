@@ -19,44 +19,31 @@
  *
  ************************************************************************/
 
-#include <QScrollArea>
-#include "lusan/view/common/IEditCommit.hpp"
-#include "lusan/view/common/TableCell.hpp"
-
-#include "lusan/data/common/IncludeEntry.hpp"
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/view/common/IncludePage.hpp"
 
 #include <QStringList>
 #include <cstdint>
 
-class IncludeDetailsView;
-class IncludeListView;
-class QEvent;
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class IncludeEntry;
 class QLabel;
 class QLineEdit;
-class QModelIndex;
 class QPlainTextEdit;
 class QPushButton;
-class QStackedWidget;
-class QTreeWidgetItem;
 class SMIncludeModel;
 
 /**
- * \brief   The FSM Includes page: one list of everything the document pulls in from outside --
- *          C++ headers, data type documents and imported state machines -- under three
- *          headings, with the selected entry's editor beside it.
- *
- *          One list rather than two, because a reader should not have to know which registry a
- *          file belongs to before they can look for it or add it. The detail editor swaps by the
- *          selected row's kind: an imported machine has an alias, a pinned version and a
- *          resolution status; a header has a deprecation flag; a data type has neither.
- *
- *          Every edit is committed through the page model's undo commands; the page mutates no
- *          model state directly and rebuilds the list from the live model on every notifier
- *          signal, self-triggered or from undo/redo alike.
+ * \brief   The FSM Includes page: the shared \ref IncludePage plus what only a state machine
+ *          does with an included file. A `.fsml` row is an imported machine, so it gets its own
+ *          editor -- an alias, a pinned version and a resolution status -- and the safety checks
+ *          that keep an import from closing a cycle or nesting too deep.
  **/
-class SMInclude : public    QScrollArea
-                , public    IEditCommit
-                , protected IETableHelper
+class SMInclude : public IncludePage
 {
     Q_OBJECT
 
@@ -65,20 +52,8 @@ class SMInclude : public    QScrollArea
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit SMInclude(SMIncludeModel& model, QWidget* parent = nullptr);
-    virtual ~SMInclude() = default;
 
-    /**
-     * \brief   Selects the include with the given ID, expanding its group first
-     *          (go-to-declaration landing).
-     **/
-    bool revealElement(uint32_t id);
-
-    /**
-     * \brief   Hands over the description text the page is still holding, from whichever of the
-     *          two detail forms the selected row uses. The box applies its text when it loses the
-     *          focus, which a save from the keyboard never causes.
-     **/
-    void commitPendingEdits(void) override;
+    virtual ~SMInclude(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Shared entry points
@@ -100,107 +75,69 @@ public:
      **/
     static bool acceptMachine(SMIncludeModel& model, const QString& absoluteFilePath, QWidget* parent);
 
-    //!< The browse filters of the FSM Includes page: C++ sources plus `.fsml` and `.dtml`.
-    static QStringList getSupportedExtensions();
-
     //!< The browse filter for an imported state machine.
-    static QStringList getMachineExtensions();
+    static QStringList getMachineExtensions(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Hands over the description text of whichever of the two forms the selected row
+     *          uses.
+     **/
+    virtual void commitPendingEdits(void) override;
+
 protected:
-    bool eventFilter(QObject* watched, QEvent* event) override;
+    /**
+     * \brief   Brings the imported machine editor forward for a `.fsml` row, and leaves every
+     *          other row to the shared file editor.
+     **/
+    virtual void selectedInclude(const IncludeEntry* entry) override;
 
     /**
-     * \brief   Returns the number of columns in the include list (IETableHelper).
+     * \brief   Lists the states that host the machine and lets the author decide.
      **/
-    int getColumnCount() const override;
-
-    /**
-     * \brief   Returns the text of the given list cell (IETableHelper).
-     * \param   cell    The index of the cell.
-     **/
-    QString getCellText(const QModelIndex& cell) const override;
-
-//////////////////////////////////////////////////////////////////////////
-// Slots
-//////////////////////////////////////////////////////////////////////////
-private slots:
-    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
-    void onAddClicked();
-    void onInsertClicked();
-    void onRemoveClicked();
-    void onMoveUpClicked();
-    void onMoveDownClicked();
-
-    void onLocationCommitted();
-
-    //!< Commits an inline edit of the Location column into the model (undo command); the derived
-    //!< Type/Name columns then refresh from the notifier. Escape is handled by the delegate.
-    void onInlineLocationEdited(const QModelIndex& index, const QString& newValue);
-
-    void onBrowseClicked();
-    void onDeprecatedToggled(bool checked);
-    void onDeprecateHintCommitted();
-
-    void onAliasCommitted();
-    void onMachineLocationCommitted();
-    void onMachineBrowseClicked();
-    void onUpdateVersionClicked();
-
-    //!< Re-derives the Type/Name/Version columns from the current include locations.
-    void onUpdateClicked();
-
-    //!< Rebuilds the whole list on any include-kind notifier signal.
-    void onNotifierChanged();
-
-//////////////////////////////////////////////////////////////////////////
-// Hidden methods
-//////////////////////////////////////////////////////////////////////////
-private:
-    void buildUi();
-    QWidget* buildMachineDetails();
-    void setupSignals();
-
-    //!< Rebuilds the whole list from the live model and restores the selection by ID.
-    void refreshAll();
-    //!< Selects the include by ID; returns false if not found (and selects nothing).
-    bool selectInclude(uint32_t id);
-    //!< Populates the details panel for the given include and brings the matching page forward.
-    void selectedInclude(const IncludeEntry* entry);
-    //!< Clears the details panel and disables the row-only tool buttons.
-    void showClean();
-
-    void setNodeText(QTreeWidgetItem* node, const IncludeEntry& entry) const;
-    void updateMoveButtons(int row, int rowCount);
-
-    //!< A placeholder location for a new entry, unique in the registry.
-    QString genName();
+    virtual bool confirmRemove(uint32_t id) override;
 
     /**
      * \brief   Runs the machine checks on a location the user typed, but only when it names a
      *          file that exists: a path that resolves to nothing cannot close a cycle or be too
      *          deep, and the user may be about to create it. Validation reports it either way.
-     * \return  False when the location must not be committed.
      **/
-    bool acceptTypedLocation(const QString& location);
+    virtual bool acceptLocation(const QString& location) override;
 
-    //!< The include ID stored on the currently selected row, or 0 if none.
-    uint32_t currentIncludeId() const;
+    /**
+     * \brief   A picked `.fsml` is a registration too, so it passes the same add-time checks and
+     *          is stored relative to the host document rather than to the workspace.
+     **/
+    virtual void commitBrowsedLocation(uint32_t id, const QString& absolutePath, const QString& relativePath) override;
 
-    //!< Puts the caret in the selected include's Location field with its text selected. An
-    //!< include has no name of its own, the location is what identifies it.
-    void focusLocationField();
+    virtual bool eventFilter(QObject* watched, QEvent* event) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
+private slots:
+    void onAliasCommitted(void);
+    void onMachineLocationCommitted(void);
+    void onMachineBrowseClicked(void);
+    void onUpdateVersionClicked(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    void buildMachineDetails(void);
+
+    //!< The resolution and version-drift sentence shown for one imported machine.
+    QString machineStatusText(const IncludeEntry& entry) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SMIncludeModel&     mModel;
-    IncludeListView*    mList;
-    QStackedWidget*     mDetailsStack;      //!< Swaps the editor by the selected row's kind.
-    IncludeDetailsView* mDetails;           //!< Source and data type editor.
+    SMIncludeModel&     mModel;             //!< The includes of the state machine being edited.
     QWidget*            mMachinePage;       //!< Imported machine editor.
     QLineEdit*          mMachineAlias;
     QLineEdit*          mMachineLocation;
@@ -208,8 +145,6 @@ private:
     QPlainTextEdit*     mMachineDescription;
     QLabel*             mMachineStatus;     //!< Resolution and version-drift text for the selection.
     QPushButton*        mMachineUpdate;
-    uint32_t            mNameCounter;       //!< Seeds the placeholder location of a new entry.
-    TableCell*          mTableCell;         //!< Inline editor delegate for the Location column.
 };
 
 #endif  // LUSAN_VIEW_SM_SMINCLUDE_HPP

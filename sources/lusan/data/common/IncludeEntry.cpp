@@ -27,7 +27,9 @@
 eIncludeKind includeKindOf(const QString& location, const QString& docExtension)
 {
     const QString suffix = QFileInfo(location).suffix().toLower();
-    if (suffix == docExtension.toLower())
+    // A document that includes no document of its own kind passes an empty extension. Without
+    // this guard a path with no extension would match it and be classified as a document.
+    if ((docExtension.isEmpty() == false) && (suffix == docExtension.toLower()))
     {
         return eIncludeKind::Document;
     }

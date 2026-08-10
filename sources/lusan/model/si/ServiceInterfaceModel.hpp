@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/ServiceInterfaceModel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -30,7 +30,7 @@
 #include "lusan/model/si/SIAttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/common/DataTypeModel.hpp"
-#include "lusan/model/si/SIIncludeModel.hpp"
+#include "lusan/model/common/IncludeModel.hpp"
 #include "lusan/model/si/SIMethodModel.hpp"
 #include "lusan/model/si/SIOverviewModel.hpp"
 
@@ -70,7 +70,7 @@ public:
     /**
      * \brief   Returns the include model.
      **/
-    inline SIIncludeModel & getIncludesModel();
+    inline IncludeModel& getIncludesModel();
 
     /**
      * \brief   Returns the data type model.
@@ -149,6 +149,11 @@ public:
     inline DataTypeDataSection& getDataTypeSection() override;
 
     /**
+     * \brief   The document's `IncludeList` section.
+     **/
+    inline IncludeDataSection& getIncludeSection() override;
+
+    /**
      * \brief   The document's validation scheduler, which owns its findings.
      **/
     inline DocValidationController& getValidationController() override;
@@ -171,7 +176,7 @@ private:
     SIAttributeModel        mModelAttributes;   //!< The data attributes model.
     SIMethodModel           mModelMethods;      //!< The methods model.
     ConstantModel           mModelConstant;     //!< The constant model.
-    SIIncludeModel          mModelInclude;      //!< The include model.
+    IncludeModel            mModelInclude;      //!< The include model.
     DocValidationController mValidation;        //!< Background structural and reference validation.
 
 //////////////////////////////////////////////////////////////////////////
@@ -213,7 +218,7 @@ inline ConstantModel& ServiceInterfaceModel::getConstantsModel()
     return mModelConstant;
 }
 
-inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel()
+inline IncludeModel& ServiceInterfaceModel::getIncludesModel()
 {
     return mModelInclude;
 }
@@ -226,6 +231,11 @@ inline ConstantDataSection& ServiceInterfaceModel::getConstantSection()
 inline DataTypeDataSection& ServiceInterfaceModel::getDataTypeSection()
 {
     return mSIData.getDataTypeData();
+}
+
+inline IncludeDataSection& ServiceInterfaceModel::getIncludeSection()
+{
+    return mSIData.getIncludeData();
 }
 
 inline DocValidationController& ServiceInterfaceModel::getValidationController()

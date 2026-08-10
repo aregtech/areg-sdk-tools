@@ -24,6 +24,7 @@
 
 #include <QIcon>
 #include <QKeySequence>
+#include <QList>
 #include <QString>
 #include <QWidget>
 
@@ -35,20 +36,25 @@ class QTreeWidget;
 class QTreeWidgetItem;
 
 /**
- * \brief   The section-3 difference between the Service Interface and State Machine Includes
- *          pages: the third recognized include extension (besides a C++ header and a `.dtml`
- *          data type document), the label shown for it in the Type column, and the heading of
- *          the group that collects it.
+ * \brief   The one difference between the Includes pages of the two editors: whether the host
+ *          document may include a document of its own kind, and if so under which extension,
+ *          label and group heading. Everything besides a C++ header and a `.dtml` data type
+ *          document is decided here.
  *
- *          Service Interface: `"siml"`, `"Service Interface"`, `"Service Interfaces"`.
- *          State Machine    : `"fsml"`, `"State Machine"`, `"State Machines"`.
+ *          State Machine    : `"fsml"`, `"State Machine"`, `"State Machines"` -- a machine may
+ *                             import another machine.
+ *          Service Interface: all empty -- an interface is an API contract and includes no
+ *                             other contract, so the page shows no document group at all.
  **/
 struct IncludeTypeConfig
 {
-    QString docExtension;   //!< The document file extension (no dot), e.g. "siml" or "fsml".
-    QString docTypeLabel;   //!< The Type column label for that extension, e.g. "Service Interface".
+    QString docExtension;   //!< The document file extension (no dot), e.g. "fsml"; empty for none.
+    QString docTypeLabel;   //!< The Type column label for that extension, e.g. "State Machine".
     QString groupDocLabel;  //!< The heading of the group that collects those documents.
     QIcon   docIcon;        //!< The mark of that document kind, on its heading and its rows.
+
+    //!< True when the host document may include a document of its own kind.
+    inline bool hasDocuments() const { return (docExtension.isEmpty() == false); }
 };
 
 /**
@@ -56,10 +62,10 @@ struct IncludeTypeConfig
  *          add/insert/delete + move up/down + update toolbar above a 4-column tree
  *          (Location / Type / Name / Version).
  *
- *          Rows sit under three permanent headings -- source files, data types, documents of
- *          the host's own kind -- so the reader does not have to know which list a file belongs
- *          to before looking for it. The headings stay visible when empty; that is what makes
- *          them read as places to put something.
+ *          Rows sit under permanent headings -- source files, data types, and documents of the
+ *          host's own kind where the host has them -- so the reader does not have to know which
+ *          list a file belongs to before looking for it. The headings stay visible when empty;
+ *          that is what makes them read as places to put something.
  *
  *          The view is controller-agnostic: it builds the widgets and exposes ctrl*() accessors
  *          plus the config-driven classification helpers, so both editors derive the group, the
@@ -93,8 +99,12 @@ public:
     QToolButton* ctrlButtonMoveDown() const;
     QToolButton* ctrlButtonUpdate() const;
 
-    //!< The permanent heading row that collects \p kind.
+    //!< The permanent heading row that collects \p kind. Never null: a kind with no heading of
+    //!< its own falls back to the source heading, which is where an unclassified row belongs.
     QTreeWidgetItem* ctrlGroup(eIncludeKind kind) const;
+
+    //!< The configuration the page was built with.
+    inline const IncludeTypeConfig& getConfig() const;
 
     //!< The kind a location belongs to, using the host document's own extension.
     eIncludeKind kindForLocation(const QString& location) const;
@@ -115,7 +125,8 @@ public:
      **/
     QString nameForLocation(const QString& location) const;
 
-    //!< Refreshes the per-group entry counts shown in the headings.
+    //!< Refreshes the per-group entry counts shown in the headings. The document count is
+    //!< ignored by a page that has no document group.
     void updateGroupCounts(int sourceCount, int dataTypeCount, int documentCount);
 
     //!< The same, counted from the rows themselves. For callers that move a single row and have
@@ -154,12 +165,15 @@ private:
     void buildUi();
     void decorateGroup(QTreeWidgetItem* group);
 
+    //!< The headings this page actually has, in display order.
+    QList<QTreeWidgetItem*> groups() const;
+
 private:
     const IncludeTypeConfig mConfig;
     QTreeWidget*    mTable;
     QTreeWidgetItem* mGroupSource;
     QTreeWidgetItem* mGroupDataType;
-    QTreeWidgetItem* mGroupDocument;
+    QTreeWidgetItem* mGroupDocument;   //!< Null when the host includes no document of its own kind.
     QToolButton*    mButtonAdd;
     QToolButton*    mButtonInsert;
     QToolButton*    mButtonRemove;
@@ -167,5 +181,14 @@ private:
     QToolButton*    mButtonMoveDown;
     QToolButton*    mButtonUpdate;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// IncludeListView inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const IncludeTypeConfig& IncludeListView::getConfig() const
+{
+    return mConfig;
+}
 
 #endif  // LUSAN_VIEW_COMMON_INCLUDELISTVIEW_HPP

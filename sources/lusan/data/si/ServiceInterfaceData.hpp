@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/ServiceInterfaceData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -26,7 +26,7 @@
 #include "lusan/data/si/SIAttributeData.hpp"
 #include "lusan/data/si/SIMethodData.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
-#include "lusan/data/si/SIIncludeData.hpp"
+#include "lusan/data/common/IncludeDataSection.hpp"
 
 
 /**
@@ -146,8 +146,8 @@ public:
      * \brief   Gets the include data.
      * \return  The include data.
      **/
-    inline const SIIncludeData& getIncludeData() const;
-    inline SIIncludeData& getIncludeData();
+    inline const IncludeDataSection& getIncludeData() const;
+    inline IncludeDataSection& getIncludeData();
 
     /**
      * \brief   Returns true if the file was successfully opened.
@@ -170,7 +170,7 @@ private:
     SIAttributeData mAttributeData; //!< The attribute data.
     SIMethodData    mMethodData;    //!< The method data.
     ConstantDataSection  mConstantData;  //!< The constant data.
-    SIIncludeData   mIncludeData;   //!< The include data.
+    IncludeDataSection mIncludeData; //!< The include data.
     bool            mOpenSuccess;   //!< File, indicating if opening file succeeded.
 };
 
@@ -238,12 +238,12 @@ inline ConstantDataSection& ServiceInterfaceData::getConstantData()
     return mConstantData;
 }
 
-inline const SIIncludeData& ServiceInterfaceData::getIncludeData() const
+inline const IncludeDataSection& ServiceInterfaceData::getIncludeData() const
 {
     return mIncludeData;
 }
 
-inline SIIncludeData& ServiceInterfaceData::getIncludeData()
+inline IncludeDataSection& ServiceInterfaceData::getIncludeData()
 {
     return mIncludeData;
 }

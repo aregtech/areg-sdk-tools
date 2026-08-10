@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/ServiceInterface.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -19,11 +19,12 @@
 
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/IEditCommit.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/view/si/SIAttribute.hpp"
 #include "lusan/view/common/ConstantPage.hpp"
 #include "lusan/view/common/DataTypePage.hpp"
-#include "lusan/view/si/SIInclude.hpp"
+#include "lusan/view/common/IncludePage.hpp"
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
 #include "lusan/model/si/SIValidator.hpp"
@@ -240,7 +241,21 @@ void ServiceInterface::slotDataTypesChanged()
     if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypesChanged();
     if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypesChanged();
     if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypesChanged();
-    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypesChanged();
+}
+
+void ServiceInterface::commitPendingEdits(void)
+{
+    // A description box gives its text to the document on focus loss, and Ctrl+S leaves the caret
+    // where it is. Collect from every page, so the file gets the text the author already wrote.
+    const QList<QWidget*> widgets = findChildren<QWidget*>();
+    for (QWidget* widget : widgets)
+    {
+        IEditCommit* editor = dynamic_cast<IEditCommit*>(widget);
+        if (editor != nullptr)
+        {
+            editor->commitPendingEdits();
+        }
+    }
 }
 
 void ServiceInterface::attachPage(int index, QWidget* page)
@@ -352,7 +367,10 @@ void ServiceInterface::ensureTabInitialized(int index)
     case eSIPages::PageIncludes:
         if (mInclude == nullptr)
         {
-            mInclude = new SIInclude(mModel.getIncludesModel(), &mTabWidget);
+            // An interface is an API contract and includes no other contract, so the page is
+            // configured with no document kind of its own -- only headers and data types.
+            mInclude = new IncludePage(mModel.getIncludesModel(), IncludeTypeConfig{}
+                                      , tr("Service Interface Includes Editor ..."), &mTabWidget);
             attachPage(index, mInclude);
         }
         break;

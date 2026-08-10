@@ -1395,6 +1395,75 @@ namespace
         CHECK(model.getData().getDataTypes().getElementCount() == 2);
     }
 
+    //!< The Includes page model reads its section through the document facade on every access,
+    //!< so it keeps editing the document that is current rather than the one it was built with.
+    void testIncludesSurviveDocumentSwap()
+    {
+        StateMachineModel model;
+        SMIncludeModel& includes = model.getIncludeModel();
+
+        CHECK(includes.createInclude(QStringLiteral("common/Before.hpp")) != nullptr);
+        CHECK(includes.getIncludeCount() == 1);
+
+        // What "File / New" does.
+        CHECK(model.createNewDocument(QStringLiteral("Swapped")));
+        CHECK(includes.getIncludeCount() == 0);
+        CHECK(&model.getData().getIncludes().getElements() == &includes.getIncludes());
+
+        IncludeEntry* added = includes.createInclude(QStringLiteral("common/Global.hpp"));
+        CHECK(added != nullptr);
+        CHECK(model.getData().getIncludes().getElementCount() == 1);
+
+        // The edit landed in the new document, and undo takes it back out of that same one.
+        const uint32_t id = added->getId();
+        includes.setDescription(id, QStringLiteral("Project-wide declarations."));
+        CHECK(model.getData().getIncludes().findElement(id)->getDescription() == QStringLiteral("Project-wide declarations."));
+        model.getUndoStack().undo();
+        CHECK(model.getData().getIncludes().findElement(id)->getDescription().isEmpty());
+
+        // And again after a reload, which swaps the data object a second time.
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = dir.filePath(QStringLiteral("swap-includes.fsml"));
+        CHECK(model.saveToFile(path));
+        CHECK(model.loadFromFile(path));
+        CHECK(includes.getIncludeCount() == 1);
+        CHECK(includes.findInclude(QStringLiteral("common/Global.hpp")) != nullptr);
+        CHECK(includes.createInclude(QStringLiteral("shared/Types.dtml")) != nullptr);
+        CHECK(model.getData().getIncludes().getElementCount() == 2);
+    }
+
+    //!< A `.fsml` row is an imported machine and announces itself as such; everything else is an
+    //!< ordinary include. The kind follows the row's location, so an edit that changes the
+    //!< extension changes what the row reports.
+    void testIncludeKindFollowsLocation()
+    {
+        StateMachineModel model;
+        SMIncludeModel& includes = model.getIncludeModel();
+
+        QList<eDocElementKind> kinds;
+        QObject::connect(&model.getNotifier(), &DocModelNotifier::elementAdded, [&](uint32_t, eDocElementKind kind){ kinds.append(kind); });
+        QObject::connect(&model.getNotifier(), &DocModelNotifier::elementChanged, [&](uint32_t, eDocElementKind kind){ kinds.append(kind); });
+
+        IncludeEntry* header = includes.createInclude(QStringLiteral("common/Global.hpp"));
+        CHECK(header != nullptr);
+        CHECK(kinds.size() == 1);
+        CHECK((kinds.isEmpty() == false) && (kinds.last() == eDocElementKind::Include));
+        CHECK(includes.kindOf(header->getId()) == eIncludeKind::Source);
+
+        // Turning a header into a machine import is announced as Import, so the submachine picker
+        // rebuilds on the way in.
+        const uint32_t id = header->getId();
+        includes.setLocation(id, QStringLiteral("./Other.fsml"));
+        CHECK((kinds.isEmpty() == false) && (kinds.last() == eDocElementKind::Import));
+        CHECK(includes.kindOf(id) == eIncludeKind::Document);
+
+        // A `.dtml` is neither: it is a data type document, and an ordinary include to the notifier.
+        includes.setLocation(id, QStringLiteral("shared/Types.dtml"));
+        CHECK((kinds.isEmpty() == false) && (kinds.last() == eDocElementKind::Import));
+        CHECK(includes.kindOf(id) == eIncludeKind::DataType);
+    }
+
     //!< A declared type is marked as a problem when the name it holds resolves to nothing. The
     //!< model keeps those resolutions current through the notifier, so an edit, an undo and a
     //!< redo all leave the same answer as loading the document from a file would.
@@ -1476,6 +1545,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testStimulusSilentRebind();
     testConstantsSurviveDocumentSwap();
     testDataTypesSurviveDocumentSwap();
+    testIncludesSurviveDocumentSwap();
+    testIncludeKindFollowsLocation();
     testDeclaredTypesStayResolved();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

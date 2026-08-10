@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/ServiceInterfaceModel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -31,7 +31,7 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
     , mModelAttributes  (mSIData.getAttributeData() , mSIData.getDataTypeData())
     , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
     , mModelConstant    (*this)
-    , mModelInclude     (mSIData.getIncludeData())
+    , mModelInclude     (*this)
     , mValidation       (*this, [this]() { return SIValidator::validate(mSIData); })
 {
 }
