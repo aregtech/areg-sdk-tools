@@ -23,7 +23,7 @@
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
@@ -384,8 +384,8 @@ void SMTryStrip::addStubRow(QVBoxLayout* into, const SMGuardEval::StubSite& site
     NEGuardStyle::eOwner owner = NEGuardStyle::eOwner::Fsm;
     if (site.kind == eKind::Call)
     {
-        const SMMethodEntry* method = SMGuardSymbols::method(data, site.symbolId);
-        owner = ((method != nullptr) && method->isLambdaCondition()) ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
+        const MethodEntry* method = SMGuardSymbols::method(data, site.symbolId);
+        owner = ((method != nullptr) && NESMMethod::isLambdaCondition(method)) ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
     }
     else if (site.kind == eKind::Raw)
     {

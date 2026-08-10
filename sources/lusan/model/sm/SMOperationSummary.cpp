@@ -20,7 +20,7 @@
 #include "lusan/model/sm/SMOperationSummary.hpp"
 
 #include "lusan/data/common/MethodBase.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"

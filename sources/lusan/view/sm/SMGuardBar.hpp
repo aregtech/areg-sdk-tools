@@ -24,7 +24,7 @@
  ************************************************************************/
 #include <QWidget>
 
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/view/sm/SMArgSinkGuard.hpp"
 
@@ -137,7 +137,7 @@ private:
     QList<int> firstCallPath(uint32_t methodId) const;
 
     //!< The ladder `Name it...` / island-to-handler flow (dialog + one composite command).
-    void runNameIsland(const QList<int>& islandPath, const QString& body, SMMethodEntry::eImplement implement);
+    void runNameIsland(const QList<int>& islandPath, const QString& body, MethodEntry::eImplement implement);
 
     //!< The ladder `Move to handler...` flow for a declared lambda condition.
     void runMoveToHandler(uint32_t methodId);

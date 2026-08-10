@@ -25,7 +25,7 @@
 
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -2922,10 +2922,10 @@ int main(int argc, char* argv[])
 
             // A trigger is a declared method, so it alone keeps the signature.
             QString triggerName;
-            for (const SMMethodEntry* m : d.getMethods().getElements())
+            for (const MethodEntry* m : d.getMethods().getElements())
             {
                 if (triggerName.isEmpty() && (m != nullptr)
-                    && (m->getMethodType() == SMMethodEntry::eMethodType::Trigger))
+                    && (m->getKind() == NEMethod::SmTrigger))
                 {
                     triggerName = m->getName();
                 }

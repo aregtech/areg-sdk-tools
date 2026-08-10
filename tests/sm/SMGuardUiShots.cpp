@@ -22,12 +22,12 @@
  *
  ************************************************************************/
 
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
-#include "lusan/model/sm/SMMethodModel.hpp"
+#include "lusan/model/common/MethodModel.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -674,7 +674,7 @@ int main(int argc, char** argv)
         check(field->chipCount() >= 1, "the call folded to a chip");
         checkEq(firstChipName(field), QStringLiteral("has_waiting"), "the method chip shows its name before the rename");
 
-        const SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("has_waiting"));
+        const MethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("has_waiting"));
         check(hw != nullptr, "the demo document has the has_waiting condition method");
         if (hw != nullptr)
         {
@@ -808,7 +808,7 @@ int main(int argc, char** argv)
             QComboBox* v0 = qobject_cast<QComboBox*>(args->valueWidget(0));
             check((v0 != nullptr) && (v0->currentText() == QStringLiteral("count")), "formal 0 is mapped to count");
 
-            SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("is_calm_hours"));
+            MethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("is_calm_hours"));
             check(hw != nullptr, "the demo document has the is_calm_hours condition method");
             if (hw != nullptr)
             {
@@ -843,7 +843,7 @@ int main(int argc, char** argv)
 
     // ---- S14: the Methods page kind split -------------------------------------
     std::printf("[ RUN  ] methodsPage\n");
-    SMMethod page(model.getMethodModel());
+    SMMethod page(model.getMethodModel(), model);
     page.resize(980, 620);
     page.show();
     pump(250);

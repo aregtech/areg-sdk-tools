@@ -17,7 +17,6 @@
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
-    ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
@@ -54,7 +53,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMIncludeModel.hpp
     ${LUSAN}/model/sm/SMLayoutCommands.hpp
     ${LUSAN}/model/sm/SMMappingSources.hpp
-    ${LUSAN}/model/sm/SMMethodModel.hpp
     ${LUSAN}/model/sm/SMOperationCommands.hpp
     ${LUSAN}/model/sm/SMOperationSummary.hpp
     ${LUSAN}/model/sm/SMOperationValidation.hpp

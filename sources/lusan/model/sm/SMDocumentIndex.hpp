@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 
 #include <QHash>
@@ -133,10 +133,10 @@ public:
     // ---- Declarations by name ---------------------------------------------
 
     //!< The first method named \p name whatever its kind, or nullptr.
-    const SMMethodEntry* method(const QString& name) const;
+    const MethodEntry* method(const QString& name) const;
 
     //!< The method named \p name of exactly \p kind; a name is unique only per kind.
-    const SMMethodEntry* method(const QString& name, SMMethodEntry::eMethodType kind) const;
+    const MethodEntry* method(const QString& name, int kind) const;
 
     const SMEventEntry* event(const QString& name) const;
     const SMTimerEntry* timer(const QString& name) const;
@@ -147,7 +147,7 @@ public:
 
     // ---- Declarations by document ID --------------------------------------
 
-    const SMMethodEntry* method(uint32_t id) const;
+    const MethodEntry* method(uint32_t id) const;
     const SMEventEntry* event(uint32_t id) const;
     const SMTimerEntry* timer(uint32_t id) const;
     const AttributeEntry* attribute(uint32_t id) const;
@@ -160,7 +160,7 @@ public:
      * \brief   Every method of \p kind in document order. Cached for the index's lifetime,
      *          so a picker that asks per row pays for the filter once.
      **/
-    QList<const SMMethodEntry*> methodsOf(SMMethodEntry::eMethodType kind) const;
+    QList<const MethodEntry*> methodsOf(int kind) const;
 
     /**
      * \brief   The shared stimulus name space in the order the pickers show it: triggers
@@ -185,7 +185,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 private:
     const StateMachineData&                             mData;      //!< The document under query.
-    mutable QHash<int, QList<const SMMethodEntry*>>     mByKind;    //!< Method groups already filtered.
+    mutable QHash<int, QList<const MethodEntry*>>     mByKind;    //!< Method groups already filtered.
     mutable QList<Stimulus>                             mStimuli;   //!< The merged stimulus name space.
     mutable bool                                        mStimuliReady;
     mutable QHash<uint32_t, const SMTransitionEntry*>   mTransitions;   //!< Transitions already found.

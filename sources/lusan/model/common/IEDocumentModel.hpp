@@ -38,6 +38,7 @@ class DataTypeCustom;
 class DataTypeDataSection;
 class DocValidationController;
 class IncludeDataSection;
+class MethodDataSection;
 class QUndoCommand;
 
 /**
@@ -104,6 +105,12 @@ public:
      *          reason as the constants section above.
      **/
     virtual AttributeDataSection& getAttributeSection() = 0;
+
+    /**
+     * \brief   The document's `MethodList` section. Answered on every call, for the same
+     *          reason as the constants section above.
+     **/
+    virtual MethodDataSection& getMethodSection() = 0;
 
     /**
      * \brief   The document's validation scheduler, which owns its findings and re-runs the

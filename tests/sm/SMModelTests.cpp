@@ -144,7 +144,7 @@ namespace
             addId(ids, t.getId());
         }
 
-        for (const SMMethodEntry* m : doc.getMethods().getElements())
+        for (const MethodEntry* m : doc.getMethods().getElements())
         {
             addId(ids, m->getId());
             for (const MethodParameter& p : m->getElements())
@@ -200,13 +200,13 @@ namespace
         doc.getTimers().createTimer("VehicleWait");
 
         // Methods: triggers, actions (one with a parameter), a condition.
-        doc.getMethods().createMethod("PowerOn", SMMethodEntry::eMethodType::Trigger);
-        doc.getMethods().createMethod("PowerOff", SMMethodEntry::eMethodType::Trigger);
-        doc.getMethods().createMethod("AllLightsOff", SMMethodEntry::eMethodType::Action);
-        SMMethodEntry* setGreen = doc.getMethods().createMethod("SetVehicleGreen", SMMethodEntry::eMethodType::Action);
+        doc.getMethods().createMethod("PowerOn", NEMethod::SmTrigger);
+        doc.getMethods().createMethod("PowerOff", NEMethod::SmTrigger);
+        doc.getMethods().createMethod("AllLightsOff", NEMethod::SmAction);
+        MethodEntry* setGreen = doc.getMethods().createMethod("SetVehicleGreen", NEMethod::SmAction);
         setGreen->addParam("direction");
-        SMMethodEntry* cond = doc.getMethods().createMethod("IsReady", SMMethodEntry::eMethodType::Condition);
-        cond->setImplement(SMMethodEntry::eImplement::Embedded);
+        MethodEntry* cond = doc.getMethods().createMethod("IsReady", NEMethod::SmCondition);
+        cond->setImplement(MethodEntry::eImplement::Embedded);
         cond->setBody("return true;");
 
         // Constants and includes; a machine import is an include entry with an alias.
@@ -312,8 +312,8 @@ namespace
         CHECK(doc.getEvents().findEvent("Nope") == nullptr);
         CHECK(doc.getTimers().findElement(QString("Red")) != nullptr);
         CHECK(doc.getMethods().findMethod("PowerOn") != nullptr);
-        CHECK(doc.getMethods().findTrigger("PowerOn") != nullptr);
-        CHECK(doc.getMethods().findTrigger("AllLightsOff") == nullptr);  // action, not a trigger
+        CHECK(doc.getMethods().findMethod("PowerOn", NEMethod::SmTrigger) != nullptr);
+        CHECK(doc.getMethods().findMethod("AllLightsOff", NEMethod::SmTrigger) == nullptr);  // action, not a trigger
         CHECK(doc.getConstants().findElement(QString("MaxCount")) != nullptr);
         CHECK(doc.getIncludes().findElement(QString("common/GlobalConst.hpp")) != nullptr);
         CHECK(doc.findImportByAlias("PedestrianCrossing") != nullptr);

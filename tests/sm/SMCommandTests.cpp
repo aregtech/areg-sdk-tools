@@ -39,7 +39,7 @@
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/sm/SMValidator.hpp"
@@ -49,6 +49,7 @@
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/common/AttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
+#include "lusan/model/common/MethodModel.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
@@ -762,7 +763,7 @@ namespace
         doc.getEvents().createEvent("evGo");
         SMTimerEntry* timer = doc.getTimers().createTimer("tmPoll");
         timer->setTimeout(500u);
-        doc.getMethods().createMethod("doWork", SMMethodEntry::eMethodType::Action);
+        doc.getMethods().createMethod("doWork", NEMethod::SmAction);
 
         SMStateData& root = doc.getStates();
         root.createState("Start", SMStateEntry::eStateKind::Start);
@@ -1280,9 +1281,9 @@ namespace
         QUndoStack          stack;
 
         // Two triggers, each declaring a 'count' : uint16 parameter.
-        SMMethodEntry* walk = doc.getMethods().createMethod("RequestWalk", SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* walk = doc.getMethods().createMethod("RequestWalk", NEMethod::SmTrigger);
         walk->addParam("count")->setType("uint16");
-        SMMethodEntry* run = doc.getMethods().createMethod("RequestRun", SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* run = doc.getMethods().createMethod("RequestRun", NEMethod::SmTrigger);
         run->addParam("count")->setType("uint16");
 
         stack.push(new SMAddStateCommand(notifier, doc.getStates(), "S", SMStateEntry::eStateKind::Start, "Add S"));
@@ -1508,6 +1509,99 @@ namespace
         CHECK(attributes.findAttribute(QStringLiteral("mRetries")) != nullptr);
     }
 
+
+    //!< The Methods page model keeps editing the current document across `File / New` and a
+    //!< save-and-reload, and undo takes the edit back out of that same document. The phase 1b
+    //!< regression guard, now over the fifth shared section.
+    void testMethodsSurviveDocumentSwap()
+    {
+        StateMachineModel model;
+        MethodModel& methods = model.getMethodModel();
+
+        CHECK(methods.createMethod(QStringLiteral("Before"), NEMethod::SmTrigger) != nullptr);
+        CHECK(methods.getMethodCount() == 1);
+
+        // What "File / New" does.
+        CHECK(model.createNewDocument(QStringLiteral("Swapped")));
+        CHECK(methods.getMethodCount() == 0);
+        CHECK(&model.getData().getMethods().getElements() == &methods.getMethods());
+
+        MethodEntry* added = methods.createMethod(QStringLiteral("Start"), NEMethod::SmTrigger);
+        CHECK(added != nullptr);
+        CHECK(model.getData().getMethods().getElementCount() == 1);
+
+        // The edit landed in the new document, and undo takes it back out of that same one.
+        const uint32_t id = added->getId();
+        methods.setDescription(id, QStringLiteral("kick off"));
+        CHECK(model.getData().getMethods().findMethod(id)->getDescription() == QStringLiteral("kick off"));
+        model.getUndoStack().undo();
+        CHECK(model.getData().getMethods().findMethod(id)->getDescription().isEmpty());
+
+        // And again after a reload, which swaps the data object a second time.
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        const QString path = dir.filePath(QStringLiteral("swap-methods.fsml"));
+        CHECK(model.saveToFile(path));
+        CHECK(model.loadFromFile(path));
+        CHECK(methods.getMethodCount() == 1);
+        CHECK(methods.findMethod(QStringLiteral("Start"), NEMethod::SmTrigger) != nullptr);
+        CHECK(methods.createMethod(QStringLiteral("Stop"), NEMethod::SmTrigger) != nullptr);
+        CHECK(model.getData().getMethods().getElementCount() == 2);
+    }
+
+    //!< A state machine method is a trigger, an action or a condition. Only a condition returns
+    //!< a value and says how it is implemented, so the section writes `Return` and `Implement`
+    //!< for one and never for the others -- and never a `Response`, which it has no notion of.
+    void testMethodSectionShape()
+    {
+        StateMachineModel model;
+        MethodModel& methods = model.getMethodModel();
+
+        MethodEntry* trigger = methods.createMethod(QStringLiteral("Go"), NEMethod::SmTrigger);
+        CHECK(trigger != nullptr);
+        CHECK(trigger->hasReturn() == false);
+        CHECK(trigger->hasImplement() == false);
+        CHECK(trigger->hasReply() == false);
+
+        MethodEntry* condition = methods.createMethod(QStringLiteral("IsReady"), NEMethod::SmCondition);
+        CHECK(condition != nullptr);
+        CHECK(condition->hasReturn());
+        CHECK(condition->hasImplement());
+        CHECK(condition->getReturn() == QStringLiteral("bool"));
+
+        const uint32_t condId = condition->getId();
+        methods.setImplement(condId, MethodEntry::eImplement::Embedded);
+        methods.setBody(condId, QStringLiteral("return true;"));
+        methods.setReturn(condId, QStringLiteral("uint32"));
+
+        // A parameter's default is an attribute in a state machine document, never a child.
+        MethodParameter* param = methods.createParam(trigger, QStringLiteral("count"));
+        CHECK(param != nullptr);
+        methods.setParamDefault(trigger, param->getId(), true, QStringLiteral("5"));
+
+        QString text;
+        QXmlStreamWriter writer(&text);
+        model.getData().getMethods().writeToXml(writer);
+        CHECK(text.contains(QStringLiteral("Return=\"uint32\"")));
+        CHECK(text.contains(QStringLiteral("Implement=\"Embedded\"")));
+        CHECK(text.contains(QStringLiteral("Default=\"5\"")));
+        CHECK(text.contains(QStringLiteral("MethodType=\"Trigger\"")));
+        CHECK(text.contains(QStringLiteral("Response=")) == false);
+        CHECK(text.contains(QStringLiteral("<Value")) == false);
+
+        // Undo unwinds the condition's fields one gesture at a time.
+        model.getUndoStack().undo();     // the parameter default
+        model.getUndoStack().undo();     // the parameter itself
+        model.getUndoStack().undo();     // the return type
+        CHECK(methods.findMethod(condId)->getReturn() == QStringLiteral("bool"));
+        model.getUndoStack().redo();
+        CHECK(methods.findMethod(condId)->getReturn() == QStringLiteral("uint32"));
+
+        // A name belongs to its kind: the same name as a trigger and as an action is legal.
+        CHECK(methods.createMethod(QStringLiteral("Go"), NEMethod::SmAction) != nullptr);
+        CHECK(methods.createMethod(QStringLiteral("Go"), NEMethod::SmTrigger) == nullptr);
+    }
+
     //!< A `.fsml` row is an imported machine and announces itself as such; everything else is an
     //!< ordinary include. The kind follows the row's location, so an edit that changes the
     //!< extension changes what the row reports.
@@ -1623,6 +1717,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testIncludesSurviveDocumentSwap();
     testAttributesSurviveDocumentSwap();
     testAttributeSectionShape();
+    testMethodsSurviveDocumentSwap();
+    testMethodSectionShape();
     testIncludeKindFollowsLocation();
     testDeclaredTypesStayResolved();
 

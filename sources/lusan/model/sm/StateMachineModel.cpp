@@ -320,6 +320,20 @@ QUndoCommand* StateMachineModel::createRenameSideEffects( eDocElementKind kind, 
         target = SMReferences::eTarget::Timer;
         break;
 
+    case eDocElementKind::Method:
+    {
+        // Which references a method has depends on what kind it was declared as: a trigger is a
+        // stimulus, an action is called from an operation, a condition is named by a guard.
+        const MethodEntry* method = getData().getMethods().findMethod(id);
+        if (method == nullptr)
+            return nullptr;
+
+        target = NESMMethod::isAction(method)      ? SMReferences::eTarget::Action
+               : NESMMethod::isCondition(method)   ? SMReferences::eTarget::Condition
+                                                   : SMReferences::eTarget::Trigger;
+        break;
+    }
+
     default:
         // The remaining kinds either carry no name-based reference or are renamed through their
         // own command, which already knows the target.

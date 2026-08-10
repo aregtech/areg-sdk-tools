@@ -29,7 +29,7 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
     , mModelOverview    (mSIData.getOverviewData())
     , mModelDataType    (*this)
     , mModelAttributes  (*this)
-    , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
+    , mModelMethods     (*this)
     , mModelConstant    (*this)
     , mModelInclude     (*this)
     , mValidation       (*this, [this]() { return SIValidator::validate(mSIData); })

@@ -104,12 +104,12 @@ SMDocumentIndex::SMDocumentIndex(const StateMachineData& data)
 {
 }
 
-const SMMethodEntry* SMDocumentIndex::method(const QString& name) const
+const MethodEntry* SMDocumentIndex::method(const QString& name) const
 {
     return mData.getMethods().findMethod(name);
 }
 
-const SMMethodEntry* SMDocumentIndex::method(const QString& name, SMMethodEntry::eMethodType kind) const
+const MethodEntry* SMDocumentIndex::method(const QString& name, int kind) const
 {
     return mData.getMethods().findMethod(name, kind);
 }
@@ -139,7 +139,7 @@ const IncludeEntry* SMDocumentIndex::import(const QString& name) const
     return mData.findImportByAlias(name);
 }
 
-const SMMethodEntry* SMDocumentIndex::method(uint32_t id) const
+const MethodEntry* SMDocumentIndex::method(uint32_t id) const
 {
     return mData.getMethods().findMethod(id);
 }
@@ -169,7 +169,7 @@ const IncludeEntry* SMDocumentIndex::import(uint32_t id) const
     return mData.getIncludes().findElement(id);
 }
 
-QList<const SMMethodEntry*> SMDocumentIndex::methodsOf(SMMethodEntry::eMethodType kind) const
+QList<const MethodEntry*> SMDocumentIndex::methodsOf(int kind) const
 {
     const int key = static_cast<int>(kind);
     const auto cached = mByKind.constFind(key);
@@ -178,10 +178,10 @@ QList<const SMMethodEntry*> SMDocumentIndex::methodsOf(SMMethodEntry::eMethodTyp
         return cached.value();
     }
 
-    QList<const SMMethodEntry*> group;
-    for (const SMMethodEntry* entry : mData.getMethods().getElements())
+    QList<const MethodEntry*> group;
+    for (const MethodEntry* entry : mData.getMethods().getElements())
     {
-        if ((entry != nullptr) && (entry->getMethodType() == kind))
+        if ((entry != nullptr) && (entry->getKind() == kind))
         {
             group.append(entry);
         }
@@ -198,9 +198,9 @@ QList<SMDocumentIndex::Stimulus> SMDocumentIndex::stimuli() const
         return mStimuli;
     }
 
-    for (const SMMethodEntry* entry : mData.getMethods().getElements())
+    for (const MethodEntry* entry : mData.getMethods().getElements())
     {
-        if ((entry != nullptr) && entry->isTrigger())
+        if ((entry != nullptr) && NESMMethod::isTrigger(entry))
         {
             mStimuli.append(Stimulus{ SMTransitionEntry::eStimulusKind::Trigger, entry->getName() });
         }

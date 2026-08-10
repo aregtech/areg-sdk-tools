@@ -25,7 +25,7 @@
 #include "lusan/view/common/ConstantPage.hpp"
 #include "lusan/view/common/DataTypePage.hpp"
 #include "lusan/view/common/IncludePage.hpp"
-#include "lusan/view/si/SIMethod.hpp"
+#include "lusan/view/common/MethodPage.hpp"
 #include "lusan/view/si/SIOverview.hpp"
 #include "lusan/model/si/SIValidator.hpp"
 
@@ -351,7 +351,13 @@ void ServiceInterface::ensureTabInitialized(int index)
     case eSIPages::PageMethods:
         if (mMethod == nullptr)
         {
-            mMethod = new SIMethod(mModel.getMethodsModel(), &mTabWidget);
+            // An interface declares requests, the responses that answer them, and broadcasts.
+            mMethod = new MethodPage(mModel.getMethodsModel()
+                                    , MethodPageConfig{ tr("Service Interface Methods Editor ...")
+                                                      , tr("Service Methods List:")
+                                                      , tr("Data Type:")
+                                                      , false }
+                                    , &mTabWidget);
             attachPage(index, mMethod);
         }
         break;

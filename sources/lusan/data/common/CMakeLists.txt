@@ -20,6 +20,8 @@
     ${LUSAN}/data/common/IncludeDataSection.cpp
     ${LUSAN}/data/common/IncludeEntry.cpp
     ${LUSAN}/data/common/MethodBase.cpp
+    ${LUSAN}/data/common/MethodDataSection.cpp
+    ${LUSAN}/data/common/MethodEntry.cpp
     ${LUSAN}/data/common/MethodParameter.cpp
     ${LUSAN}/data/common/OptionsManager.cpp
     ${LUSAN}/data/common/ParamBase.cpp
@@ -49,6 +51,8 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/IncludeDataSection.hpp
     ${LUSAN}/data/common/IncludeEntry.hpp
     ${LUSAN}/data/common/MethodBase.hpp
+    ${LUSAN}/data/common/MethodDataSection.hpp
+    ${LUSAN}/data/common/MethodEntry.hpp
     ${LUSAN}/data/common/MethodParameter.hpp
     ${LUSAN}/data/common/OptionsManager.hpp
     ${LUSAN}/data/common/ParamBase.hpp

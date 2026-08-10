@@ -22,7 +22,7 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -80,8 +80,8 @@ namespace
 
         case eKind::Call:
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
-            if ((method == nullptr) || (method->isCondition() == false))
+            const MethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
+            if ((method == nullptr) || (NESMMethod::isCondition(method) == false))
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, target, location
                                 , QStringLiteral("%1 calls a deleted condition method %2").arg(what, refDisplay(node))

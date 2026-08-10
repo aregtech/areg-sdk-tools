@@ -19,7 +19,7 @@
 
 #include "lusan/view/sm/SMHoverCard.hpp"
 
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
@@ -64,7 +64,7 @@ namespace
         QString generated;  //!< the form the generator emits.
     };
 
-    SymbolFacts symbolFacts(const SMGuardSymbol& symbol, const SMMethodEntry* method)
+    SymbolFacts symbolFacts(const SMGuardSymbol& symbol, const MethodEntry* method)
     {
         SymbolFacts facts;
         switch (symbol.owner)
@@ -83,7 +83,7 @@ namespace
 
         case NEGuardStyle::eOwner::Fsm:
         default:
-            if ((method != nullptr) && method->isLambdaCondition())
+            if ((method != nullptr) && NESMMethod::isLambdaCondition(method))
             {
                 facts.noun = SMHoverCard::tr("named lambda");
                 facts.declared = SMHoverCard::tr("declared on the Methods page, with the body written in Lusan");
@@ -189,7 +189,7 @@ SMHoverCard::SMHoverCard(QWidget* parent /*= nullptr*/)
 QString SMHoverCard::symbolTip(StateMachineModel& model, uint32_t transitionId, const SMGuardSymbol& symbol)
 {
     const StateMachineData& data = model.getData();
-    const SMMethodEntry* method = symbol.isCall ? SMGuardSymbols::method(data, symbol.symbolId) : nullptr;
+    const MethodEntry* method = symbol.isCall ? SMGuardSymbols::method(data, symbol.symbolId) : nullptr;
     const SymbolFacts facts = symbolFacts(symbol, method);
 
     // Leads with the badge the user is looking at, the owner letter the chip draws, not the
@@ -202,11 +202,11 @@ QString SMHoverCard::symbolTip(StateMachineModel& model, uint32_t transitionId, 
     tip += tipLine(symbol.display() + QStringLiteral(" -> ")
                    + (symbol.typeText.isEmpty() ? QStringLiteral("bool") : symbol.typeText), true);
     tip += tipLine(facts.declared);
-    if ((method != nullptr) && method->isHandlerCondition())
+    if ((method != nullptr) && NESMMethod::isHandlerCondition(method))
     {
         tip += tipLine(tr("IMPLEMENTED BY YOUR HANDLER"));
     }
-    if ((method != nullptr) && method->isLambdaCondition())
+    if ((method != nullptr) && NESMMethod::isLambdaCondition(method))
     {
         tip += tipLine(tr("generated as std::function member %1%2")
                        .arg(QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX), symbol.name));
@@ -241,17 +241,17 @@ void SMHoverCard::showSymbol(StateMachineModel& model, uint32_t transitionId, co
     mSymbolId = symbol.symbolId;
 
     const StateMachineData& data = model.getData();
-    const SMMethodEntry* method = symbol.isCall ? SMGuardSymbols::method(data, symbol.symbolId) : nullptr;
+    const MethodEntry* method = symbol.isCall ? SMGuardSymbols::method(data, symbol.symbolId) : nullptr;
     const SymbolFacts facts = symbolFacts(symbol, method);
 
     addBadgeLine(symbol.owner, facts.noun);
     addLine(symbol.display() + QStringLiteral(" -> ") + (symbol.typeText.isEmpty() ? QStringLiteral("bool") : symbol.typeText), true);
     addLine(facts.declared);
-    if ((method != nullptr) && method->isHandlerCondition())
+    if ((method != nullptr) && NESMMethod::isHandlerCondition(method))
     {
         addLine(tr("IMPLEMENTED BY YOUR HANDLER"));
     }
-    if ((method != nullptr) && method->isLambdaCondition())
+    if ((method != nullptr) && NESMMethod::isLambdaCondition(method))
     {
         addLine(tr("generated as std::function member %1%2")
                 .arg(QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX), symbol.name));
@@ -281,7 +281,7 @@ void SMHoverCard::showCall(StateMachineModel& model, uint32_t transitionId, cons
         return;
     }
 
-    const SMMethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
+    const MethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
     if (method == nullptr)
     {
         return;
@@ -290,7 +290,7 @@ void SMHoverCard::showCall(StateMachineModel& model, uint32_t transitionId, cons
     clearContent();
     mSymbolId = call->getSymbolId();
 
-    const bool isLambda = method->isLambdaCondition();
+    const bool isLambda = NESMMethod::isLambdaCondition(method);
     addLine((isLambda ? QStringLiteral("{}  ") : QStringLiteral("h  ")) + method->getName()
             + QStringLiteral(" : ") + (isLambda ? tr("lambda") : tr("handler")));
 

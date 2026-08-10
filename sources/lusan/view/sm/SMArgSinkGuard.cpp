@@ -19,7 +19,7 @@
 
 #include "lusan/view/sm/SMArgSinkGuard.hpp"
 
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
@@ -124,7 +124,7 @@ uint32_t SMArgSinkGuard::formalId(const QString& paramName) const
         return 0u;
     }
 
-    const SMMethodEntry* method = SMGuardSymbols::method(mModel.getData(), call->getSymbolId());
+    const MethodEntry* method = SMGuardSymbols::method(mModel.getData(), call->getSymbolId());
     if (method != nullptr)
     {
         const QList<MethodParameter>& formals = method->getElements();
@@ -286,7 +286,7 @@ const SMArgumentEntry* SMArgSinkGuard::argFor(const QString& paramName) const
         if (arg->getCount() == 0)
         {
             // A parameterless condition-method call used as a boolean value.
-            const SMMethodEntry* method = SMGuardSymbols::method(data, arg->getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(data, arg->getSymbolId());
             mProjected.setSource(eSource::Condition);
             mProjected.setValue((method != nullptr) ? method->getName() : QString());
             break;

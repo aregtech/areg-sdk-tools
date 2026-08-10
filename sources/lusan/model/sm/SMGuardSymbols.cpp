@@ -26,7 +26,7 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMDocumentIndex.hpp"
 
@@ -103,7 +103,7 @@ QStringList SMGuardSymbols::scopedMembers(const StateMachineData& data, const QS
     return members;
 }
 
-bool SMGuardSymbols::conditionBindsBare(const SMMethodEntry& method)
+bool SMGuardSymbols::conditionBindsBare(const MethodEntry& method)
 {
     for (const MethodParameter& param : method.getElements())
     {
@@ -130,7 +130,7 @@ SMGuardSymbols::BareResult SMGuardSymbols::bindBare(const StateMachineData& data
 
     if (surface == eSurface::Guard)
     {
-        const SMMethodEntry* cond = conditionMethod(data, name);
+        const MethodEntry* cond = conditionMethod(data, name);
         if ((cond != nullptr) && conditionBindsBare(*cond))
         {
             result.bind = eBind::Condition;
@@ -176,10 +176,10 @@ uint32_t SMGuardSymbols::paramId(const StateMachineData& data, uint32_t transiti
     return (param != nullptr) ? param->getId() : 0u;
 }
 
-const SMMethodEntry* SMGuardSymbols::conditionMethod(const StateMachineData& data, const QString& name)
+const MethodEntry* SMGuardSymbols::conditionMethod(const StateMachineData& data, const QString& name)
 {
-    const SMMethodEntry* method = SMDocumentIndex(data).method(name);
-    return ((method != nullptr) && method->isCondition()) ? method : nullptr;
+    const MethodEntry* method = SMDocumentIndex(data).method(name);
+    return ((method != nullptr) && NESMMethod::isCondition(method)) ? method : nullptr;
 }
 
 QStringList SMGuardSymbols::paramNames(const StateMachineData& data, uint32_t transitionId)
@@ -228,12 +228,12 @@ QString SMGuardSymbols::paramType(const StateMachineData& data, uint32_t transit
     return (param != nullptr) ? param->getType() : QString();
 }
 
-const SMMethodEntry* SMGuardSymbols::method(const StateMachineData& data, uint32_t id)
+const MethodEntry* SMGuardSymbols::method(const StateMachineData& data, uint32_t id)
 {
     return SMDocumentIndex(data).method(id);
 }
 
-QList<int> SMGuardSymbols::bindArguments(const SMGuardNode& call, const SMMethodEntry& method)
+QList<int> SMGuardSymbols::bindArguments(const SMGuardNode& call, const MethodEntry& method)
 {
     const QList<SMGuardNode*>& args = call.getChildren();
     const QList<MethodParameter>& formals = method.getElements();

@@ -78,8 +78,8 @@ namespace
         StateMachineData& doc = d.data;
         doc.getOverview().setName("Refs");
 
-        doc.getMethods().createMethod("PowerOn", SMMethodEntry::eMethodType::Trigger);
-        doc.getMethods().createMethod("DoWork",  SMMethodEntry::eMethodType::Action);
+        doc.getMethods().createMethod("PowerOn", NEMethod::SmTrigger);
+        doc.getMethods().createMethod("DoWork",  NEMethod::SmAction);
         doc.getEvents().createEvent("Started");
         doc.getTimers().createTimer("Tick");
         doc.getAttributes().createAttribute("Level");
@@ -236,14 +236,14 @@ namespace
 
         // Give an action the same name as the trigger, referenced by an ActionCall, then
         // rename only the trigger: the action's ActionCall must stay put.
-        doc.getMethods().createMethod("Shared", SMMethodEntry::eMethodType::Action);
+        doc.getMethods().createMethod("Shared", NEMethod::SmAction);
         SMStateEntry* run = doc.getStates().findState("Run");
         SMActionCall* call = new SMActionCall();
         call->setAction("Shared");
         run->getEntryList().addOperation(call);
 
         // A trigger named "Shared" used by a transition stimulus.
-        doc.getMethods().createMethod("Shared", SMMethodEntry::eMethodType::Trigger);
+        doc.getMethods().createMethod("Shared", NEMethod::SmTrigger);
         run->getTransitions().createTransition(eKind::Trigger, "Shared", 0u, SMTransitionEntry::eTransitionKind::Internal);
 
         CHECK(uses(doc, eTarget::Action,  "Shared", 0) == 1);

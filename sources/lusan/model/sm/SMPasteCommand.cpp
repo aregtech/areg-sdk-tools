@@ -98,7 +98,7 @@ namespace
     /**
      * \brief   The typed registry insertion: works for value entries (AttributeEntry,
      *          SMTimerEntry, ConstantEntry, IncludeEntry) and owning-pointer entries
-     *          (SMEventEntry*, SMMethodEntry*, DataTypeCustom*).
+     *          (SMEventEntry*, MethodEntry*, DataTypeCustom*).
      **/
     template<typename Data>
     class TPasteRegistryEntry : public SMPasteCommand::RegistryEntryBase
@@ -168,7 +168,7 @@ namespace
     TEDataContainer<AttributeEntry, DocumentElem>& _attributesOf(StateMachineData& data) { return data.getAttributes(); }
     TEDataContainer<SMEventEntry*, DocumentElem>&    _eventsOf(StateMachineData& data)     { return data.getEvents(); }
     TEDataContainer<SMTimerEntry, DocumentElem>&     _timersOf(StateMachineData& data)     { return data.getTimers(); }
-    TEDataContainer<SMMethodEntry*, DocumentElem>&   _methodsOf(StateMachineData& data)    { return data.getMethods(); }
+    TEDataContainer<MethodEntry*, DocumentElem>&   _methodsOf(StateMachineData& data)    { return data.getMethods(); }
     TEDataContainer<ConstantEntry, DocumentElem>&    _constantsOf(StateMachineData& data)  { return data.getConstants(); }
     TEDataContainer<IncludeEntry, DocumentElem>&     _includesOf(StateMachineData& data)   { return data.getIncludes(); }
 }
@@ -316,20 +316,20 @@ void SMPasteCommand::buildRegistryPlan(SMClipboardContent& content)
         section.removeAllElements();
     };
 
-    const auto planMethods = [&](SMMethodData& section, bool referenced)
+    const auto planMethods = [&](MethodDataSection& section, bool referenced)
     {
-        for (SMMethodEntry* entry : section.getElements())
+        for (MethodEntry* entry : section.getElements())
         {
             const QString& name = entry->getName();
-            const SMMethodEntry* existing = doc.getMethods().findMethod(name);
-            if (referenced && (existing != nullptr) && (existing->getMethodType() == entry->getMethodType())
+            const MethodEntry* existing = doc.getMethods().findMethod(name);
+            if (referenced && (existing != nullptr) && (existing->getKind() == entry->getKind())
                 && SMClipboard::structurallyEqual(*existing, *entry))
             {
                 delete entry;
                 continue;
             }
 
-            const bool trigger  = (entry->getMethodType() == SMMethodEntry::eMethodType::Trigger);
+            const bool trigger  = (entry->getKind() == NEMethod::SmTrigger);
             const bool conflict = (existing != nullptr) || claimedMethods.contains(name)
                                   || (trigger && stimulusTaken(name));
             if (conflict == false)
@@ -337,7 +337,7 @@ void SMPasteCommand::buildRegistryPlan(SMClipboardContent& content)
                 claimedMethods.insert(name);
             }
 
-            mRegistry.append(new TPasteRegistryEntry<SMMethodEntry*>(entry, &_methodsOf, eDocElementKind::Method
+            mRegistry.append(new TPasteRegistryEntry<MethodEntry*>(entry, &_methodsOf, eDocElementKind::Method
                                                                      , eRenameRole::Method, conflict));
         }
 

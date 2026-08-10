@@ -19,7 +19,7 @@
 
 #include "lusan/model/sm/SMGuardCommands.hpp"
 
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
@@ -227,7 +227,7 @@ namespace
 
     //!< The declared position of \p formalId among \p method's formals, or a large value when
     //!< it is not a formal (a legacy positional arg, id 0, sorts to the end).
-    int declaredPos(const SMMethodEntry* method, uint32_t formalId)
+    int declaredPos(const MethodEntry* method, uint32_t formalId)
     {
         if ((method != nullptr) && (formalId != 0u))
         {
@@ -245,7 +245,7 @@ namespace
     }
 
     //!< The child index at which a new arg for \p formalId keeps the list in declared order.
-    int insertionIndex(const SMGuardNode* call, const SMMethodEntry* method, uint32_t formalId)
+    int insertionIndex(const SMGuardNode* call, const MethodEntry* method, uint32_t formalId)
     {
         const int pos = declaredPos(method, formalId);
         int index = 0;
@@ -279,7 +279,7 @@ SMSetGuardCommand* SMGuardCommands::setArgByFormal(StateMachineData& data, DocMo
         }
         else
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
             call->getChildren().insert(insertionIndex(call, method, formalId), newArg);
         }
 

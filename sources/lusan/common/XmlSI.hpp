@@ -32,6 +32,7 @@ namespace XmlSI
     constexpr QLatin1StringView xmlSIElementAttribute       { "Attribute" };
     constexpr QLatin1StringView xmlSIElementAttributeList   { "AttributeList" };
     constexpr QLatin1StringView xmlSIElementBaseTypeKey     { "BaseTypeKey" };
+    constexpr QLatin1StringView xmlSIElementBody            { "Body" };
     constexpr QLatin1StringView xmlSIElementBaseTypeValue   { "BaseTypeValue" };
     constexpr QLatin1StringView xmlSIElementConstant        { "Constant" };
     constexpr QLatin1StringView xmlSIElementConstantList    { "ConstantList" };
@@ -61,8 +62,11 @@ namespace XmlSI
     constexpr QLatin1StringView xmlSIAttributeAlias         { "Alias" };
     constexpr QLatin1StringView xmlSIAttributeCategory      { "Category" };
     constexpr QLatin1StringView xmlSIAttributeDataType      { "DataType" };
+    constexpr QLatin1StringView xmlSIAttributeDefault       { "Default" };
     constexpr QLatin1StringView xmlSIAttributeDeprecateHint { "DeprecateHint" };
     constexpr QLatin1StringView xmlSIAttributeHasKey        { "HasKey" };
+    constexpr QLatin1StringView xmlSIAttributeImplement     { "Implement" };
+    constexpr QLatin1StringView xmlSIAttributeReturn        { "Return" };
     constexpr QLatin1StringView xmlSIAttributeHasValue      { "HasValue" };
     constexpr QLatin1StringView xmlSIAttributeID            { "ID" };
     constexpr QLatin1StringView xmlSIAttributeIsDefault     { "IsDefault" };

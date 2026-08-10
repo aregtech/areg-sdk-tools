@@ -24,7 +24,7 @@
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include "lusan/model/sm/SMDocumentIndex.hpp"
@@ -125,15 +125,15 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
 
     // Condition methods come next in guard weight order (a bare name reaches a condition before
     // it reaches an attribute or a constant): lambdas keep the FSM hue, handlers their own.
-    for (const SMMethodEntry* method : index.methodsOf(SMMethodEntry::eMethodType::Condition))
+    for (const MethodEntry* method : index.methodsOf(NEMethod::SmCondition))
     {
         SMGuardSymbol sym;
         sym.name        = method->getName();
-        sym.owner       = method->isLambdaCondition() ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
+        sym.owner       = NESMMethod::isLambdaCondition(method) ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
         sym.refkind     = SMGuardSymbol::eRefKind::Cond;
-        sym.glyph       = method->isLambdaCondition() ? QStringLiteral("{}") : QStringLiteral("h");
+        sym.glyph       = NESMMethod::isLambdaCondition(method) ? QStringLiteral("{}") : QStringLiteral("h");
         sym.typeText    = method->getReturn();
-        sym.provenance  = method->isLambdaCondition() ? QStringLiteral("lambda") : QStringLiteral("handler()");
+        sym.provenance  = NESMMethod::isLambdaCondition(method) ? QStringLiteral("lambda") : QStringLiteral("handler()");
         sym.symbolId    = method->getId();
         for (const MethodParameter& param : method->getElements())
         {

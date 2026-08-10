@@ -31,7 +31,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
@@ -136,7 +136,7 @@ namespace
         }
         case SMGuardNode::eKind::Call:
         {
-            const SMMethodEntry* method = SMGuardSymbols::method(data, node->getSymbolId());
+            const MethodEntry* method = SMGuardSymbols::method(data, node->getSymbolId());
             if (method != nullptr) out.conditions.insert(method->getName());
             break;
         }
@@ -232,7 +232,7 @@ namespace
         void checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName);
 
         // A condition whose name is already the name of a generated function.
-        void checkConditionCallableName(const SMMethodEntry& method);
+        void checkConditionCallableName(const MethodEntry& method);
 
         // Import rules.
         void checkImports(const QList<LevelInfo>& levels);
@@ -374,7 +374,7 @@ namespace
     {
         QHash<uint32_t, int> counts;
         collectIds(mData.getStates(), counts);
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr) continue;
             counts[m->getId()] += 1;
@@ -443,11 +443,11 @@ namespace
         // Methods are unique per kind, not per name: a trigger, an action and a condition may all
         // be called `on`. Qualifying the name with its kind expresses that.
         QStringList mNames; QList<uint32_t> mIds;
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m != nullptr)
             {
-                mNames << (QString::fromLatin1(SMMethodEntry::toString(m->getMethodType())) + QLatin1Char(' ') + m->getName());
+                mNames << (m->getType() + QLatin1Char(' ') + m->getName());
                 mIds << m->getId();
             }
         }
@@ -509,8 +509,8 @@ namespace
             else if (it.value() != kind)
                 add(id, kind, eSeverity::Error, 4, vtr("Stimulus name '%1' collides across trigger/event/timer").arg(name));
         };
-        for (SMMethodEntry* m : mData.getMethods().getElements())
-            if ((m != nullptr) && m->isTrigger()) stimulus(m->getName(), m->getId(), eDocElementKind::Method);
+        for (MethodEntry* m : mData.getMethods().getElements())
+            if ((m != nullptr) && NESMMethod::isTrigger(m)) stimulus(m->getName(), m->getId(), eDocElementKind::Method);
         for (SMEventEntry* e : mData.getEvents().getElements())
             if (e != nullptr) stimulus(e->getName(), e->getId(), eDocElementKind::Event);
         for (const SMTimerEntry& t : mData.getTimers().getElements())
@@ -529,7 +529,7 @@ namespace
                     add(p.getId(), kind, eSeverity::Error, 4, vtr("Duplicate parameter name '%1'").arg(p.getName()));
             }
         };
-        for (SMMethodEntry* m : mData.getMethods().getElements()) dupParams(m, eDocElementKind::Method);
+        for (MethodEntry* m : mData.getMethods().getElements()) dupParams(m, eDocElementKind::Method);
         for (SMEventEntry* e : mData.getEvents().getElements())   dupParams(e, eDocElementKind::Event);
     }
 
@@ -803,7 +803,7 @@ namespace
             {
             case SMTransitionEntry::eStimulusKind::Trigger:
             {
-                SMMethodEntry* m = mData.getMethods().findTrigger(stim);
+                MethodEntry* m = mData.getMethods().findMethod(stim, NEMethod::SmTrigger);
                 if (m == nullptr)
                     add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Trigger '%1' is not declared").arg(stim));
                 scope.stimParams = m;
@@ -841,7 +841,7 @@ namespace
             case SMOperationBase::eOperation::ActionCall:
             {
                 SMActionCall* call = static_cast<SMActionCall*>(op);
-                SMMethodEntry* action = mData.getMethods().findAction(call->getAction());
+                MethodEntry* action = mData.getMethods().findMethod(call->getAction(), NEMethod::SmAction);
                 if (action == nullptr)
                     add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Action '%1' is not declared").arg(call->getAction()));
                 validateArguments(id, eDocElementKind::Operation, action, call->getArguments(), scope);
@@ -929,7 +929,7 @@ namespace
             break;
         case eValueSource::Condition:
         {
-            SMMethodEntry* c = mData.getMethods().findCondition(ref);
+            MethodEntry* c = mData.getMethods().findMethod(ref, NEMethod::SmCondition);
             if (c == nullptr)
                 add(ownerId, kind, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (valuePosition && c->hasElements())
@@ -999,7 +999,7 @@ namespace
             validateOperand(id, leaf->getLhsKind(), leaf->getLhs(), scope, false);
             if (leaf->getLhsKind() == eValueSource::Condition)
             {
-                SMMethodEntry* c = mData.getMethods().findCondition(leaf->getLhs());
+                MethodEntry* c = mData.getMethods().findMethod(leaf->getLhs(), NEMethod::SmCondition);
                 if ((c != nullptr) && c->hasElements())
                     validateArguments(id, eDocElementKind::Condition, c, leaf->getArguments(), scope);
             }
@@ -1036,7 +1036,7 @@ namespace
 
         case eValueSource::Condition:
         {
-            SMMethodEntry* c = mData.getMethods().findCondition(ref);
+            MethodEntry* c = mData.getMethods().findMethod(ref, NEMethod::SmCondition);
             if (c == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
@@ -1105,7 +1105,7 @@ namespace
         
         case eValueSource::Condition:
         {
-            SMMethodEntry* m = mData.getMethods().findCondition(ref);
+            MethodEntry* m = mData.getMethods().findMethod(ref, NEMethod::SmCondition);
             return (m != nullptr) ? m->getReturn() : QString();
         }
 
@@ -1268,18 +1268,18 @@ namespace
         checkRegistryNames();
 
         // Registry entries: their names must be identifiers, and their declared types must resolve.
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr) continue;
             checkIdentifier(m->getId(), eDocElementKind::Method, m->getName());
             // An embedded condition owns its body and must supply one; every other method has none.
-            const bool embedded = m->isCondition() && (m->getImplement() == SMMethodEntry::eImplement::Embedded);
+            const bool embedded = NESMMethod::isCondition(m) && (m->getImplement() == MethodEntry::eImplement::Embedded);
             if (embedded && m->getBody().trimmed().isEmpty())
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("Embedded condition '%1' has an empty body").arg(m->getName()));
             if ((embedded == false) && (m->getBody().trimmed().isEmpty() == false))
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("A body is only allowed on an Embedded condition"));
             // Return belongs to a condition method and is a declared type like any other.
-            if (m->isCondition())
+            if (NESMMethod::isCondition(m))
             {
                 checkDataType(m->getId(), eDocElementKind::Method, m->getReturn());
                 checkConditionCallableName(*m);
@@ -1518,9 +1518,9 @@ namespace
     {
         // An attribute and a trigger of the same name both become members of the machine class and
         // collide there, whatever their parameter lists are. Always an error.
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
-            if ((m == nullptr) || (m->isTrigger() == false))
+            if ((m == nullptr) || (NESMMethod::isTrigger(m) == false))
                 continue;
             if (mData.getAttributes().findElement(m->getName()) != nullptr)
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, 32
@@ -1579,9 +1579,9 @@ namespace
         // A trigger or condition whose parameter carries the method's own name: inside the body the
         // parameter hides the method and its attribute getter. An action is generated with a name
         // prefix, so the same parameter name is harmless there.
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
-            if ((m == nullptr) || ((m->isTrigger() == false) && (m->isCondition() == false)))
+            if ((m == nullptr) || ((NESMMethod::isTrigger(m) == false) && (NESMMethod::isCondition(m) == false)))
                 continue;
             for (const MethodParameter& p : m->getElements())
             {
@@ -1589,7 +1589,7 @@ namespace
                 {
                     add(p.getId(), eDocElementKind::Method, eSeverity::Warning, 34
                       , vtr("Parameter '%1' has the same name as its %2, and hides the method and its attribute getter inside the body. Rename the parameter.")
-                            .arg(m->getName(), m->isTrigger() ? QStringLiteral("trigger") : QStringLiteral("condition")));
+                            .arg(m->getName(), NESMMethod::isTrigger(m) ? QStringLiteral("trigger") : QStringLiteral("condition")));
                     break;
                 }
             }
@@ -1671,7 +1671,7 @@ namespace
                 "Move the parameter to the end, or give the parameters after it defaults as well."));
     }
 
-    void Ctx::checkConditionCallableName(const SMMethodEntry& method)
+    void Ctx::checkConditionCallableName(const MethodEntry& method)
     {
         // A condition keeps its document name in the generated code, while an action is generated
         // under a prefix. A condition already spelled that way lands on the same identifier.
@@ -1755,7 +1755,7 @@ namespace
         for (const AttributeEntry& a : mData.getAttributes().getElements())
             note(a.getId(), eDocElementKind::Attribute, vtr("Attribute '%1' has no description").arg(a.getName()), a.getDescription());
 
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)
                 continue;
@@ -2018,11 +2018,11 @@ namespace
         }
 
         // Declared types referenced by declarations count as used
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)
                 continue;
-            if (m->isCondition()) noteType(m->getReturn());
+            if (NESMMethod::isCondition(m)) noteType(m->getReturn());
             for (const MethodParameter& p : m->getElements()) noteType(p.getType());
         }
         for (SMEventEntry* e : mData.getEvents().getElements())
@@ -2034,14 +2034,14 @@ namespace
         // import is a warning; an unused constant is only information. An unused attribute is not
         // reported at all -- an attribute is public state and being read only by generated code
         // outside the machine is normal.
-        for (SMMethodEntry* m : mData.getMethods().getElements())
+        for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)
                 continue;
             bool used = false;
-            if (m->isAction())          used = actionsUsed.contains(m->getName());
-            else if (m->isCondition())  used = conditionsUsed.contains(m->getName());
-            else if (m->isTrigger())    used = triggersUsed.contains(m->getName());
+            if (NESMMethod::isAction(m))          used = actionsUsed.contains(m->getName());
+            else if (NESMMethod::isCondition(m))  used = conditionsUsed.contains(m->getName());
+            else if (NESMMethod::isTrigger(m))    used = triggersUsed.contains(m->getName());
             if (used == false)
                 add(m->getId(), eDocElementKind::Method, eSeverity::Warning, 4, vtr("Method '%1' is never referenced").arg(m->getName()));
         }

@@ -23,6 +23,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/common/ParamType.cpp
     ${LUSAN}/data/common/MethodBase.cpp
     ${LUSAN}/data/common/MethodParameter.cpp
+    ${LUSAN}/data/common/MethodEntry.cpp
     ${LUSAN}/data/common/ConstantEntry.cpp
     ${LUSAN}/data/common/IncludeEntry.cpp
     ${LUSAN}/data/common/DataTypeBase.cpp
@@ -50,7 +51,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMImportResolver.cpp
     ${LUSAN}/data/common/IncludeDataSection.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
-    ${LUSAN}/data/sm/SMMethodData.cpp
+    ${LUSAN}/data/common/MethodDataSection.cpp
     ${LUSAN}/data/sm/SMOperation.cpp
     ${LUSAN}/data/sm/SMOverviewData.cpp
     ${LUSAN}/data/sm/SMReferences.cpp
@@ -185,7 +186,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
-    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/common/MethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
@@ -239,7 +240,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
-    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/common/MethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
@@ -432,7 +433,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
-    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/common/MethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
@@ -643,7 +644,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/common/AttributeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
-    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/common/MethodModel.cpp
     ${LUSAN}/model/common/ConstantModel.cpp
     ${LUSAN}/model/common/IncludeModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
@@ -666,6 +667,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/EditCancelFilter.cpp
+    ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/MethodDetailsView.cpp
     ${LUSAN}/view/common/MethodListView.cpp
     ${LUSAN}/view/common/MethodParamDetailsView.cpp
@@ -693,6 +695,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
     ${LUSAN}/view/sm/SMIslandEditor.cpp
+    ${LUSAN}/view/common/MethodPage.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
@@ -756,6 +759,71 @@ target_link_libraries(lusan_sm_guard_u4_sweep PRIVATE
 )
 set_target_properties(lusan_sm_guard_u4_sweep PROPERTIES WIN32_EXECUTABLE OFF)
 
+# ---------------------------------------------------------------------------
+# The shared editor pages, built over both document kinds. LUSAN_DESIGN_PAGE_SRC
+# carries the two models and the canvas but none of the page views, so this list
+# adds them, the service interface data and model layer, and the three state
+# machine subclasses. Registered as the ctest entry design_pages (offscreen QPA);
+# can also be run manually for the pictures:
+#   lusan_design_pages <TrafficLight.fsml> [output directory]
+# ---------------------------------------------------------------------------
+set(LUSAN_SI_MODEL_SRC
+    ${LUSAN}/data/si/SIOverviewData.cpp
+    ${LUSAN}/data/si/ServiceInterfaceData.cpp
+    ${LUSAN}/model/si/SICommand.cpp
+    ${LUSAN}/model/si/SIOverviewModel.cpp
+    ${LUSAN}/model/si/SIValidator.cpp
+    ${LUSAN}/model/si/ServiceInterfaceModel.cpp
+)
+
+set(LUSAN_EDITOR_PAGE_SRC
+    ${LUSAN}/view/common/AttributeDetailsView.cpp
+    ${LUSAN}/view/common/AttributeListView.cpp
+    ${LUSAN}/view/common/AttributePage.cpp
+    ${LUSAN}/view/common/ConstantDetailsView.cpp
+    ${LUSAN}/view/common/ConstantListView.cpp
+    ${LUSAN}/view/common/ConstantPage.cpp
+    ${LUSAN}/view/common/DataTypeDetailsView.cpp
+    ${LUSAN}/view/common/DataTypeFieldDetailsView.cpp
+    ${LUSAN}/view/common/DataTypeListView.cpp
+    ${LUSAN}/view/common/DataTypePage.cpp
+    ${LUSAN}/view/common/EditCancelFilter.cpp
+    ${LUSAN}/view/common/IEDataTypeConsumer.cpp
+    ${LUSAN}/view/common/IncludeDetailsView.cpp
+    ${LUSAN}/view/common/IncludeListView.cpp
+    ${LUSAN}/view/common/IncludePage.cpp
+    ${LUSAN}/view/common/MethodDetailsView.cpp
+    ${LUSAN}/view/common/MethodListView.cpp
+    ${LUSAN}/view/common/MethodPage.cpp
+    ${LUSAN}/view/common/MethodParamDetailsView.cpp
+    ${LUSAN}/view/common/TableCell.cpp
+    ${LUSAN}/view/common/WidgetHighlight.cpp
+    ${LUSAN}/view/common/WorkspaceFileDialog.cpp
+    ${LUSAN}/view/sm/SMAttribute.cpp
+    ${LUSAN}/view/sm/SMConstant.cpp
+    ${LUSAN}/view/sm/SMInclude.cpp
+    ${LUSAN}/view/sm/SMMethod.cpp
+)
+
+qt_add_executable(lusan_design_pages
+    ${LUSAN_DESIGN_PAGE_SRC}
+    ${LUSAN_SI_MODEL_SRC}
+    ${LUSAN_EDITOR_PAGE_SRC}
+    ${LUSAN_ROOT}/tests/common/AppEnvStub.cpp
+    ${LUSAN_ROOT}/tests/common/DesignPageTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_design_pages PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_design_pages PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_design_pages PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_design_pages PROPERTIES WIN32_EXECUTABLE OFF)
+
 # The Service Interface headless data layer.
 set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/common/ElementBase.cpp
@@ -786,13 +854,9 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/common/ConstantDataSection.cpp
     ${LUSAN}/data/common/DataTypeDataSection.cpp
     ${LUSAN}/data/common/IncludeDataSection.cpp
-    ${LUSAN}/data/si/SIMethodBase.cpp
-    ${LUSAN}/data/si/SIMethodBroadcast.cpp
-    ${LUSAN}/data/si/SIMethodData.cpp
-    ${LUSAN}/data/si/SIMethodRequest.cpp
-    ${LUSAN}/data/si/SIMethodResponse.cpp
+    ${LUSAN}/data/common/MethodDataSection.cpp
+    ${LUSAN}/data/common/MethodEntry.cpp
     ${LUSAN}/data/si/SIOverviewData.cpp
-    ${LUSAN}/data/si/SIResponseLink.cpp
     ${LUSAN}/data/si/ServiceInterfaceData.cpp
 )
 
@@ -862,5 +926,10 @@ add_test(NAME sm_dirty_mark COMMAND lusan_sm_dirty_mark
 # machine, so a failure means a real algorithmic regression, not timing noise.
 add_test(NAME sm_perf COMMAND lusan_sm_perf ${CMAKE_CURRENT_BINARY_DIR}/perf)
 
-set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_dirty_mark sm_perf PROPERTIES
+# The four merged pages, over both document kinds. Guards the merges no window was ever
+# free to look at, and leaves a picture of each page behind.
+add_test(NAME design_pages COMMAND lusan_design_pages
+         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/design-pages)
+
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_dirty_mark sm_perf design_pages PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

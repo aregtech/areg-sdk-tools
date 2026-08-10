@@ -73,21 +73,21 @@ namespace
     }
 
     //!< The declared property command for a condition's Implement mode.
-    QUndoCommand* implementCommand(StateMachineData& data, DocModelNotifier& notifier, uint32_t methodId, SMMethodEntry::eImplement implement, const QString& text, QUndoCommand* parent)
+    QUndoCommand* implementCommand(StateMachineData& data, DocModelNotifier& notifier, uint32_t methodId, MethodEntry::eImplement implement, const QString& text, QUndoCommand* parent)
     {
         StateMachineData* doc = &data;
-        auto getter = [doc, methodId]() -> SMMethodEntry::eImplement
+        auto getter = [doc, methodId]() -> MethodEntry::eImplement
         {
-            SMMethodEntry* m = doc->getMethods().findMethod(methodId);
-            return (m != nullptr) ? m->getImplement() : SMMethodEntry::eImplement::Handler;
+            MethodEntry* m = doc->getMethods().findMethod(methodId);
+            return (m != nullptr) ? m->getImplement() : MethodEntry::eImplement::Handler;
         };
-        auto setter = [doc, methodId](const SMMethodEntry::eImplement& value)
+        auto setter = [doc, methodId](const MethodEntry::eImplement& value)
         {
-            SMMethodEntry* m = doc->getMethods().findMethod(methodId);
+            MethodEntry* m = doc->getMethods().findMethod(methodId);
             if (m != nullptr) { m->setImplement(value); }
         };
 
-        return new TDocSetPropertyCommand<SMMethodEntry::eImplement>(notifier, methodId, eDocElementKind::Method, getter, setter, implement, text, parent);
+        return new TDocSetPropertyCommand<MethodEntry::eImplement>(notifier, methodId, eDocElementKind::Method, getter, setter, implement, text, parent);
     }
 
     //!< The declared property command for a condition's verbatim body.
@@ -96,12 +96,12 @@ namespace
         StateMachineData* doc = &data;
         auto getter = [doc, methodId]() -> QString
         {
-            SMMethodEntry* m = doc->getMethods().findMethod(methodId);
+            MethodEntry* m = doc->getMethods().findMethod(methodId);
             return (m != nullptr) ? m->getBody() : QString();
         };
         auto setter = [doc, methodId](const QString& value)
         {
-            SMMethodEntry* m = doc->getMethods().findMethod(methodId);
+            MethodEntry* m = doc->getMethods().findMethod(methodId);
             if (m != nullptr) { m->setBody(value); }
         };
 
@@ -115,7 +115,7 @@ namespace
 
 SMNameIslandCommand::SMNameIslandCommand(  StateMachineData& data, DocModelNotifier& notifier
                                          , uint32_t transitionId, const QList<int>& islandPath
-                                         , const QString& name, SMMethodEntry::eImplement implement
+                                         , const QString& name, MethodEntry::eImplement implement
                                          , const QString& text, QUndoCommand* parent /*= nullptr*/)
     : SMCommand     (data, notifier, text, parent)
     , mTransId      (transitionId)
@@ -170,10 +170,10 @@ void SMNameIslandCommand::redo()
 
         // The declaration: the island's body, bool return, and one parameter per in-scope
         // stimulus parameter the body references (the deterministic auto-map).
-        mEntry = new SMMethodEntry(0, mName, SMMethodEntry::eMethodType::Condition);
+        mEntry = new MethodEntry(0, mName, NEMethod::SmCondition, NEMethod::stateMachine());
         mEntry->setReturn(QStringLiteral("bool"));
         mEntry->setImplement(mImplement);
-        if (mImplement == SMMethodEntry::eImplement::Embedded)
+        if (mImplement == MethodEntry::eImplement::Embedded)
         {
             mEntry->setBody(mBody);
         }
@@ -292,7 +292,7 @@ bool SMGuardLadder::isSingleReturnBody(const QString& body)
 
 SMNameIslandCommand* SMGuardLadder::nameIsland(  StateMachineData& data, DocModelNotifier& notifier
                                                , uint32_t transitionId, const QList<int>& islandPath
-                                               , const QString& name, SMMethodEntry::eImplement implement
+                                               , const QString& name, MethodEntry::eImplement implement
                                                , const QString& text)
 {
     SMTransitionEntry* transition = data.findTransitionById(transitionId);
@@ -313,28 +313,28 @@ SMNameIslandCommand* SMGuardLadder::nameIsland(  StateMachineData& data, DocMode
 
 QUndoCommand* SMGuardLadder::moveToHandler(StateMachineData& data, DocModelNotifier& notifier, uint32_t methodId, const QString& text)
 {
-    SMMethodEntry* method = data.getMethods().findMethod(methodId);
-    if ((method == nullptr) || (method->isLambdaCondition() == false))
+    MethodEntry* method = data.getMethods().findMethod(methodId);
+    if ((method == nullptr) || (NESMMethod::isLambdaCondition(method) == false))
     {
         return nullptr;
     }
 
     DocCompositeCommand* composite = new DocCompositeCommand(notifier, text);
-    implementCommand(data, notifier, methodId, SMMethodEntry::eImplement::Handler, text, composite);
+    implementCommand(data, notifier, methodId, MethodEntry::eImplement::Handler, text, composite);
     bodyCommand(data, notifier, methodId, QString(), text, composite);
     return composite;
 }
 
 QUndoCommand* SMGuardLadder::adoptBody(StateMachineData& data, DocModelNotifier& notifier, uint32_t methodId, const QString& body, const QString& text)
 {
-    SMMethodEntry* method = data.getMethods().findMethod(methodId);
-    if ((method == nullptr) || (method->isHandlerCondition() == false))
+    MethodEntry* method = data.getMethods().findMethod(methodId);
+    if ((method == nullptr) || (NESMMethod::isHandlerCondition(method) == false))
     {
         return nullptr;
     }
 
     DocCompositeCommand* composite = new DocCompositeCommand(notifier, text);
-    implementCommand(data, notifier, methodId, SMMethodEntry::eImplement::Embedded, text, composite);
+    implementCommand(data, notifier, methodId, MethodEntry::eImplement::Embedded, text, composite);
     bodyCommand(data, notifier, methodId, body, text, composite);
     return composite;
 }
@@ -353,8 +353,8 @@ QUndoCommand* SMGuardLadder::inlineBody(StateMachineData& data, DocModelNotifier
         return nullptr;
     }
 
-    const SMMethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
-    if ((method == nullptr) || (method->isLambdaCondition() == false) || (isSingleReturnBody(method->getBody()) == false))
+    const MethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
+    if ((method == nullptr) || (NESMMethod::isLambdaCondition(method) == false) || (isSingleReturnBody(method->getBody()) == false))
     {
         return nullptr;
     }

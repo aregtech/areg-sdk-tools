@@ -389,13 +389,13 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     {
         mField->setIslandBody(islandIndex, body);
         mField->commitNow();
-        runNameIsland(nthIslandPath(islandIndex), body, SMMethodEntry::eImplement::Embedded);
+        runNameIsland(nthIslandPath(islandIndex), body, MethodEntry::eImplement::Embedded);
     });
     connect(mIsland, &SMIslandEditor::moveToHandlerRequested, this, [this](int islandIndex, const QString& body)
     {
         mField->setIslandBody(islandIndex, body);
         mField->commitNow();
-        runNameIsland(nthIslandPath(islandIndex), body, SMMethodEntry::eImplement::Handler);
+        runNameIsland(nthIslandPath(islandIndex), body, MethodEntry::eImplement::Handler);
     });
 
     // ---- Hover card and grid route wiring ---------------------------------
@@ -591,7 +591,7 @@ QList<int> SMGuardBar::firstCallPath(uint32_t methodId) const
 // Ladder flows (one implementation each; lens, island editor, hover share them)
 //////////////////////////////////////////////////////////////////////////
 
-void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body, SMMethodEntry::eImplement implement)
+void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body, MethodEntry::eImplement implement)
 {
     const SMGuardNode* tree = guardTree();
     if ((tree == nullptr) || (mTransId == 0u))
@@ -607,7 +607,7 @@ void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body
                          : tr("parameters (from the body): %1").arg(params.join(QStringLiteral(", ")));
 
     bool accepted = false;
-    const QString title = (implement == SMMethodEntry::eImplement::Embedded) ? tr("Name the lambda") : tr("Move to a handler condition");
+    const QString title = (implement == MethodEntry::eImplement::Embedded) ? tr("Name the lambda") : tr("Move to a handler condition");
     const QString name = QInputDialog::getText(this, title
                                               , tr("Condition name (%1)").arg(hint)
                                               , QLineEdit::Normal, QString(), &accepted).trimmed();
@@ -632,7 +632,7 @@ void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body
     mModel.getUndoStack().push(command);
     mIsland->hide();
 
-    if (implement == SMMethodEntry::eImplement::Handler)
+    if (implement == MethodEntry::eImplement::Handler)
     {
         // Lusan stops owning the body: hand it to the user as a copyable stub.
         const QString stub = handlerStub(data, mTransId, name, body);
@@ -646,8 +646,8 @@ void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body
 void SMGuardBar::runMoveToHandler(uint32_t methodId)
 {
     StateMachineData& data = mModel.getData();
-    SMMethodEntry* method = data.getMethods().findMethod(methodId);
-    if ((method == nullptr) || (method->isLambdaCondition() == false))
+    MethodEntry* method = data.getMethods().findMethod(methodId);
+    if ((method == nullptr) || (NESMMethod::isLambdaCondition(method) == false))
     {
         return;
     }
@@ -672,8 +672,8 @@ void SMGuardBar::runMoveToHandler(uint32_t methodId)
 void SMGuardBar::runAdoptBody(uint32_t methodId)
 {
     StateMachineData& data = mModel.getData();
-    SMMethodEntry* method = data.getMethods().findMethod(methodId);
-    if ((method == nullptr) || (method->isHandlerCondition() == false))
+    MethodEntry* method = data.getMethods().findMethod(methodId);
+    if ((method == nullptr) || (NESMMethod::isHandlerCondition(method) == false))
     {
         return;
     }
@@ -763,7 +763,7 @@ const SMGuardNode* SMGuardBar::nodeAtPath(const QList<int>& path) const
 
 void SMGuardBar::bindArgumentsTo(const QList<int>& callPath, uint32_t methodId)
 {
-    const SMMethodEntry* method = SMGuardSymbols::method(mModel.getData(), methodId);
+    const MethodEntry* method = SMGuardSymbols::method(mModel.getData(), methodId);
     if (method == nullptr)
     {
         mArgs->clearBinding();
@@ -815,7 +815,7 @@ void SMGuardBar::syncArgumentsToCaret()
         {
             for (const QPair<QList<int>, const SMGuardNode*>& entry : calls)
             {
-                const SMMethodEntry* method = SMGuardSymbols::method(mModel.getData(), entry.second->getSymbolId());
+                const MethodEntry* method = SMGuardSymbols::method(mModel.getData(), entry.second->getSymbolId());
                 if ((method != nullptr) && (method->getName() == callee))
                 {
                     targetPath   = entry.first;
@@ -836,7 +836,7 @@ void SMGuardBar::syncArgumentsToCaret()
         }
     }
 
-    const SMMethodEntry* boundMethod = SMGuardSymbols::method(mModel.getData(), targetMethod);
+    const MethodEntry* boundMethod = SMGuardSymbols::method(mModel.getData(), targetMethod);
     const int formalCount = (boundMethod != nullptr) ? static_cast<int>(boundMethod->getElements().size()) : 0;
     if (mBoundCallValid && (targetPath == mBoundCallPath) && (mArgs->rowCount() == formalCount))
     {
@@ -925,8 +925,8 @@ void SMGuardBar::openPopout()
     connect(popout, &SMGuardPopout::nameIslandRequested, this, [this, popout](int islandIndex, const QString& body, bool moveToHandler)
     {
         popout->field()->commitNow();
-        const SMMethodEntry::eImplement implement = moveToHandler ? SMMethodEntry::eImplement::Handler
-                                                                  : SMMethodEntry::eImplement::Embedded;
+        const MethodEntry::eImplement implement = moveToHandler ? MethodEntry::eImplement::Handler
+                                                                  : MethodEntry::eImplement::Embedded;
         runNameIsland(nthIslandPath(islandIndex), body, implement);
     });
 

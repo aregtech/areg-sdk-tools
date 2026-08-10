@@ -243,13 +243,13 @@ SMClipboardContent::SMClipboardContent()
     , mAttributes   (NEAttribute::StateMachine, &mRoot)
     , mEvents       (&mRoot)
     , mTimers       (&mRoot)
-    , mMethods      (&mRoot)
+    , mMethods      (NEMethod::stateMachine(), &mRoot)
     , mConstants    (&mRoot)
     , mIncludes     (&mRoot)
     , mRefAttributes(NEAttribute::StateMachine, &mRoot)
     , mRefEvents    (&mRoot)
     , mRefTimers    (&mRoot)
-    , mRefMethods   (&mRoot)
+    , mRefMethods   (NEMethod::stateMachine(), &mRoot)
     , mRefConstants (&mRoot)
 {
 }
@@ -281,7 +281,7 @@ QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t
     QList<const AttributeEntry*>  attributes;
     QList<const SMEventEntry*>      events;
     QList<const SMTimerEntry*>      timers;
-    QList<const SMMethodEntry*>     methods;
+    QList<const MethodEntry*>     methods;
     QList<const ConstantEntry*>     constants;
     QList<const IncludeEntry*>      includes;
 
@@ -320,7 +320,7 @@ QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t
         {
             timers.append(timer);
         }
-        else if (const SMMethodEntry* method = doc.getMethods().findMethod(id); method != nullptr)
+        else if (const MethodEntry* method = doc.getMethods().findMethod(id); method != nullptr)
         {
             methods.append(method);
         }
@@ -407,11 +407,11 @@ QString SMClipboard::serialize(const StateMachineData& doc, const QList<uint32_t
             , [&doc](const QString& name) { return doc.getTimers().findElement(name); });
 
     explicitNames.clear();
-    for (const SMMethodEntry* entry : methods)
+    for (const MethodEntry* entry : methods)
     {
         explicitNames.insert(entry->getName());
     }
-    const QList<const SMMethodEntry*> refMethods = _resolveReferences<SMMethodEntry>(references.methods, explicitNames
+    const QList<const MethodEntry*> refMethods = _resolveReferences<MethodEntry>(references.methods, explicitNames
             , [&doc](const QString& name) { return doc.getMethods().findMethod(name); });
 
     explicitNames.clear();

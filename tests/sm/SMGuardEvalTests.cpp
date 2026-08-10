@@ -23,7 +23,7 @@
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
-#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMMethodKind.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -81,11 +81,11 @@ namespace
         ConstantEntry* konst = data.getConstants().createConstant(QStringLiteral("MIN_WAITING"));
         if (konst != nullptr) { konst->setValue(QStringLiteral("3")); }
 
-        SMMethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), SMMethodEntry::eMethodType::Trigger);
+        MethodEntry* trigger = data.getMethods().createMethod(QStringLiteral("RequestWalk"), NEMethod::SmTrigger);
         trigger->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
-        SMMethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), SMMethodEntry::eMethodType::Condition);
-        handler->setImplement(SMMethodEntry::eImplement::Handler);
+        MethodEntry* handler = data.getMethods().createMethod(QStringLiteral("HasWaiting"), NEMethod::SmCondition);
+        handler->setImplement(MethodEntry::eImplement::Handler);
         handler->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Idle"), SMStateEntry::eStateKind::Start);
@@ -291,7 +291,7 @@ static void testGuardTruthAndSiblings()
     SMStateEntry* idle = data.findState(QStringLiteral("Idle"));
     SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
     // And one on a different stimulus that must NOT count as a sibling.
-    data.getMethods().createMethod(QStringLiteral("RequestRest"), SMMethodEntry::eMethodType::Trigger);
+    data.getMethods().createMethod(QStringLiteral("RequestRest"), NEMethod::SmTrigger);
     idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), 0u, SMTransitionEntry::eTransitionKind::Internal);
 
     const QList<uint32_t> siblings = SMGuardEval::siblingTransitions(data, tid);
@@ -396,7 +396,7 @@ static void testValidationFindings()
     check(guard2.resolved(), "param guard resolves");
     trans2->getGuard().setTree(guard2.tree);
 
-    SMMethodEntry* bare = data2.getMethods().createMethod(QStringLiteral("RequestStop"), SMMethodEntry::eMethodType::Trigger);
+    MethodEntry* bare = data2.getMethods().createMethod(QStringLiteral("RequestStop"), NEMethod::SmTrigger);
     (void)bare;
     trans2->setStimulus(QStringLiteral("RequestStop"));
     findings = SMGuardValidation::validateTransition(data2, tid2);
