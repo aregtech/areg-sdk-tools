@@ -130,6 +130,20 @@ public:
     bool canUndo() const override;
     bool canRedo() const override;
 
+    /**
+     * \brief   The document facade, which the output window's Validation tab binds to.
+     **/
+    IEDocumentModel* documentModel() override;
+
+    /**
+     * \brief   Reveals a validation finding of this document: switches to the page that owns the
+     *          element, building it on demand, and puts the accent on the field at fault.
+     **/
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule) override;
+
+    //!< The model of the service interface.
+    inline ServiceInterfaceModel& getModel();
+
 protected:
     
     /**
@@ -197,5 +211,10 @@ private:
     SIInclude*   mInclude;   //!< The include widget
     QList<int>   mPendingInitTabs; //!< Background initialization queue
 };
+
+inline ServiceInterfaceModel& ServiceInterface::getModel()
+{
+    return mModel;
+}
 
 #endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP

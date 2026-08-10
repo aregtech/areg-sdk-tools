@@ -27,6 +27,7 @@
 #include "lusan/model/common/IEDocumentModel.hpp"
 
 #include <QList>
+#include <QObject>
 #include <QString>
 #include <cstdint>
 
@@ -59,9 +60,17 @@ class FieldEntry;
  *          those are stored by value in the owning type's list, so a sibling add or remove
  *          can reallocate and move them. The owning `DataTypeCustom*` is stable, because the
  *          section stores it by pointer, so capturing it directly is safe.
+ *
+ *          The model also keeps the section coherent: a structure field and a container
+ *          key/value each store a resolved type object beside the type name they were given,
+ *          and the model re-resolves all of them whenever the set of types changes -- an edit,
+ *          an undo, a redo or a reload alike. It listens to the notifier for that, so the work
+ *          happens once per change and before the pages read the section.
  **/
-class DataTypeModel
+class DataTypeModel : public QObject
 {
+    Q_OBJECT
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////

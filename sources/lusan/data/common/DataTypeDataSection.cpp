@@ -278,3 +278,28 @@ void DataTypeDataSection::normalizeType(DataTypeCustom* dataType) const
         static_cast<DataTypeContainer*>(dataType)->validate(customTypes);
     }
 }
+
+void DataTypeDataSection::refreshTypeReferences()
+{
+    const QList<DataTypeCustom *>& customTypes{ getCustomDataTypes() };
+    for (DataTypeCustom* dataType : customTypes)
+    {
+        if (dataType == nullptr)
+            continue;
+
+        // Invalidate before validating: validate() only fills an empty slot, so a reference left
+        // over from a type that no longer exists would otherwise survive.
+        if (dataType->isStructure())
+        {
+            DataTypeStructure* structType = static_cast<DataTypeStructure*>(dataType);
+            structType->invalidate();
+            structType->validate(customTypes);
+        }
+        else if (dataType->isContainer())
+        {
+            DataTypeContainer* container = static_cast<DataTypeContainer*>(dataType);
+            container->invalidate();
+            container->validate(customTypes);
+        }
+    }
+}

@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/data/common/AttributeEntry.hpp"
+#include "lusan/model/common/DocIssue.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
@@ -139,7 +140,13 @@ public:
      * \brief Destructor.
      */
     virtual ~SIAttribute();
-    
+
+    /**
+     * \brief   Selects the attribute with the given ID and, when the check names one, puts the
+     *          accent on the field at fault. Used by the validation results panel.
+     **/
+    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
+
 protected:
     
     /**

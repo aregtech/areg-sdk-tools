@@ -25,6 +25,7 @@
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/DocUndoStack.hpp"
+#include "lusan/model/common/DocValidationController.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/model/si/SIAttributeModel.hpp"
 #include "lusan/model/common/ConstantModel.hpp"
@@ -143,9 +144,14 @@ public:
     inline ConstantDataSection& getConstantSection() override;
 
     /**
-     * rief   The document's `DataTypeList` section.
+     * \brief   The document's `DataTypeList` section.
      **/
     inline DataTypeDataSection& getDataTypeSection() override;
+
+    /**
+     * \brief   The document's validation scheduler, which owns its findings.
+     **/
+    inline DocValidationController& getValidationController() override;
 
     /**
      * \brief   True while the document holds edits that have not been saved.
@@ -161,11 +167,12 @@ private:
     DocModelNotifier        mNotifier;          //!< The document's change notifier.
     DocUndoStack            mUndoStack;         //!< The document's undo stack.
     SIOverviewModel         mModelOverview;     //!< The overview model.
-    DataTypeModel         mModelDataType;     //!< The data type model.
+    DataTypeModel           mModelDataType;     //!< The data type model.
     SIAttributeModel        mModelAttributes;   //!< The data attributes model.
     SIMethodModel           mModelMethods;      //!< The methods model.
     ConstantModel           mModelConstant;     //!< The constant model.
     SIIncludeModel          mModelInclude;      //!< The include model.
+    DocValidationController mValidation;        //!< Background structural and reference validation.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -219,6 +226,11 @@ inline ConstantDataSection& ServiceInterfaceModel::getConstantSection()
 inline DataTypeDataSection& ServiceInterfaceModel::getDataTypeSection()
 {
     return mSIData.getDataTypeData();
+}
+
+inline DocValidationController& ServiceInterfaceModel::getValidationController()
+{
+    return mValidation;
 }
 
 inline DocModelNotifier& ServiceInterfaceModel::getNotifier()

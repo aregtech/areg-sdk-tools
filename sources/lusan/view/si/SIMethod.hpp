@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QScrollArea>
 #include "lusan/data/si/SIMethodBase.hpp"
+#include "lusan/model/common/DocIssue.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
@@ -76,6 +77,12 @@ public:
     explicit SIMethod(SIMethodModel & model, QWidget* parent = nullptr);
 
     virtual ~SIMethod();
+
+    /**
+     * \brief   Selects the method with the given ID and, when the check names one, puts the
+     *          accent on the field at fault. Used by the validation results panel.
+     **/
+    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
     
 //////////////////////////////////////////////////////////////////////////
 // override

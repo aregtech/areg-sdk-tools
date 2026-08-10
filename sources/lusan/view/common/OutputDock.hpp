@@ -35,8 +35,8 @@
  ************************************************************************/
 class MdiMainWindow;
 class QVBoxLayout;
-class SMValidationPanel;
-class StateMachine;
+class DocValidationPanel;
+class MdiChild;
 
 /**
  * \brief   The OutputDock class is the output-window content (a tab widget of analysis views).
@@ -58,7 +58,7 @@ public:
     {
           OutputUnknown     //!< Unknown output window
         , OutputLogging     //!< Status window for log analyzes
-        , OutputValidation  //!< Document validation findings of the active State Machine
+        , OutputValidation  //!< Validation findings of the open documents
     };
 
     //!< The tab name for the logging output window
@@ -97,11 +97,11 @@ public:
     inline ScopeOutputViewer& getScopeLogsView();
 
     /**
-     * \brief   Points the Validation tab at the given State Machine document, or at a
-     *          placeholder when \p doc is nullptr. The findings list belongs to one document,
-     *          so it is rebuilt whenever the active document changes.
+     * \brief   Points the Validation tab at the open documents that carry validation, or at a
+     *          placeholder when there are none. The list is rebuilt whenever the set of open
+     *          documents changes.
      **/
-    void setDocuments(const QList<StateMachine*>& docs);
+    void setDocuments(const QList<MdiChild*>& docs);
 
     /**
      * \brief   Brings the Validation tab forward and, when \p step is non-zero, moves to the
@@ -112,7 +112,7 @@ public:
     /**
      * \brief   The findings panel of the currently bound document, or nullptr when none.
      **/
-    inline SMValidationPanel* getValidationView() const;
+    inline DocValidationPanel* getValidationView() const;
 
     /**
      * \brief   A dock content widget must be free to grow and shrink along the docking axis,
@@ -133,7 +133,7 @@ private:
     void showValidationPlaceholder();
 
     //!< Builds the findings panel on first use and returns it.
-    SMValidationPanel* ensureValidationPanel();
+    DocValidationPanel* ensureValidationPanel();
 
     //!< Retitles the tab `Validation (N)`, or plain `Validation` when nothing is pending.
     void updateValidationTitle(int pending);
@@ -148,8 +148,8 @@ private:
     QWidget*                mValidationTab; //!< The Validation tab body, host of the findings panel.
     QVBoxLayout*            mValidationBody;//!< The single-child layout of the Validation tab.
     QWidget*                mValidationView;//!< The hosted findings panel, or the placeholder note.
-    SMValidationPanel*      mValidation;    //!< mValidationView when it is a real findings panel.
-    QList<QPointer<StateMachine> > mBoundDocs;  //!< The documents the Validation tab currently shows.
+    DocValidationPanel*     mValidation;    //!< mValidationView when it is a real findings panel.
+    QList<QPointer<MdiChild> > mBoundDocs;  //!< The documents the Validation tab currently shows.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -172,7 +172,7 @@ inline ScopeOutputViewer& OutputDock::getScopeLogsView()
     return mScopeOutput;
 }
 
-inline SMValidationPanel* OutputDock::getValidationView() const
+inline DocValidationPanel* OutputDock::getValidationView() const
 {
     return mValidation;
 }

@@ -52,8 +52,27 @@ namespace
 }
 
 DataTypeModel::DataTypeModel(IEDocumentModel& document)
-    : mDocument(document)
+    : QObject   ( )
+    , mDocument (document)
 {
+    // A structure field and a container key/value keep the type object they resolved to beside
+    // the name they were given, and that object is what tells a valid declaration from a broken
+    // one. Adding, removing, converting or renaming a type changes what those names resolve to,
+    // so they are all looked up again here, once per change. The document facade builds this
+    // model before it builds any page, so the section is coherent by the time a page reads it.
+    DocModelNotifier& notifier = mDocument.getNotifier();
+    auto onTypesChanged = [this](uint32_t, eDocElementKind kind)
+    {
+        if (kind == eDocElementKind::DataType)
+        {
+            types().refreshTypeReferences();
+        }
+    };
+
+    connect(&notifier, &DocModelNotifier::elementAdded  , this, onTypesChanged);
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, onTypesChanged);
+    connect(&notifier, &DocModelNotifier::elementChanged, this, onTypesChanged);
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, [this]() { types().refreshTypeReferences(); });
 }
 
 const DataTypeDataSection& DataTypeModel::getDataTypeData() const

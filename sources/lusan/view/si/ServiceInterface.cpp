@@ -26,6 +26,7 @@
 #include "lusan/view/si/SIInclude.hpp"
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
+#include "lusan/model/si/SIValidator.hpp"
 
 #include <QTimer>
 #include <QVBoxLayout>
@@ -117,6 +118,42 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
 
 ServiceInterface::~ServiceInterface()
 {
+}
+
+IEDocumentModel* ServiceInterface::documentModel()
+{
+    return &mModel;
+}
+
+void ServiceInterface::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule)
+{
+    int pageIndex = -1;
+    switch (kind)
+    {
+    case eDocElementKind::Overview:     pageIndex = static_cast<int>(PageOverview);     break;
+    case eDocElementKind::DataType:     pageIndex = static_cast<int>(PageDataTypes);    break;
+    case eDocElementKind::Attribute:    pageIndex = static_cast<int>(PageAttributes);   break;
+    case eDocElementKind::Method:       pageIndex = static_cast<int>(PageMethods);      break;
+    case eDocElementKind::Constant:     pageIndex = static_cast<int>(PageConstants);    break;
+    case eDocElementKind::Include:      pageIndex = static_cast<int>(PageIncludes);     break;
+    default:                            return;
+    }
+
+    ensureTabInitialized(pageIndex);
+    mTabWidget.setCurrentIndex(pageIndex);
+
+    // The element alone says which entry to fix; the check often also says which of its fields.
+    const eIssueField field = SIValidator::fieldOfRule(rule);
+    switch (kind)
+    {
+    case eDocElementKind::Overview:     if (mOverview  != nullptr) mOverview->revealField(field);                break;
+    case eDocElementKind::DataType:     if (mDataType  != nullptr) mDataType->revealElement(elementId, field);   break;
+    case eDocElementKind::Attribute:    if (mAttribute != nullptr) mAttribute->revealElement(elementId, field);  break;
+    case eDocElementKind::Method:       if (mMethod    != nullptr) mMethod->revealElement(elementId, field);     break;
+    case eDocElementKind::Constant:     if (mConstant  != nullptr) mConstant->revealElement(elementId, field);   break;
+    case eDocElementKind::Include:      if (mInclude   != nullptr) mInclude->revealElement(elementId, field);    break;
+    default:                                                                                                     break;
+    }
 }
 
 bool ServiceInterface::openSucceeded() const

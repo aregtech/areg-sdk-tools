@@ -122,7 +122,7 @@ set_target_properties(lusan_sm_serialization_tests PROPERTIES WIN32_EXECUTABLE O
 # ---------------------------------------------------------------------------
 # Structural and reference validation engine. The engine is headless, so it reuses
 # the same data-layer support sources plus SMValidator.cpp; the QObject scheduler
-# (SMValidationController) is exercised by the app, not this headless driver.
+# (DocValidationController) is exercised by the app, not this headless driver.
 # ---------------------------------------------------------------------------
 qt_add_executable(lusan_sm_validation_tests
     ${LUSAN_TEST_SUPPORT_SRC}
@@ -189,7 +189,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
-    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
@@ -242,7 +242,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
-    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
@@ -435,7 +435,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
-    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/PendingEditWatcher.cpp
@@ -473,7 +473,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
-    ${LUSAN}/view/sm/SMValidationPanel.cpp
+    ${LUSAN}/view/common/DocValidationPanel.cpp
     ${LUSAN}/data/sm/SMReferences.cpp
     ${LUSAN}/model/sm/SMGoToDef.cpp
     ${LUSAN}/model/sm/SMWhereUsed.cpp
@@ -645,7 +645,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
-    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
@@ -728,7 +728,7 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/view/sm/SMInternalDialog.cpp
     ${LUSAN}/view/sm/SMInternalEditor.cpp
     ${LUSAN}/view/sm/SMStimulusPicker.cpp
-    ${LUSAN}/view/sm/SMValidationPanel.cpp
+    ${LUSAN}/view/common/DocValidationPanel.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
@@ -795,7 +795,13 @@ qt_add_executable(lusan_si_command_tests
     ${LUSAN_SI_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/si/SICommand.cpp
+    ${LUSAN}/model/si/SIValidator.cpp
+    ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/si/SICommandTests.cpp
+    # Resolving a declared type against the primitive and basic-container catalogs needs the real
+    # ones: DataTypeFactory loads them from the "Predefined Types" resource at runtime, so without
+    # the .qrc compiled in every uint32 or bool looks like an undeclared type.
+    ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_si_command_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
 target_compile_definitions(lusan_si_command_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)

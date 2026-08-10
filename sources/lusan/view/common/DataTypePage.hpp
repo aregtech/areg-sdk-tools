@@ -44,6 +44,7 @@ class DataTypeModel;
 class DataTypeStructure;
 class DocumentElem;
 class ElementBase;
+class FieldEntry;
 class QComboBox;
 class QStringListModel;
 class QTreeWidgetItem;
@@ -194,6 +195,11 @@ private:
     //!< or a declared enum/structure/container/imported type, is always valid), otherwise a
     //!< short, user-facing reason.
     QString validateFieldValue(const QString& typeName, const QString& value) const;
+    //!< Empty string when the type a row declares is known to the document, otherwise the reason
+    //!< behind the warning marker the row carries in the type column.
+    static QString validateDeclaredType(const FieldEntry& field);
+    static QString validateDeclaredType(const DataTypeCustom* dataType);
+    static QString unknownTypeHint(const QString& typeName);
 
     void selectedStruct(DataTypeStructure* dataType);
     void selectedEnum(DataTypeEnum* dataType);

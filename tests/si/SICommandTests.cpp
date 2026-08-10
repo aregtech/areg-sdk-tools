@@ -25,6 +25,7 @@
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/data/common/AttributeEntry.hpp"
 #include "lusan/data/common/ConstantEntry.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
@@ -32,8 +33,14 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/si/SICommand.hpp"
+#include "lusan/data/common/MethodParameter.hpp"
+#include "lusan/data/si/SIMethodBase.hpp"
+#include "lusan/data/si/SIMethodRequest.hpp"
+#include "lusan/data/si/SIMethodResponse.hpp"
+#include "lusan/model/si/SIValidator.hpp"
 
 #include <QUndoStack>
+#include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 #include <QString>
 #include <QStringList>
@@ -331,6 +338,246 @@ namespace
         CHECK(someArray != nullptr);
         CHECK((someArray != nullptr) && (someArray->getCategory() == DataTypeBase::eCategory::Container));
     }
+
+    //!< A structure field and a container key/value keep the type object their type name resolves
+    //!< to, and that object is what tells a complete declaration from a broken one. The registry
+    //!< re-reads all of them on demand, so a name entered before its type exists starts resolving
+    //!< and a name whose type is gone stops.
+    void testTypeReferenceRefresh()
+    {
+        ServiceInterfaceData doc;
+        DataTypeDataSection& types = doc.getDataTypeData();
+
+        DataTypeContainer* list = types.addContainer(QStringLiteral("List"));
+        CHECK(list != nullptr);
+        list->setValue(QStringLiteral("Record"));
+
+        DataTypeStructure* rec = types.addStructure(QStringLiteral("Record"));
+        CHECK(rec != nullptr);
+        FieldEntry* field = rec->addField(QStringLiteral("id"));
+        CHECK(field != nullptr);
+        field->setType(QStringLiteral("uint32"));
+        const uint32_t fieldId = field->getId();
+
+        // A name alone resolves to nothing until the registry is asked to look it up.
+        CHECK(list->getValueDataType() == nullptr);
+        types.refreshTypeReferences();
+        CHECK(list->getValueDataType() == rec);
+        CHECK(rec->findElement(fieldId)->getParamType() != nullptr);
+
+        // The reference reads its name off the type it resolved to, so a rename carries it along
+        // and a later refresh looks up the new name, not the one stored when it first resolved.
+        rec->setName(QStringLiteral("Entry"));
+        CHECK(list->getValue() == QStringLiteral("Entry"));
+        types.refreshTypeReferences();
+        CHECK(list->getValueDataType() == rec);
+        CHECK(list->getValue() == QStringLiteral("Entry"));
+
+        // The default container declares Array<bool>, which is complete: bool is a primitive the
+        // registry knows, so the type carries no warning.
+        DataTypeContainer* flags = types.addContainer(QStringLiteral("Flags"));
+        CHECK(flags != nullptr);
+        CHECK(flags->getValue() == QStringLiteral("bool"));
+        types.refreshTypeReferences();
+        CHECK(flags->getValueDataType() != nullptr);
+
+        // A type that leaves the registry takes its resolved object with it, and leaves the name.
+        types.removeElement(rec->getId());
+        types.refreshTypeReferences();
+        CHECK(list->getValueDataType() == nullptr);
+        CHECK(list->getValue() == QStringLiteral("Entry"));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Scenario E: the validation engine
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< How many findings carry the given rule id.
+    int countRule(const QList<DocIssue>& issues, int rule)
+    {
+        int count = 0;
+        for (const DocIssue& issue : issues)
+        {
+            count += (issue.rule == rule ? 1 : 0);
+        }
+
+        return count;
+    }
+
+    //!< True when some finding carries the rule and quotes the text.
+    bool namesIt(const QList<DocIssue>& issues, int rule, const QString& text)
+    {
+        for (const DocIssue& issue : issues)
+        {
+            if ((issue.rule == rule) && issue.message.contains(text))
+                return true;
+        }
+
+        return false;
+    }
+
+    //!< A document with a name, a version and one attribute, so the overview rules stay quiet
+    //!< and each case below reports only what it is about.
+    void makeUsable(ServiceInterfaceData& doc)
+    {
+        doc.getOverviewData().setName(QStringLiteral("TestInterface"));
+        doc.getOverviewData().setVersion(1, 0, 0);
+        AttributeEntry* attribute = doc.getAttributeData().createAttribute(QStringLiteral("state"));
+        if (attribute != nullptr)
+        {
+            attribute->setType(QStringLiteral("uint32"));
+        }
+    }
+
+    void testValidatorUnreferenced()
+    {
+        const int unreferenced = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNREFERENCED;
+
+        {   // The reported case: a container nothing declares with is a warning, and the container
+            // itself is complete, so it must not also be reported as an unresolved type.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            DataTypeContainer* list = doc.getDataTypeData().addContainer(QStringLiteral("NewDataType1"));
+            CHECK(list != nullptr);
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, unreferenced) == 1);
+            CHECK(namesIt(issues, unreferenced, QStringLiteral("'NewDataType1'")));
+            CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 0);
+        }
+
+        {   // A type an attribute declares with is referenced, and so is a type reached only
+            // through another type.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            DataTypeStructure* rec = doc.getDataTypeData().addStructure(QStringLiteral("Record"));
+            CHECK(rec != nullptr);
+            rec->addField(QStringLiteral("id"))->setType(QStringLiteral("uint32"));
+
+            DataTypeContainer* list = doc.getDataTypeData().addContainer(QStringLiteral("Records"));
+            CHECK(list != nullptr);
+            list->setValue(QStringLiteral("Record"));
+
+            AttributeEntry* attribute = doc.getAttributeData().createAttribute(QStringLiteral("all"));
+            CHECK(attribute != nullptr);
+            attribute->setType(QStringLiteral("Records"));
+
+            CHECK(countRule(SIValidator::validate(doc), unreferenced) == 0);
+        }
+
+        {   // A constant nothing reads is advisory, not a warning, and a constant used as a
+            // parameter default is read.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            ConstantEntry* limit = doc.getConstantData().createConstant(QStringLiteral("MaxItems"));
+            CHECK(limit != nullptr);
+            limit->setType(QStringLiteral("uint32"));
+            limit->setValue(QStringLiteral("64"));
+
+            QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, unreferenced) == 1);
+            for (const DocIssue& issue : issues)
+            {
+                if (issue.rule == unreferenced)
+                {
+                    CHECK(issue.severity == DocIssue::eSeverity::Info);
+                }
+            }
+
+            SIMethodBase* request = doc.getMethodData().addMethod(QStringLiteral("fetch"), SIMethodBase::eMethodType::MethodRequest);
+            CHECK(request != nullptr);
+            MethodParameter* count = request->addParam(QStringLiteral("count"));
+            CHECK(count != nullptr);
+            count->setType(QStringLiteral("uint32"));
+            count->setValue(QStringLiteral("MaxItems"));
+            CHECK(countRule(SIValidator::validate(doc), unreferenced) == 0);
+        }
+    }
+
+    void testValidatorDeclarations()
+    {
+        {   // A declared type the registry does not answer to, on an attribute and inside a
+            // container, and a name the generated code could not carry.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            AttributeEntry* broken = doc.getAttributeData().createAttribute(QStringLiteral("2nd value"));
+            CHECK(broken != nullptr);
+            broken->setType(QStringLiteral("Missing"));
+
+            DataTypeContainer* list = doc.getDataTypeData().addContainer(QStringLiteral("Items"));
+            CHECK(list != nullptr);
+            list->setValue(QStringLiteral("Nothing"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 2);
+            CHECK(namesIt(issues, SIValidator::RULE_UNRESOLVED_TYPE, QStringLiteral("'Missing'")));
+            CHECK(namesIt(issues, SIValidator::RULE_UNRESOLVED_TYPE, QStringLiteral("'Nothing'")));
+            CHECK(countRule(issues, SIValidator::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // Two attributes cannot share a name, and a constant's value has to read as its type.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getAttributeData().createAttribute(QStringLiteral("speed"))->setType(QStringLiteral("uint32"));
+            doc.getAttributeData().createAttribute(QStringLiteral("speed"))->setType(QStringLiteral("uint32"));
+
+            ConstantEntry* bad = doc.getConstantData().createConstant(QStringLiteral("Limit"));
+            CHECK(bad != nullptr);
+            bad->setType(QStringLiteral("uint32"));
+            bad->setValue(QStringLiteral("not a number"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, SIValidator::RULE_DUPLICATE_NAME) == 1);
+            CHECK(countRule(issues, SIValidator::RULE_BAD_LITERAL) == 1);
+        }
+
+        {   // A request answers with a declared response and no other. A stale link is what a
+            // document carries after the response was renamed or removed outside the editor, so
+            // the case is built the way it reaches us: by reading it.
+            const QString source = QStringLiteral(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                "<ServiceInterface FormatVersion=\"1.1.0\">"
+                "  <Overview ID=\"1\" Name=\"Linked\" Version=\"1.0.0\" isRemote=\"true\"/>"
+                "  <MethodList>"
+                "    <Method ID=\"2\" Name=\"start\" MethodType=\"request\" Response=\"started\"/>"
+                "    <Method ID=\"3\" Name=\"stopped\" MethodType=\"response\"/>"
+                "  </MethodList>"
+                "</ServiceInterface>");
+
+            ServiceInterfaceData doc;
+            QXmlStreamReader reader(source);
+            while (reader.readNextStartElement())
+            {
+                CHECK(doc.readFromXml(reader));
+                break;
+            }
+
+            const int unbound = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNBOUND_RESPONSE;
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, SIValidator::RULE_RESPONSE_LINK) == 1);
+            CHECK(namesIt(issues, SIValidator::RULE_RESPONSE_LINK, QStringLiteral("'started'")));
+            CHECK(countRule(issues, unbound) == 1);
+            CHECK(namesIt(issues, unbound, QStringLiteral("'stopped'")));
+        }
+
+        {   // Every finding reaches the results panel with a reason attached.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getDataTypeData().addContainer(QStringLiteral("Unused"));
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(issues.isEmpty() == false);
+            bool allExplained = true;
+            for (const DocIssue& issue : issues)
+            {
+                allExplained = allExplained && (issue.detail.isEmpty() == false);
+            }
+
+            CHECK(allExplained);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -345,6 +592,9 @@ int main(int /*argc*/, char* /*argv*/[])
     testDeepHistory();
     testDataTypeSection();
     testLegacyTypeNames();
+    testTypeReferenceRefresh();
+    testValidatorUnreferenced();
+    testValidatorDeclarations();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

@@ -420,7 +420,12 @@ void StateMachine::onOpenImport(uint32_t stateId, const QString& alias)
     }
 }
 
-void StateMachine::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule /*= 0*/)
+IEDocumentModel* StateMachine::documentModel()
+{
+    return &mModel;
+}
+
+void StateMachine::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rule)
 {
     // A registry finding is answered by its own page. Sending it through the canvas first would
     // build the design view for nothing and flick the author past a page they never asked for.

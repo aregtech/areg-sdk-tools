@@ -42,6 +42,7 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/model/common/DataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
@@ -1393,6 +1394,65 @@ namespace
         CHECK(dataTypes.createDataType(QStringLiteral("AfterReload"), DataTypeBase::eCategory::Enumeration) != nullptr);
         CHECK(model.getData().getDataTypes().getElementCount() == 2);
     }
+
+    //!< A declared type is marked as a problem when the name it holds resolves to nothing. The
+    //!< model keeps those resolutions current through the notifier, so an edit, an undo and a
+    //!< redo all leave the same answer as loading the document from a file would.
+    void testDeclaredTypesStayResolved()
+    {
+        StateMachineModel model;
+        DataTypeModel& dt = model.getDataTypeModel();
+
+        // A new container declares Array<bool>. Nothing is wrong with it: bool is a primitive the
+        // document knows, so the row must not be marked.
+        DataTypeContainer* list = static_cast<DataTypeContainer*>(dt.createDataType(QStringLiteral("List"), DataTypeBase::eCategory::Container));
+        CHECK(list != nullptr);
+        CHECK(list->getValueDataType() != nullptr);
+
+        // A value type nothing declares is a problem, and stops being one when it is declared.
+        dt.setContainerValue(list, QStringLiteral("Item"));
+        CHECK(list->getValueDataType() == nullptr);
+        DataTypeCustom* item = dt.createDataType(QStringLiteral("Item"), DataTypeBase::eCategory::Structure);
+        CHECK(item != nullptr);
+        CHECK(list->getValueDataType() == item);
+
+        // A rename carries the reference with it, and undoing the rename carries it back.
+        dt.renameDataType(item, QStringLiteral("Element"));
+        CHECK(list->getValue() == QStringLiteral("Element"));
+        CHECK(list->getValueDataType() == item);
+        model.getUndoStack().undo();
+        CHECK(list->getValue() == QStringLiteral("Item"));
+        CHECK(list->getValueDataType() == item);
+
+        // Deleting the declared type drops the reference rather than leaving a pointer to a type
+        // the document no longer holds; undo brings both back.
+        dt.deleteDataType(item);
+        CHECK(list->getValueDataType() == nullptr);
+        CHECK(list->getValue() == QStringLiteral("Item"));
+        model.getUndoStack().undo();
+        CHECK(list->getValueDataType() != nullptr);
+
+        // A keyed container is judged on both of its element types.
+        dt.setContainerObject(list, QStringLiteral("HashMap"));
+        CHECK(list->canHaveKey());
+        dt.setContainerKey(list, QStringLiteral("uint32"));
+        CHECK(list->getKeyDataType() != nullptr);
+        dt.setContainerKey(list, QStringLiteral("Missing"));
+        CHECK(list->getKeyDataType() == nullptr);
+
+        // A structure field declares a type the same way and is kept current the same way.
+        DataTypeStructure* rec = static_cast<DataTypeStructure*>(dt.createDataType(QStringLiteral("Rec"), DataTypeBase::eCategory::Structure));
+        CHECK(rec != nullptr);
+        ElementBase* created = dt.createField(rec, QStringLiteral("count"));
+        CHECK(created != nullptr);
+        const uint32_t fieldId = (created != nullptr ? created->getId() : 0u);
+        dt.setFieldType(rec, fieldId, QStringLiteral("uint32"));
+        CHECK(rec->findElement(fieldId)->getParamType() != nullptr);
+        dt.setFieldType(rec, fieldId, QStringLiteral("Nothing"));
+        CHECK(rec->findElement(fieldId)->getParamType() == nullptr);
+        model.getUndoStack().undo();
+        CHECK(rec->findElement(fieldId)->getParamType() != nullptr);
+    }
 }
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -1416,6 +1476,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testStimulusSilentRebind();
     testConstantsSurviveDocumentSwap();
     testDataTypesSurviveDocumentSwap();
+    testDeclaredTypesStayResolved();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

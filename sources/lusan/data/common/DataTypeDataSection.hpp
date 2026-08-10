@@ -203,6 +203,15 @@ public:
      **/
     void normalizeType(DataTypeCustom* dataType) const;
 
+    /**
+     * \brief   Drops every resolved type object a structure field or a container key/value holds
+     *          beside its type name, then looks them all up again in the registry as it stands
+     *          now. Run whenever the set of types changes: a name typed before its type existed
+     *          starts resolving, and a reference to a type that has been deleted or replaced is
+     *          dropped instead of being read.
+     **/
+    void refreshTypeReferences();
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls.
 //////////////////////////////////////////////////////////////////////////

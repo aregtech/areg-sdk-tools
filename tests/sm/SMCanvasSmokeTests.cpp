@@ -3091,7 +3091,7 @@ int main(int argc, char* argv[])
         // owns no validation widget at all; F8 / Shift+F8 and the canvas View entry can only
         // ask the window for it, which is what keeps one findings list for the whole app.
         CHECK(page.findChild<QDockWidget*>(QStringLiteral("SMValidationDock")) == nullptr);
-        CHECK(page.findChild<QWidget*>(QStringLiteral("smValidation")) == nullptr);
+        CHECK(page.findChild<QWidget*>(QStringLiteral("docValidation")) == nullptr);
 
         bool hasNextIssue = false;
         bool hasPrevIssue = false;

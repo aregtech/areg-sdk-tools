@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIMethod.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -106,6 +107,29 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     updateData();
     updateWidgets();
     setupSignals();
+}
+
+void SIMethod::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    for (int i = 0; i < table->topLevelItemCount(); ++i)
+    {
+        QTreeWidgetItem* item = table->topLevelItem(i);
+        const SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+        if ((method == nullptr) || (method->getId() != id))
+            continue;
+
+        table->setCurrentItem(item);
+        table->scrollToItem(item);
+        switch (field)
+        {
+        case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+        case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+        default:                                                                              break;
+        }
+
+        return;
+    }
 }
 
 SIMethod::~SIMethod()

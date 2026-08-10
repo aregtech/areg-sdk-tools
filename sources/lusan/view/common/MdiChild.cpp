@@ -444,6 +444,15 @@ bool MdiChild::isToolbarVisible() const
     return true;
 }
 
+IEDocumentModel* MdiChild::documentModel()
+{
+    return nullptr;
+}
+
+void MdiChild::navigateToIssue(uint32_t /*elementId*/, eDocElementKind /*kind*/, int /*rule*/)
+{
+}
+
 void MdiChild::clear()
 {
     // Implement clear functionality

@@ -10,19 +10,18 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMValidationPanel.cpp
+ *  \file        lusan/view/common/DocValidationPanel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM document validation results panel.
+ *  \brief       Lusan application, Document validation results panel.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMValidationPanel.hpp"
+#include "lusan/view/common/DocValidationPanel.hpp"
 
 #include "lusan/model/common/DocModelNotifier.hpp"
-#include "lusan/model/sm/SMGuardValidation.hpp"
-#include "lusan/model/sm/SMValidationController.hpp"
-#include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/model/common/DocValidationController.hpp"
+#include "lusan/model/common/IEDocumentModel.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -92,64 +91,8 @@ namespace
         int             rule;       //!< The check that produced it, for the field-level landing.
     };
 
-    /**
-     * The message names the symbol
-     **/
-    QString ruleDetail(int rule, SMIssue::eSeverity severity)
-    {
-        if (rule > SMValidator::WARNING_RULE_BASE)
-        {
-            switch (rule - SMValidator::WARNING_RULE_BASE)
-            {
-            case 1:  return QObject::tr("The state cannot be reached by any transition, so its behaviour never runs.");
-            case 2:  return QObject::tr("The state has no way out. Once the machine enters it, it stays there.");
-            case 3:  return QObject::tr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
-            case 4:  return QObject::tr("Nothing in the machine uses this declaration. Keep it if you are about to, or remove it.");
-            case 5:  return QObject::tr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
-            case 6:  return QObject::tr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
-            case 7:  return QObject::tr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
-            case 10: return QObject::tr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
-            case 11: return QObject::tr("The inline code block generates nothing. Write the code, or remove the block.");
-            default: return QObject::tr("Advisory only. The document still generates.");
-            }
-        }
-
-        switch (rule)
-        {
-        case 1:  return QObject::tr("Every machine level needs exactly one Start state; it marks where execution begins.");
-        case 2:  return QObject::tr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
-        case 3:  return QObject::tr("A Final state is terminal and cannot have outgoing transitions.");
-        case 4:  return QObject::tr("Two entries of the SAME kind share this name. Names are unique per kind, so a trigger, an action and a condition may all be called the same, but two triggers may not.");
-        case 5:  return QObject::tr("Identifiers must be usable in generated code: a letter or underscore first, then letters, digits or underscores.");
-        case 6:  return QObject::tr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
-        case 7:  return QObject::tr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
-        case 8:  return QObject::tr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
-        case 9:  return QObject::tr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");
-        case 10: return QObject::tr("The argument does not match the parameter it is bound to.");
-        case 11: return QObject::tr("The call passes a different number of arguments than the declaration takes.");
-        case 12: return QObject::tr("A Param reference resolves against the stimulus of its own transition; this stimulus declares no such parameter.");
-        case 13: return QObject::tr("The literal cannot be read as a value of the target type.");
-        case 14: return QObject::tr("The two operands have no common type, so the comparison has no defined result.");
-        case 16: return QObject::tr("The declared type is not in the data-type registry.");
-        case 18: return QObject::tr("A submachine belongs on a composite state; Start and Final cannot carry one.");
-        case 20: return QObject::tr("The condition row is incomplete: an operator needs both operands.");
-        case 21: return QObject::tr("A condition that takes parameters may appear as the LEFT operand only. The right side must be a plain value.");
-        case 23: return QObject::tr("The value source and the target disagree; pick a source of a compatible kind.");
-        case 24: return QObject::tr("The element refers to itself, directly or through a cycle.");
-        default: return (severity == SMIssue::eSeverity::Error)
-                            ? QObject::tr("The document will not generate until this is resolved.")
-                            : QString();
-        }
-    }
-
-    /**
-     * Names the element a finding blames, so the row says WHERE before it says what. A state
-     * or transition is resolved to its own name; a registry entry keeps its kind label,
-     * because the message already quotes the name that failed to resolve.
-     **/
-    QString whereLabel(const StateMachineData& data, uint32_t elementId, eDocElementKind kind, const QString& fallback);
-
-    //!< A short, human-readable label for the owning page of an engine finding.
+    //!< A short, human-readable label for the owning page of a finding, used when the document
+    //!< itself has nothing finer to say about the element.
     QString kindLabel(eDocElementKind kind)
     {
         switch (kind)
@@ -164,34 +107,31 @@ namespace
         case eDocElementKind::Attribute:  return QObject::tr("Attribute");
         case eDocElementKind::Constant:   return QObject::tr("Constant");
         case eDocElementKind::DataType:   return QObject::tr("Data type");
+        case eDocElementKind::Include:    return QObject::tr("Include");
         case eDocElementKind::Import:     return QObject::tr("Import");
-        default:                          return QObject::tr("Machine");
+        case eDocElementKind::Overview:   return QObject::tr("Overview");
+        default:                          return QObject::tr("Document");
         }
     }
 
-    QString whereLabel(const StateMachineData& data, uint32_t elementId, eDocElementKind kind, const QString& fallback)
+    /**
+     * Names the element a finding blames, so the row says where before it says what. The check
+     * may already carry its own location; failing that the document is asked to name the element,
+     * and failing that the kind is the answer -- those messages quote the name themselves.
+     **/
+    QString whereLabel(const IEDocumentModel& document, uint32_t elementId, eDocElementKind kind, const QString& fallback)
     {
         if (fallback.isEmpty() == false)
         {
-            return fallback;    // the guard engine already knows its own location string
+            return fallback;
         }
 
         if (elementId != 0)
         {
-            if (const SMStateEntry* state = data.findStateById(elementId))
+            const QString described = document.describeElement(elementId, kind);
+            if (described.isEmpty() == false)
             {
-                return QObject::tr("State '%1'").arg(state->getName());
-            }
-
-            if (const SMTransitionEntry* tr = data.findTransitionById(elementId))
-            {
-                // A transition has no name of its own: it is identified by what it reacts to
-                // and where it leads, which is how it is labelled on the canvas.
-                const SMStateEntry* target = data.findStateById(tr->getToId());
-                const QString stimulus = tr->getStimulus().isEmpty() ? QObject::tr("(initial)") : tr->getStimulus();
-                return (target != nullptr)
-                        ? QObject::tr("Transition %1 -> %2").arg(stimulus, target->getName())
-                        : QObject::tr("Transition %1").arg(stimulus);
+                return described;
             }
         }
 
@@ -203,7 +143,7 @@ namespace
 // Construction
 //////////////////////////////////////////////////////////////////////////
 
-SMValidationPanel::SMValidationPanel(QWidget* parent /*= nullptr*/)
+DocValidationPanel::DocValidationPanel(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mList             (nullptr)
     , mSummary          (nullptr)
@@ -214,26 +154,26 @@ SMValidationPanel::SMValidationPanel(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-SMValidationPanel::SMValidationPanel(StateMachineModel& model, QWidget* parent /*= nullptr*/)
-    : SMValidationPanel (parent)
+DocValidationPanel::DocValidationPanel(IEDocumentModel& document, QWidget* parent /*= nullptr*/)
+    : DocValidationPanel (parent)
 {
-    addDocument(model, QString());
+    addDocument(document, QString());
 }
 
-void SMValidationPanel::buildUi()
+void DocValidationPanel::buildUi()
 {
-    setObjectName(QStringLiteral("smValidation"));
+    setObjectName(QStringLiteral("docValidation"));
 
     QVBoxLayout* outer = new QVBoxLayout(this);
     outer->setContentsMargins(4, 4, 4, 4);
     outer->setSpacing(2);
 
     mSummary = new QLabel(this);
-    mSummary->setObjectName(QStringLiteral("smValidationSummary"));
+    mSummary->setObjectName(QStringLiteral("docValidationSummary"));
     outer->addWidget(mSummary);
 
     mList = new QTreeWidget(this);
-    mList->setObjectName(QStringLiteral("smValidationList"));
+    mList->setObjectName(QStringLiteral("docValidationList"));
     mList->setAlternatingRowColors(true);
     mList->setRootIsDecorated(false);
     mList->setUniformRowHeights(true);
@@ -260,8 +200,8 @@ void SMValidationPanel::buildUi()
 
     outer->addWidget(mList);
 
-    connect(mList, &QTreeWidget::itemActivated, this, &SMValidationPanel::onItemActivated);
-    connect(mList, &QTreeWidget::itemDoubleClicked, this, &SMValidationPanel::onItemActivated);
+    connect(mList, &QTreeWidget::itemActivated, this, &DocValidationPanel::onItemActivated);
+    connect(mList, &QTreeWidget::itemDoubleClicked, this, &DocValidationPanel::onItemActivated);
 
     // Findings are quoted into reports and issue trackers, so a selected row copies whole.
     mList->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -269,14 +209,14 @@ void SMValidationPanel::buildUi()
     QAction* copy = new QAction(tr("Copy"), mList);
     copy->setShortcut(QKeySequence::Copy);
     copy->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    connect(copy, &QAction::triggered, this, &SMValidationPanel::copySelection);
+    connect(copy, &QAction::triggered, this, &DocValidationPanel::copySelection);
     mList->addAction(copy);
 
     // A tree of documents: the roots carry the document names, so only the leaves indent.
     mList->setRootIsDecorated(true);
 }
 
-void SMValidationPanel::copySelection() const
+void DocValidationPanel::copySelection() const
 {
     QStringList lines;
     for (const QTreeWidgetItem* item : mList->selectedItems())
@@ -300,11 +240,12 @@ void SMValidationPanel::copySelection() const
     }
 }
 
-int SMValidationPanel::indexOf(const StateMachineModel* model) const
+int DocValidationPanel::indexOf(const IEDocumentModel* document) const
 {
     for (int i = 0; i < mSources.size(); ++i)
     {
-        if (mSources.at(i).model == model)
+        const Source& source = mSources.at(i);
+        if ((source.controller.isNull() == false) && (&source.controller->getDocument() == document))
         {
             return i;
         }
@@ -313,9 +254,9 @@ int SMValidationPanel::indexOf(const StateMachineModel* model) const
     return -1;
 }
 
-void SMValidationPanel::addDocument(StateMachineModel& model, const QString& name, QObject* owner /*= nullptr*/)
+void DocValidationPanel::addDocument(IEDocumentModel& document, const QString& name, QObject* owner /*= nullptr*/)
 {
-    const int existing = indexOf(&model);
+    const int existing = indexOf(&document);
     if (existing >= 0)
     {
         mSources[existing].name  = name;
@@ -324,18 +265,19 @@ void SMValidationPanel::addDocument(StateMachineModel& model, const QString& nam
         return;
     }
 
+    // Each document drives its own root: its controller publishes findings, and edits that reach
+    // beyond one element schedule a rebuild. The connections are kept so the root drops cleanly.
+    DocValidationController& controller = document.getValidationController();
+
     Source source;
-    source.model = &model;
+    source.controller = &controller;
     source.owner = owner;
     source.name  = name;
 
-    // Each document drives its own root: its controller publishes findings, and guard-affecting
-    // edits schedule a rebuild. The connections are kept so the root can be dropped cleanly.
-    SMValidationController& controller = model.getValidationController();
-    source.bindings.append(connect(&controller, &SMValidationController::validationUpdated, this
-                                  , [this, &model](const QList<SMIssue>& issues)
+    source.bindings.append(connect(&controller, &DocValidationController::validationUpdated, this
+                                  , [this, &document](const QList<DocIssue>& issues)
     {
-        const int index = indexOf(&model);
+        const int index = indexOf(&document);
         if (index >= 0)
         {
             mSources[index].issues = issues;
@@ -343,7 +285,7 @@ void SMValidationPanel::addDocument(StateMachineModel& model, const QString& nam
         }
     }));
 
-    DocModelNotifier& notifier = model.getNotifier();
+    DocModelNotifier& notifier = document.getNotifier();
     const auto onChanged = [this]() { scheduleRebuild(); };
     source.bindings.append(connect(&notifier, &DocModelNotifier::elementChanged, this, onChanged));
     source.bindings.append(connect(&notifier, &DocModelNotifier::elementRemoved, this, onChanged));
@@ -351,7 +293,7 @@ void SMValidationPanel::addDocument(StateMachineModel& model, const QString& nam
 
     // The host normally unbinds a document it closes, but a window can also be destroyed without
     // anyone saying so. The findings of a document that no longer exists must not survive it.
-    source.bindings.append(connect(&model, &QObject::destroyed, this, [this]() { purgeClosedDocuments(); }));
+    source.bindings.append(connect(&controller, &QObject::destroyed, this, [this]() { purgeClosedDocuments(); }));
 
     controller.validateNow();
     source.issues = controller.issues();
@@ -359,9 +301,9 @@ void SMValidationPanel::addDocument(StateMachineModel& model, const QString& nam
     rebuild();
 }
 
-void SMValidationPanel::removeDocument(StateMachineModel& model)
+void DocValidationPanel::removeDocument(IEDocumentModel& document)
 {
-    const int index = indexOf(&model);
+    const int index = indexOf(&document);
     if (index < 0)
     {
         return;
@@ -376,12 +318,12 @@ void SMValidationPanel::removeDocument(StateMachineModel& model)
     rebuild();
 }
 
-void SMValidationPanel::purgeClosedDocuments()
+void DocValidationPanel::purgeClosedDocuments()
 {
     bool dropped = false;
     for (int i = mSources.size() - 1; i >= 0; --i)
     {
-        if (mSources.at(i).model.isNull() == false)
+        if (mSources.at(i).controller.isNull() == false)
         {
             continue;
         }
@@ -401,12 +343,12 @@ void SMValidationPanel::purgeClosedDocuments()
     }
 }
 
-int SMValidationPanel::documentCount() const
+int DocValidationPanel::documentCount() const
 {
     return static_cast<int>(mSources.size());
 }
 
-int SMValidationPanel::pendingCount() const
+int DocValidationPanel::pendingCount() const
 {
     return mPending;
 }
@@ -415,28 +357,28 @@ int SMValidationPanel::pendingCount() const
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 
-void SMValidationPanel::refreshNow()
+void DocValidationPanel::refreshNow()
 {
     purgeClosedDocuments();
     for (Source& source : mSources)
     {
-        source.issues = source.model->getValidationController().issues();
+        source.issues = source.controller->issues();
     }
 
     rebuild();
 }
 
-void SMValidationPanel::focusNextIssue()
+void DocValidationPanel::focusNextIssue()
 {
     step(+1);
 }
 
-void SMValidationPanel::focusPreviousIssue()
+void DocValidationPanel::focusPreviousIssue()
 {
     step(-1);
 }
 
-void SMValidationPanel::step(int delta)
+void DocValidationPanel::step(int delta)
 {
     // F8 steps findings, not document roots, so it walks the leaves across every document in
     // tree order -- a root is a heading and can never be a destination.
@@ -474,7 +416,7 @@ void SMValidationPanel::step(int delta)
 // Update slots
 //////////////////////////////////////////////////////////////////////////
 
-void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
+void DocValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
 {
     // A document heading carries no element, and only the rows tagged as findings do. Depth is
     // not the test: a single open document is listed flat, and its findings have no parent.
@@ -512,7 +454,7 @@ void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
 // Build
 //////////////////////////////////////////////////////////////////////////
 
-void SMValidationPanel::scheduleRebuild()
+void DocValidationPanel::scheduleRebuild()
 {
     if (mRebuildPending)
     {
@@ -528,7 +470,7 @@ void SMValidationPanel::scheduleRebuild()
     });
 }
 
-void SMValidationPanel::rebuild()
+void DocValidationPanel::rebuild()
 {
     mList->clear();
 
@@ -536,29 +478,30 @@ void SMValidationPanel::rebuild()
     int live = 0;
     for (const Source& source : mSources)
     {
-        live += (source.model.isNull() ? 0 : 1);
+        live += (source.controller.isNull() ? 0 : 1);
     }
 
     const bool single = (live == 1);
 
     for (const Source& source : mSources)
     {
-        if (source.model.isNull())
+        if (source.controller.isNull())
         {
             continue;   // the window went away; the source is dropped on the next purge
         }
 
-        // One list from one engine. The guard and mapping checks are part of that run now, so
-        // this view no longer knows which checker produced a row, or what a rule number means.
-        const StateMachineData& data = source.model->getData();
+        // One list per document, from that document's own engine. Every row arrives with its
+        // severity, its message and the reason behind it, so this view knows neither which
+        // checker produced a row nor what a rule number means.
+        const IEDocumentModel& document = source.controller->getDocument();
         QList<Row> rows;
-        for (const SMIssue& issue : source.issues)
+        for (const DocIssue& issue : source.issues)
         {
             Row row;
             row.severity  = issue.severity;
-            row.where     = whereLabel(data, issue.elementId, issue.kind, issue.location);
+            row.where     = whereLabel(document, issue.elementId, issue.kind, issue.location);
             row.text      = issue.message;
-            row.detail    = issue.detail.isEmpty() ? ruleDetail(issue.rule, issue.severity) : issue.detail;
+            row.detail    = issue.detail;
             row.elementId = issue.elementId;
             row.kind      = issue.kind;
             row.rule      = issue.rule;

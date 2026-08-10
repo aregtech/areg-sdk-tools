@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/DocIssue.hpp"
+
 #include <QScrollArea>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/view/common/TableCell.hpp"
@@ -86,6 +88,12 @@ public:
     explicit SIInclude(SIIncludeModel & model, QWidget* parent = nullptr);
 
     virtual ~SIInclude();
+
+    /**
+     * \brief   Selects the include row with the given ID and, when the check names one, puts the
+     *          accent on the field at fault. Used by the validation results panel.
+     **/
+    void revealElement(uint32_t id, eIssueField field = eIssueField::None);
 
 //////////////////////////////////////////////////////////////////////////
 // overrides

@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIOverview.hpp"
+#include "lusan/view/common/WidgetHighlight.hpp"
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -75,6 +76,16 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     updateWidgets();
     updateData();
     setupSignals();
+}
+
+void SIOverview::revealField(eIssueField field)
+{
+    switch (field)
+    {
+    case eIssueField::Name:         WidgetHighlight::reveal(mDetails->ctrlName());        break;
+    case eIssueField::Description:  WidgetHighlight::reveal(mDetails->ctrlDescription()); break;
+    default:                                                                              break;
+    }
 }
 
 SIOverview::~SIOverview()

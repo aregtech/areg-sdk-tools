@@ -53,7 +53,7 @@
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
-#include "lusan/view/sm/SMValidationPanel.hpp"
+#include "lusan/view/common/DocValidationPanel.hpp"
 
 #include <QTreeWidget>
 
@@ -282,13 +282,13 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     // S14: the Methods page kind split is verified by the U3 harness (methodsPage).
 
     // S15: the validation panel.
-    SMValidationPanel panel(model);
+    DocValidationPanel panel(model);
     panel.resize(560, 240);
     panel.show();
     panel.refreshNow();
     pump(100);
-    check(panel.objectName() == QStringLiteral("smValidation"), "S15: smValidation");
-    check(panel.findChild<QWidget*>(QStringLiteral("smValidationList")) != nullptr, "S15: smValidationList");
+    check(panel.objectName() == QStringLiteral("docValidation"), "S15: docValidation");
+    check(panel.findChild<QWidget*>(QStringLiteral("docValidationList")) != nullptr, "S15: docValidationList");
 
     // S15 activation: double-clicking a finding must ask for a jump. One open document is listed
     // flat, so the findings are the top-level rows -- the case that made every double-click a
@@ -300,7 +300,7 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
 
         int jumps = 0;
         uint32_t jumpedTo = 0;
-        QObject::connect(&panel, &SMValidationPanel::navigateRequested
+        QObject::connect(&panel, &DocValidationPanel::navigateRequested
                         , [&jumps, &jumpedTo](uint32_t elementId, eDocElementKind, int)
         {
             ++jumps;
@@ -715,7 +715,7 @@ static void sweepItem21(const QString& docPath, const QString& tmpDir, const QSt
     second->getGuard().setDraft(QStringLiteral("WalkRequsted &&"));
     model.getNotifier().notifyElementAdded(second->getId(), eDocElementKind::Transition);
 
-    SMValidationPanel panel(model);
+    DocValidationPanel panel(model);
     panel.resize(640, 220);
     panel.show();
     panel.refreshNow();

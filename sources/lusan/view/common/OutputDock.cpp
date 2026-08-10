@@ -21,8 +21,9 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
-#include "lusan/view/sm/SMValidationPanel.hpp"
-#include "lusan/view/sm/StateMachine.hpp"
+#include "lusan/view/common/DocValidationPanel.hpp"
+#include "lusan/model/common/IEDocumentModel.hpp"
+#include "lusan/view/common/MdiChild.hpp"
 
 #include <QLabel>
 #include <QVBoxLayout>
@@ -121,7 +122,7 @@ QSize OutputDock::minimumSizeHint() const
 
 void OutputDock::showValidationPlaceholder()
 {
-    QLabel* placeholder = new QLabel(tr("Open a State Machine document to see its validation findings."), mValidationTab);
+    QLabel* placeholder = new QLabel(tr("Open a State Machine or a Service Interface document to see its validation findings."), mValidationTab);
     placeholder->setAlignment(Qt::AlignCenter);
     placeholder->setWordWrap(true);
     placeholder->setEnabled(false);
@@ -130,7 +131,7 @@ void OutputDock::showValidationPlaceholder()
     mValidationBody->addWidget(mValidationView);
 }
 
-SMValidationPanel* OutputDock::ensureValidationPanel()
+DocValidationPanel* OutputDock::ensureValidationPanel()
 {
     if (mValidation != nullptr)
     {
@@ -138,22 +139,22 @@ SMValidationPanel* OutputDock::ensureValidationPanel()
     }
 
     delete mValidationView;                 // the placeholder note
-    mValidation = new SMValidationPanel(mValidationTab);
+    mValidation = new DocValidationPanel(mValidationTab);
     mValidationView = mValidation;
     mValidationBody->addWidget(mValidationView);
 
     // A finding names the document that owns it, so the reveal goes to that window.
-    connect(mValidation, &SMValidationPanel::navigateRequestedIn, this
+    connect(mValidation, &DocValidationPanel::navigateRequestedIn, this
            , [](QObject* owner, uint32_t elementId, eDocElementKind kind, int rule)
     {
-        StateMachine* doc = qobject_cast<StateMachine*>(owner);
+        MdiChild* doc = qobject_cast<MdiChild*>(owner);
         if (doc != nullptr)
         {
             doc->navigateToIssue(elementId, kind, rule);
         }
     });
 
-    connect(mValidation, &SMValidationPanel::pendingCountChanged, this, &OutputDock::updateValidationTitle);
+    connect(mValidation, &DocValidationPanel::pendingCountChanged, this, &OutputDock::updateValidationTitle);
     return mValidation;
 }
 
@@ -169,7 +170,7 @@ void OutputDock::updateValidationTitle(int pending)
     }
 }
 
-void OutputDock::setDocuments(const QList<StateMachine*>& docs)
+void OutputDock::setDocuments(const QList<MdiChild*>& docs)
 {
     if (docs.isEmpty())
     {
@@ -187,28 +188,30 @@ void OutputDock::setDocuments(const QList<StateMachine*>& docs)
         return;
     }
 
-    SMValidationPanel* panel = ensureValidationPanel();
+    DocValidationPanel* panel = ensureValidationPanel();
 
     // Drop the documents that are gone, then add or refresh the ones that are here. Closing a
     // window must unbind it: the panel holds its facade and would outlive it otherwise.
-    for (const QPointer<StateMachine>& bound : mBoundDocs)
+    for (const QPointer<MdiChild>& bound : mBoundDocs)
     {
-        if ((bound.isNull() == false) && (docs.contains(bound.data()) == false))
+        IEDocumentModel* model = bound.isNull() ? nullptr : bound->documentModel();
+        if ((model != nullptr) && (docs.contains(bound.data()) == false))
         {
-            panel->removeDocument(bound->getModel());
+            panel->removeDocument(*model);
         }
     }
 
     mBoundDocs.clear();
-    for (StateMachine* doc : docs)
+    for (MdiChild* doc : docs)
     {
-        if (doc == nullptr)
+        IEDocumentModel* model = (doc != nullptr) ? doc->documentModel() : nullptr;
+        if (model == nullptr)
         {
             continue;
         }
 
-        panel->addDocument(doc->getModel(), doc->userFriendlyCurrentFile(), doc);
-        mBoundDocs.append(QPointer<StateMachine>(doc));
+        panel->addDocument(*model, doc->userFriendlyCurrentFile(), doc);
+        mBoundDocs.append(QPointer<MdiChild>(doc));
     }
 
     updateValidationTitle(panel->pendingCount());

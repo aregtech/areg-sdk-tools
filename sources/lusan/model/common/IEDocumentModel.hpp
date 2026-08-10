@@ -35,6 +35,7 @@
 class ConstantDataSection;
 class DataTypeCustom;
 class DataTypeDataSection;
+class DocValidationController;
 class QUndoCommand;
 
 /**
@@ -89,6 +90,25 @@ public:
      *          reason as the constants section above.
      **/
     virtual DataTypeDataSection& getDataTypeSection() = 0;
+
+    /**
+     * \brief   The document's validation scheduler, which owns its findings and re-runs the
+     *          checks in the background as the document changes.
+     **/
+    virtual DocValidationController& getValidationController() = 0;
+
+    /**
+     * \brief   Names the element a finding blames, in the document's own words, so a results row
+     *          says where before it says what. Answer an empty string when the element's kind is
+     *          the whole answer -- a registry entry whose message already quotes its name needs
+     *          nothing finer, while a state or a transition is worth naming.
+     * \param   id      The unique ID of the element.
+     * \param   kind    The kind of the element.
+     **/
+    virtual QString describeElement(uint32_t /*id*/, eDocElementKind /*kind*/) const
+    {
+        return QString();
+    }
 
     /**
      * \brief   Builds the command that repairs whatever else in the document refers to a renamed

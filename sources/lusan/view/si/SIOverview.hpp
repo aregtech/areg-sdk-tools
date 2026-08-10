@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/DocIssue.hpp"
+
 #include <QScrollArea>
 #include <QIntValidator>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
@@ -68,6 +70,11 @@ public:
     explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
 
     virtual ~SIOverview();
+
+    /**
+     * \brief   Puts the accent on the overview field a validation finding blames.
+     **/
+    void revealField(eIssueField field);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

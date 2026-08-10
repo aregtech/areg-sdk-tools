@@ -3,6 +3,7 @@
     ${LUSAN}/model/common/DataTypeModel.cpp
     ${LUSAN}/model/common/DataTypesModel.cpp
     ${LUSAN}/model/common/DocCommand.cpp
+    ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/common/DocModelNotifier.cpp
     ${LUSAN}/model/common/DocUnknownScan.cpp
     ${LUSAN}/model/common/FileSystemEntry.cpp
@@ -19,6 +20,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/common/DataTypeModel.hpp
     ${LUSAN}/model/common/DataTypesModel.hpp
     ${LUSAN}/model/common/DocCommand.hpp
+    ${LUSAN}/model/common/DocValidationController.hpp
     ${LUSAN}/model/common/DocElementCommands.hpp
     ${LUSAN}/model/common/DocModelNotifier.hpp
     ${LUSAN}/model/common/DocUndoStack.hpp

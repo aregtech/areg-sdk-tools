@@ -20,6 +20,7 @@
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/model/si/SIValidator.hpp"
 
 ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString()*/)
     : mSIData           (filePath)
@@ -31,6 +32,7 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
     , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
     , mModelConstant    (*this)
     , mModelInclude     (mSIData.getIncludeData())
+    , mValidation       (*this, [this]() { return SIValidator::validate(mSIData); })
 {
 }
 

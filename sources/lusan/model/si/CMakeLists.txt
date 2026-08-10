@@ -5,6 +5,7 @@
     ${LUSAN}/model/si/SIIncludeModel.cpp
     ${LUSAN}/model/si/SIMethodModel.cpp
     ${LUSAN}/model/si/SIOverviewModel.cpp
+    ${LUSAN}/model/si/SIValidator.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -14,4 +15,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/si/SIIncludeModel.hpp
     ${LUSAN}/model/si/SIMethodModel.hpp
     ${LUSAN}/model/si/SIOverviewModel.hpp
+    ${LUSAN}/model/si/SIValidator.hpp
 )

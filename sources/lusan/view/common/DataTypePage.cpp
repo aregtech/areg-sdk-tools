@@ -629,6 +629,7 @@ QTreeWidgetItem* DataTypePage::createNode(DataTypeCustom* dataType) const
     setNodeText(item, dataType);
     item->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
     item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, 0u);
+    item->setToolTip(static_cast<int>(eColumn::ColType), validateDeclaredType(dataType));
 
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
     {
@@ -642,6 +643,7 @@ QTreeWidgetItem* DataTypePage::createNode(DataTypeCustom* dataType) const
                 child->setIcon(static_cast<int>(eColumn::ColValue), NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
                 child->setToolTip(static_cast<int>(eColumn::ColValue), reason);
             }
+            child->setToolTip(static_cast<int>(eColumn::ColType), validateDeclaredType(field));
             child->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
             child->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, field.getId());
             item->addChild(child);
@@ -670,6 +672,34 @@ QString DataTypePage::validateFieldValue(const QString& typeName, const QString&
         return QString();
 
     return LiteralValidator::validate(typeName, value);
+}
+
+QString DataTypePage::validateDeclaredType(const FieldEntry& field)
+{
+    return (field.getParamType() != nullptr) ? QString() : unknownTypeHint(field.getType());
+}
+
+QString DataTypePage::validateDeclaredType(const DataTypeCustom* dataType)
+{
+    // Asks the same question the row's warning marker answers, so the marker and the tooltip can
+    // never disagree: a declared type is either known to the document or it is not.
+    if (dataType->getCategory() != DataTypeBase::eCategory::Container)
+        return QString();
+
+    const DataTypeContainer* container = static_cast<const DataTypeContainer*>(dataType);
+    if (container->canHaveKey() && (container->getKeyDataType() == nullptr))
+        return unknownTypeHint(container->getKey());
+    if (container->getValueDataType() == nullptr)
+        return unknownTypeHint(container->getValue());
+
+    return QString();
+}
+
+QString DataTypePage::unknownTypeHint(const QString& typeName)
+{
+    return typeName.isEmpty()
+            ? QObject::tr("No type is chosen yet.")
+            : QObject::tr("Type '%1' is not declared in this document.").arg(typeName);
 }
 
 void DataTypePage::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const

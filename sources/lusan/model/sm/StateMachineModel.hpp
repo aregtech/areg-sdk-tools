@@ -32,7 +32,7 @@
 #include "lusan/model/common/ConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
-#include "lusan/model/sm/SMValidationController.hpp"
+#include "lusan/model/common/DocValidationController.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -110,6 +110,14 @@ public:
                                          , const QString& oldName, const QString& newName
                                          , QUndoCommand* parent) override;
 
+    /**
+     * \brief   Names a state or a transition for a results row. A transition has no name of its
+     *          own, so it is identified by what it reacts to and where it leads, the way it is
+     *          labelled on the canvas. Everything else is left to its kind: those messages quote
+     *          the name that failed already.
+     **/
+    QString describeElement(uint32_t id, eDocElementKind kind) const override;
+
     inline SMOverviewModel& getOverviewModel();
     inline DataTypeModel& getDataTypeModel();
     inline SMAttributeModel& getAttributeModel();
@@ -119,7 +127,7 @@ public:
     inline ConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
     inline SMSelectionModel& getSelectionModel();
-    inline SMValidationController& getValidationController();
+    inline DocValidationController& getValidationController() override;
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -149,7 +157,7 @@ private:
     SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
     QString         mReadOnlyOrigin;    //!< Non-empty only for a read-only import view.
-    SMValidationController mValidationController; //!< Background structural/reference validation.
+    DocValidationController mValidationController; //!< Background structural/reference validation.
 };
 
 inline bool StateMachineModel::openSucceeded() const
@@ -258,7 +266,7 @@ inline SMSelectionModel& StateMachineModel::getSelectionModel()
     return mSelectionModel;
 }
 
-inline SMValidationController& StateMachineModel::getValidationController()
+inline DocValidationController& StateMachineModel::getValidationController()
 {
     return mValidationController;
 }
