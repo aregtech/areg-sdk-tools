@@ -50,7 +50,6 @@ namespace
         {
               QObject::tr("State Machine Methods Editor ...")
             , QObject::tr("Methods:")
-            , QObject::tr("Type:")
             , true
         };
 

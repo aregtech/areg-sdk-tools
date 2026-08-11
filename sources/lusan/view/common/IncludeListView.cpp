@@ -117,18 +117,24 @@ void IncludeListView::buildUi()
     // that can never fill reads as a place to put something, and there is nothing to put there.
     mGroupDataType = (mConfig.hasDataTypes() ? new QTreeWidgetItem(mTable) : nullptr);
     mGroupDocument = (mConfig.hasDocuments() ? new QTreeWidgetItem(mTable) : nullptr);
-    for (eIncludeKind kind : { eIncludeKind::Source, eIncludeKind::DataType, eIncludeKind::Document })
+    // Each heading is marked with its own kind, and only the headings this page actually built.
+    // ctrlGroup() answers the source heading for a kind that has none, so driving this from the
+    // kinds would let an absent kind overwrite the mark the source heading already carries.
+    auto prepareGroup = [this](eIncludeKind kind, QTreeWidgetItem* item)
     {
-        QTreeWidgetItem* item = ctrlGroup(kind);
         if (item == nullptr)
-            continue;
+            return;
 
         item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         // Show the expand indicator even while empty, so a heading reads as a container.
         item->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
         item->setExpanded(true);
         item->setIcon(static_cast<int>(eColumn::ColLocation), iconForKind(kind));
-    }
+    };
+
+    prepareGroup(eIncludeKind::Source  , mGroupSource);
+    prepareGroup(eIncludeKind::DataType, mGroupDataType);
+    prepareGroup(eIncludeKind::Document, mGroupDocument);
 
     updateGroupCounts(0, 0, 0);
 
@@ -308,7 +314,7 @@ QIcon IncludeListView::iconForKind(eIncludeKind kind) const
 {
     switch (kind)
     {
-    case eIncludeKind::DataType:    return NELusanCommon::iconStructure(NELusanCommon::SizeSmall);
+    case eIncludeKind::DataType:    return NELusanCommon::iconDataTypeDocument(NELusanCommon::SizeSmall);
     case eIncludeKind::Document:    return mConfig.docIcon;
     default:                        return NELusanCommon::iconInclude(NELusanCommon::SizeSmall);
     }

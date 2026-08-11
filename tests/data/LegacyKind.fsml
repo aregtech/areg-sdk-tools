@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="LegacyKind" Version="1.0.0" Threading="Local">
+        <Description>L2 fixture: a document written before the Transition Kind attribute existed,
+            so every transition's intent has to be recovered from which attributes are missing.
+            It carries all three cases the read shim must recognize -- an initial transition out of
+            a Kind="Start" wearing the StimulusKind/Stimulus placeholders, an ordinary transition
+            with a To, and an internal one with none -- and it is deliberately NOT in canonical
+            writer form, so the first save is the conversion and the second one is byte-identical.</Description>
+    </Overview>
+    <MethodList>
+        <Method ID="10" Name="begin" MethodType="Trigger">
+            <Description>Starts the work.</Description>
+        </Method>
+        <Method ID="11" Name="poke" MethodType="Trigger">
+            <Description>Nudges the worker without leaving the state.</Description>
+        </Method>
+        <Method ID="12" Name="note" MethodType="Action">
+            <Description>Records the nudge.</Description>
+        </Method>
+    </MethodList>
+    <StateList>
+        <State ID="20" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="23" StimulusKind="Trigger" Stimulus="" To="21"/>
+            </TransitionList>
+        </State>
+        <State ID="21" Name="Idle" Kind="Normal">
+            <Description>Waiting to begin.</Description>
+            <TransitionList>
+                <Transition ID="22" StimulusKind="Trigger" Stimulus="begin" To="24"/>
+            </TransitionList>
+        </State>
+        <State ID="24" Name="Working" Kind="Normal">
+            <Description>Working; a nudge is handled in place.</Description>
+            <TransitionList>
+                <Transition ID="25" StimulusKind="Trigger" Stimulus="poke">
+                    <Description>Internal: no To, so the state is neither exited nor re-entered.</Description>
+                    <OperationList>
+                        <ActionCall ID="26" Action="note"/>
+                    </OperationList>
+                </Transition>
+            </TransitionList>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="20" X="120" Y="60" Width="64" Height="32"/>
+            <Node Owner="21" X="120" Y="140" Width="160" Height="64"/>
+            <Node Owner="24" X="440" Y="140" Width="160" Height="64"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

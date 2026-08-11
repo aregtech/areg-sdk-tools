@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DataTypeDocument FormatVersion="1.0.0">
+    <Overview ID="50" Name="SharedTypes" Version="1.0.0" IsDeprecated="false">
+        <Description>Manual-test fixture for the Data Type document editor.</Description>
+    </Overview>
+    <DataTypeList>
+        <DataType ID="51" Name="Unit" Type="Enumeration" Values="uint16">
+            <Description>The unit a reading is expressed in.</Description>
+            <FieldList>
+                <EnumEntry ID="52" Name="Celsius">
+                    <Value>0</Value>
+                </EnumEntry>
+                <EnumEntry ID="53" Name="Kelvin">
+                    <Value>1</Value>
+                </EnumEntry>
+                <EnumEntry ID="54" Name="Fahrenheit">
+                    <Value>2</Value>
+                </EnumEntry>
+            </FieldList>
+        </DataType>
+        <DataType ID="55" Name="Reading" Type="Structure">
+            <Description>One sensor reading.</Description>
+            <FieldList>
+                <Field ID="56" Name="value" DataType="uint32">
+                    <Value IsDefault="true">0</Value>
+                    <Description>The measured value.</Description>
+                </Field>
+                <Field ID="57" Name="unit" DataType="Unit">
+                    <Value IsDefault="true">Celsius</Value>
+                    <Description>The unit the value is expressed in.</Description>
+                </Field>
+            </FieldList>
+        </DataType>
+        <DataType ID="58" Name="ReadingList" Type="Container">
+            <Description>A series of readings.</Description>
+            <Container>Array</Container>
+            <BaseTypeValue>Reading</BaseTypeValue>
+        </DataType>
+    </DataTypeList>
+    <IncludeList>
+        <Location ID="60" Name="areg/base/GEGlobal.h">
+            <Description>Base definitions the generated types rely on.</Description>
+        </Location>
+    </IncludeList>
+</DataTypeDocument>

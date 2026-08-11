@@ -22,7 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QLatin1StringView>
+#include <QString>
+#include <QStringList>
 #include <QStringView>
 
 /************************************************************************
@@ -32,16 +33,19 @@ class VersionNumber;
 
 /**
  * \namespace   DocElementTable
- * \brief   Every element the state machine format defines, where each one may appear, and
- *          whether it still counts. One table, one lookup: a reader that meets an element
- *          asks here instead of carrying its own list, so a tag is added or retired in a
- *          single row.
+ * \brief   Every element the three document formats define, where each one may appear, and
+ *          whether it still counts. One table per document, one lookup: a reader that meets an
+ *          element asks here instead of carrying its own list.
  *
- *          This is the built-in copy. A delivered description of the format wins over it when
- *          one is present beside the executable; with none, this is what validates, so it is
- *          kept complete rather than treated as a stand-in. The row shape is the delivered
- *          one's -- name, permitted parents, status -- so replacing the source touches no
- *          call site.
+ *          The table is read from the schema of the document, and there are two of those. The
+ *          one delivered with the Areg SDK sits in `schema` beside the executable and wins
+ *          whenever it is there. The one compiled into the application answers when it is not,
+ *          so a build with no SDK schemas beside it validates exactly as well -- the copies are
+ *          the same file, and the delivered one exists so a format change reaches an installed
+ *          Lusan without rebuilding it.
+ *
+ *          An element the format once defined and no longer does is the one thing a schema
+ *          cannot state, because a schema describes what it accepts. Those few are named here.
  **/
 namespace DocElementTable
 {
@@ -57,35 +61,80 @@ namespace DocElementTable
     };
 
     /**
-     * \struct  Row
-     * \brief   One element of the format.
+     * \enum    eDocument
+     * \brief   The document formats Lusan edits, each with its own element vocabulary.
      **/
-    struct Row
+    enum class eDocument
     {
-        QLatin1StringView   name;           //!< The element name.
-        QLatin1StringView   parents;        //!< The elements it may sit in, '|' separated; empty for the document element.
-        eStatus             status;         //!< Whether the element still counts.
-        QLatin1StringView   replacement;    //!< What to use instead, for a deprecated or removed element.
+          StateMachine      //!< `.fsml`
+        , ServiceInterface  //!< `.siml`
+        , DataType          //!< `.dtml`
     };
 
     /**
-     * \brief   The newest format this build reads. A document declaring a newer one is refused,
-     *          because an element this build has never heard of cannot be edited safely.
+     * \enum    eSource
+     * \brief   Which of the two copies of the format description answered.
+     **/
+    enum class eSource
+    {
+          BuiltIn       //!< Compiled into the application.
+        , Delivered     //!< Found beside the executable, delivered with the Areg SDK.
+    };
+
+    /**
+     * \struct  Row
+     * \brief   One element of a format.
+     **/
+    struct Row
+    {
+        QString     name;           //!< The element name.
+        QStringList parents;        //!< The elements it may sit in; empty for the document element.
+        eStatus     status;         //!< Whether the element still counts.
+        QString     replacement;    //!< What to use instead, for a deprecated or removed element.
+    };
+
+    /**
+     * \brief   The newest state machine format this build reads. A document declaring a newer
+     *          one is refused, because an element this build has never heard of cannot be
+     *          edited safely.
      **/
     const VersionNumber& maxFormatVersion();
 
     /**
-     * \brief   The row for \p name, or nullptr when the format defines no such element.
+     * \brief   The row \p doc has for \p name, or nullptr when that format defines no such
+     *          element.
      **/
-    const Row* find(QStringView name);
+    const Row* find(eDocument doc, QStringView name);
 
     /**
-     * \brief   True when \p name is an element the format defines and \p parent is one of the
+     * \brief   True when \p name is an element \p doc defines and \p parent is one of the
      *          elements it may sit in.
+     * \param   doc     The document format being read.
      * \param   name    The element name as written in the document.
      * \param   parent  The name of the element that contains it, empty at the document level.
      **/
-    bool accepts(QStringView name, QStringView parent);
+    bool accepts(eDocument doc, QStringView name, QStringView parent);
+
+    /**
+     * \brief   The document element of \p doc, which is the tag its files open with.
+     **/
+    QString documentElement(eDocument doc);
+
+    /**
+     * \brief   Which copy of the format description \p doc was read from.
+     **/
+    eSource source(eDocument doc);
+
+    /**
+     * \brief   The file the format description of \p doc was read from, for a status line.
+     **/
+    QString sourcePath(eDocument doc);
+
+    /**
+     * \brief   Reads every format description again. The tables are built once on first use;
+     *          this exists so a test can put a schema beside the executable and see it taken.
+     **/
+    void reload();
 }
 
 #endif  // LUSAN_COMMON_DOCELEMENTTABLE_HPP

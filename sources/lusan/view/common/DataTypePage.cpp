@@ -1370,12 +1370,13 @@ void DataTypePage::onImportBrowse(void)
         mCurUrl = dialog.directoryUrl().path();
         mCurFile = dialog.getSelectedFilePath();
 
+        const QString location{ dialog.getSelectedFileRelativePath() };
         DataTypeCustom* dataType = currentDataType();
-        if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
+        if ((location.isEmpty() == false) && (dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
         {
-            mModel.setImportLocation(static_cast<DataTypeImported*>(dataType), dialog.getSelectedFileRelativePath());
+            mModel.setImportLocation(static_cast<DataTypeImported*>(dataType), location);
             const QSignalBlocker blockLoc(mDetails->ctrlImportLocation());
-            mDetails->ctrlImportLocation()->setText(dialog.getSelectedFileRelativePath());
+            mDetails->ctrlImportLocation()->setText(location);
         }
     }
 }

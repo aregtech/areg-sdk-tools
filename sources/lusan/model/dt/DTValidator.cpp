@@ -84,6 +84,7 @@ namespace
         void checkType(uint32_t id, eDocElementKind kind, const QString& typeName, const QString& what);
 
         void checkOverview(void);
+        void checkUnknownElements(void);
         void checkDataTypes(void);
         void checkIncludes(void);
         void checkUnreferenced(void);
@@ -127,8 +128,8 @@ namespace
         const OverviewDataSection& overview = mData.getOverviewData();
         const QString name = overview.getName();
 
-        // The name becomes the namespace the generated types sit in, and it is the file's own
-        // base name, so a file named in a way C++ cannot carry has to be renamed on disk.
+        // The name becomes the namespace the generated types sit in, so it has to be a name C++
+        // can spell. The file it lives in is free to be called something else.
         if (name.isEmpty())
         {
             add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DTValidator::RULE_MISSING_NAME
@@ -137,8 +138,10 @@ namespace
         else if (DocRuleChecks::isIdentifier(name) == false)
         {
             add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DTValidator::RULE_INVALID_IDENTIFIER
-               , vtr("'%1' cannot be a namespace, so the file has to be renamed").arg(name));
+               , vtr("'%1' cannot be a namespace, so the document has to be renamed").arg(name));
         }
+
+        mChecks.noteFileNameMismatch(overview.getId(), name, mData.getFilePath(), DTValidator::RULE_FILE_NAME_MISMATCH);
 
         if (overview.getVersion().isValid() == false)
         {
@@ -272,8 +275,15 @@ namespace
         // nothing here refers to is entirely normal and is not worth a word.
     }
 
+    void Ctx::checkUnknownElements(void)
+    {
+        mChecks.noteUnknownElements(DocElementTable::eDocument::DataType, eDocElementKind::Overview
+                                  , DTValidator::RULE_UNKNOWN_ELEMENT, mData.getUnknownElements());
+    }
+
     QList<DocIssue> Ctx::run(void)
     {
+        checkUnknownElements();
         checkOverview();
         checkDataTypes();
         checkIncludes();
@@ -295,6 +305,7 @@ eIssueField DTValidator::fieldOfRule(int rule)
     case DTValidator::RULE_MISSING_NAME:
     case DTValidator::RULE_INVALID_IDENTIFIER:
     case DTValidator::RULE_DUPLICATE_NAME:
+    case DTValidator::ADVISORY_RULE_BASE + DTValidator::RULE_FILE_NAME_MISMATCH:
         return eIssueField::Name;
 
     case DTValidator::RULE_UNRESOLVED_TYPE:
@@ -344,6 +355,8 @@ QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case DTValidator::RULE_NOT_A_HEADER:
         return QCoreApplication::translate("DTValidator", "Data types are shared by including this document, not by chaining one into another. Move the types you need in here, or include the header they come from.");
+    case DTValidator::RULE_UNKNOWN_ELEMENT:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnknownElement);
     default:
         return (severity == DocIssue::eSeverity::Error)
                     ? QCoreApplication::translate("DTValidator", "The document will not generate until this is resolved.")

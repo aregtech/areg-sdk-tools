@@ -92,7 +92,9 @@ public:
         uint32_t                                    id { 0 };   //!< The include row that brought the group in.
         QString                                     location;   //!< The location as the document stores it.
         QString                                     absolutePath;
-        QString                                     space;      //!< The namespace, taken from the file's base name.
+        QString                                     space;      //!< The namespace: the name the included
+                                                                //!< document declares, its file's base name
+                                                                //!< while the file could not be read.
         eImportState                                state { eImportState::NotFound };
         QList<DataTypeCustom*>                      types;      //!< Read-only; owned by \a document.
         std::shared_ptr<const DataTypeDocumentData> document;

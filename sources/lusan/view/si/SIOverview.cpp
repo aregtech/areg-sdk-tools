@@ -44,8 +44,9 @@ namespace
         config.headline         = QObject::tr("Service Interface Overview ...");
         config.versionTitle     = QObject::tr("Interface Version:");
         config.descriptionHint  = QObject::tr("Describe service interface here");
-        // An interface is named by the file it lives in, and a save writes that name back.
-        config.nameEditable     = false;
+        // The name is the author's. The first save seeds it from the file name; after that the
+        // two are free to differ, and the generated code follows the name, not the file.
+        config.nameEditable     = true;
         config.links            =
         {
               { pageIndex(ServiceInterface::eSIPages::PageDataTypes) , QStringLiteral("linkDataTypes") , QObject::tr("Data Types ..."), QObject::tr("Click to open Interface Data Types page")      , QObject::tr("Open Service Interface Data Types Page ...")      }

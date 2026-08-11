@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="SubmachineDemo" Version="1.0.0" Threading="Local">
+        <Description>A crossing built from one reusable direction machine. Both directions host
+            the same import as independent instances, and each reports back through its own
+            completion event. Valid on purpose: this is the fixture that must generate. The
+            unresolved-import findings live in UnresolvedImport.fsml.</Description>
+    </Overview>
+    <EventList>
+        <Event ID="10" Name="EastWestDone">
+            <Description>Sent when the east-west direction finishes its cycle.</Description>
+        </Event>
+        <Event ID="11" Name="SouthNorthDone">
+            <Description>Sent when the south-north direction finishes its cycle.</Description>
+        </Event>
+    </EventList>
+    <MethodList>
+        <Method ID="20" Name="power_on" MethodType="Trigger"/>
+    </MethodList>
+    <IncludeList>
+        <Location ID="30" Name="./TurnCycle.fsml" Alias="TurnCycle" Version="1.2.0">
+            <Description>Reusable one-direction phase cycle.</Description>
+        </Location>
+    </IncludeList>
+    <StateList>
+        <State ID="46" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="47" Kind="Initial" To="40"/>
+            </TransitionList>
+        </State>
+        <State ID="40" Name="Off" Kind="Normal">
+            <TransitionList>
+                <Transition ID="41" Kind="External" StimulusKind="Trigger" Stimulus="power_on" To="42"/>
+            </TransitionList>
+        </State>
+        <State ID="42" Name="EastWest" Kind="Normal" Submachine="TurnCycle" OnFinal="EastWestDone">
+            <Description>Runs one full cycle of the east-west direction.</Description>
+            <TransitionList>
+                <Transition ID="43" Kind="External" StimulusKind="Event" Stimulus="EastWestDone" To="44"/>
+            </TransitionList>
+        </State>
+        <State ID="44" Name="SouthNorth" Kind="Normal" Submachine="TurnCycle" OnFinal="SouthNorthDone">
+            <Description>The same imported machine, a separate instance.</Description>
+            <TransitionList>
+                <Transition ID="45" Kind="External" StimulusKind="Event" Stimulus="SouthNorthDone" To="42"/>
+            </TransitionList>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="460" Y="250"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="40" X="80" Y="160" Width="160" Height="64"/>
+            <Node Owner="42" X="320" Y="160" Width="220" Height="72"/>
+            <Node Owner="44" X="620" Y="160" Width="220" Height="72"/>
+            <Node Owner="46" X="80" Y="80" Width="64" Height="32"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

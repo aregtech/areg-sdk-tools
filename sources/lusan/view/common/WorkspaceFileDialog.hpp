@@ -85,14 +85,27 @@ public:
     void setFileFilters(const QStringList& filters);
 
     /**
-     * \brief   Returns the selected file relative path.
+     * \brief   Returns the path of the selected file relative to the root directory it belongs to.
+     *          Returns an empty string when nothing is selected.
+     *          A file under none of the roots keeps its absolute path.
      **/
     QString getSelectedFileRelativePath() const;
 
     /**
-     * \brief   Returns the selected file path.
+     * \brief   Returns the absolute path of the selected file, or an empty string when nothing
+     *          is selected.
      **/
     QString getSelectedFilePath() const;
+
+    /**
+     * \brief   Measures a file against a list of root directories and returns the path relative
+     *          to the first root that contains it. The list is in priority order: the workspace
+     *          root comes first, so a file under it is spelled the same way from every document.
+     *          Returns the cleaned absolute path when no root contains the file.
+     * \param   absoluteFilePath    The file to measure.
+     * \param   roots               The root directories, most preferred first.
+     **/
+    static QString relativeToRoots(const QString& absoluteFilePath, const QStringList& roots);
 
     /**
      * \brief   Clears the history.

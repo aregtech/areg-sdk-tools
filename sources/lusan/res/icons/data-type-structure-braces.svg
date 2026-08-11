@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The first Structure mark: a pair of braces around three members. Kept as the alternative
+    to data-type-structure.svg, and no longer registered in lusan.qrc. The viewBox carries the
+    margin the other three category marks have, so the two designs read at one size if this
+    one is put back.
+ -->
+<svg width="64px" height="64px" viewBox="-1.8 -1.8 27.6 27.6" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" fill-rule="evenodd">
+    <path d="M9.4 3.4C7.5 3.4 7 4.6 7 6.2V8.6C7 10.2 6.2 11.2 4.6 11.2V12.8C6.2 12.8 7 13.8 7 15.4V17.8C7 19.4 7.5 20.6 9.4 20.6"
+          stroke="#00a63a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14.6 3.4C16.5 3.4 17 4.6 17 6.2V8.6C17 10.2 17.8 11.2 19.4 11.2V12.8C17.8 12.8 17 13.8 17 15.4V17.8C17 19.4 16.5 20.6 14.6 20.6"
+          stroke="#00a63a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="8.75" cy="12" r="1.55" fill="#1c274c"/>
+    <circle cx="12" cy="12" r="1.55" fill="#1c274c"/>
+    <circle cx="15.25" cy="12" r="1.55" fill="#1c274c"/>
+  </g>
+</svg>

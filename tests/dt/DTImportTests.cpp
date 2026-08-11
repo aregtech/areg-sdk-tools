@@ -20,6 +20,7 @@
  *
  ************************************************************************/
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
@@ -429,8 +430,63 @@ static void testPathResolution()
     CHECK(DataTypeImportResolver::absolutePath(QString(), QStringLiteral("./Shared.dtml")).isEmpty());
     CHECK(DataTypeImportResolver::absolutePath(QString(), expected) == expected);
 
-    CHECK(DataTypeImportResolver::storableLocation(host, expected) == QStringLiteral("./Shared.dtml"));
+    // With no workspace root configured there is nothing to measure against, so the file keeps
+    // its absolute path rather than being spelled against the host document.
+    NELusanCommon::setSearchRoots(QStringList());
+    CHECK(DataTypeImportResolver::storableLocation(host, expected) == expected);
     CHECK(DataTypeImportResolver::storableLocation(QString(), expected) == expected);
+}
+
+//!< A location is anchored at a workspace root, so every host spells one file the same way.
+static void testLocationAnchoring()
+{
+    std::printf("[location anchoring]\n");
+
+    QTemporaryDir dir;
+    CHECK(dir.isValid());
+    const QString root = QDir::cleanPath(dir.path());
+    QDir(root).mkpath(QStringLiteral("src/common"));
+    QDir(root).mkpath(QStringLiteral("src/svc"));
+    QDir(root).mkpath(QStringLiteral("src2"));
+
+    const QString shared = QDir::cleanPath(root + QStringLiteral("/src/common/Shared.dtml"));
+    const QString decoy  = QDir::cleanPath(root + QStringLiteral("/src2/Shared.dtml"));
+    CHECK(writeFile(shared, QString::fromLatin1(SHARED_TYPES)));
+    CHECK(writeFile(decoy, QString::fromLatin1(SHARED_TYPES)));
+
+    NELusanCommon::setSearchRoots(QStringList{ root });
+
+    // Stored the same way whichever document does the storing, and the folders survive.
+    CHECK(NELusanCommon::toStorableLocation(shared) == QStringLiteral("src/common/Shared.dtml"));
+
+    // The root is a string prefix of "src2" as well; a separator boundary is what tells them apart.
+    NELusanCommon::setSearchRoots(QStringList{ root + QStringLiteral("/src") });
+    CHECK(NELusanCommon::toStorableLocation(decoy) == decoy);
+    CHECK(NELusanCommon::toStorableLocation(shared) == QStringLiteral("common/Shared.dtml"));
+
+    // Priority order decides, not the deepest match: the first root that contains the file wins.
+    NELusanCommon::setSearchRoots(QStringList{ root, root + QStringLiteral("/src") });
+    CHECK(NELusanCommon::toStorableLocation(shared) == QStringLiteral("src/common/Shared.dtml"));
+
+    // A file under no root at all is not portable, and keeps the only path that resolves.
+    NELusanCommon::setSearchRoots(QStringList{ root + QStringLiteral("/src2") });
+    CHECK(NELusanCommon::toStorableLocation(shared) == shared);
+
+    CHECK(NELusanCommon::relativeToRoots(QString(), QStringList{ root }).isEmpty());
+
+    // Resolution: two hosts in different folders, one location, one file.
+    NELusanCommon::setSearchRoots(QStringList{ root });
+    const QString hostDeep    = QDir::cleanPath(root + QStringLiteral("/src/svc"));
+    const QString hostShallow = root;
+    const QString stored      = QStringLiteral("src/common/Shared.dtml");
+    CHECK(NELusanCommon::resolveLocation(hostDeep, stored) == shared);
+    CHECK(NELusanCommon::resolveLocation(hostShallow, stored) == shared);
+
+    // A document written before locations were anchored still resolves against its own folder.
+    CHECK(NELusanCommon::resolveLocation(QDir::cleanPath(root + QStringLiteral("/src/common"))
+                                         , QStringLiteral("./Shared.dtml")) == shared);
+
+    NELusanCommon::setSearchRoots(QStringList());
 }
 
 //!< A C++ header in the include list is not a data type document and contributes nothing.
@@ -465,6 +521,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testUnusedImport();
     testChangedDocumentIsReread();
     testPathResolution();
+    testLocationAnchoring();
     testHeaderIsNotAnImport();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

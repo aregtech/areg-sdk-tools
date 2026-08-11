@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="NameResolutionManualTest" Version="1.0.0" Threading="Local">
+        <Description>Manual-test machine for the guard name-resolution visuals: the invalid
+            reference chip, the Alt+Left/Alt+Right kind cycle, and the dimmed default in the
+            argument-mapping table. The symbol universe is set up so a tester can reproduce each
+            case in a few clicks; the guard itself is left empty and typed during the test.</Description>
+    </Overview>
+    <AttributeList>
+        <Attribute ID="10" Name="Threshold" DataType="uint16" Value="">
+            <Description>Used in a guard, then deleted, to produce an invalid reference.</Description>
+        </Attribute>
+        <Attribute ID="11" Name="limit" DataType="uint16" Value="">
+            <Description>Shares the name "limit" with a stimulus parameter and a condition, so a
+                guard chip on "limit" can cycle its kind.</Description>
+        </Attribute>
+    </AttributeList>
+    <MethodList>
+        <Method ID="20" Name="advance" MethodType="Trigger">
+            <Description>The stimulus of the tested transition; carries count and limit.</Description>
+            <ParamList>
+                <Parameter ID="21" Name="count" DataType="uint16">
+                    <Description>A plain counter.</Description>
+                </Parameter>
+                <Parameter ID="22" Name="limit" DataType="uint16">
+                    <Description>Same name as the attribute and the condition (for the kind cycle).</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="23" Name="at_least" MethodType="Condition" Return="bool" Implement="Handler">
+            <Description>A condition whose second parameter is defaulted, so its unmapped slot
+                shows the dimmed default in the argument-mapping table.</Description>
+            <ParamList>
+                <Parameter ID="24" Name="count" DataType="uint16">
+                    <Description>The value to test.</Description>
+                </Parameter>
+                <Parameter ID="25" Name="slack" DataType="uint16">
+                    <Description>A defaulted allowance; left unmapped it passes its default.</Description>
+                    <Value IsDefault="true">2</Value>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="26" Name="limit" MethodType="Condition" Return="bool" Implement="Handler">
+            <Description>A zero-argument condition named "limit", so a bare "limit" can bind as a
+                condition and take part in the kind cycle.</Description>
+            <ParamList/>
+        </Method>
+    </MethodList>
+    <ConstantList>
+        <Constant ID="30" Name="MIN_WAIT" DataType="uint16" Value="3">
+            <Description>A plain constant used in comparisons.</Description>
+        </Constant>
+    </ConstantList>
+    <StateList>
+        <State ID="40" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="44" Kind="Initial" To="41"/>
+            </TransitionList>
+        </State>
+        <State ID="41" Name="Idle" Kind="Normal">
+            <Description>Waiting for the advance stimulus.</Description>
+            <TransitionList>
+                <Transition ID="43" Kind="External" StimulusKind="Trigger" Stimulus="advance" To="42">
+                    <Description>The transition whose guard the manual test edits.</Description>
+                </Transition>
+            </TransitionList>
+        </State>
+        <State ID="42" Name="Active" Kind="Normal">
+            <Description>Reached when the guard passes.</Description>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="41" X="120" Y="140" Width="160" Height="64"/>
+            <Node Owner="42" X="440" Y="140" Width="160" Height="64"/>
+            <Node Owner="40" X="120" Y="60" Width="64" Height="32"/>
+        </NodeList>
+        <EdgeList>
+            <Edge Owner="43">
+                <Point X="280" Y="172"/>
+                <Point X="440" Y="172"/>
+                <Label X="330" Y="152"/>
+            </Edge>
+        </EdgeList>
+    </Layout>
+</StateMachine>

@@ -19,6 +19,7 @@
 
 #include "lusan/data/dt/DataTypeImportResolver.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
@@ -64,39 +65,15 @@ namespace
 
 QString DataTypeImportResolver::absolutePath(const QString& hostFilePath, const QString& location)
 {
-    if (location.isEmpty())
-    {
-        return QString();
-    }
-
-    const QFileInfo info(location);
-    if (info.isAbsolute())
-    {
-        return QDir::cleanPath(info.absoluteFilePath());
-    }
-
-    const QString directory = hostDirectory(hostFilePath);
-    return (directory.isEmpty() ? QString() : QDir::cleanPath(QDir(directory).absoluteFilePath(location)));
+    return NELusanCommon::resolveLocation(hostDirectory(hostFilePath), location);
 }
 
-QString DataTypeImportResolver::storableLocation(const QString& hostFilePath, const QString& absoluteFilePath)
+QString DataTypeImportResolver::storableLocation(const QString& /*hostFilePath*/, const QString& absoluteFilePath)
 {
-    const QString cleaned = QDir::cleanPath(absoluteFilePath);
-    const QString dir     = hostDirectory(hostFilePath);
-    if (dir.isEmpty() || cleaned.isEmpty())
-    {
-        return cleaned;
-    }
-
-    // A relative location keeps working when the whole project tree is moved or checked out
-    // elsewhere; one that has to climb out of the tree does not, so it stays absolute.
-    const QString relative = QDir(dir).relativeFilePath(cleaned);
-    if (relative.startsWith(QStringLiteral("..")) || QFileInfo(relative).isAbsolute())
-    {
-        return cleaned;
-    }
-
-    return QStringLiteral("./") + relative;
+    // Measured from a workspace root and not from the host document, so that two documents in
+    // different folders importing one file write the same location and the generator places its
+    // output once. A relative location also survives moving or checking out the tree elsewhere.
+    return NELusanCommon::toStorableLocation(absoluteFilePath);
 }
 
 bool DataTypeImportResolver::refresh(DataTypeDataSection& types, const QString& hostFilePath
@@ -117,6 +94,7 @@ bool DataTypeImportResolver::refresh(DataTypeDataSection& types, const QString& 
         group.id           = include.getId();
         group.location     = location;
         group.absolutePath = absolutePath(hostFilePath, location);
+        // Until the file is read, the best guess at the namespace is what it is called on disk.
         group.space        = DTDocumentCache::spaceOf(group.absolutePath.isEmpty() ? location : group.absolutePath);
 
         if (group.absolutePath.isEmpty() || (QFileInfo(group.absolutePath).isFile() == false))
@@ -126,19 +104,28 @@ bool DataTypeImportResolver::refresh(DataTypeDataSection& types, const QString& 
             continue;
         }
 
+        group.document = DTDocumentCache::getInstance().document(group.absolutePath);
+        if (group.document == nullptr)
+        {
+            group.state = eImportState::ParseFailed;
+            groups.append(std::move(group));
+            continue;
+        }
+
+        // The namespace is the name the document declares, which is also what the generated header
+        // and source are called. The file may be called something else.
+        const QString declared = group.document->getOverviewData().getName();
+        if (declared.isEmpty() == false)
+        {
+            group.space = declared;
+        }
+
         if (claimed.contains(group.space))
         {
             // Both would generate into one namespace, so the second one contributes nothing and
             // is reported instead.
             group.state = eImportState::DuplicateSpace;
-            groups.append(std::move(group));
-            continue;
-        }
-
-        group.document = DTDocumentCache::getInstance().document(group.absolutePath);
-        if (group.document == nullptr)
-        {
-            group.state = eImportState::ParseFailed;
+            group.document.reset();
             groups.append(std::move(group));
             continue;
         }

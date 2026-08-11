@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="LegacyStart" Version="1.0.0" Threading="Local">
+        <Description>A document in the LEGACY MERGED FORM, kept exactly as it was authored before
+            Kind="Start" became a pseudo-state: the level's first REAL state carries the Start kind
+            together with its entry actions and its stimulus-driven transitions. Both levels are
+            written that way, so the read shim has to fire on a nested level too.
+
+            Nothing here is to be corrected by hand. The point of the fixture is that the shim
+            rewrites it on load -- a pseudo-state per level, the old state demoted to Normal with
+            its operations and transitions untouched, one unguarded initial transition between them
+            -- and that the result then validates clean and saves in the corrected form.</Description>
+    </Overview>
+    <AttributeList>
+        <Attribute ID="10" Name="Ready" DataType="bool" Value="false">
+            <Description>Set once the hardware answered.</Description>
+        </Attribute>
+    </AttributeList>
+    <TimerList>
+        <Timer ID="12" Name="Settle" Timeout="500">
+            <Description>Gives the hardware time to settle.</Description>
+        </Timer>
+    </TimerList>
+    <MethodList>
+        <Method ID="14" Name="begin" MethodType="Trigger">
+            <Description>Starts the machine.</Description>
+        </Method>
+        <Method ID="15" Name="halt" MethodType="Trigger">
+            <Description>Stops the machine.</Description>
+        </Method>
+        <Method ID="16" Name="warmup" MethodType="Action">
+            <Description>Powers the hardware up.</Description>
+        </Method>
+        <Method ID="17" Name="cooldown" MethodType="Action">
+            <Description>Powers the hardware down.</Description>
+        </Method>
+        <Method ID="18" Name="poll" MethodType="Action">
+            <Description>Reads the hardware once.</Description>
+        </Method>
+    </MethodList>
+    <StateList>
+        <State ID="30" Name="Idle" Kind="Start">
+            <Description>The legacy merged form: a real state wearing the Start kind.</Description>
+            <EntryList>
+                <ActionCall ID="31" Action="warmup"/>
+                <TimerStart ID="32" Timer="Settle"/>
+            </EntryList>
+            <ExitList>
+                <ActionCall ID="33" Action="cooldown"/>
+            </ExitList>
+            <TransitionList>
+                <Transition ID="34" StimulusKind="Trigger" Stimulus="begin" To="40"/>
+            </TransitionList>
+        </State>
+        <State ID="40" Name="Running" Kind="Normal">
+            <Description>Composite, and its sublevel is in the merged form too.</Description>
+            <TransitionList>
+                <Transition ID="41" StimulusKind="Trigger" Stimulus="halt" To="30"/>
+            </TransitionList>
+            <StateList>
+                <State ID="50" Name="Polling" Kind="Start">
+                    <Description>The nested merged form.</Description>
+                    <TransitionList>
+                        <Transition ID="52" StimulusKind="Timer" Stimulus="Settle" To="60"/>
+                    </TransitionList>
+                </State>
+                <State ID="60" Name="Steady" Kind="Normal">
+                    <Description>Reached once the hardware settled.</Description>
+                </State>
+            </StateList>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+            <View Owner="40" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="30" X="80" Y="140" Width="160" Height="64"/>
+            <Node Owner="40" X="340" Y="140" Width="220" Height="72"/>
+            <Node Owner="50" X="80" Y="140" Width="160" Height="64"/>
+            <Node Owner="60" X="340" Y="140" Width="160" Height="64"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

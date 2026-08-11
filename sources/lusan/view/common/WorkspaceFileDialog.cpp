@@ -18,6 +18,13 @@
  ************************************************************************/
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
+
+QString WorkspaceFileDialog::relativeToRoots(const QString& absoluteFilePath, const QStringList& roots)
+{
+    return NELusanCommon::relativeToRoots(absoluteFilePath, roots);
+}
+
 WorkspaceFileDialog::WorkspaceFileDialog(bool openFile, bool openDir, const QString& caption, QWidget* parent /*= nullptr*/)
     : QFileDialog       (parent, caption)
     , mRootDirectories  ()
@@ -125,33 +132,16 @@ void WorkspaceFileDialog::setFileFilters(const QStringList& filters)
 
 QString WorkspaceFileDialog::getSelectedFileRelativePath() const
 {
-    QStringList selected{ selectedFiles() };
-    QString result = selected.first();
-    QDir rootDir(directoryUrl().path());
-    
-    if (result.startsWith(rootDir.absolutePath()))
-    {
-        result = rootDir.relativeFilePath(result);
-    }
-    else
-    {
-        for (const QString& root : mRootDirectories)
-        {
-            if (result.startsWith(root))
-            {
-                result = QDir(root).relativeFilePath(result);
-                break;
-            }
-        }
-    }
-    
-    return result;
+    // Measured against the root, not against the folder the user navigated into: the document
+    // stores this string, and two documents must spell one file the same way whatever route
+    // their authors took through the tree.
+    return WorkspaceFileDialog::relativeToRoots(getSelectedFilePath(), mRootDirectories);
 }
 
 QString WorkspaceFileDialog::getSelectedFilePath() const
 {
-    QStringList selected{ selectedFiles() };
-    return selected.first();
+    const QStringList selected{ selectedFiles() };
+    return (selected.isEmpty() ? QString() : selected.first());
 }
 
 void WorkspaceFileDialog::clearHistory()

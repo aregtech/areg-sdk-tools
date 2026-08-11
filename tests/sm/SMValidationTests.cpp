@@ -2490,12 +2490,15 @@ namespace
             CHECK(countRule(hostIssues, 19) == 0);
         }
 
-        {   // An absolute location resolves too, and a picked file is stored relative to the host.
+        {   // An absolute location resolves too. A picked file is stored relative to a workspace
+            // root, never to the host document, so two machines in different folders importing one
+            // file write the same location. This fixture sets no root, and a file under none keeps
+            // its absolute path.
             writeMachine(at("abs.fsml"), QStringLiteral("Abs"), QStringLiteral("1.0.0"));
             std::unique_ptr<StateMachineData> host = hostMachine(at("h5.fsml"), QStringLiteral("Abs"), at("abs.fsml"), QStringLiteral("1.0.0"), 1);
             SMDocumentCache::getInstance().clear();
             CHECK(countRule(SMValidator::validate(*host), 19) == 0);
-            CHECK(SMImportResolver::storableLocation(*host, at("abs.fsml")) == QStringLiteral("./abs.fsml"));
+            CHECK(SMImportResolver::storableLocation(*host, at("abs.fsml")) == QDir::cleanPath(at("abs.fsml")));
         }
 
         {   // Rule 31. The generated constructor names one action handler per machine below this

@@ -23,7 +23,9 @@
  * Includes
  ************************************************************************/
 #include "lusan/data/common/EnumEntry.hpp"
+#include "lusan/common/DocElementTable.hpp"
 #include "lusan/model/common/DocIssue.hpp"
+#include "lusan/model/common/DocUnknownScan.hpp"
 
 #include <QCoreApplication>
 #include <QList>
@@ -98,6 +100,8 @@ public:
         , Deprecated
         , BrokenImport
         , UnusedImport
+        , FileNameMismatch
+        , UnknownElement
     };
 
     /**
@@ -242,6 +246,30 @@ public:
      * \param   rule        The number this engine files an unused import under.
      **/
     void noteUnusedImports(eDocElementKind kind, int rule, const QSet<QString>& typesUsed);
+
+    /**
+     * \brief   Notes that the document declares one name and lives in a file called another.
+     *          Both are allowed -- the generated files follow the declared name -- but the two
+     *          drifting apart is worth saying once. Silent for a document not saved yet.
+     * \param   id          The overview element the finding points at.
+     * \param   name        The name the document declares.
+     * \param   filePath    The file the document was read from or written to.
+     * \param   rule        The number this engine files the mismatch under.
+     **/
+    void noteFileNameMismatch(uint32_t id, const QString& name, const QString& filePath, int rule);
+
+    /**
+     * \brief   Files every element of the opened file that the format does not place, whether
+     *          the tag is unknown, sits somewhere the format does not allow, or was dropped from
+     *          the format. The block itself survives the save, so the finding is what tells the
+     *          author it is there.
+     * \param   doc     The format the elements were read against, for the replacement to suggest.
+     * \param   kind    The element kind these findings carry; they point at no element of their own.
+     * \param   rule    The number this engine files an unknown element under.
+     * \param   unknown The blocks the read could not place, in document order.
+     **/
+    void noteUnknownElements(DocElementTable::eDocument doc, eDocElementKind kind, int rule
+                           , const QList<DocUnknownElement>& unknown);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes

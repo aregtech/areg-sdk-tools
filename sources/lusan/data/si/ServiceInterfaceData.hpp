@@ -27,6 +27,7 @@
 #include "lusan/data/common/MethodDataSection.hpp"
 #include "lusan/data/common/ConstantDataSection.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
+#include "lusan/model/common/DocUnknownScan.hpp"
 
 
 /**
@@ -158,7 +159,13 @@ public:
      * \brief   Returns the current document version.
      **/
     inline const VersionNumber& getCurrentDocumentVersion() const;
-    
+
+    /**
+     * \brief   Every element of the opened document that the format does not define, in
+     *          document order. Empty for a document written by this build.
+     **/
+    inline const QList<DocUnknownElement>& getUnknownElements() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -172,6 +179,9 @@ private:
     ConstantDataSection  mConstantData;  //!< The constant data.
     IncludeDataSection mIncludeData; //!< The include data.
     bool            mOpenSuccess;   //!< File, indicating if opening file succeeded.
+
+    //!< The blocks of the opened file this build could not place, kept so a save puts them back.
+    QList<DocUnknownElement> mUnknownElements;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -256,6 +266,11 @@ inline bool ServiceInterfaceData::openSucceeded() const
 inline const VersionNumber& ServiceInterfaceData::getCurrentDocumentVersion() const
 {
     return mXmlVersion;
+}
+
+inline const QList<DocUnknownElement>& ServiceInterfaceData::getUnknownElements() const
+{
+    return mUnknownElements;
 }
 
 #endif // LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP

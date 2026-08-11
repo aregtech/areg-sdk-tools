@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="TurnCycle" Version="1.2.0" Threading="Local">
+        <Description>One direction of a crossing, from green to red. Designed once and hosted
+            by every direction of the crossing; the host never reaches inside it.</Description>
+    </Overview>
+    <TimerList>
+        <Timer ID="10" Name="Phase" Timeout="5000" Repeat="1">
+            <Description>Duration of one lamp phase.</Description>
+        </Timer>
+    </TimerList>
+    <MethodList>
+        <Method ID="20" Name="lamp_green" MethodType="Action"/>
+        <Method ID="21" Name="lamp_yellow" MethodType="Action"/>
+        <Method ID="22" Name="lamp_red" MethodType="Action"/>
+    </MethodList>
+    <StateList>
+        <State ID="30" Name="CycleStart" Kind="Start">
+            <TransitionList>
+                <Transition ID="31" Kind="Initial" To="32"/>
+            </TransitionList>
+        </State>
+        <State ID="32" Name="Green" Kind="Normal">
+            <EntryList>
+                <ActionCall ID="33" Action="lamp_green"/>
+                <TimerStart ID="34" Timer="Phase"/>
+            </EntryList>
+            <TransitionList>
+                <Transition ID="35" Kind="External" StimulusKind="Timer" Stimulus="Phase" To="36"/>
+            </TransitionList>
+        </State>
+        <State ID="36" Name="Yellow" Kind="Normal">
+            <EntryList>
+                <ActionCall ID="37" Action="lamp_yellow"/>
+                <TimerStart ID="38" Timer="Phase"/>
+            </EntryList>
+            <TransitionList>
+                <Transition ID="39" Kind="External" StimulusKind="Timer" Stimulus="Phase" To="40"/>
+            </TransitionList>
+        </State>
+        <State ID="40" Name="Red" Kind="Normal">
+            <EntryList>
+                <ActionCall ID="41" Action="lamp_red"/>
+                <TimerStart ID="44" Timer="Phase"/>
+            </EntryList>
+            <TransitionList>
+                <Transition ID="42" Kind="External" StimulusKind="Timer" Stimulus="Phase" To="43"/>
+            </TransitionList>
+        </State>
+        <State ID="43" Name="CycleDone" Kind="Final"/>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="30" X="80" Y="140" Width="160" Height="64"/>
+            <Node Owner="32" X="300" Y="140" Width="180" Height="88"/>
+            <Node Owner="36" X="540" Y="140" Width="180" Height="88"/>
+            <Node Owner="40" X="780" Y="140" Width="180" Height="72"/>
+            <Node Owner="43" X="1020" Y="140" Width="160" Height="64"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

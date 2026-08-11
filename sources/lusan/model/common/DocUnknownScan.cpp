@@ -146,7 +146,7 @@ namespace
     }
 }
 
-QList<DocUnknownElement> DocUnknownScan::scan(const QByteArray& xml)
+QList<DocUnknownElement> DocUnknownScan::scan(DocElementTable::eDocument doc, const QByteArray& xml)
 {
     QList<DocUnknownElement> found;
     QXmlStreamReader reader(xml);
@@ -171,7 +171,7 @@ QList<DocUnknownElement> DocUnknownScan::scan(const QByteArray& xml)
 
         const QString name   = reader.name().toString();
         const QString parent = stack.isEmpty() ? QString() : stack.constLast().name;
-        if (DocElementTable::accepts(name, parent))
+        if (DocElementTable::accepts(doc, name, parent))
         {
             OpenElement open;
             open.name = name;
@@ -184,7 +184,7 @@ QList<DocUnknownElement> DocUnknownScan::scan(const QByteArray& xml)
         entry.name    = name;
         entry.parent  = parent;
         entry.line    = static_cast<int>(reader.lineNumber());
-        const DocElementTable::Row* row = DocElementTable::find(name);
+        const DocElementTable::Row* row = DocElementTable::find(doc, name);
         entry.removed = (row != nullptr) && (row->status == DocElementTable::eStatus::Removed);
         anchorOf(stack, entry.ownerId, entry.wrappers);
         entry.text = captureElement(reader);
@@ -194,12 +194,15 @@ QList<DocUnknownElement> DocUnknownScan::scan(const QByteArray& xml)
     return found;
 }
 
-QByteArray DocUnknownScan::restore(const QByteArray& written, const QList<DocUnknownElement>& unknown)
+QByteArray DocUnknownScan::restore(DocElementTable::eDocument doc, const QByteArray& written
+                                 , const QList<DocUnknownElement>& unknown)
 {
     if (unknown.isEmpty())
     {
         return written;
     }
+
+    const QString documentElement = DocElementTable::documentElement(doc);
 
     QByteArray out;
     QXmlStreamReader reader(written);
@@ -246,7 +249,7 @@ QByteArray DocUnknownScan::restore(const QByteArray& written, const QList<DocUnk
                 const DocUnknownElement& entry = unknown.at(i);
                 // The document element keeps its own blocks, in the order they were found
                 // between the sections; taking them here would write them twice.
-                if (placed.at(i) || (entry.parent == XmlSM::xmlSMElementStateMachine)
+                if (placed.at(i) || (entry.parent == documentElement)
                     || (entry.parent != here) || (entry.ownerId != ownerId)
                     || (entry.wrappers != wrappers))
                 {

@@ -367,7 +367,6 @@ void ServiceInterface::ensureTabInitialized(int index)
             mMethod = new MethodPage(mModel.getMethodsModel()
                                     , MethodPageConfig{ tr("Service Interface Methods Editor ...")
                                                       , tr("Service Methods List:")
-                                                      , tr("Data Type:")
                                                       , false }
                                     , &mTabWidget);
             attachPage(index, mMethod);

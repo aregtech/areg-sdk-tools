@@ -73,6 +73,17 @@ public:
     //!< An include that is not a C++ header. A data type document includes nothing else.
     static constexpr int RULE_NOT_A_HEADER         { 16 };
 
+    //!< Advisory: the document declares one name and lives in a file called another.
+    static constexpr int RULE_FILE_NAME_MISMATCH   { 17 };
+
+    /**
+     * \brief   An element of the opened file the format does not place: an unknown tag, a real
+     *          one written where the format does not allow it, or one the format has dropped.
+     *          The block is kept as written, so a document carrying one still opens and still
+     *          saves without losing it.
+     **/
+    static constexpr int RULE_UNKNOWN_ELEMENT      { 18 };
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

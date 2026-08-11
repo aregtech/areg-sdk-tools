@@ -76,6 +76,18 @@ add_custom_command(TARGET ${APP_NAME} POST_BUILD
     COMMENT "Copying third-party license notices"
     VERBATIM)
 
+# The document schemas travel with the Areg SDK. An SDK built before they existed does not carry
+# them, and Lusan must build and run either way, so their absence is a status line and nothing more.
+if (EXISTS "${AREG_SDK_ROOT}/tools/schema")
+    message(STATUS ">>> Document schemas found at '${AREG_SDK_ROOT}/tools/schema', copying beside the executable")
+    add_custom_command(TARGET ${APP_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${AREG_SDK_ROOT}/tools/schema" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/schema"
+        COMMENT "Copying document schemas"
+        VERBATIM)
+else()
+    message(STATUS ">>> No document schemas at '${AREG_SDK_ROOT}/tools/schema', the built-in format description is used")
+endif()
+
 # ADS is a shared library (see conf/cmake/setup.cmake); look for it next to the
 # executable at runtime, and copy it there after each build, the same way the
 # Qt runtime libraries are deployed below.
@@ -149,6 +161,9 @@ if (UNIX AND NOT APPLE)
     install(FILES "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES "$<TARGET_SONAME_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(DIRECTORY "${LUSAN_ROOT}/licenses" DESTINATION ${CMAKE_INSTALL_BINDIR})
+    if (EXISTS "${AREG_SDK_ROOT}/tools/schema")
+        install(DIRECTORY "${AREG_SDK_ROOT}/tools/schema" DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
     install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan-256.png"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps" RENAME lusan.png)
     install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.svg"

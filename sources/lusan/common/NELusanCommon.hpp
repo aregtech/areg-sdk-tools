@@ -358,7 +358,47 @@ namespace NELusanCommon
      * \param   path    The path to fix.
      **/
     QString fixPath(const QString& path);
-    
+
+    /**
+     * \brief   Sets the directories a relative include location is measured from, most preferred
+     *          first. The application sets them from the active workspace; the data layer reads
+     *          them to turn a stored location back into a file.
+     **/
+    void setSearchRoots(const QStringList& roots);
+
+    /**
+     * \brief   Returns the directories set by setSearchRoots().
+     **/
+    const QStringList& getSearchRoots(void);
+
+    /**
+     * \brief   Turns a stored include location into an absolute file path.
+     *
+     *          A location is stored relative to one of the search roots. Older documents spell it
+     *          relative to the document that holds it, so both are tried and the first candidate
+     *          that exists on disk wins. When none exists, the preferred candidate is returned, so
+     *          that a "not found" message names the path the author most likely meant.
+     *
+     * \param   hostDirectory   Directory of the document holding the location; may be empty when
+     *                          the document is unsaved.
+     * \param   location        The location as the document spells it.
+     **/
+    QString resolveLocation(const QString& hostDirectory, const QString& location);
+
+    /**
+     * \brief   Returns the path of a file relative to the first of \p roots that contains it, or
+     *          the cleaned absolute path when no root does. The list is in priority order.
+     **/
+    QString relativeToRoots(const QString& absoluteFilePath, const QStringList& roots);
+
+    /**
+     * \brief   Returns the form of a file path a document stores: relative to the search root that
+     *          contains it, so that every document spells one file the same way. A file under no
+     *          root keeps its absolute path, which is not portable but is at least resolvable.
+     **/
+    QString toStorableLocation(const QString& absoluteFilePath);
+
+
     using AnyData = std::any;
     using AnyList = std::vector<AnyData>;
     
@@ -661,13 +701,34 @@ namespace NELusanCommon
     //!< Loads Undo icon
     inline QIcon iconEditRedo(const QSize& size = QSize{32, 32});
     
-    //!< Crate a tool button object.    
+    /**
+     * \brief   The side of the square cell every list page toolbar button occupies. One value for
+     *          all of them, so the icon column starts at the same place on every page.
+     **/
+    constexpr int TOOLBUTTON_CELL { 24 };
+
+    //!< The icon size a list page toolbar button carries, the same for plain and split buttons.
+    constexpr int TOOLBUTTON_ICON { 25 };
+
+    /**
+     * \brief   Object name every split (drop-down) toolbar button carries. The theme sheet matches
+     *          on it to reserve the drop-down zone as right padding, which is what keeps the icon
+     *          of a split button in the same cell as the plain buttons beside it. The matching
+     *          rule lives in `res/styles/theme-template.qss`.
+     **/
+    extern const QString SPLIT_TOOLBUTTON_NAME;
+
+    //!< Crate a tool button object.
     QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
-    
+
     //!< Applies the shared look to a plain toolbar button (without a split drop-down menu).
     void decorateToolButton(QToolButton* button);
 
-    //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
+    /**
+     * \brief   Attaches the drop-down menu to an Add split button and sizes it so its icon keeps
+     *          the same cell as a plain toolbar button, with the arrow zone appended on the right.
+     *          The button re-sizes itself whenever the application style changes.
+     **/
     void decorateToolButton(QToolButton* button, QMenu* menu);
 
     /**
@@ -691,6 +752,15 @@ namespace NELusanCommon
      *          answer every document editor and every validation engine asks.
      **/
     bool isValidIdentifier(const QString& name);
+
+    /**
+     * \brief   Turns the base name of a file into the name a document may carry into generated
+     *          code: spaces drop out, every character C++ cannot spell becomes '_', and a leading
+     *          digit becomes 'N'. "Some File" answers "SomeFile", "123What Ever #1" answers
+     *          "NNNWhatEver_1". Answers an empty string for a base name that leaves nothing.
+     * \param   fileBaseName    The file name without its extension.
+     **/
+    QString toDocumentName(const QString& fileBaseName);
 
     /**
      * \brief   Creates a validator that filters keystrokes to valid C++ identifier characters.
@@ -956,7 +1026,7 @@ inline QIcon NELusanCommon::iconMethodParam(const QSize & size)
 
 inline QIcon NELusanCommon::iconInclude(const QSize & size)
 {
-    return loadIcon(":/icons/data-include", size);
+    return loadIcon(":/icons/include-file", size);
 }
 
 inline QIcon NELusanCommon::iconStructField(const QSize & size)

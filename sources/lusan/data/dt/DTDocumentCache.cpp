@@ -64,8 +64,11 @@ std::shared_ptr<const DataTypeDocumentData> DTDocumentCache::document(const QStr
         if (parsed->readFromFile(absolutePath) && parsed->openSucceeded())
         {
             // Stamped once, here, while the document is still this function's own. From now on
-            // every reader sees it as `const` and its types answer to `Space::Name` only.
-            const QString space = spaceOf(absolutePath);
+            // every reader sees it as `const` and its types answer to `Space::Name` only. The
+            // namespace is the name the document declares; the file name only fills in for a
+            // document that declares none.
+            const QString declared = parsed->getOverviewData().getName();
+            const QString space = declared.isEmpty() ? spaceOf(absolutePath) : declared;
             for (DataTypeCustom* dataType : parsed->getDataTypeData().getCustomDataTypes())
             {
                 if (dataType != nullptr)

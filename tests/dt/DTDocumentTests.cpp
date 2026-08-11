@@ -13,8 +13,8 @@
  *  \file        tests/dt/DTDocumentTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Data Type document (.dtml) tests: the file format, the name that follows the
- *               file, and every rule the validation engine files.
+ *  \brief       Data Type document (.dtml) tests: the file format, the name the document
+ *               declares, and every rule the validation engine files.
  *
  *  Self-contained (no external test framework), matching SICommandTests.cpp.
  *
@@ -173,12 +173,12 @@ void testDocumentShape()
 }
 
 //////////////////////////////////////////////////////////////////////////
-// The document is named by the file it lives in
+// The document keeps the name it declares, whatever the file is called
 //////////////////////////////////////////////////////////////////////////
 
-void testNameFollowsFile()
+void testNameSurvivesTheFile()
 {
-    std::printf("[dt] the name follows the file\n");
+    std::printf("[dt] the declared name outlives the file name\n");
 
     QTemporaryDir dir;
     CHECK(dir.isValid());
@@ -192,21 +192,32 @@ void testNameFollowsFile()
     doc.getOverviewData().setName(QStringLiteral("WhateverWasTypedHere"));
     doc.getDataTypeData().addEnum(QStringLiteral("Unit"));
     CHECK(doc.writeToFile(first));
-    // The file names the document, so what was in the field is not what is written.
-    CHECK(doc.getOverviewData().getName() == QStringLiteral("Common"));
+    // The name belongs to the author, so writing it into another file leaves it alone.
+    CHECK(doc.getOverviewData().getName() == QStringLiteral("WhateverWasTypedHere"));
 
     DataTypeDocumentData opened(first);
     CHECK(opened.openSucceeded());
-    CHECK(opened.getOverviewData().getName() == QStringLiteral("Common"));
+    CHECK(opened.getOverviewData().getName() == QStringLiteral("WhateverWasTypedHere"));
     CHECK(opened.getDataTypeData().getCustomDataTypes().size() == 1);
 
-    // Saving under another name renames the document with it.
+    // Saving under another name does not rename the document either.
     CHECK(opened.writeToFile(second));
-    CHECK(opened.getOverviewData().getName() == QStringLiteral("Shared"));
+    CHECK(opened.getOverviewData().getName() == QStringLiteral("WhateverWasTypedHere"));
 
     DataTypeDocumentData reopened(second);
     CHECK(reopened.openSucceeded());
-    CHECK(reopened.getOverviewData().getName() == QStringLiteral("Shared"));
+    CHECK(reopened.getOverviewData().getName() == QStringLiteral("WhateverWasTypedHere"));
+
+    // A document that declares no name of its own falls back to the file, spelled the way C++
+    // can carry it.
+    const QString odd = dir.filePath(QStringLiteral("123 Odd Name.dtml"));
+    QFile oddFile(odd);
+    CHECK(oddFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    oddFile.write("<?xml version=\"1.0\"?>\n<DataTypeDocument FormatVersion=\"1.0.0\"/>\n");
+    oddFile.close();
+
+    DataTypeDocumentData unnamed(odd);
+    CHECK(unnamed.getOverviewData().getName() == QStringLiteral("NNNOddName"));
 
     // A file that is not a data type document is refused rather than half read.
     const QString wrong = dir.filePath(QStringLiteral("NotOurs.dtml"));
@@ -523,7 +534,7 @@ int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("Data Type document tests\n");
     testDocumentShape();
-    testNameFollowsFile();
+    testNameSurvivesTheFile();
     testValidatorClean();
     testValidatorDuplicateEnumValue();
     testValidatorDeprecation();

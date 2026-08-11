@@ -21,6 +21,8 @@
 
 #include "lusan/data/dt/DataTypeImportResolver.hpp"
 
+#include "lusan/common/DocElementTable.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 #include <QFile>
@@ -48,15 +50,17 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
 {
     mOpenSuccess = false;
     mFilePath.clear();
+    mUnknownElements.clear();
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly))
     {
         mFilePath = filePath;
-        QFileInfo info(filePath);
-        QString name = info.baseName();
-        mOverviewData.setName(name);
-        
-        QXmlStreamReader xml(&file);
+        // A fallback only: an interface that declares no name of its own is called after its file.
+        mOverviewData.setName(NELusanCommon::toDocumentName(QFileInfo(filePath).completeBaseName()));
+
+
+        const QByteArray content = file.readAll();
+        QXmlStreamReader xml(content);
         while (!xml.atEnd() && !xml.hasError())
         {
             if (xml.readNextStartElement())
@@ -73,6 +77,7 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
         if (xml.hasError() == false)
         {
             mOpenSuccess = true;
+            mUnknownElements = DocUnknownScan::scan(DocElementTable::eDocument::ServiceInterface, content);
             // Before anything is resolved: a declaration may name a type an included data type
             // document brings in, and that type has to be in the registry by then.
             DataTypeImportResolver::refresh(mDataTypeData, mFilePath, mIncludeData);
@@ -92,19 +97,27 @@ bool ServiceInterfaceData::writeToFile(const QString& filePath /*= ""*/)
     QString path = filePath.isEmpty() ? mFilePath : filePath;
     if (!path.isEmpty())
     {
-        QFile file(path);
-        if (file.open(QFile::WriteOnly | QFile::Text))
+        QByteArray buffer;
         {
-            QFileInfo info(QString(file.filesystemFileName().c_str()));
-            const QString & serviceName = info.baseName();
-            mOverviewData.setName(serviceName);
-            
-            QXmlStreamWriter xml(&file);
+            QXmlStreamWriter xml(&buffer);
             xml.setAutoFormatting(true);
             xml.writeStartDocument("1.0", true);
             writeToXml(xml);
+        }
+
+        // An element this build cannot show goes back where it was found. Dropping it would
+        // destroy the very document the author has to open elsewhere to recover.
+        buffer = DocUnknownScan::restore(DocElementTable::eDocument::ServiceInterface, buffer, mUnknownElements);
+
+        QFile file(path);
+        if (file.open(QFile::WriteOnly | QFile::Text))
+        {
+            // A save under another name moves the document; what an include resolves against and
+            // what the file-name check compares with both read this.
+            mFilePath = path;
+            const bool written = (file.write(buffer) == buffer.size());
             file.close();
-            return true;
+            return written;
         }
     }
 

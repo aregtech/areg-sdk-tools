@@ -19,6 +19,8 @@
 
 #include "lusan/data/dt/DataTypeDocumentData.hpp"
 
+#include "lusan/common/DocElementTable.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlDT.hpp"
 
 #include <QFile>
@@ -49,13 +51,16 @@ bool DataTypeDocumentData::readFromFile(const QString& filePath)
 {
     mOpenSuccess = false;
     mFilePath.clear();
+    mUnknownElements.clear();
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly))
     {
         mFilePath = filePath;
-        mOverviewData.setName(QFileInfo(filePath).baseName());
+        // A fallback only: a document that declares no name of its own is called after its file.
+        mOverviewData.setName(NELusanCommon::toDocumentName(QFileInfo(filePath).completeBaseName()));
 
-        QXmlStreamReader xml(&file);
+        const QByteArray content = file.readAll();
+        QXmlStreamReader xml(content);
         while (!xml.atEnd() && !xml.hasError())
         {
             if (xml.readNextStartElement())
@@ -72,6 +77,7 @@ bool DataTypeDocumentData::readFromFile(const QString& filePath)
         if (xml.hasError() == false)
         {
             mOpenSuccess = true;
+            mUnknownElements = DocUnknownScan::scan(DocElementTable::eDocument::DataType, content);
             mDataTypeData.validate(mDataTypeData);
         }
     }
@@ -85,20 +91,26 @@ bool DataTypeDocumentData::writeToFile(const QString& filePath /*= QString()*/)
     if (path.isEmpty())
         return false;
 
+    QByteArray buffer;
+    {
+        QXmlStreamWriter xml(&buffer);
+        xml.setAutoFormatting(true);
+        xml.writeStartDocument("1.0", true);
+        writeToXml(xml);
+    }
+
+    // An element this build cannot show goes back where it was found. Dropping it would
+    // destroy the very document the author has to open elsewhere to recover.
+    buffer = DocUnknownScan::restore(DocElementTable::eDocument::DataType, buffer, mUnknownElements);
+
     QFile file(path);
     if (file.open(QFile::WriteOnly | QFile::Text) == false)
         return false;
 
-    // The document is named by the file it lives in, so a save under another name renames it.
-    mOverviewData.setName(QFileInfo(path).baseName());
     mFilePath = path;
-
-    QXmlStreamWriter xml(&file);
-    xml.setAutoFormatting(true);
-    xml.writeStartDocument("1.0", true);
-    writeToXml(xml);
+    const bool written = (file.write(buffer) == buffer.size());
     file.close();
-    return true;
+    return written;
 }
 
 bool DataTypeDocumentData::readFromXml(QXmlStreamReader& xml)

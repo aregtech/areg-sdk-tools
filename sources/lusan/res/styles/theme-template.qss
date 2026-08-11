@@ -105,6 +105,17 @@ QToolButton::menu-arrow
     height: 10px;
 }
 
+/* A styled tool button centers its icon over its whole width, drop-down zone included, so a
+   split button would carry its icon further right than the plain buttons next to it. Reserving
+   the zone as right padding puts the icon back in the leftmost cell, and the icon column of the
+   Data Types, Methods and Events pages then starts where the Attributes, Constants and Includes
+   pages start. The 16px is the drop-down zone above (12px wide, 2px left margin) plus the 2px
+   button padding; the button's own width is measured from the style, so only this stays here. */
+QToolButton#lusanSplitToolButton
+{
+    padding-right: 16px;
+}
+
 /* Text split button in the Structure lens (the [+ and v] add button). A text-only
    MenuButtonPopup tool button does not reserve room for the drop-down arrow, so the
    chevron paints on top of the label. Reserve right-side padding wider than the

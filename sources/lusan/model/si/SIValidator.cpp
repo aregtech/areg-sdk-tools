@@ -101,6 +101,7 @@ namespace
         void checkParameters(const MethodEntry& method);
 
         void checkOverview();
+        void checkUnknownElements();
         void checkDataTypes();
         void checkAttributes();
         void checkMethods();
@@ -180,10 +181,17 @@ namespace
         }
     }
 
+    void Ctx::checkUnknownElements()
+    {
+        mChecks.noteUnknownElements(DocElementTable::eDocument::ServiceInterface, eDocElementKind::Overview
+                                  , SIValidator::RULE_UNKNOWN_ELEMENT, mData.getUnknownElements());
+    }
+
     void Ctx::checkOverview()
     {
         const SIOverviewData& overview = mData.getOverviewData();
         checkName(overview.getId(), eDocElementKind::Overview, overview.getName(), vtr("The service interface"));
+        mChecks.noteFileNameMismatch(overview.getId(), overview.getName(), mData.getFilePath(), SIValidator::RULE_FILE_NAME_MISMATCH);
 
         if (overview.getVersion().isValid() == false)
         {
@@ -420,6 +428,7 @@ namespace
     {
         // The type-use record is filled by the declaration checks, so they all run before the
         // unreferenced pass reads it.
+        checkUnknownElements();
         checkOverview();
         checkDataTypes();
         checkAttributes();
@@ -472,6 +481,7 @@ eIssueField SIValidator::fieldOfRule(int rule)
     case SIValidator::RULE_MISSING_NAME:
     case SIValidator::RULE_INVALID_IDENTIFIER:
     case SIValidator::RULE_DUPLICATE_NAME:
+    case SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_FILE_NAME_MISMATCH:
         return eIssueField::Name;
 
     case SIValidator::RULE_UNRESOLVED_TYPE:
@@ -532,6 +542,8 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return QCoreApplication::translate("SIValidator", "A caller may only leave out trailing arguments, so every parameter after a defaulted one needs a default too.");
     case SIValidator::RULE_BROKEN_IMPORT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BrokenImport);
+    case SIValidator::RULE_UNKNOWN_ELEMENT:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnknownElement);
     default:
         return (severity == DocIssue::eSeverity::Error)
                     ? QCoreApplication::translate("SIValidator", "The interface will not generate until this is resolved.")

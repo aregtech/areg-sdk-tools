@@ -79,19 +79,25 @@ void DataTypeDetailsView::buildUi()
     mName->setValidator(NELusanCommon::createIdentifierValidator(mName));
     mForm->addRow(tr("Name:"), mName);
 
-    QGroupBox* typeGroup = new QGroupBox(tr("Type Definition:"), details);
-    typeGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    QHBoxLayout* typeLayout = new QHBoxLayout(typeGroup);
-    mTypeStruct    = new QRadioButton(tr("Structure"), typeGroup);
-    mTypeEnum      = new QRadioButton(tr("Enumeration"), typeGroup);
-    mTypeImport    = new QRadioButton(tr("Imported"), typeGroup);
-    mTypeContainer = new QRadioButton(tr("Container"), typeGroup);
+    // The category radios, laid out and marked the way the Methods page marks its method kinds,
+    // so the Type row reads the same in both editors.
+    QWidget* typeCell = new QWidget(details);
+    QHBoxLayout* typeLayout = new QHBoxLayout(typeCell);
+    typeLayout->setContentsMargins(0, 0, 0, 0);
+    mTypeStruct    = new QRadioButton(tr("Structure"), typeCell);
+    mTypeEnum      = new QRadioButton(tr("Enumeration"), typeCell);
+    mTypeImport    = new QRadioButton(tr("Imported"), typeCell);
+    mTypeContainer = new QRadioButton(tr("Container"), typeCell);
+    mTypeStruct->setIcon(NELusanCommon::iconStructure(NELusanCommon::SizeSmall));
+    mTypeEnum->setIcon(NELusanCommon::iconEnum(NELusanCommon::SizeSmall));
+    mTypeImport->setIcon(NELusanCommon::iconImported(NELusanCommon::SizeSmall));
+    mTypeContainer->setIcon(NELusanCommon::iconContainer(NELusanCommon::SizeSmall));
     typeLayout->addWidget(mTypeStruct);
     typeLayout->addWidget(mTypeEnum);
     typeLayout->addWidget(mTypeImport);
     typeLayout->addWidget(mTypeContainer);
     typeLayout->addStretch(1);
-    mForm->addRow(tr("Type:"), typeGroup);
+    mForm->addRow(tr("Type:"), typeCell);
 
     mEnumGroup = new QGroupBox(tr("Enumeration Details:"), details);
     QFormLayout* enumForm = new QFormLayout(mEnumGroup);

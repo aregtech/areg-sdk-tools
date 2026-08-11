@@ -346,7 +346,7 @@ void SMInclude::commitBrowsedLocation(uint32_t id, const QString& absolutePath, 
     // -- otherwise the safe route is only the slow one.
     if (acceptMachine(mModel, absolutePath, this))
     {
-        mModel.setLocation(id, mModel.storableLocation(absolutePath));
+        mModel.setLocation(id, relativePath);
     }
 }
 

@@ -41,6 +41,7 @@ class MethodModel;
 class MethodParamDetailsView;
 class QAbstractItemModel;
 class QEvent;
+class QStandardItemModel;
 class QTreeWidgetItem;
 
 /**
@@ -52,7 +53,6 @@ struct MethodPageConfig
 {
     QString headline;           //!< The title above the two panels.
     QString listTitle;          //!< The caption of the list panel.
-    QString typeColumnLabel;    //!< The header of the list's type column.
     bool    hasGuardInfo;       //!< The page can say where a method is used.
 };
 
@@ -294,6 +294,9 @@ private:
     //!< The index of the kind a method may be answered by, or -1 when the document has none.
     int replyKindIndex(void) const;
 
+    //!< The index of the method kind carrying the given label, or -1 when no kind does.
+    int kindIndexOf(const QString& label) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -304,6 +307,8 @@ private:
     MethodDetailsView*      mDetails;           //!< The selected method's form.
     MethodParamDetailsView* mParamDetails;      //!< The selected parameter's form.
     TableCell*              mTableCell;         //!< The inline editors of the tree.
+    QStandardItemModel*     mKindModel;         //!< The method kinds the type cell offers, marked
+                                                //!< with the same icons the details radios carry.
     uint32_t                mMethodNameCounter; //!< The counter behind the generated names.
 
 //////////////////////////////////////////////////////////////////////////

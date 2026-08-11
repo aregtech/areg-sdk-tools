@@ -41,7 +41,7 @@
         <file alias="sign-plus">icons/sign-plus.svg</file>
         <file alias="data-attribute">icons/data-attribute.svg</file>
         <file alias="data-constant">icons/data-constant.svg</file>
-        <file alias="data-include">icons/data-include.svg</file>
+        <file alias="include-file">icons/include-file.svg</file>
         <file alias="log-prio-fatal">icons/log-prio-fatal.svg</file>
         <file alias="log-prio-debug">icons/log-prio-debug.svg</file>
         <file alias="log-prio-error">icons/log-prio-error.svg</file>
@@ -70,6 +70,11 @@
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>
+    </qresource>
+    <qresource prefix="/schema">
+        <file alias="fsml.xsd">schema/fsml.xsd</file>
+        <file alias="siml.xsd">schema/siml.xsd</file>
+        <file alias="dtml.xsd">schema/dtml.xsd</file>
     </qresource>
     <qresource prefix="/styles">
         <file alias="theme-template.qss">styles/theme-template.qss</file>

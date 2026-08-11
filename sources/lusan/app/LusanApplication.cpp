@@ -19,6 +19,7 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/LogCollectorClient.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/Workspace.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
@@ -360,6 +361,10 @@ WorkspaceEntry LusanApplication::startupWorkspace(bool enableDefault)
 int LusanApplication::startupMainWindow(const WorkspaceEntry& curWorkspace)
 {
     Q_ASSERT(curWorkspace.isValid());
+
+    // Every relative include location a document holds is measured from one of these, so they
+    // have to be in place before the first document opens.
+    NELusanCommon::setSearchRoots(LusanApplication::getWorkspaceDirectories());
 
     MdiMainWindow w;
     mMainWindow = &w;

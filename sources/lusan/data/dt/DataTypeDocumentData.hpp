@@ -27,6 +27,7 @@
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/IncludeDataSection.hpp"
 #include "lusan/data/common/OverviewDataSection.hpp"
+#include "lusan/model/common/DocUnknownScan.hpp"
 
 #include <QObject>
 
@@ -114,6 +115,12 @@ public:
      **/
     inline const VersionNumber& getCurrentDocumentVersion(void) const;
 
+    /**
+     * \brief   Every element of the opened document that the format does not define, in
+     *          document order. Empty for a document written by this build.
+     **/
+    inline const QList<DocUnknownElement>& getUnknownElements(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -124,6 +131,9 @@ private:
     DataTypeDataSection mDataTypeData;  //!< The data types it declares.
     IncludeDataSection  mIncludeData;   //!< The C++ headers those types need.
     bool                mOpenSuccess;   //!< Whether the file was read.
+
+    //!< The blocks of the opened file this build could not place, kept so a save puts them back.
+    QList<DocUnknownElement> mUnknownElements;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -185,6 +195,11 @@ inline bool DataTypeDocumentData::openSucceeded(void) const
 inline const VersionNumber& DataTypeDocumentData::getCurrentDocumentVersion(void) const
 {
     return mXmlVersion;
+}
+
+inline const QList<DocUnknownElement>& DataTypeDocumentData::getUnknownElements(void) const
+{
+    return mUnknownElements;
 }
 
 #endif  // LUSAN_DATA_DT_DATATYPEDOCUMENTDATA_HPP
