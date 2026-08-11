@@ -21,6 +21,8 @@
 
 #include <QColor>
 #include <QDateTime>
+#include <QDir>
+#include <QEvent>
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
@@ -29,6 +31,8 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QStandardPaths>
+#include <QStyle>
+#include <QStyleOptionToolButton>
 #include <QToolButton>
 #include <QMenu>
 
@@ -148,6 +152,119 @@ QString NELusanCommon::fixPath(const QString& path)
     return fi.absoluteFilePath();
 }
 
+namespace
+{
+    //!< The workspace directories a relative include location is measured from, most preferred
+    //!< first. Set once when a workspace activates, read by the data layer.
+    QStringList _searchRoots;
+
+    //!< File names compare the way the platform's file system compares them.
+#ifdef Q_OS_WIN
+    constexpr Qt::CaseSensitivity _pathCase{ Qt::CaseInsensitive };
+#else
+    constexpr Qt::CaseSensitivity _pathCase{ Qt::CaseSensitive };
+#endif // Q_OS_WIN
+
+    //!< True when the file lies inside the root. Both paths are already cleaned. The separator
+    //!< check is what keeps "/home/dev/src2/a.dtml" out of the root "/home/dev/src".
+    bool isUnderRoot(const QString& file, const QString& root)
+    {
+        if (root.isEmpty() || (file.size() < root.size()) || (file.startsWith(root, _pathCase) == false))
+            return false;
+
+        return (file.size() == root.size())
+            || root.endsWith(QLatin1Char('/'))
+            || (file.at(root.size()) == QLatin1Char('/'));
+    }
+}
+
+QString NELusanCommon::relativeToRoots(const QString& absoluteFilePath, const QStringList& roots)
+{
+    const QString file{ QDir::cleanPath(absoluteFilePath) };
+    if (file.isEmpty())
+        return QString();
+
+    for (const QString& entry : roots)
+    {
+        const QString root{ QDir::cleanPath(entry) };
+        if (isUnderRoot(file, root))
+        {
+            return QDir(root).relativeFilePath(file);
+        }
+    }
+
+    return file;
+}
+
+QString NELusanCommon::toStorableLocation(const QString& absoluteFilePath)
+{
+    return NELusanCommon::relativeToRoots(absoluteFilePath, _searchRoots);
+}
+
+void NELusanCommon::setSearchRoots(const QStringList& roots)
+{
+    _searchRoots = roots;
+}
+
+const QStringList& NELusanCommon::getSearchRoots(void)
+{
+    return _searchRoots;
+}
+
+QString NELusanCommon::resolveLocation(const QString& hostDirectory, const QString& location)
+{
+    if (location.isEmpty())
+        return QString();
+
+    const QFileInfo info(location);
+    if (info.isAbsolute())
+        return QDir::cleanPath(info.absoluteFilePath());
+
+    // A location spelled "./" or "../" was written against the document that holds it. Anything
+    // else was written against a workspace root, which is the form every document shares.
+    const bool hostFirst = location.startsWith(QStringLiteral("./")) || location.startsWith(QStringLiteral("../"));
+    const QString fromHost{ hostDirectory.isEmpty()
+                            ? QString()
+                            : QDir::cleanPath(QDir(hostDirectory).absoluteFilePath(location)) };
+
+    QStringList candidates;
+    if (hostFirst && (fromHost.isEmpty() == false))
+    {
+        candidates.append(fromHost);
+    }
+
+    for (const QString& root : _searchRoots)
+    {
+        if (root.isEmpty() == false)
+        {
+            candidates.append(QDir::cleanPath(QDir(root).absoluteFilePath(location)));
+        }
+    }
+
+    if ((hostFirst == false) && (fromHost.isEmpty() == false))
+    {
+        candidates.append(fromHost);
+    }
+
+    // One candidate needs no disambiguation, and this is the hot path: resolution runs on every
+    // validation sweep, so touching the disk when there is nothing to choose between costs a
+    // stat per import for an answer that cannot change.
+    if (candidates.size() < 2)
+    {
+        return (candidates.isEmpty() ? QString() : candidates.first());
+    }
+
+    for (const QString& candidate : candidates)
+    {
+        if (QFileInfo(candidate).isFile())
+        {
+            return candidate;
+        }
+    }
+
+    return candidates.first();
+}
+
 QIcon NELusanCommon::mergeIcons(const QIcon& icon1, double scale1, const QIcon& icon2, double scale2, const QSize& size)
 {
     // Step 1: Create a transparent pixmap of the target size
@@ -178,15 +295,65 @@ QIcon NELusanCommon::mergeIcons(const QIcon& icon1, double scale1, const QIcon& 
     return QIcon(result);
 }
 
+const QString NELusanCommon::SPLIT_TOOLBUTTON_NAME{ QStringLiteral("lusanSplitToolButton") };
+
+namespace
+{
+    /**
+     * Holds a split tool button to one icon cell plus the drop-down zone the current style
+     * reserves, so its icon starts exactly where a plain toolbar button's icon starts.
+     *
+     * The zone is not a constant: the system style and the themed one reserve different widths,
+     * and picking a theme swaps the style under a window that is already open. So the width is
+     * measured from the style rather than written down, and measured again after a style change.
+     */
+    class SplitToolButtonSizer : public QObject
+    {
+    public:
+        explicit SplitToolButtonSizer(QToolButton* button)
+            : QObject(button)
+        {
+            button->installEventFilter(this);
+            applyWidth(button);
+        }
+
+        static void applyWidth(QToolButton* button)
+        {
+            QStyleOptionToolButton option;
+            option.initFrom(button);
+            option.iconSize         = button->iconSize();
+            option.toolButtonStyle  = Qt::ToolButtonIconOnly;
+            option.features         = QStyleOptionToolButton::MenuButtonPopup | QStyleOptionToolButton::HasMenu;
+            option.subControls      = QStyle::SC_All;
+            const int zone = button->style()->subControlRect(QStyle::CC_ToolButton, &option, QStyle::SC_ToolButtonMenu, button).width();
+            button->setFixedSize(NELusanCommon::TOOLBUTTON_CELL + zone, NELusanCommon::TOOLBUTTON_CELL);
+        }
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event->type() == QEvent::StyleChange)
+            {
+                // A theme change installs the new style first and its sheet after it, so the width
+                // is taken once the whole switch is through rather than half way into it.
+                QToolButton* button = static_cast<QToolButton*>(watched);
+                QMetaObject::invokeMethod(button, [button]() { applyWidth(button); }, Qt::QueuedConnection);
+            }
+
+            return QObject::eventFilter(watched, event);
+        }
+    };
+}
+
 QToolButton* NELusanCommon::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
 {
     QToolButton* button = new QToolButton(parent);
-    button->setMaximumSize(24, 24);
+    button->setMaximumSize(TOOLBUTTON_CELL, TOOLBUTTON_CELL);
     button->setCursor(Qt::PointingHandCursor);
     button->setMouseTracking(true);
     button->setToolTip(toolTip);
     button->setIcon(QIcon(iconName));
-    button->setIconSize(QSize(25, 25));
+    button->setIconSize(QSize(TOOLBUTTON_ICON, TOOLBUTTON_ICON));
     button->setShortcut(shortcut);
     return button;
 }
@@ -198,8 +365,8 @@ void NELusanCommon::decorateToolButton(QToolButton* button)
 
     button->setMenu(nullptr);
     button->setPopupMode(QToolButton::DelayedPopup);
-    button->setIconSize(QSize(24, 24));
-    button->setMaximumSize(24, 24);
+    button->setIconSize(QSize(TOOLBUTTON_ICON, TOOLBUTTON_ICON));
+    button->setMaximumSize(TOOLBUTTON_CELL, TOOLBUTTON_CELL);
 }
 
 void NELusanCommon::decorateToolButton(QToolButton* button, QMenu* menu)
@@ -212,9 +379,12 @@ void NELusanCommon::decorateToolButton(QToolButton* button, QMenu* menu)
 
     button->setMenu(menu);
     button->setPopupMode(QToolButton::MenuButtonPopup);
-    // Keep a dedicated right-side drop-down zone so the menu arrow never crowds the icon.
-    button->setIconSize(QSize(20, 20));
-    button->setFixedSize(48, 24);
+    // The icon keeps the size and the cell of a plain toolbar button; only the arrow zone is
+    // added, to the right of that cell. The name must be set before the width is measured,
+    // because the theme sheet reserves the arrow zone through a rule that matches on it.
+    button->setObjectName(SPLIT_TOOLBUTTON_NAME);
+    button->setIconSize(QSize(TOOLBUTTON_ICON, TOOLBUTTON_ICON));
+    new SplitToolButtonSizer(button);
 }
 
 const QString& NELusanCommon::identifierPattern()
@@ -231,6 +401,32 @@ bool NELusanCommon::isValidIdentifier(const QString& name)
     return (name.isEmpty() == false)
         && (name.size() <= NELusanCommon::MAX_IDENTIFIER_LENGTH)
         && _re.match(name).hasMatch();
+}
+
+QString NELusanCommon::toDocumentName(const QString& fileBaseName)
+{
+    QString result;
+    result.reserve(fileBaseName.size());
+    for (const QChar ch : fileBaseName)
+    {
+        if (ch.isSpace())
+            continue;
+
+        // Only the characters C++ accepts survive; the test is deliberately ASCII, so an accented
+        // letter is replaced rather than kept as a letter Qt would happily call one.
+        const bool spellable = (ch == QLatin1Char('_'))
+                            || ((ch >= QLatin1Char('a')) && (ch <= QLatin1Char('z')))
+                            || ((ch >= QLatin1Char('A')) && (ch <= QLatin1Char('Z')))
+                            || ((ch >= QLatin1Char('0')) && (ch <= QLatin1Char('9')));
+        result.append(spellable ? ch : QLatin1Char('_'));
+    }
+
+    for (qsizetype i = 0; (i < result.size()) && (result.at(i) >= QLatin1Char('0')) && (result.at(i) <= QLatin1Char('9')); ++i)
+    {
+        result[i] = QLatin1Char('N');
+    }
+
+    return result;
 }
 
 QValidator* NELusanCommon::createIdentifierValidator(QObject* parent)

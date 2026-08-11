@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="ThreadingMismatch" Version="1.0.0" Threading="Shared">
+        <Description>A Shared host importing the Local TurnCycle machine. Deliberately invalid:
+            it exists so the threading pairing rule (10.1 rule 26) has a fixture, and so a code
+            generator can prove it refuses the document rather than emitting a machine whose
+            imported half has no locking. Everything else about it validates clean.</Description>
+    </Overview>
+    <EventList>
+        <Event ID="10" Name="CycleDone">
+            <Description>Raised when the imported cycle reaches its Final state.</Description>
+        </Event>
+    </EventList>
+    <MethodList>
+        <Method ID="20" Name="go" MethodType="Trigger"/>
+    </MethodList>
+    <IncludeList>
+        <Location ID="30" Name="./TurnCycle.fsml" Alias="TurnCycle" Version="1.2.0">
+            <Description>A Local machine, which a Shared host may not import.</Description>
+        </Location>
+    </IncludeList>
+    <StateList>
+        <State ID="44" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="45" Kind="Initial" To="40"/>
+            </TransitionList>
+        </State>
+        <State ID="40" Name="Idle" Kind="Normal">
+            <TransitionList>
+                <Transition ID="41" Kind="External" StimulusKind="Trigger" Stimulus="go" To="42"/>
+            </TransitionList>
+        </State>
+        <State ID="42" Name="Cycle" Kind="Normal" Submachine="TurnCycle" OnFinal="CycleDone">
+            <Description>Hosts the Local import that makes this document invalid.</Description>
+            <TransitionList>
+                <Transition ID="43" Kind="External" StimulusKind="Event" Stimulus="CycleDone" To="40"/>
+            </TransitionList>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="40" X="80" Y="140" Width="160" Height="64"/>
+            <Node Owner="42" X="340" Y="140" Width="220" Height="72"/>
+            <Node Owner="44" X="80" Y="60" Width="64" Height="32"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

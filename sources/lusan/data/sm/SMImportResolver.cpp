@@ -19,6 +19,7 @@
 
 #include "lusan/data/sm/SMImportResolver.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/sm/SMDocumentCache.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -47,21 +48,11 @@ namespace
     //!< branch, so a cycle terminates instead of recursing forever.
     int depthOf(const QString& absoluteFilePath, int limit, QSet<QString>& onPath, QStringList& chain);
 
-    //!< Absolute, cleaned path of a location interpreted relative to \p directory.
+    //!< Absolute, cleaned path of a stored location. A location is written against a workspace
+    //!< root; documents written before that spell it against their own folder, and both resolve.
     QString makeAbsolute(const QString& directory, const QString& location)
     {
-        if (location.isEmpty())
-        {
-            return QString();
-        }
-
-        const QFileInfo info(location);
-        if (info.isAbsolute())
-        {
-            return QDir::cleanPath(info.absoluteFilePath());
-        }
-
-        return (directory.isEmpty() ? QString() : QDir::cleanPath(QDir(directory).absoluteFilePath(location)));
+        return NELusanCommon::resolveLocation(directory, location);
     }
 
     int depthOf(const QString& absoluteFilePath, int limit, QSet<QString>& onPath, QStringList& chain)
@@ -113,24 +104,12 @@ QString SMImportResolver::absolutePath(const StateMachineData& host, const QStri
     return makeAbsolute(hostDirectory(host), location);
 }
 
-QString SMImportResolver::storableLocation(const StateMachineData& host, const QString& absoluteFilePath)
+QString SMImportResolver::storableLocation(const StateMachineData& /*host*/, const QString& absoluteFilePath)
 {
-    const QString cleaned = QDir::cleanPath(absoluteFilePath);
-    const QString dir     = hostDirectory(host);
-    if (dir.isEmpty() || cleaned.isEmpty())
-    {
-        return cleaned;
-    }
-
-    // A relative location keeps working when the whole project tree is moved or checked out
-    // elsewhere; one that has to climb out of the tree does not, so it stays absolute.
-    const QString relative = QDir(dir).relativeFilePath(cleaned);
-    if (relative.startsWith(QStringLiteral("..")) || QFileInfo(relative).isAbsolute())
-    {
-        return cleaned;
-    }
-
-    return QStringLiteral("./") + relative;
+    // Measured from a workspace root and not from the host document, so that two machines in
+    // different folders importing one file write the same location and the generator places its
+    // output once. A relative location also survives moving or checking out the tree elsewhere.
+    return NELusanCommon::toStorableLocation(absoluteFilePath);
 }
 
 SMImportResolver::Resolution SMImportResolver::resolve(const StateMachineData& host, const IncludeEntry& entry)

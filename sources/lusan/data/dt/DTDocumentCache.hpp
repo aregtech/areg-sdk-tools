@@ -77,8 +77,9 @@ public:
     std::shared_ptr<const DataTypeDocumentData> document(const QString& absolutePath);
 
     /**
-     * \brief   The namespace a file at the given path contributes: its base name. Answered
+     * \brief   The fallback namespace of a file at the given path: its base name. Answered
      *          without reading the file, so a caller can name a document that does not parse.
+     *          A document that reads contributes the name it declares instead.
      **/
     static QString spaceOf(const QString& absolutePath);
 

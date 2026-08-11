@@ -70,6 +70,7 @@
 
 #include <QAbstractButton>
 #include <QApplication>
+#include <QComboBox>
 #include <QDir>
 #include <QFile>
 #include <QKeyEvent>
@@ -130,6 +131,51 @@ namespace
         QKeyEvent press(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
         QApplication::sendEvent(field, &press);
         QApplication::processEvents();
+    }
+
+    /**
+     * \brief   Opens the inline editor of a cell, picks the entry reading \p choice out of its
+     *          drop-down and activates it, the way a click on the list does.
+     * \return  False when the cell offered no drop-down, or offered no such entry.
+     **/
+    bool pickInCell(QTreeWidget* table, QTreeWidgetItem* row, int column, const QString& choice)
+    {
+        // A closed editor lives on until its deferred deletion runs, and would be picked up
+        // instead of the one this call opens.
+        QApplication::processEvents();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        const QList<QComboBox*> stale = table->viewport()->findChildren<QComboBox*>();
+
+        const QModelIndex index = table->indexFromItem(row, column);
+        table->setCurrentItem(row, column);
+        table->edit(index);
+        QApplication::processEvents();
+
+        QComboBox* combo = nullptr;
+        for (QComboBox* opened : table->viewport()->findChildren<QComboBox*>())
+        {
+            if (stale.contains(opened) == false)
+            {
+                combo = opened;
+                break;
+            }
+        }
+
+        if (combo == nullptr)
+            return false;
+
+        // The editor stays inside its cell: anything wider covers the first characters of the
+        // column beside it while the edit is open.
+        CHECK(combo->width() <= table->visualRect(index).width());
+
+        const int at = combo->findText(choice);
+        if (at < 0)
+            return false;
+
+        combo->setCurrentIndex(at);
+        QMetaObject::invokeMethod(combo, "activated", Q_ARG(int, at));
+        QApplication::processEvents();
+        return true;
     }
 
     int countRows(const QTreeWidgetItem* item)
@@ -269,12 +315,71 @@ namespace
     }
 
     /**
+     * \brief   The two cells of the Methods list that edit through a drop-down: the method kind,
+     *          and the method that answers it. Proves the column names as well, since both are
+     *          the same in every editor now.
+     * \param   otherKind   A kind of this document other than the one Add creates.
+     * \param   replyKind   The kind that may be named as an answer, empty where the document has
+     *                      none and the Reply column must therefore not exist.
+     **/
+    void exerciseMethodCells( const char* label, MethodPage* page, MethodDataSection& methods
+                            , DocUndoStack& stack, const QString& otherKind, const QString& replyKind)
+    {
+        std::printf("--- %s\n", label);
+        QTreeWidget* table = page->getList()->ctrlTableList();
+        const bool hasReply = (replyKind.isEmpty() == false);
+
+        CHECK(table->headerItem()->text(MethodListView::ColType) == QStringLiteral("Method Type:"));
+        CHECK((table->columnCount() > static_cast<int>(MethodListView::ColReply)) == hasReply);
+        if (hasReply)
+        {
+            CHECK(table->headerItem()->text(MethodListView::ColReply) == QStringLiteral("Reply:"));
+        }
+
+        const int before = static_cast<int>(methods.getElements().size());
+        page->getList()->ctrlButtonAdd()->click();
+        page->getList()->ctrlButtonAdd()->click();
+        QApplication::processEvents();
+        CHECK(static_cast<int>(methods.getElements().size()) == before + 2);
+
+        MethodEntry* first  = methods.getElements().at(before);
+        MethodEntry* second = methods.getElements().at(before + 1);
+        const int addedKind = second->getKind();
+
+        // The kind cell offers every kind the document has, and picking one is the edit the
+        // details radio makes.
+        CHECK(pickInCell(table, table->topLevelItem(before + 1), MethodListView::ColType, otherKind));
+        QApplication::processEvents();
+        CHECK(second->getKind() != addedKind);
+        CHECK(second->kind().label == otherKind);
+
+        int steps = 3;
+        if (hasReply)
+        {
+            // A request may name its answer; the cell offers exactly the methods that can be one.
+            CHECK(second->kind().label == replyKind);
+            CHECK(pickInCell(table, table->topLevelItem(before), MethodListView::ColReply, second->getName()));
+            QApplication::processEvents();
+            CHECK(first->getReply() == second->getName());
+            ++steps;
+        }
+
+        // Back to where the page started, so the next check runs on the document it expects.
+        for (int i = 0; i < steps; ++i)
+        {
+            stack.undo();
+        }
+
+        QApplication::processEvents();
+        CHECK(static_cast<int>(methods.getElements().size()) == before);
+    }
+
+    /**
      * \brief   The Overview page has no list and no rows: the document itself is what it edits.
      *          What is proved is the same, in the terms this page has -- a committed edit reaches
      *          the document as one undo step, the fields follow undo and redo, and the text a
      *          field still holds is handed over when the document is saved.
-     * \param   nameEditable    False for a document named by its file, whose name row is shown
-     *                          but not edited.
+     * \param   nameEditable    False for a document whose name row is shown but not edited.
      **/
     void exerciseOverview( const char* label, OverviewPage* page, DocUndoStack& stack, bool nameEditable
                          , std::function<QString()> name, std::function<QString()> description
@@ -384,7 +489,7 @@ namespace
             // The interface is named by its file, so its name row is shown and not edited.
             SIOverview* page = new SIOverview(model.getOverviewModel());
             QWidget* window = showPage(page);
-            exerciseOverview( "service interface / Overview", page, stack, false
+            exerciseOverview( "service interface / Overview", page, stack, true
                             , [&model]() { return model.getData().getOverviewData().getName(); }
                             , [&model]() { return model.getData().getOverviewData().getDescription(); }
                             , [&model]() { return model.getData().getOverviewData().getVersion().getMajor(); }
@@ -472,7 +577,6 @@ namespace
             MethodPage* page = new MethodPage(model.getMethodsModel()
                                              , MethodPageConfig{ QStringLiteral("Methods")
                                                                , QStringLiteral("Service Methods List:")
-                                                               , QStringLiteral("Data Type:")
                                                                , false });
             QWidget* window = showPage(page);
             MethodDetailsView* details = page->findChild<MethodDetailsView*>();
@@ -487,6 +591,8 @@ namespace
             };
 
             exercisePage("service interface / Methods", probe, stack, QStringLiteral("probedRequest"), outDir, QStringLiteral("si-methods"));
+            exerciseMethodCells( "service interface / Methods cells", page, model.getMethodSection(), stack
+                               , QStringLiteral("Response"), QStringLiteral("Response"));
             delete window;
         }
     }
@@ -603,6 +709,8 @@ namespace
             };
 
             exercisePage("state machine / Methods", probe, stack, QStringLiteral("probedTrigger"), outDir, QStringLiteral("sm-methods"));
+            exerciseMethodCells( "state machine / Methods cells", page, model.getMethodSection(), stack
+                               , QStringLiteral("Condition"), QString());
             delete window;
         }
     }
@@ -622,13 +730,13 @@ namespace
         DocUndoStack& stack = model.getUndoStack();
 
         {
-            // A data type document is named by its file, the way a service interface is, so its
-            // name row is shown and not edited. It has neither a category nor a threading row.
+            // A data type document owns its name, the way a service interface does, so the name
+            // row is edited here. It has neither a category nor a threading row.
             OverviewPageConfig config;
             config.headline        = QStringLiteral("Data Type Document Overview");
             config.versionTitle    = QStringLiteral("Document Version:");
             config.descriptionHint = QStringLiteral("Describe the data types collected here");
-            config.nameEditable    = false;
+            config.nameEditable    = true;
             config.links           =
             {
                   { 1, QStringLiteral("linkDataTypes"), QStringLiteral("Data Types ...")
@@ -647,7 +755,7 @@ namespace
             CHECK(page->findChild<QAbstractButton*>(QStringLiteral("overviewCategoryPublic")) == nullptr);
             CHECK(page->findChild<QAbstractButton*>(QStringLiteral("overviewThreadingShared")) == nullptr);
 
-            exerciseOverview( "data type document / Overview", page, stack, false
+            exerciseOverview( "data type document / Overview", page, stack, true
                             , [&model]() { return model.getData().getOverviewData().getName(); }
                             , [&model]() { return model.getData().getOverviewData().getDescription(); }
                             , [&model]() { return model.getData().getOverviewData().getVersion().getMajor(); }

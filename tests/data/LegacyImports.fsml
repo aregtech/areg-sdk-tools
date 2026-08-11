@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.0.0">
+    <Overview ID="1" Name="LegacyImports" Version="1.0.0" Threading="Local">
+        <Description>Deliberately left in the 1.0.0 form, with machine imports in their own
+            &lt;ImportList&gt; section. This is the migration fixture: loading it folds every
+            MachineImport into the include list, and saving it writes 1.1.0 with no
+            &lt;ImportList&gt; at all. Do not modernise this file.</Description>
+    </Overview>
+    <EventList>
+        <Event ID="10" Name="CycleDone">
+            <Description>Sent when the hosted direction machine finishes its cycle.</Description>
+        </Event>
+    </EventList>
+    <MethodList>
+        <Method ID="20" Name="power_on" MethodType="Trigger"/>
+    </MethodList>
+    <IncludeList>
+        <Location ID="25" Name="areg/base/GEGlobal.h">
+            <Description>A plain source include, so the fold has to preserve document order.</Description>
+        </Location>
+    </IncludeList>
+    <ImportList>
+        <MachineImport ID="30" Name="TurnCycle" Location="./TurnCycle.fsml" Version="1.2.0">
+            <Description>Reusable one-direction phase cycle.</Description>
+        </MachineImport>
+    </ImportList>
+    <StateList>
+        <State ID="45" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="46" StimulusKind="Trigger" Stimulus="" To="40"/>
+            </TransitionList>
+        </State>
+        <State ID="40" Name="Off" Kind="Normal">
+            <TransitionList>
+                <Transition ID="41" StimulusKind="Trigger" Stimulus="power_on" To="42"/>
+            </TransitionList>
+        </State>
+        <State ID="42" Name="Running" Kind="Normal" Submachine="TurnCycle" OnFinal="CycleDone">
+            <Description>Hosts the imported machine as an independent instance.</Description>
+            <TransitionList>
+                <Transition ID="43" StimulusKind="Event" Stimulus="CycleDone" To="44"/>
+            </TransitionList>
+        </State>
+        <State ID="44" Name="Done" Kind="Final"/>
+    </StateList>
+    <Layout>
+        <NodeList>
+            <Node Owner="45" X="80" Y="0" Width="64" Height="32"/>
+            <Node Owner="40" X="80" Y="80" Width="48" Height="48"/>
+            <Node Owner="42" X="200" Y="80" Width="160" Height="80"/>
+            <Node Owner="44" X="440" Y="80" Width="48" Height="48"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

@@ -21,6 +21,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     # common
     ${LUSAN}/common/DocElementTable.cpp
     ${LUSAN}/common/DocReservedNames.cpp
+    ${LUSAN}/common/DocSchemaReader.cpp
     ${LUSAN}/common/ElementBase.cpp
     ${LUSAN}/common/VersionNumber.cpp
     ${LUSAN}/common/NELusanCommon.cpp
@@ -72,6 +73,8 @@ set(LUSAN_TEST_SUPPORT_SRC
     # model/sm (headless reference glue)
     ${LUSAN}/model/sm/SMDocumentIndex.cpp
     ${LUSAN}/model/sm/SMGoToDef.cpp
+    # The element table reads the compiled-in schemas, so every headless target carries them.
+    ${LUSAN}/res/lusan.qrc
 )
 
 qt_add_executable(lusan_sm_tests
@@ -144,8 +147,6 @@ qt_add_executable(lusan_sm_validation_tests
     ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMValidationTests.cpp
-    # Enumeration literal checks (rule 15) load the basic-container/predefined type catalog.
-    ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_validation_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
 target_compile_definitions(lusan_sm_validation_tests PRIVATE
@@ -210,11 +211,6 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/common/DocRuleChecks.cpp
     ${LUSAN}/model/common/LiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
-    # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
-    # loaded from the "Predefined Types" resource at runtime (DataTypeFactory::_initPredefined),
-    # not hardcoded, so the .qrc must be compiled in or DataTypeContainer::canHaveKey() sees an
-    # empty catalog and every container looks non-keyed.
-    ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_command_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
 target_compile_definitions(lusan_sm_command_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
@@ -272,7 +268,6 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN_ROOT}/tests/sm/SMArgMapTableTests.cpp
-    ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_mapping_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
 target_compile_definitions(lusan_sm_mapping_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
@@ -855,6 +850,8 @@ set_target_properties(lusan_design_pages PROPERTIES WIN32_EXECUTABLE OFF)
 # The Service Interface headless data layer.
 set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN_DT_DATA_SRC}
+    ${LUSAN}/common/DocElementTable.cpp
+    ${LUSAN}/common/DocSchemaReader.cpp
     ${LUSAN}/common/ElementBase.cpp
     ${LUSAN}/common/VersionNumber.cpp
     ${LUSAN}/common/NELusanCommon.cpp
@@ -888,6 +885,7 @@ set(LUSAN_SI_SUPPORT_SRC
     ${LUSAN}/data/common/OverviewDataSection.cpp
     ${LUSAN}/data/si/SIOverviewData.cpp
     ${LUSAN}/data/si/ServiceInterfaceData.cpp
+    ${LUSAN}/model/common/DocUnknownScan.cpp
 )
 
 qt_add_executable(lusan_si_command_tests
@@ -971,7 +969,29 @@ target_link_libraries(lusan_dt_import_tests PRIVATE
 )
 set_target_properties(lusan_dt_import_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
+# ---------------------------------------------------------------------------
+# The element table each document format is validated against: what the reader makes
+# of a schema, that the copy delivered with the SDK is preferred over the compiled-in
+# one, and that an element none of them defines is reported and still survives a save.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_doc_schema_tests
+    ${LUSAN_SI_SUPPORT_SRC}
+    ${LUSAN_ROOT}/tests/common/DocSchemaTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_doc_schema_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_doc_schema_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_doc_schema_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_doc_schema_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
 enable_testing()
+add_test(NAME doc_schema_tests COMMAND lusan_doc_schema_tests)
 add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
 add_test(NAME sm_reference_tests COMMAND lusan_sm_reference_tests)
 add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)

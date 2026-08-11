@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/common/DocElementTable.hpp"
+
 #include <QByteArray>
 #include <QList>
 #include <QString>
@@ -57,10 +59,10 @@ struct DocUnknownElement
 namespace DocUnknownScan
 {
     /**
-     * \brief   Every element of \p xml that the format does not define, or defines somewhere
-     *          else, in document order.
+     * \brief   Every element of \p xml that the format of \p doc does not define, or defines
+     *          somewhere else, in document order.
      **/
-    QList<DocUnknownElement> scan(const QByteArray& xml);
+    QList<DocUnknownElement> scan(DocElementTable::eDocument doc, const QByteArray& xml);
 
     /**
      * \brief   Puts the blocks of \p unknown back into \p written, each inside the element it
@@ -68,7 +70,8 @@ namespace DocUnknownScan
      *          author deleted what held it.
      * \return  \p written unchanged when \p unknown is empty.
      **/
-    QByteArray restore(const QByteArray& written, const QList<DocUnknownElement>& unknown);
+    QByteArray restore(DocElementTable::eDocument doc, const QByteArray& written
+                     , const QList<DocUnknownElement>& unknown);
 }
 
 #endif  // LUSAN_MODEL_COMMON_DOCUNKNOWNSCAN_HPP

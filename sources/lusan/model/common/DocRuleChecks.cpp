@@ -26,6 +26,7 @@
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
+#include <QFileInfo>
 #include <QHash>
 #include <QRegularExpression>
 #include <QStringList>
@@ -86,6 +87,13 @@ QString DocRuleChecks::explainShape(eShape shape)
 
     case eShape::UnusedImport:
         return tr("Including a data type document pulls its generated header in. Take a type from it, writing '<name>::<type>', or drop the row.");
+
+    case eShape::FileNameMismatch:
+        return tr("The generated header and source are named after the declared name, not after the file, so the two may differ. Rename one of them if you expected them to match.");
+
+    case eShape::UnknownElement:
+        return tr("The code generator refuses the whole document, so nothing generates until the tag is removed or corrected. "
+                  "The block is kept as written until then.");
 
     default:
         return QString();
@@ -295,6 +303,44 @@ void DocRuleChecks::noteDeprecated(uint32_t id, eDocElementKind kind, const QStr
        , hint.trimmed().isEmpty() ? tr("%1 is deprecated").arg(subject)
                                   : tr("%1 is deprecated: %2").arg(subject, hint.trimmed())
        , explainShape(eShape::Deprecated));
+}
+
+void DocRuleChecks::noteFileNameMismatch(uint32_t id, const QString& name, const QString& filePath, int rule)
+{
+    if (name.isEmpty() || filePath.isEmpty())
+        return;
+
+    const QString fromFile{ NELusanCommon::toDocumentName(QFileInfo(filePath).completeBaseName()) };
+    if (fromFile.isEmpty() || (fromFile == name))
+        return;
+
+    add(id, eDocElementKind::Overview, DocIssue::eSeverity::Info, rule
+       , tr("Different document name: the document is called '%1', the file '%2'").arg(name, QFileInfo(filePath).fileName())
+       , explainShape(eShape::FileNameMismatch));
+}
+
+void DocRuleChecks::noteUnknownElements(DocElementTable::eDocument doc, eDocElementKind kind, int rule
+                                      , const QList<DocUnknownElement>& unknown)
+{
+    for (const DocUnknownElement& entry : unknown)
+    {
+        // The tag is the only thing to point at: an element the format does not define has no
+        // document element behind it, and so nothing to select. The line is what lets the author
+        // find the first one, which matters because a mistyped tag travels by copy.
+        const QString message = entry.removed
+            ? tr("Unknown tag '%1', line %2. The format no longer defines it").arg(entry.name).arg(entry.line)
+            : tr("Unknown tag '%1', line %2").arg(entry.name).arg(entry.line);
+
+        const DocElementTable::Row* row = DocElementTable::find(doc, entry.name);
+        const QString detail = ((row != nullptr) && (row->replacement.isEmpty() == false))
+            ? tr("The format no longer defines this element; use %1 instead. "
+                 "Nothing generates until the block is removed or replaced. The block is kept as written until then.")
+                    .arg(row->replacement)
+            : explainShape(eShape::UnknownElement);
+
+        add(0u, kind, DocIssue::eSeverity::Error, rule, message, detail);
+        mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+    }
 }
 
 void DocRuleChecks::checkImportedDocuments(eDocElementKind kind, int rule)

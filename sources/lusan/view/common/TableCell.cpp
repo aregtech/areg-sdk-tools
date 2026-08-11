@@ -243,8 +243,9 @@ void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
 {
     if (editor != nullptr)
     {
-        // A flat list row is often shorter than a comfortable edit control; grow the editor
-        // vertically (centered on the cell) and a touch wider so the text is fully visible.
+        // A flat list row is often shorter than a comfortable edit control, so the editor grows
+        // vertically (centered on the cell). Its width stays inside the cell: anything wider
+        // covers the first characters of the neighbouring column while the edit is open.
         QRect rect = option.rect;
         const int minHeight = qMax(editor->sizeHint().height(), 24);
         if (rect.height() < minHeight)
@@ -252,7 +253,6 @@ void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
             rect.setTop(rect.top() - ((minHeight - rect.height()) / 2));
             rect.setHeight(minHeight);
         }
-        rect.setWidth(rect.width() + 8);
         editor->setGeometry(rect);
         if (QComboBox* combo = qobject_cast<QComboBox*>(editor))
         {

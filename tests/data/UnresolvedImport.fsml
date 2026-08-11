@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="UnresolvedImport" Version="1.0.0" Threading="Local">
+        <Description>A host whose import does not resolve. Deliberately invalid: the host still
+            opens, the registration is still created, and both the import and the state hosting it
+            are flagged as errors (10.1 rule 19). A broken import must never cost the user their
+            own document, and a code generator must refuse this rather than emit a machine with a
+            hole in it.</Description>
+    </Overview>
+    <MethodList>
+        <Method ID="10" Name="diagnose" MethodType="Trigger"/>
+    </MethodList>
+    <IncludeList>
+        <Location ID="20" Name="./no-such-machine.fsml" Alias="Missing" Version="1.0.0">
+            <Description>The file is not there and is not meant to be.</Description>
+        </Location>
+    </IncludeList>
+    <StateList>
+        <State ID="33" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="34" Kind="Initial" To="30"/>
+            </TransitionList>
+        </State>
+        <State ID="30" Name="Idle" Kind="Normal">
+            <TransitionList>
+                <Transition ID="31" Kind="External" StimulusKind="Trigger" Stimulus="diagnose" To="32"/>
+            </TransitionList>
+        </State>
+        <State ID="32" Name="Diagnostics" Kind="Normal" Submachine="Missing">
+            <Description>Hosts an import whose file is not there.</Description>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="30" X="80" Y="140" Width="160" Height="64"/>
+            <Node Owner="32" X="340" Y="140" Width="220" Height="72"/>
+            <Node Owner="33" X="80" Y="60" Width="64" Height="32"/>
+        </NodeList>
+    </Layout>
+</StateMachine>

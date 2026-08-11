@@ -315,7 +315,8 @@ bool IncludePage::acceptLocation(const QString& /*location*/)
 
 void IncludePage::commitBrowsedLocation(uint32_t id, const QString& /*absolutePath*/, const QString& relativePath)
 {
-    if (acceptLocation(relativePath))
+    // An empty path means the dialog closed with nothing selected, which must not wipe the row.
+    if ((relativePath.isEmpty() == false) && acceptLocation(relativePath))
     {
         mModel.setLocation(id, relativePath);
     }

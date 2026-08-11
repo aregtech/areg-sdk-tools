@@ -32,18 +32,16 @@ class QTreeWidget;
 /**
  * \brief   The section-3 differences between the Service Interface and State Machine Methods
  *          list panels, parameterized so a single shared view serves both editors:
- *          - `groupTitle`          : the group box caption.
- *          - `typeColumnLabel`     : the header text of the type column ("Data Type:" vs "Type:").
- *          - `typeMenuLabels`      : the Add split-button drop-down entries, one per method kind;
- *                                    a plain Add click creates the first kind (the default).
- *          - `hasResponseColumn`   : append a fourth "Response:" column (Service Interface).
+ *          - `groupTitle`      : the group box caption.
+ *          - `typeMenuLabels`  : the Add split-button drop-down entries, one per method kind;
+ *                                a plain Add click creates the first kind (the default).
+ *          - `hasReplyColumn`  : append a fourth "Reply:" column (Service Interface).
  **/
 struct MethodListConfig
 {
     QString     groupTitle;
-    QString     typeColumnLabel;
     QStringList typeMenuLabels;
-    bool        hasResponseColumn;
+    bool        hasReplyColumn;
 };
 
 /**
@@ -54,7 +52,7 @@ struct MethodListConfig
  *
  *          The view is controller-agnostic: it only builds the widgets and exposes ctrl*()
  *          accessors. The page controller owns all row population and selection logic. Columns
- *          are always Name / Type / Value, with an optional fourth Response column.
+ *          are always Name / Method Type / Value, with an optional fourth Reply column.
  **/
 class MethodListView : public QWidget
 {
@@ -66,10 +64,10 @@ public:
      **/
     enum eColumn
     {
-          ColName     = 0 //!< The method / parameter name.
-        , ColType     = 1 //!< The method kind / parameter data type.
-        , ColValue    = 2 //!< The parameter default value (empty for methods).
-        , ColResponse = 3 //!< The connected response (Service Interface only).
+          ColName  = 0 //!< The method / parameter name.
+        , ColType  = 1 //!< The method kind / parameter data type.
+        , ColValue = 2 //!< The parameter default value (empty for methods).
+        , ColReply = 3 //!< The method that answers this one (Service Interface only).
     };
 
     explicit MethodListView(const MethodListConfig& config, QWidget* parent = nullptr);

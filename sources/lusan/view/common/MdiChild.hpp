@@ -351,6 +351,25 @@ protected:
     virtual bool writeToFile(const QString& filePath);
 
     /**
+     * \brief   Names the document after the file it is saved into, but only while it still
+     *          carries the generated placeholder. Once the author has named the document, the
+     *          name is theirs and saving under any other file name leaves it alone.
+     *
+     *          The file name is spelled the way C++ can carry it: spaces drop out, an
+     *          unspellable character becomes '_', and a leading digit becomes 'N'.
+     * \param   filePath    The file the document is being saved into.
+     **/
+    void seedNameFromFile(const QString& filePath);
+
+    /**
+     * \brief   Writes the name into the document's overview and tells the open pages about it.
+     *          Bypasses the undo history on purpose: naming a new document and naming a saved
+     *          one are not edits the author made. An empty name is ignored.
+     * \param   name    The name the document declares from now on.
+     **/
+    void setDocumentName(const QString& name);
+
+    /**
      * \brief   Handles the close event.
      * \param   event    The close event.
      **/

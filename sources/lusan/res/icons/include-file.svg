@@ -1,0 +1,7 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" width="64px" height="64px" viewBox="0 0 100 100" xml:space="preserve">
+  <g fill="none" stroke="#2b62e3" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M38,22 L12,50 L38,78"/>
+    <path d="M62,22 L88,50 L62,78"/>
+  </g>
+</svg>

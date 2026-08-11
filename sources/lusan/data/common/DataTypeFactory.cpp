@@ -19,6 +19,7 @@
 
 #include "lusan/data/common/DataTypeFactory.hpp"
 
+#include "lusan/common/DocSchemaReader.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
@@ -237,8 +238,40 @@ void DataTypeFactory::_initPredefined()
     Q_ASSERT(mPredefinedBasicTypes.isEmpty());
     Q_ASSERT(mPredefinedContainerTypes.isEmpty());
 
-    // Open the resource file
-    QFile file(":/data/Predefined Types");
+    // The list delivered with the Areg SDK wins over the compiled-in one, so a type added to the
+    // SDK reaches an installed Lusan without rebuilding it. The compiled-in copy is the floor:
+    // a Lusan with no predefined types is not a reduced Lusan, it is a broken one.
+    const QString directory = DocSchemaReader::deliveryDirectory();
+    const QString delivered = directory.isEmpty() ? QString() : (directory + QStringLiteral("/datatype.xml"));
+    const QString builtIn(QStringLiteral(":/data/Predefined Types"));
+
+    QString path = builtIn;
+    if ((delivered.isEmpty() == false) && QFile::exists(delivered))
+    {
+        path = delivered;
+
+        // The two copies drifting apart is what nobody notices until a type resolves in one tool
+        // and not in the other, so say it once rather than let it stay silent. Line endings and a
+        // byte-order mark differ between the two routinely and mean nothing.
+        QFile compiled(builtIn);
+        QFile shipped(delivered);
+        if (compiled.open(QIODevice::ReadOnly) && shipped.open(QIODevice::ReadOnly))
+        {
+            QByteArray left  = compiled.readAll().replace('\r', "");
+            QByteArray right = shipped.readAll().replace('\r', "");
+            if (left.startsWith("\xEF\xBB\xBF"))
+                left.remove(0, 3);
+            if (right.startsWith("\xEF\xBB\xBF"))
+                right.remove(0, 3);
+
+            if (left != right)
+            {
+                qInfo("Lusan: the delivered predefined type list differs from the built-in one; the delivered one is used.");
+            }
+        }
+    }
+
+    QFile file(path);
     if (file.open(QIODevice::ReadOnly | QIODevice::Text) == false)
         return;
 

@@ -356,7 +356,7 @@ namespace
 
         // An element this build cannot show goes back where it was found. Dropping it would
         // destroy the very document the author has to open elsewhere to recover.
-        buffer = DocUnknownScan::restore(buffer, data.getUnknownElements());
+        buffer = DocUnknownScan::restore(DocElementTable::eDocument::StateMachine, buffer, data.getUnknownElements());
         buffer.append('\n');
         return buffer;
     }
@@ -433,7 +433,7 @@ bool StateMachineData::readFromFile(const QString& filePath)
         mOpenSuccess = (xml.hasError() == false);
         if (mOpenSuccess)
         {
-            mUnknownElements = DocUnknownScan::scan(content);
+            mUnknownElements = DocUnknownScan::scan(DocElementTable::eDocument::StateMachine, content);
             DataTypeImportResolver::refresh(mDataTypes, mFilePath, mIncludes);
             mDataTypes.validate(mDataTypes);
             mAttributes.validate(mDataTypes);

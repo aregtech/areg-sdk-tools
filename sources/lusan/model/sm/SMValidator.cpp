@@ -1269,6 +1269,9 @@ namespace
                                   , mData.getOverview().getDeprecateHint());
         }
 
+        mChecks.noteFileNameMismatch(mData.getOverview().getId(), mData.getOverview().getName()
+                                    , mData.getFilePath(), SMValidator::RULE_FILE_NAME_MISMATCH);
+
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {
             if (d == nullptr)
@@ -1597,31 +1600,8 @@ namespace
 
     void Ctx::checkUnknownElements()
     {
-        for (const DocUnknownElement& unknown : mData.getUnknownElements())
-        {
-            // The tag is the only thing to point at: an element the format does not define has
-            // no document element behind it, and so nothing to select. The line is what lets the
-            // author find the first one, which matters because a mistyped tag travels by copy.
-            const QString message = unknown.removed
-                ? vtr("Unknown tag '%1', line %2. The format no longer defines it")
-                        .arg(unknown.name).arg(unknown.line)
-                : vtr("Unknown tag '%1', line %2").arg(unknown.name).arg(unknown.line);
-
-            const DocElementTable::Row* row = DocElementTable::find(unknown.name);
-            QString detail = vtr("The code generator refuses the whole document, so nothing generates until the tag is removed or corrected. "
-                                 "The block is kept as written until then.");
-            if ((row != nullptr) && (row->replacement.isEmpty() == false))
-            {
-                detail = vtr("The format no longer defines this element; use %1 instead. "
-                             "Nothing generates until the block is removed or replaced. The block is kept as written until then.")
-                            .arg(QString(row->replacement));
-            }
-
-            add(0u, eDocElementKind::Overview, eSeverity::Error, 34, message, detail);
-            mIssues.last().location = unknown.parent.isEmpty()
-                                        ? QString()
-                                        : vtr("in <%1>").arg(unknown.parent);
-        }
+        mChecks.noteUnknownElements(DocElementTable::eDocument::StateMachine, eDocElementKind::Overview
+                                  , SMValidator::RULE_UNKNOWN_ELEMENT, mData.getUnknownElements());
     }
 
     void Ctx::checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName)
@@ -2140,7 +2120,12 @@ eIssueField SMValidator::fieldOfRule(int rule)
 
     if (advisory)
     {
-        return (plain == SMValidator::RULE_MISSING_DESCRIPTION) ? eIssueField::Description : eIssueField::None;
+        switch (plain)
+        {
+        case SMValidator::RULE_MISSING_DESCRIPTION:     return eIssueField::Description;
+        case SMValidator::RULE_FILE_NAME_MISMATCH:      return eIssueField::Name;
+        default:                                        return eIssueField::None;
+        }
     }
 
     switch (plain)

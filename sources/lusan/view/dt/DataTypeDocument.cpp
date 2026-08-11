@@ -46,8 +46,9 @@ namespace
         config.headline         = QObject::tr("Data Type Document Overview ...");
         config.versionTitle     = QObject::tr("Document Version:");
         config.descriptionHint  = QObject::tr("Describe the data types collected here");
-        // The document is named by the file it lives in, and a save writes that name back.
-        config.nameEditable     = false;
+        // The name is the author's. The first save seeds it from the file name; after that the
+        // two are free to differ, and the generated code follows the name, not the file.
+        config.nameEditable     = true;
         config.links            =
         {
               { static_cast<int>(DataTypeDocument::eDTPages::PageDataTypes), QStringLiteral("linkDataTypes")

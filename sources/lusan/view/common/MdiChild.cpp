@@ -19,6 +19,9 @@
 
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/OverviewDataSection.hpp"
+#include "lusan/model/common/IEDocumentModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QCloseEvent>
@@ -145,6 +148,9 @@ void MdiChild::newFile()
     mIsUntitled = true;
     mCurFile = newDocumentName();
     mIsModified = true;
+    // The document opens under the generated name, so it is never nameless. The file it is
+    // first saved into replaces that name, unless the author has already chosen one.
+    setDocumentName(mDocName);
     setWindowTitle(mCurFile + "[*]");
     setWindowModified(true);
 #if 0
@@ -193,6 +199,7 @@ bool MdiChild::saveFile(const QString& fileName)
 {
     bool saved { false };
     commitPendingEdits();
+    seedNameFromFile(fileName);
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     if (writeToFile(fileName) )
     {
@@ -209,6 +216,35 @@ bool MdiChild::saveFile(const QString& fileName)
 bool MdiChild::writeToFile(const QString& filePath)
 {
     return true;
+}
+
+void MdiChild::seedNameFromFile(const QString& filePath)
+{
+    IEDocumentModel* model = documentModel();
+    if ((model == nullptr) || filePath.isEmpty())
+        return;
+
+    const QString current{ model->getOverviewSection().getName() };
+    if ((current.isEmpty() == false) && (current != mDocName))
+        return;     // the author named it, so the file name has nothing to say
+
+    setDocumentName(NELusanCommon::toDocumentName(QFileInfo(filePath).completeBaseName()));
+}
+
+void MdiChild::setDocumentName(const QString& name)
+{
+    IEDocumentModel* model = documentModel();
+    if ((model == nullptr) || name.isEmpty())
+        return;
+
+    OverviewDataSection& overview = model->getOverviewSection();
+    if (overview.getName() == name)
+        return;
+
+    // Written straight into the section rather than through a command: naming a new document and
+    // naming a saved one are not edits the author made, and neither belongs in the history.
+    overview.setName(name);
+    model->getNotifier().notifyElementChanged(overview.getId(), eDocElementKind::Overview);
 }
 
 void MdiChild::commitPendingEdits(void)

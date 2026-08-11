@@ -97,10 +97,10 @@ void MethodListView::buildUi()
     toolbarLayout->addWidget(mButtonMoveDown);
     toolbarLayout->addStretch(1);
 
-    QStringList headers{ tr("Name:"), mConfig.typeColumnLabel, tr("Value:") };
-    if (mConfig.hasResponseColumn)
+    QStringList headers{ tr("Name:"), tr("Method Type:"), tr("Value:") };
+    if (mConfig.hasReplyColumn)
     {
-        headers.append(tr("Response:"));
+        headers.append(tr("Reply:"));
     }
 
     mTable = new QTreeWidget(group);
@@ -125,9 +125,9 @@ void MethodListView::buildUi()
     header->setSectionResizeMode(ColName , QHeaderView::Stretch);
     header->setSectionResizeMode(ColType , QHeaderView::ResizeToContents);
     header->setSectionResizeMode(ColValue, QHeaderView::ResizeToContents);
-    if (mConfig.hasResponseColumn)
+    if (mConfig.hasReplyColumn)
     {
-        header->setSectionResizeMode(ColResponse, QHeaderView::ResizeToContents);
+        header->setSectionResizeMode(ColReply, QHeaderView::ResizeToContents);
     }
 
     groupLayout->addWidget(toolbar);

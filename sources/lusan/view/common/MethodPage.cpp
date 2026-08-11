@@ -47,6 +47,7 @@
 #include <QRadioButton>
 #include <QShortcut>
 #include <QSignalBlocker>
+#include <QStandardItemModel>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
@@ -97,14 +98,33 @@ namespace
 
     MethodListConfig listConfigOf(const MethodConfig& config, const MethodPageConfig& pageConfig)
     {
-        MethodListConfig result{ pageConfig.listTitle, pageConfig.typeColumnLabel, QStringList{}, false };
+        MethodListConfig result{ pageConfig.listTitle, QStringList{}, false };
         for (const MethodKind& kind : config.kinds)
         {
             result.typeMenuLabels.append(kind.label);
-            result.hasResponseColumn = result.hasResponseColumn || kind.hasReply;
+            result.hasReplyColumn = result.hasReplyColumn || kind.hasReply;
         }
 
         return result;
+    }
+
+    //!< The kinds a method may be declared as, as a list model the type cell's drop-down uses.
+    //!< The rows are the kinds in configuration order, so a row index is a kind index.
+    QStandardItemModel* buildKindModel(const MethodConfig& config, QObject* owner)
+    {
+        QStandardItemModel* model = new QStandardItemModel(owner);
+        for (const MethodKind& kind : config.kinds)
+        {
+            QStandardItem* item = new QStandardItem(kind.label);
+            if (kind.icon.isEmpty() == false)
+            {
+                item->setIcon(QIcon(kind.icon));
+            }
+
+            model->appendRow(item);
+        }
+
+        return model;
     }
 }
 
@@ -123,6 +143,7 @@ MethodPage::MethodPage(MethodModel& model, const MethodPageConfig& config, QWidg
     , mDetails              (new MethodDetailsView(detailsConfigOf(model.getConfig(), config.hasGuardInfo), this))
     , mParamDetails         (new MethodParamDetailsView(tr("Details:"), this))
     , mTableCell            (nullptr)
+    , mKindModel            (buildKindModel(model.getConfig(), this))
     , mMethodNameCounter    (0)
 {
     buildUi();
@@ -469,24 +490,24 @@ QTreeWidgetItem* MethodPage::createMethodNode(MethodEntry* method) const
     QTreeWidgetItem* item = new QTreeWidgetItem();
     setNodeText(item, method);
 
-    if (mList->ctrlTableList()->columnCount() > static_cast<int>(MethodListView::ColResponse))
+    if (mList->ctrlTableList()->columnCount() > static_cast<int>(MethodListView::ColReply))
     {
         const QString reply = method->hasReply() ? method->getReply() : QString();
-        item->setText(MethodListView::ColResponse, reply);
+        item->setText(MethodListView::ColReply, reply);
         if (reply.isEmpty())
         {
-            item->setIcon(MethodListView::ColResponse, QIcon());
-            item->setToolTip(MethodListView::ColResponse, QString());
+            item->setIcon(MethodListView::ColReply, QIcon());
+            item->setToolTip(MethodListView::ColReply, QString());
         }
         else if (mModel.findMethod(reply, replyKindIndex()) != nullptr)
         {
-            item->setIcon(MethodListView::ColResponse, method->getIcon(ElementBase::eDisplay::DisplayLink));
-            item->setToolTip(MethodListView::ColResponse, QString());
+            item->setIcon(MethodListView::ColReply, method->getIcon(ElementBase::eDisplay::DisplayLink));
+            item->setToolTip(MethodListView::ColReply, QString());
         }
         else
         {
-            item->setIcon(MethodListView::ColResponse, NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
-            item->setToolTip(MethodListView::ColResponse, tr("'%1' is not declared").arg(reply));
+            item->setIcon(MethodListView::ColReply, NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
+            item->setToolTip(MethodListView::ColReply, tr("'%1' is not declared").arg(reply));
         }
     }
 
@@ -634,6 +655,18 @@ int MethodPage::replyKindIndex(void) const
     for (int i = 0; i < kinds.size(); ++i)
     {
         if (kinds.at(i).isReply)
+            return i;
+    }
+
+    return -1;
+}
+
+int MethodPage::kindIndexOf(const QString& label) const
+{
+    const QList<MethodKind>& kinds = mModel.getConfig().kinds;
+    for (int i = 0; i < kinds.size(); ++i)
+    {
+        if (kinds.at(i).label == label)
             return i;
     }
 
@@ -1406,9 +1439,19 @@ bool MethodPage::isCellEditable(const QModelIndex& index) const
     const int col = index.column();
     if (kind == eRowKind::Method)
     {
-        // Only the name is editable inline: the kind is set by the details radios, the value
-        // column is derived, and the response column is a choice from a list.
-        return (col == static_cast<int>(MethodListView::ColName));
+        if ((col == static_cast<int>(MethodListView::ColName)) || (col == static_cast<int>(MethodListView::ColType)))
+            return true;
+
+        if (col == static_cast<int>(MethodListView::ColReply))
+        {
+            // Only a kind that is answered by another one may name that answer, exactly as the
+            // Reply combo of the form is enabled under the same condition.
+            const MethodEntry* method = mModel.findMethod(index.sibling(index.row(), static_cast<int>(MethodListView::ColType)).data(Qt::ItemDataRole::UserRole).toUInt());
+            return (method != nullptr) && method->hasReply();
+        }
+
+        // The value column carries nothing for a method.
+        return false;
     }
 
     if (kind == eRowKind::Param)
@@ -1436,10 +1479,23 @@ QAbstractItemModel* MethodPage::editorModelFor(const QModelIndex& index) const
         return nullptr;
 
     const eRowKind kind = static_cast<eRowKind>(index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).toInt());
+    const int col = index.column();
+
     // The parameter's type column reuses the form's type combo model, so the inline list and
     // the form list are the same list by construction.
-    if ((kind == eRowKind::Param) && (index.column() == static_cast<int>(MethodListView::ColType)))
+    if ((kind == eRowKind::Param) && (col == static_cast<int>(MethodListView::ColType)))
         return mParamDetails->ctrlTypes()->model();
+
+    if (kind == eRowKind::Method)
+    {
+        // The kinds the details radios offer, and the answers the Reply combo offers -- picking
+        // one in the cell is the same edit as picking it in the form.
+        if (col == static_cast<int>(MethodListView::ColType))
+            return mKindModel;
+
+        if (col == static_cast<int>(MethodListView::ColReply))
+            return mDetails->ctrlReply()->model();
+    }
 
     return nullptr;
 }
@@ -1482,9 +1538,21 @@ void MethodPage::commitInlineEdit(int kind, uint32_t methodId, uint32_t paramId,
 
     if (static_cast<eRowKind>(kind) == eRowKind::Method)
     {
-        if ((column == static_cast<int>(MethodListView::ColName)) && (method->getName() != newValue))
+        if (column == static_cast<int>(MethodListView::ColName))
         {
-            mModel.renameMethod(methodId, newValue);
+            if (method->getName() != newValue)
+                mModel.renameMethod(methodId, newValue);
+        }
+        else if (column == static_cast<int>(MethodListView::ColType))
+        {
+            const int picked = kindIndexOf(newValue);
+            if ((picked >= 0) && (picked != method->getKind()))
+                mModel.setKind(methodId, picked);
+        }
+        else if (column == static_cast<int>(MethodListView::ColReply))
+        {
+            if (method->hasReply() && (method->getReply() != newValue))
+                mModel.setReply(methodId, newValue);
         }
     }
     else if (static_cast<eRowKind>(kind) == eRowKind::Param)

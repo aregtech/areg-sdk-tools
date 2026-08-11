@@ -75,6 +75,17 @@ public:
     static constexpr int RULE_DEPRECATED           { 14 };  //!< Advisory: the interface, or a declaration in it, is marked deprecated.
     static constexpr int RULE_BROKEN_IMPORT        { 15 };  //!< An included data type document that could not be read.
 
+    //!< Advisory: the interface declares one name and lives in a file called another.
+    static constexpr int RULE_FILE_NAME_MISMATCH   { 17 };
+
+    /**
+     * \brief   An element of the opened file the format does not place: an unknown tag, a real
+     *          one written where the format does not allow it, or one the format has dropped.
+     *          The block is kept as written, so a document carrying one still opens and still
+     *          saves without losing it.
+     **/
+    static constexpr int RULE_UNKNOWN_ELEMENT      { 18 };
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

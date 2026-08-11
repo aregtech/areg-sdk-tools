@@ -144,6 +144,12 @@ public:
     static constexpr int RULE_UNUSED_IMPORT { 43 };
 
     /**
+     * \brief   Advisory: the machine declares one name and lives in a file called another. Both
+     *          are allowed -- the generated files follow the declared name -- but worth saying.
+     **/
+    static constexpr int RULE_FILE_NAME_MISMATCH { 44 };
+
+    /**
      * \brief   The rule guard findings are filed under. The guard checker owns the grammar and
      *          the symbol binding, but its findings are collected into the one document run.
      **/
@@ -171,6 +177,14 @@ public:
      *          to file the same faults under the same number.
      **/
     static constexpr int RULE_TRANSITION_KIND { 28 };
+
+    /**
+     * \brief   An element of the opened file the format does not place: an unknown tag, a real
+     *          one written where the format does not allow it, or one the format has dropped.
+     *          The block is kept as written, so a document carrying one still opens and still
+     *          saves without losing it.
+     **/
+    static constexpr int RULE_UNKNOWN_ELEMENT { 34 };
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
