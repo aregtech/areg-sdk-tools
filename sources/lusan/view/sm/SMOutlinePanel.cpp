@@ -48,6 +48,15 @@ namespace
     constexpr int KindTransition{ 2 };
     constexpr int KindRegistry  { 3 };
 
+    //!< Idle gap before a scheduled rebuild runs. A rebuild walks the whole document, so a
+    //!< burst of notifier signals -- an undo/redo chain, entering a large level, a rename that
+    //!< also touches every transition pointing at the renamed state -- collapses into one
+    //!< rebuild instead of paying the full walk once per signal. DocValidationController uses
+    //!< the same idea for re-validation, at 300 ms; this one runs a heavier full-document walk
+    //!< (every state, every transition, recursively) rather than reading an already-computed
+    //!< issue list, so it is given more room before it fires.
+    constexpr int REBUILD_DEBOUNCE_MS { 600 };
+
     //!< A short label for a transition, spelling its kind out: `on -> Idle`, `on (internal)`,
     //!< `initial -> Idle`, and `on (not connected)` for an external edge with no target yet.
     QString transitionLabel(const SMTransitionEntry& transition)
@@ -90,7 +99,8 @@ SMOutlinePanel::SMOutlinePanel(StateMachineModel& model, SMSceneManager& sceneMa
     layout->addWidget(mTree);
 
     mRebuildTimer->setSingleShot(true);
-    mRebuildTimer->setInterval(0);
+    mRebuildTimer->setTimerType(Qt::PreciseTimer);
+    mRebuildTimer->setInterval(REBUILD_DEBOUNCE_MS);
     connect(mRebuildTimer, &QTimer::timeout, this, &SMOutlinePanel::rebuild);
 
     connect(mTree, &QTreeWidget::itemSelectionChanged, this, &SMOutlinePanel::onOutlineSelectionChanged);

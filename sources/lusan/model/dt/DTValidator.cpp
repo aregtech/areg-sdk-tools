@@ -277,8 +277,8 @@ namespace
 
     void Ctx::checkUnknownElements(void)
     {
-        mChecks.noteUnknownElements(DocElementTable::eDocument::DataType, eDocElementKind::Overview
-                                  , DTValidator::RULE_UNKNOWN_ELEMENT, mData.getUnknownElements());
+        mChecks.noteUnknownElements(eDocElementKind::Overview, DTValidator::RULE_UNKNOWN_ELEMENT
+                                  , mData.getUnknownElements());
     }
 
     QList<DocIssue> Ctx::run(void)

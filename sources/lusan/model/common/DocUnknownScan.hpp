@@ -47,7 +47,6 @@ struct DocUnknownElement
     uint32_t    ownerId;    //!< The ID of the nearest enclosing element that carries one, 0 at the root.
     QStringList wrappers;   //!< The element names between that owner and this block.
     QString     text;       //!< The block itself, verbatim.
-    bool        removed;    //!< True when the format once defined the element and no longer does.
 };
 
 /**

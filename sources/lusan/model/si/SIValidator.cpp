@@ -183,8 +183,8 @@ namespace
 
     void Ctx::checkUnknownElements()
     {
-        mChecks.noteUnknownElements(DocElementTable::eDocument::ServiceInterface, eDocElementKind::Overview
-                                  , SIValidator::RULE_UNKNOWN_ELEMENT, mData.getUnknownElements());
+        mChecks.noteUnknownElements(eDocElementKind::Overview, SIValidator::RULE_UNKNOWN_ELEMENT
+                                  , mData.getUnknownElements());
     }
 
     void Ctx::checkOverview()

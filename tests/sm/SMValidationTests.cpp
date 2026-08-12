@@ -2246,7 +2246,7 @@ namespace
         const QList<Expect> expected =
         {
               { "TrafficLight.fsml"     , {}          , "the golden machine: must be clean" }
-            , { "FullFeature.fsml"      , {18, 19, 25, 34}, "deliberate: History on a non-composite, an unresolved import, a draft guard, a removed InlineCode tag."
+            , { "FullFeature.fsml"      , {18, 19, 25, 34}, "deliberate: History on a non-composite, an unresolved import, a draft guard, an unknown tag."
                                                            " 'Operational' and its descendants both reacting to Dispensed is the plain"
                                                            " hierarchical override and is reported by nothing" }
             , { "GuardDemo.fsml"        , {}          , "every guard node kind, all resolved" }

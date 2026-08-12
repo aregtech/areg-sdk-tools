@@ -32,7 +32,6 @@ namespace
 {
     using eDocument = DocElementTable::eDocument;
     using eSource   = DocElementTable::eSource;
-    using eStatus   = DocElementTable::eStatus;
     using Row       = DocElementTable::Row;
 
     constexpr int DOCUMENT_COUNT { 3 };
@@ -45,28 +44,6 @@ namespace
         , "dtml.xsd"
     };
 
-    /**
-     * \struct  Retired
-     * \brief   An element the format once defined. A schema states what it accepts, so what it
-     *          no longer accepts has to be named here or a document carrying one is reported as
-     *          a plain misspelling with nothing useful to say about it.
-     **/
-    struct Retired
-    {
-        eDocument   document;
-        const char* name;
-        const char* parents;        //!< Where it used to sit, '|' separated.
-        const char* replacement;
-    };
-
-    constexpr Retired RETIRED[]
-    {
-          { eDocument::StateMachine, "DoList", "State"
-          , "a Timer started on entry and stopped on exit" }
-        , { eDocument::StateMachine, "InlineCode", "EntryList|ExitList|OperationList"
-          , "an Action that carries the code" }
-    };
-
     //!< One document's vocabulary, and which copy of the description it came from.
     struct Table
     {
@@ -75,32 +52,6 @@ namespace
         QString     path;
         QString     documentElement;
     };
-
-    void appendRetired(Table& table, eDocument doc)
-    {
-        for (const Retired& retired : RETIRED)
-        {
-            if (retired.document != doc)
-            {
-                continue;
-            }
-
-            const QString name = QString::fromLatin1(retired.name);
-            const auto known = std::find_if(table.rows.cbegin(), table.rows.cend()
-                                          , [&name](const Row& row) { return row.name == name; });
-            if (known != table.rows.cend())
-            {
-                continue;
-            }
-
-            Row row;
-            row.name        = name;
-            row.parents     = QString::fromLatin1(retired.parents).split(QLatin1Char('|'));
-            row.status      = eStatus::Removed;
-            row.replacement = QString::fromLatin1(retired.replacement);
-            table.rows.append(row);
-        }
-    }
 
     Table buildTable(eDocument doc)
     {
@@ -128,13 +79,12 @@ namespace
             table.path   = builtIn;
         }
 
-        table.rows.reserve(elements.size() + 2);
+        table.rows.reserve(elements.size());
         for (const DocSchemaReader::Element& element : elements)
         {
             Row row;
             row.name    = element.name;
             row.parents = element.parents;
-            row.status  = eStatus::Valid;
             table.rows.append(row);
 
             if (element.parents.isEmpty())
@@ -143,7 +93,6 @@ namespace
             }
         }
 
-        appendRetired(table, doc);
         std::sort(table.rows.begin(), table.rows.end()
                 , [](const Row& left, const Row& right) { return left.name < right.name; });
         return table;
@@ -230,7 +179,7 @@ const DocElementTable::Row* DocElementTable::find(eDocument doc, QStringView nam
 bool DocElementTable::accepts(eDocument doc, QStringView name, QStringView parent)
 {
     const Row* row = find(doc, name);
-    if ((row == nullptr) || (row->status == eStatus::Removed))
+    if (row == nullptr)
     {
         return false;
     }
