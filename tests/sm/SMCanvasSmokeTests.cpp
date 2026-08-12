@@ -75,6 +75,8 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QSet>
+#include <QStyle>
+#include <QStyleFactory>
 #include <QTreeWidget>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -253,8 +255,23 @@ namespace
 int main(int argc, char* argv[])
 {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
-    qputenv("QT_QPA_PLATFORM", "offscreen");
+    // Offscreen by default, but never over an explicit choice: offscreen has no font database, so
+    // a visual check of text has to be run on the real platform plugin.
+    const bool visualRun = (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM") == false);
+    if (visualRun == false)
+    {
+        qputenv("QT_QPA_PLATFORM", "offscreen");
+    }
+
     QApplication app(argc, argv);
+    if (visualRun)
+    {
+        // The canvas takes its state colors from the palette, so a grab meant to be looked at needs
+        // the same style the application runs under. The checks never read a color and are left
+        // alone by this.
+        QApplication::setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
+        QApplication::setPalette(QApplication::style()->standardPalette());
+    }
     if (argc < 2)
     {
         std::printf("Usage: %s <TrafficLight.fsml> [grab dir]\n", argv[0]);
@@ -2835,7 +2852,8 @@ int main(int argc, char* argv[])
         if (host != nullptr)
         {
             // A clean slate: an Enter list holding ONLY an event, and an Exit list holding only a
-            // timer -- the exact shape that used to lose its band mark to the kind mark.
+            // timer. The band is named by the `entry` / `exit` word drawn beside the group, so every
+            // row keeps its OWN kind mark and no placeholder row is produced to carry a band mark.
             const auto clear = [](SMOperationList& list)
             {
                 while (list.getCount() > 0)
@@ -2855,35 +2873,36 @@ int main(int argc, char* argv[])
             {
                 box->updateFromModel();
                 const QList<SMStateItem::BodyRow> rows = box->getBodyRows();
-                CHECK(rows.size() == 4);
-                if (rows.size() == 4)
+                CHECK(rows.size() == 2);
+                if (rows.size() == 2)
                 {
-                    // Row 1 is the action row even with no action: it holds the `->|` band mark and
-                    // says `...`, so row 2 is free to carry the lightning bolt.
-                    CHECK(rows.at(0).icon == SMKindGlyph::eGlyph::Entry);
-                    CHECK(rows.at(0).text == QStringLiteral("..."));
-                    CHECK(rows.at(0).continues);                  // the group reads as one block
-                    CHECK(rows.at(1).icon == SMKindGlyph::eGlyph::Event);
-                    CHECK(rows.at(1).text == QStringLiteral("NewEvent"));    // no brackets, no verb
+                    // One row per operation, each with its own kind mark. The first row of a group
+                    // is the one the band word is written against.
+                    CHECK(rows.at(0).icon == SMKindGlyph::eGlyph::Event);
+                    CHECK(rows.at(0).text == QStringLiteral("NewEvent"));    // no brackets, no verb
+                    CHECK(rows.at(0).zone == SMStateItem::eRowZone::Enter);
+                    CHECK(rows.at(0).firstInGroup);
 
-                    CHECK(rows.at(2).icon == SMKindGlyph::exitGlyph());
-                    CHECK(rows.at(2).text == QStringLiteral("..."));
-                    CHECK(rows.at(3).icon == SMKindGlyph::eGlyph::TimerStart);
-                    CHECK(rows.at(3).text == QStringLiteral("NewTimer"));
+                    CHECK(rows.at(1).icon == SMKindGlyph::eGlyph::TimerStart);
+                    CHECK(rows.at(1).text == QStringLiteral("NewTimer"));
+                    CHECK(rows.at(1).zone == SMStateItem::eRowZone::Exit);
+                    CHECK(rows.at(1).firstInGroup);
                 }
 
-                // With a real action the placeholder is gone: the band mark rides the action row,
-                // and the event keeps its own row and its own mark.
+                // Adding a real action adds exactly one row, and the event keeps its own mark: an
+                // action never displaces the row below it.
                 host->getEntryList().insertOperation(0, new SMActionCall(0, QStringLiteral("doWork")));
                 box->updateFromModel();
                 const QList<SMStateItem::BodyRow> withAction = box->getBodyRows();
-                CHECK(withAction.size() == 4);
-                if (withAction.size() == 4)
+                CHECK(withAction.size() == 3);
+                if (withAction.size() == 3)
                 {
-                    CHECK(withAction.at(0).icon == SMKindGlyph::eGlyph::Entry);
+                    CHECK(withAction.at(0).icon == SMKindGlyph::eGlyph::Action);
                     CHECK(withAction.at(0).text.startsWith(QStringLiteral("doWork(")));   // a method DOES call
+                    CHECK(withAction.at(0).firstInGroup);
                     CHECK(withAction.at(1).icon == SMKindGlyph::eGlyph::Event);
                     CHECK(withAction.at(1).text == QStringLiteral("NewEvent"));
+                    CHECK(withAction.at(1).firstInGroup == false);
                 }
             }
         }

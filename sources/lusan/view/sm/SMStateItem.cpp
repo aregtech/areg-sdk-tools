@@ -164,9 +164,28 @@ namespace
         }
     };
 
-    //!< The placeholder for a group's first row when the group has no action method. The row keeps
-    //!< the band mark on a line of its own, so it never displaces the mark of the row below.
-    const QString NoActionText { QStringLiteral("...") };
+    //!< The mark of a band: what says WHEN a group runs. A Middle row has no band -- an internal
+    //!< transition is a construct rather than a band, and its header carries its own marks.
+    SMKindGlyph::eGlyph bandGlyph(SMStateItem::eRowZone zone)
+    {
+        switch (zone)
+        {
+        case SMStateItem::eRowZone::Enter:  return SMKindGlyph::eGlyph::Entry;
+        case SMStateItem::eRowZone::Exit:   return SMKindGlyph::exitGlyph();
+        default:                            return SMKindGlyph::eGlyph::None;
+        }
+    }
+
+    //!< The band spelled out, for the word style of \ref NESMDesign::StateBandStyle.
+    QString bandWord(SMStateItem::eRowZone zone)
+    {
+        switch (zone)
+        {
+        case SMStateItem::eRowZone::Enter:  return translate("entry");
+        case SMStateItem::eRowZone::Exit:   return translate("exit");
+        default:                            return QString();
+        }
+    }
 
     //!< The text of one behavior row for an operation.
     QString operationText(const SMOperationBase& op)
@@ -612,6 +631,8 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
     const double nameW = std::max(nameRect.width() - suffixW, 10.0);
     const QString elided = metrics.elidedText(mName, Qt::ElideRight, static_cast<int>(nameW)) + suffix;
     painter->drawText(nameRect, Qt::AlignVCenter | Qt::AlignLeft, elided);
+
+    painter->setFont(baseFont);     // leave the painter as it was found, the body rows read it next
 }
 
 QList<SMStateItem::RowSlot> SMStateItem::bodyRowLayout() const
@@ -720,62 +741,102 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
     const double padding = NESMDesign::StatePadding;
     const QColor color   = NESMDesign::contrastTextColor(bodyColor);
 
+    QColor bandColor{ color };
+    bandColor.setAlphaF(NESMDesign::StateBandWordAlpha);
+
+    // Built from the box font and explicitly unbolded: the header leaves the state name's bold on
+    // the painter, and the body is running text that must not inherit it.
     QFont rowFont = painter->font();
-    rowFont.setPointSizeF(rowFont.pointSizeF() * 0.85);
+    rowFont.setBold(false);
+    rowFont.setPointSizeF(rowFont.pointSizeF() * NESMDesign::StateBodyFontScale);
     const QFontMetrics metrics{ rowFont };
+    painter->setFont(rowFont);
 
-    const auto drawRow = [&](const BodyRow& row, double rowY, bool ellipsis, bool continues, bool linked)
+    // The band is said ONCE, in a column of its own, and every action lines up to the right of it.
+    // That column is what ties a group together, so no row needs a continuation cue and no action
+    // has to give up its own kind mark to carry a band mark.
+    constexpr bool useWords = (NESMDesign::StateBandStyle == NESMDesign::eBandStyle::Word)
+                           || (SMKindGlyph::Style == SMKindGlyph::eStyle::Word);
+
+    // The column always has room for a mark: a transition header puts its band mark there even in
+    // the word style, where the entry and exit bands are spelled out instead.
+    double bandW = std::max(NESMDesign::StateBodyIndentMin, static_cast<double>(SMKindGlyph::GlyphSize));
+    if constexpr (useWords)
     {
-        painter->setFont(rowFont);
-        painter->setPen(color);
-        if (ellipsis)
+        for (const RowSlot& slot : layout)
         {
-            painter->drawText(QRectF(padding, rowY, box.width() - 2.0 * padding, rowH)
-                             , Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("..."));
-            return;
+            const QString word = bandWord(mRows.at(slot.index).zone);
+            if (word.isEmpty() == false)
+            {
+                bandW = std::max(bandW, static_cast<double>(metrics.horizontalAdvance(word)));
+            }
         }
+    }
 
-        // A ` \` continuation cue at the right edge says "the next row belongs to this same
-        // Enter/Exit group"; reserve its width so it never overlaps the row text.
-        const double cueW = (continues ? (metrics.horizontalAdvance(QStringLiteral("\\")) + 4.0) : 0.0);
-        // A second mark takes a second gutter slot, so that row's text starts one mark further in.
-        // Only the `on <stimulus>` header of an internal transition has one.
-        const bool   twoMarks = SMKindGlyph::isDrawn(row.kindIcon);
-        const double gutter   = padding + 16.0 + (twoMarks ? SMKindGlyph::GlyphSize : 0.0);
-        const QRectF textRect{ gutter, rowY, box.width() - padding - gutter - cueW, rowH };
-
-        SMKindGlyph::paint(*painter, QRectF(padding, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0), row.icon, color);
-        if (twoMarks)
-        {
-            SMKindGlyph::paint(*painter, QRectF(padding + SMKindGlyph::GlyphSize, rowY + 2.0
-                                              , SMKindGlyph::GlyphSize, rowH - 4.0), row.kindIcon, color);
-        }
-
-        painter->setFont(rowFont);
-        painter->setPen(color);
-        const QString elided = metrics.elidedText(row.text, Qt::ElideRight, static_cast<int>(textRect.width()));
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
-        if (continues)
-        {
-            painter->drawText(QRectF(box.width() - padding - cueW, rowY, cueW, rowH)
-                             , Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("\\"));
-        }
-
-        // Ctrl+Shift link feedback: underline the hovered row's text so the user sees the link.
-        if (linked)
-        {
-            const double textW   = std::min(static_cast<double>(metrics.horizontalAdvance(elided)), textRect.width());
-            const double baseline = rowY + (rowH / 2.0) + ((metrics.ascent() - metrics.descent()) / 2.0) + 1.0;
-            painter->drawLine(QPointF(textRect.left(), baseline), QPointF(textRect.left() + textW, baseline));
-        }
-    };
+    const double actionX = padding + bandW + NESMDesign::StateBandGap;
 
     for (const RowSlot& slot : layout)
     {
-        const BodyRow& row = mRows.at(slot.index);
-        const bool linked = (slot.truncated == false) && (slot.index == mHoverRow)
-                            && ((row.refs.isEmpty() == false) || (row.transitionId != 0u));
-        drawRow(row, slot.y, slot.truncated, row.continues && (slot.truncated == false), linked);
+        const BodyRow& row  = mRows.at(slot.index);
+        const double   rowY = slot.y;
+
+        if (row.firstInGroup)
+        {
+            if constexpr (useWords)
+            {
+                const QString word = bandWord(row.zone);
+                if (word.isEmpty() == false)
+                {
+                    painter->setPen(bandColor);
+                    painter->drawText(QRectF(padding, rowY, bandW, rowH), Qt::AlignLeft | Qt::AlignVCenter, word);
+                }
+            }
+            else
+            {
+                // Full strength, not the muted tone the words take: a band mark is a thin stroke,
+                // and entry against exit is read as a comparison of arrow direction that needs the
+                // shape crisp. The same 12 px slot the kind marks get, which is what leaves the
+                // band mark full size and the kind mark subordinate inside it.
+                SMKindGlyph::paint(*painter, QRectF(padding, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0)
+                                  , bandGlyph(row.zone), color);
+            }
+        }
+
+        if (slot.truncated)
+        {
+            painter->setPen(bandColor);
+            painter->drawText(QRectF(actionX, rowY, std::max(box.width() - actionX - padding, 10.0), rowH)
+                             , Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("..."));
+            continue;
+        }
+
+        // Two columns, used the same way by every row: the band column says WHEN the row runs, the
+        // action column what it does. A transition header is the only row carrying something for
+        // both, and giving each mark its own column is what puts its stimulus and its text on the
+        // same line-up as the operations below it.
+        const bool twoMarks = SMKindGlyph::isDrawn(row.kindIcon);
+        if (twoMarks)
+        {
+            SMKindGlyph::paint(*painter, QRectF(padding, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0)
+                              , row.icon, color);
+        }
+
+        SMKindGlyph::paint(*painter, QRectF(actionX, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0)
+                          , (twoMarks ? row.kindIcon : row.icon), color);
+
+        const double textX = actionX + SMKindGlyph::GlyphSize + 3.0;
+        const QRectF textRect{ textX, rowY, std::max(box.width() - padding - textX, 10.0), rowH };
+        painter->setPen(color);
+        const QString elided = metrics.elidedText(row.text, Qt::ElideRight, static_cast<int>(textRect.width()));
+        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+
+        // Ctrl+Shift link feedback: underline the hovered row's text so the user sees the link.
+        if ((slot.index == mHoverRow) && ((row.refs.isEmpty() == false) || (row.transitionId != 0u)))
+        {
+            const double textW    = std::min(static_cast<double>(metrics.horizontalAdvance(elided)), textRect.width());
+            const double baseline = rowY + (rowH / 2.0) + ((metrics.ascent() - metrics.descent()) / 2.0) + 1.0;
+            painter->drawLine(QPointF(textRect.left(), baseline), QPointF(textRect.left() + textW, baseline));
+        }
     }
 }
 
@@ -1041,21 +1102,9 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         return SMKindGlyph::prefix(SMKindGlyph::operationGlyph(op)) + withoutRowVerb(op, summary);
     };
 
-    // The band mark of an Enter/Exit group, so the reader sees which activity a row belongs to.
-    // An internal transition is not a zone but a construct, and brings its own mark below.
-    const auto zoneGlyph = [](eRowZone zone) -> SMKindGlyph::eGlyph
-    {
-        switch (zone)
-        {
-        case eRowZone::Enter:   return SMKindGlyph::eGlyph::Entry;
-        case eRowZone::Exit:    return SMKindGlyph::exitGlyph();
-        default:                return SMKindGlyph::eGlyph::None;    // Middle rows carry their own mark.
-        }
-    };
-
-    // One Enter/Exit group, ordered action, event, then all timers on one row. The first row
-    // always carries the band mark, except for an internal transition whose header already has it.
-    const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone, bool bandRow = true)
+    // One group of operations, ordered action, event, then all timers on one row. The first row of
+    // the group is the one the band word is written against.
+    const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone)
     {
         QList<const SMOperationBase*> actions;
         QList<const SMOperationBase*> events;
@@ -1077,28 +1126,19 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
             }
         }
 
+        // Every row carries its own kind mark -- the gear, the bolt, the clock. Which band it runs
+        // in is said once by the `entry` / `exit` word beside the group, so no row has to trade its
+        // kind mark away to announce its band, and a group of events needs no placeholder row.
         QList<BodyRow> group;
-        if (actions.isEmpty())
+        for (const SMOperationBase* op : std::as_const(actions))
         {
-            if (bandRow && ((events.isEmpty() == false) || (timers.isEmpty() == false)))
-            {
-                group.append(BodyRow{ zoneGlyph(zone), NoActionText, zone, false, false, { } });
-            }
-        }
-        else
-        {
-            for (const SMOperationBase* op : std::as_const(actions))
-            {
-                // A band row takes its band's mark; a group that has no band row of its own (an
-                // internal transition's operations) takes the operation's own kind mark, the gear.
-                const SMKindGlyph::eGlyph mark = bandRow ? zoneGlyph(zone) : SMKindGlyph::operationGlyph(*op);
-                group.append(BodyRow{ mark, rowText(*op), zone, false, false, SMReferences::operationRefs(*op) });
-            }
+            group.append(BodyRow{ SMKindGlyph::operationGlyph(*op), rowText(*op), zone, false
+                                , SMReferences::operationRefs(*op) });
         }
 
         for (const SMOperationBase* op : std::as_const(events))
         {
-            group.append(BodyRow{ SMKindGlyph::eGlyph::Event, rowText(*op), zone, false, false, SMReferences::operationRefs(*op) });
+            group.append(BodyRow{ SMKindGlyph::eGlyph::Event, rowText(*op), zone, false, SMReferences::operationRefs(*op) });
         }
         if (timers.isEmpty() == false)
         {
@@ -1116,13 +1156,12 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
             }
 
             group.append(BodyRow{ SMKindGlyph::operationGlyph(*timers.first())
-                                , parts.join(QStringLiteral(" | ")), zone, false, false, timerRefs });
+                                , parts.join(QStringLiteral(" | ")), zone, false, timerRefs });
         }
 
         for (int i = 0; i < group.size(); ++i)
         {
             group[i].firstInGroup = (i == 0);
-            group[i].continues    = (i < (group.size() - 1));
             mRows.append(group.at(i));
         }
     };
@@ -1194,7 +1233,7 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
 
             // Two marks: the band mark says what the row is, the kind mark says what fires it, a
             // button, a bolt or a clock. An unfinished external edge gets the kind mark alone.
-            BodyRow header{ SMKindGlyph::eGlyph::Internal, head, eRowZone::Middle, false, false, stimRef };
+            BodyRow header{ SMKindGlyph::eGlyph::Internal, head, eRowZone::Middle, false, stimRef };
             header.kindIcon    = SMKindGlyph::stimulusGlyph(*transition);
             header.transitionId = transition->getId();
             if (transition->isInternal() == false)
@@ -1204,7 +1243,7 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
             }
 
             mRows.append(header);
-            appendGroup(transition->getOperations(), eRowZone::Middle, false);
+            appendGroup(transition->getOperations(), eRowZone::Middle);
         }
     }
 
