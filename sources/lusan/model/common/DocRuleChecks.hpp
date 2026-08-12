@@ -23,7 +23,6 @@
  * Includes
  ************************************************************************/
 #include "lusan/data/common/EnumEntry.hpp"
-#include "lusan/common/DocElementTable.hpp"
 #include "lusan/model/common/DocIssue.hpp"
 #include "lusan/model/common/DocUnknownScan.hpp"
 
@@ -260,16 +259,13 @@ public:
 
     /**
      * \brief   Files every element of the opened file that the format does not place, whether
-     *          the tag is unknown, sits somewhere the format does not allow, or was dropped from
-     *          the format. The block itself survives the save, so the finding is what tells the
-     *          author it is there.
-     * \param   doc     The format the elements were read against, for the replacement to suggest.
+     *          the tag is unknown or sits somewhere the format does not allow. The block itself
+     *          survives the save, so the finding is what tells the author it is there.
      * \param   kind    The element kind these findings carry; they point at no element of their own.
      * \param   rule    The number this engine files an unknown element under.
      * \param   unknown The blocks the read could not place, in document order.
      **/
-    void noteUnknownElements(DocElementTable::eDocument doc, eDocElementKind kind, int rule
-                           , const QList<DocUnknownElement>& unknown);
+    void noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes

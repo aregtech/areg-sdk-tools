@@ -184,8 +184,6 @@ QList<DocUnknownElement> DocUnknownScan::scan(DocElementTable::eDocument doc, co
         entry.name    = name;
         entry.parent  = parent;
         entry.line    = static_cast<int>(reader.lineNumber());
-        const DocElementTable::Row* row = DocElementTable::find(doc, name);
-        entry.removed = (row != nullptr) && (row->status == DocElementTable::eStatus::Removed);
         anchorOf(stack, entry.ownerId, entry.wrappers);
         entry.text = captureElement(reader);
         found.append(entry);

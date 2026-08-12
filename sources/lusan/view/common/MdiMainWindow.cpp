@@ -29,6 +29,8 @@
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
 #include "lusan/view/dt/DataTypeDocument.hpp"
+#include "lusan/view/common/DataTypePage.hpp"
+#include "lusan/model/dt/DataTypeDocumentModel.hpp"
 #include "lusan/view/common/NaviDesignPanel.hpp"
 #include "lusan/view/common/NaviFsmToolbar.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
@@ -851,9 +853,7 @@ void MdiMainWindow::syncDesignWidgets()
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     const bool designCurrent = (stateMachine != nullptr) && (design != nullptr) && stateMachine->isDesignPageCurrent();
 
-    // The output window's Validation tab lists every open document that carries validation, one
-    // tree root each, so the count on the tab is a workspace total and a finding always names the
-    // document it belongs to.
+    // The output window's Validation tab lists every open document that carries validation
     QList<MdiChild*> documents;
     for (QMdiSubWindow* sub : mMdiArea.subWindowList())
     {
@@ -1268,8 +1268,6 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
         mdiActive->onWindowActivated();
     }
 
-    // Re-apply the design-widget placement to the newly active document, so the toolbar, Properties
-    // and Outline are populated only while a Design page is current.
     syncDesignWidgets();
 }
 
@@ -1280,6 +1278,9 @@ void MdiMainWindow::onWarmupServiceInterface()
 
     mSIWarmupDone = true;
     DataTypeFactory::warmup();
+
+    DataTypeDocumentModel warmupDoc;
+    DataTypePage warmupPage(warmupDoc.getDataTypeModel(), QString());
 }
 
 void MdiMainWindow::onShowMenuTheme()

@@ -319,26 +319,15 @@ void DocRuleChecks::noteFileNameMismatch(uint32_t id, const QString& name, const
        , explainShape(eShape::FileNameMismatch));
 }
 
-void DocRuleChecks::noteUnknownElements(DocElementTable::eDocument doc, eDocElementKind kind, int rule
-                                      , const QList<DocUnknownElement>& unknown)
+void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown)
 {
     for (const DocUnknownElement& entry : unknown)
     {
         // The tag is the only thing to point at: an element the format does not define has no
         // document element behind it, and so nothing to select. The line is what lets the author
         // find the first one, which matters because a mistyped tag travels by copy.
-        const QString message = entry.removed
-            ? tr("Unknown tag '%1', line %2. The format no longer defines it").arg(entry.name).arg(entry.line)
-            : tr("Unknown tag '%1', line %2").arg(entry.name).arg(entry.line);
-
-        const DocElementTable::Row* row = DocElementTable::find(doc, entry.name);
-        const QString detail = ((row != nullptr) && (row->replacement.isEmpty() == false))
-            ? tr("The format no longer defines this element; use %1 instead. "
-                 "Nothing generates until the block is removed or replaced. The block is kept as written until then.")
-                    .arg(row->replacement)
-            : explainShape(eShape::UnknownElement);
-
-        add(0u, kind, DocIssue::eSeverity::Error, rule, message, detail);
+        const QString message = tr("Unknown tag '%1', line %2").arg(entry.name).arg(entry.line);
+        add(0u, kind, DocIssue::eSeverity::Error, rule, message, explainShape(eShape::UnknownElement));
         mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
     }
 }

@@ -185,27 +185,6 @@ void testTablesLoad()
     CHECK(DocElementTable::accepts(eDocument::StateMachine, u"Arg", u"Call"));
 }
 
-// A schema states what it accepts, so what a format has dropped is named in the code and
-// reported with the replacement to use.
-void testRetiredElements()
-{
-    std::printf("[table] elements the format dropped\n");
-
-    const DocElementTable::Row* inlineCode = DocElementTable::find(eDocument::StateMachine, u"InlineCode");
-    CHECK(inlineCode != nullptr);
-    CHECK((inlineCode != nullptr) && (inlineCode->status == DocElementTable::eStatus::Removed));
-    CHECK((inlineCode != nullptr) && (inlineCode->replacement.isEmpty() == false));
-    CHECK(DocElementTable::accepts(eDocument::StateMachine, u"InlineCode", u"OperationList") == false);
-
-    const DocElementTable::Row* doList = DocElementTable::find(eDocument::StateMachine, u"DoList");
-    CHECK(doList != nullptr);
-    CHECK((doList != nullptr) && (doList->status == DocElementTable::eStatus::Removed));
-
-    // They are the state machine's, and no other format ever had them.
-    CHECK(DocElementTable::find(eDocument::ServiceInterface, u"InlineCode") == nullptr);
-    CHECK(DocElementTable::find(eDocument::DataType, u"DoList") == nullptr);
-}
-
 // The compiled-in copy is the whole description, not a stand-in for one: a build with no SDK
 // schemas beside it has to validate exactly as well. The counts are not pinned -- the schemas
 // own them -- but a table this small means the resource did not load at all.
@@ -426,7 +405,6 @@ int main(int argc, char* argv[])
     std::printf("Document schema tests\n");
     testReaderShapes();
     testTablesLoad();
-    testRetiredElements();
     testBuiltInCopyIsComplete();
     testServiceInterfaceKeepsUnknownBlock();
     testDataTypeDocumentKeepsUnknownBlock();

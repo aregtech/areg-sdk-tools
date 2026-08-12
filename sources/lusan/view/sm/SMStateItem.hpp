@@ -74,11 +74,10 @@ public:
      **/
     struct BodyRow
     {
-        SMKindGlyph::eGlyph         icon;           //!< The row's mark: its band, or its own kind.
+        SMKindGlyph::eGlyph         icon;           //!< The row's own kind mark (action, event, timer).
         QString                     text;           //!< The row text.
         eRowZone                    zone;           //!< Where in the box the row is anchored.
-        bool                        firstInGroup;   //!< First row of its Enter/Exit group (carries the band mark).
-        bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
+        bool                        firstInGroup;   //!< First row of its group: the one that carries the `entry` / `exit` word.
         QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
 
         //!< A SECOND mark, drawn after \ref icon, or \c None. Exactly one row uses it: the

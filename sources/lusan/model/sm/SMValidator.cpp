@@ -19,7 +19,6 @@
 
 #include "lusan/model/sm/SMValidator.hpp"
 
-#include "lusan/common/DocElementTable.hpp"
 #include "lusan/common/DocReservedNames.hpp"
 
 #include "lusan/model/sm/SMGuardValidation.hpp"
@@ -1600,8 +1599,8 @@ namespace
 
     void Ctx::checkUnknownElements()
     {
-        mChecks.noteUnknownElements(DocElementTable::eDocument::StateMachine, eDocElementKind::Overview
-                                  , SMValidator::RULE_UNKNOWN_ELEMENT, mData.getUnknownElements());
+        mChecks.noteUnknownElements(eDocElementKind::Overview, SMValidator::RULE_UNKNOWN_ELEMENT
+                                  , mData.getUnknownElements());
     }
 
     void Ctx::checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName)

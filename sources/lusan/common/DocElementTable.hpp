@@ -43,23 +43,9 @@ class VersionNumber;
  *          so a build with no SDK schemas beside it validates exactly as well -- the copies are
  *          the same file, and the delivered one exists so a format change reaches an installed
  *          Lusan without rebuilding it.
- *
- *          An element the format once defined and no longer does is the one thing a schema
- *          cannot state, because a schema describes what it accepts. Those few are named here.
  **/
 namespace DocElementTable
 {
-    /**
-     * \enum    eStatus
-     * \brief   What the format currently says about an element.
-     **/
-    enum class eStatus
-    {
-          Valid         //!< Part of the format; read, written and edited.
-        , Deprecated    //!< Still read and written, but the replacement is preferred.
-        , Removed       //!< No longer part of the format; a document carrying it does not generate.
-    };
-
     /**
      * \enum    eDocument
      * \brief   The document formats Lusan edits, each with its own element vocabulary.
@@ -89,8 +75,6 @@ namespace DocElementTable
     {
         QString     name;           //!< The element name.
         QStringList parents;        //!< The elements it may sit in; empty for the document element.
-        eStatus     status;         //!< Whether the element still counts.
-        QString     replacement;    //!< What to use instead, for a deprecated or removed element.
     };
 
     /**

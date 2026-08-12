@@ -168,6 +168,34 @@ namespace NESMDesign
     constexpr double    StateRowHeight      { 14.0 };
     //!< The horizontal text padding inside the state box.
     constexpr double    StatePadding        { 8.0 };
+    //!< The body text size relative to the state name. The name is the box's one bold, full-size
+    //!< label; the behavior rows below it are running text and step down from it.
+    constexpr double    StateBodyFontScale  { 0.85 };
+    /**
+     * \enum    eBandStyle
+     * \brief   How the state body says WHEN a group of operations runs.
+     **/
+    enum class eBandStyle
+    {
+          Glyph //!< The drawn marks `->|` and `<-|`: one 12 px column, and the same in every language.
+        , Word  //!< The plain words `entry` and `exit`: no mark to learn, about 32 px more per row.
+    };
+
+    //!< THE switch between the two band encodings. Both are built and kept working; change this one
+    //!< line to try the other on a real diagram. The words are also used on their own whenever the
+    //!< kind marks are in their word style, because then nothing is drawn at all.
+    constexpr eBandStyle StateBandStyle     { eBandStyle::Glyph };
+
+    //!< How present the `entry` / `exit` words are beside the action they label, and the overflow
+    //!< `...` marker with them. Structure, not content: a step below the action names, and still
+    //!< above the contrast floor for small text on the body fill.
+    constexpr double    StateBandWordAlpha  { 0.68 };
+    //!< The gap between the band column and the action column beside it.
+    constexpr double    StateBandGap        { 5.0 };
+    //!< The narrowest the action column may be indented. It keeps an internal transition's
+    //!< operations sitting under their `on ...` header even on a box with no entry or exit band
+    //!< to give the column its width.
+    constexpr double    StateBodyIndentMin  { 10.0 };
     //!< The side length of a selection resize handle.
     constexpr double    HandleSize          { 7.0 };
     //!< The darkening factor applied to the body color to derive the header shade.
