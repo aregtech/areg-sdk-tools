@@ -499,6 +499,10 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
     const QColor  textColor = NESMDesign::contrastTextColor(headerColor);
     double        left      = padding;
     double        right     = box.width() - padding;
+    // Taken before any badge is drawn. The badges set a smaller font on the painter, so the name
+    // must be built from this and not from painter->font(), or a state carrying a badge would end
+    // up with a smaller title than a state without one.
+    const QFont   baseFont  = painter->font();
 
     // Right-to-left: chevron, then the badges.
     if (hasBodyContent() || (mExpanded == false))
@@ -522,8 +526,8 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
         right = chevron.left() - 4.0;
     }
 
-    QFont badgeFont = painter->font();
-    badgeFont.setPointSizeF(badgeFont.pointSizeF() * 0.75);
+    QFont badgeFont{ baseFont };
+    badgeFont.setPointSizeF(baseFont.pointSizeF() * 0.75);
     badgeFont.setBold(true);
 
     if (mHistory != SMStateEntry::eHistory::None)
@@ -590,23 +594,23 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
         right = badge.left() - 4.0;
     }
 
-    // A state that owns nested states or an imported submachine reads as a container: its name
-    // gets the same bold-plus-larger step an outline view gives a parent row. A plain state stays
-    // at the regular weight and size, so the two kinds are told apart on sight without leaning on
-    // the small badge glyph alone. Text color is left untouched by this: it stays derived from
-    // headerColor for guaranteed contrast, whatever color the user picked for the box.
-    const bool isContainer = mComposite || mImported;
-    QFont nameFont = painter->font();
-    nameFont.setBold(isContainer);
-    if (isContainer)
-    {
-        nameFont.setPointSizeF(nameFont.pointSizeF() * NESMDesign::StateCompositeNameScale);
-    }
-
+    QFont nameFont{ baseFont };
+    nameFont.setBold(true);
     painter->setFont(nameFont);
     painter->setPen(textColor);
     const QRectF nameRect{ left, 0.0, std::max(right - left, 10.0), headerH };
-    const QString elided = QFontMetrics(nameFont).elidedText(mName, Qt::ElideRight, static_cast<int>(nameRect.width()));
+
+    // A state that owns nested states or an imported submachine gets a plain text " [+]" suffix
+    // instead of a font change, so the title itself stays the one legible, uniform label across
+    // the whole canvas. Plain "+" reads as "contains more" and does not collide with the app's
+    // own use of "*" for unsaved-changes (see MdiChild's "[*]" window title). The suffix's width
+    // is reserved first and never elided away: only the name in front of it gives up space, so
+    // the marker survives even on a narrow or renamed box.
+    const QFontMetrics metrics{ nameFont };
+    const QString suffix = (mComposite || mImported) ? QStringLiteral(" [+]") : QString();
+    const double suffixW = suffix.isEmpty() ? 0.0 : metrics.horizontalAdvance(suffix);
+    const double nameW = std::max(nameRect.width() - suffixW, 10.0);
+    const QString elided = metrics.elidedText(mName, Qt::ElideRight, static_cast<int>(nameW)) + suffix;
     painter->drawText(nameRect, Qt::AlignVCenter | Qt::AlignLeft, elided);
 }
 
