@@ -590,8 +590,19 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
         right = badge.left() - 4.0;
     }
 
+    // A state that owns nested states or an imported submachine reads as a container: its name
+    // gets the same bold-plus-larger step an outline view gives a parent row. A plain state stays
+    // at the regular weight and size, so the two kinds are told apart on sight without leaning on
+    // the small badge glyph alone. Text color is left untouched by this: it stays derived from
+    // headerColor for guaranteed contrast, whatever color the user picked for the box.
+    const bool isContainer = mComposite || mImported;
     QFont nameFont = painter->font();
-    nameFont.setBold(true);
+    nameFont.setBold(isContainer);
+    if (isContainer)
+    {
+        nameFont.setPointSizeF(nameFont.pointSizeF() * NESMDesign::StateCompositeNameScale);
+    }
+
     painter->setFont(nameFont);
     painter->setPen(textColor);
     const QRectF nameRect{ left, 0.0, std::max(right - left, 10.0), headerH };

@@ -172,6 +172,11 @@ namespace NESMDesign
     constexpr double    HandleSize          { 7.0 };
     //!< The darkening factor applied to the body color to derive the header shade.
     constexpr int       HeaderShadeFactor   { 145 };
+    //!< The name font size multiplier for a state that owns nested states or an imported
+    //!< submachine. Bold plus a modest size step reads as "container" at a glance, the same
+    //!< cue an outline view gives a parent row, without needing a second text color that would
+    //!< have to be re-balanced against every user-chosen header color for contrast.
+    constexpr double    StateCompositeNameScale{ 1.12 };
 
     //!< The radius of the begin dot drawn on the source state border.
     constexpr double    EdgeBeginDotRadius  { 3.0 };
