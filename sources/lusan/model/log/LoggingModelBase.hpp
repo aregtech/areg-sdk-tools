@@ -92,6 +92,10 @@ public:
         , LoggingDisconneced    // Logging was live, it is disconnected from the log collector service, but still is connected to the database.
     };
 
+    //!< Number of entries the reading thread pulls from the database in one step.
+    //!< Used when the caller did not ask for an explicit step size.
+    static constexpr int32_t    READ_CHUNK_SIZE { 1000 };
+
     using   ListColumns     = QList<LoggingModelBase::eColumn>;
     using   ListLogs        = std::vector<areg::SharedBuffer>;
     using   ListInstances   = std::vector< areg::ConnectedInstance>;
@@ -630,6 +634,16 @@ public:
 protected:
 
     /**
+     * \brief   Appends a batch of log entries read from the database to the model.
+     *          Runs in the thread that owns the model. The reading thread hands its
+     *          batches over by a queued call, it does not touch the model itself.
+     * \param   logs        The entries to append. The list is emptied on output.
+     * \param   generation  The read session the batch belongs to.
+     *                      Batches of an already replaced session are dropped.
+     **/
+    void appendLogBatch(std::vector<areg::SharedBuffer>&& logs, uint32_t generation);
+
+    /**
      * \brief   Closes currently opened log database file without triggering signal.
      **/
     inline void _closeDatabase();
@@ -707,10 +721,11 @@ protected:
     QModelIndex             mSelectedScope; //!< The selected node of the tree;
     QModelIndex             mSelectedLog;   //!< The selected entry of the log;
     MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes.
-    int                     mLogChunk;      //!< The position in the log messages list to read from.
-    uint32_t                mLogCount;      //!< The position of updated log.
-    uint32_t                mTotalLogCount; //!< NEW: total rows in DB (for scrollbar)
-    uint32_t                mWindowStart;   //!< NEW: first row index of current window
+    int                     mLogChunk;      //!< The number of entries to read from the database in one step.
+    uint32_t                mLogCount;      //!< The number of log entries held by the model.
+    uint32_t                mTotalLogCount; //!< Total number of rows the database holds for the current query.
+    uint32_t                mWindowStart;   //!< First row index of the loaded window.
+    uint32_t                mLoadGeneration;//!< Identifies the running read session, so that batches of an abandoned read are dropped.
     areg::Thread            mReadThread;    //!< The thread to run the model operations.
     areg::Mutex             mQuitThread;    //!< The event to notify when data is ready.
     ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.
@@ -857,6 +872,7 @@ inline void LoggingModelBase::setScopeFiler(ScopeLogViewerFilter* filter)
 
 inline void LoggingModelBase::_closeDatabase()
 {
+    _quitThread();
     mDatabase.disconnect();
     dataReset();
 }
@@ -873,7 +889,11 @@ inline void LoggingModelBase::_quitThread()
 
 inline void LoggingModelBase::cleanLogs()
 {
-    mLogCount = 0;
+    // Stepping the generation makes the batches of a read that is being abandoned obsolete.
+    ++ mLoadGeneration;
+    mLogCount       = 0;
+    mTotalLogCount  = 0;
+    mWindowStart    = 0;
     mLogs.clear();
 }
 

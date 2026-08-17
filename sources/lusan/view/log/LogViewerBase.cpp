@@ -188,6 +188,11 @@ void LogViewerBase::setupWidgets()
             , [this]() {
                 _updateHighlightColumn();
             });
+    connect(mFilter, &QAbstractItemModel::rowsRemoved, this
+            , [this](const QModelIndex&, int, int) {
+                // Rows above the hit are gone, the remembered position no longer names it.
+                _resetSearchResult();
+            });
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged, this
