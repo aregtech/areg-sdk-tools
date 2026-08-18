@@ -558,16 +558,9 @@ void LogObserver::slotLogServiceConnected(bool isConnected, const std::string& a
 
 void LogObserver::slotLogObserverStarted(bool isStarted)
 {
-    if (isStarted )
-    {
-        areg::SharedBuffer stream;
-        stream << isStarted;
-        LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_Started, stream), master_thread());
-    }
-    else
-    {
-        emit signalLogObserverStarted(false);
-    }
+    areg::SharedBuffer stream;
+    stream << isStarted;
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_Started, stream), master_thread());
 }
 
 void LogObserver::slotLogDbCreated(const std::string& dbLocation)

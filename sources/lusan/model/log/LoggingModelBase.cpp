@@ -33,6 +33,8 @@
 #include <QIcon>
 #include <QSize>
 
+#include <iterator>
+
 const QStringList& LoggingModelBase::getHeaderList()
 {
     static QStringList _headers
@@ -94,6 +96,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mLogCount     (0)
     , mTotalLogCount(0)
     , mWindowStart  (0)
+    , mLoadGeneration(0)
     , mReadThread   (static_cast<areg::ThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
     , mScopeFilter  (nullptr)
@@ -102,6 +105,8 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
 
 LoggingModelBase::~LoggingModelBase()
 {
+    // The reading thread works on the database and the statement of this object, stop it first.
+    _quitThread();
     _cleanNodes();
 }
 
@@ -132,7 +137,9 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
-    return parent.isValid() ? 0 : static_cast<int>(mTotalLogCount);  // was mLogCount
+    // Only the entries the model actually holds are addressable. Reporting the number of
+    // rows the database has would hand out indexes that data() cannot answer.
+    return parent.isValid() ? 0 : static_cast<int>(mLogCount);
 }
 
 int LoggingModelBase::columnCount(const QModelIndex& parent) const
@@ -302,9 +309,10 @@ void LoggingModelBase::slideWindow(uint32_t newStartRow)
                       ? mTotalLogCount - windowSize
                       : 0u;
 
+    _quitThread();
     mWindowStart = newStartRow;
 
-    // Re-prepare the statement with new offset — SQLite jumps directly, no scanning
+    // Re-prepare the statement with the new offset, SQLite jumps directly without scanning.
     setupLogStatement(areg::TARGET_ALL, mLogChunk, mWindowStart);
 
     beginResetModel();
@@ -527,16 +535,21 @@ int LoggingModelBase::removeInstances(const std::vector<areg::ConnectedInstance>
 
 void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
 {
+    // Both models may have a reading thread on their database, stop them before the data moves.
+    _quitThread();
+    logModel._quitThread();
+
     mActiveColumns.clear();
     mActiveColumns = std::move(logModel.mActiveColumns);
     logModel.mActiveColumns.clear();
 
     cleanLogs();
     mLogs = std::move(logModel.mLogs);
-    mLogChunk = logModel.mLogChunk;
-    mLogCount = logModel.mLogCount;
-    logModel.mLogCount = 0;
-    logModel.mLogs.clear();
+    mLogChunk       = logModel.mLogChunk;
+    mLogCount       = logModel.mLogCount;
+    mTotalLogCount  = logModel.mTotalLogCount;
+    mWindowStart    = logModel.mWindowStart;
+    logModel.cleanLogs();
 
     mInstances.clear();
     mInstances = std::move(logModel.mInstances);
@@ -571,27 +584,16 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     cleanLogs();
     endResetModel();
     mLogChunk = maxEntries;
-    mLogCount = 0u;
-    mWindowStart = 0u;           
-    
+
     uint32_t count = setupLogStatement(areg::TARGET_ALL, mLogChunk, 0u);
     if (count == 0)
         return;
 
     mTotalLogCount = count;
-
-    // If maxEntries <= 0, no windowing limit is applied (e.g. scopes model loads all)
-    uint32_t windowSize = (maxEntries > 0)
-                          ? static_cast<uint32_t>(maxEntries)
-                          : count;
-    mLogs.resize(std::min(count, windowSize));
+    mLogs.reserve(count);
     mReadThread.start(areg::DO_NOT_WAIT);
-
-    mTotalLogCount = count;
-    qDebug() << "Total logs in DB:" << mTotalLogCount << "| Window size:" << mLogs.size();
 }
 
-// New — add limit and offset params
 uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId, int32_t limit, uint32_t offset)
 {
     return mDatabase.setup_statement_read_logs(mStatement, instId, limit, offset);
@@ -728,30 +730,48 @@ inline void LoggingModelBase::_cleanNodes()
     mRootList.clear();
 }
 
+void LoggingModelBase::appendLogBatch(std::vector<areg::SharedBuffer>&& logs, uint32_t generation)
+{
+    if ((generation != mLoadGeneration) || logs.empty())
+        return;
+
+    const int first{ static_cast<int>(mLogs.size()) };
+    const int last { first + static_cast<int>(logs.size()) - 1 };
+
+    beginInsertRows(QModelIndex(), first, last);
+    mLogs.insert(mLogs.end(), std::make_move_iterator(logs.begin()), std::make_move_iterator(logs.end()));
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endInsertRows();
+}
+
 void LoggingModelBase::on_run()
 {
-    uint32_t    nextStart   { 0 };
-    int         readCount   { 0 };
-    
-    Q_ASSERT(mLogCount == 0);
+    // Runs in the reading thread. It reads from the database only, the entries are handed
+    // over to the thread that owns the model, which is the single writer of the row list.
+    const uint32_t generation{ mLoadGeneration };
+    const int32_t  chunk{ mLogChunk > 0 ? mLogChunk : LoggingModelBase::READ_CHUNK_SIZE };
+    int32_t        readCount{ 0 };
 
     do
     {
-        readCount = -1;
         if (mQuitThread.try_lock() == false)
             break;
-        
+
         mQuitThread.unlock();
-        readCount   = areg::ext::LogSqliteDatabase::fill_log_messages(mLogs, mStatement, nextStart, mLogChunk);
-        if (readCount != 0)
-        {
-            beginInsertRows(QModelIndex(), static_cast<int>(nextStart), static_cast<int>(nextStart) + readCount - 1);
-            nextStart += static_cast<uint32_t>(readCount);
-            mLogCount = nextStart;
-            endInsertRows();
-        }
-    } while ((readCount > 0) && (readCount == mLogChunk));
-    
-    Q_ASSERT((mLogCount == static_cast<uint32_t>(mLogs.size())) || (readCount == -1));
+
+        std::vector<areg::SharedBuffer> batch(static_cast<size_t>(chunk));
+        readCount = areg::ext::LogSqliteDatabase::fill_log_messages(batch, mStatement, 0, chunk);
+        if (readCount <= 0)
+            break;
+
+        batch.resize(static_cast<size_t>(readCount));
+        QMetaObject::invokeMethod(this
+                                 , [this, generation, batch = std::move(batch)]() mutable
+                                   {
+                                       appendLogBatch(std::move(batch), generation);
+                                   }
+                                 , Qt::ConnectionType::QueuedConnection);
+
+    } while (readCount == chunk);
 }
 

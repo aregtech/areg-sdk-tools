@@ -24,6 +24,8 @@
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "areg/base/File.hpp"
 
+#include <algorithm>
+
 
 QString LiveLogsModel::generateFileName()
 {
@@ -112,12 +114,11 @@ void LiveLogsModel::serviceConnected(bool isConnected, const QString& address, u
     mIsConnected = isConnected;
     mAddress     = address;
     mPort        = port;
-    
-    if (isConnected == false)
-    {
-        _setupSignals(false);        
-    }
-    
+
+    // Subscribe on connect and drop the subscription on disconnect, so that a model that
+    // outlives a session does not stay deaf after the service comes back.
+    _setupSignals(isConnected);
+
     openDatabase(dbPath, true);
 }
 
@@ -151,10 +152,11 @@ void LiveLogsModel::_setupSignals(bool doSetup)
         if (mSignalsSetup)
             return;
         
-        mSignalsSetup = true;
         LogObserver* log = LogObserver::getComponent();
-        Q_ASSERT(log != nullptr);
-        
+        if (log == nullptr)
+            return;
+
+        mSignalsSetup = true;
         mConLogs                = connect(log, &LogObserver::signalLogMessage            , this, &LiveLogsModel::slotLogMessage);
         mConInstancesDisconnect = connect(log, &LogObserver::signalLogInstancesDisconnect, this, &LiveLogsModel::slotLogInstancesDisconnect);
         
@@ -191,13 +193,41 @@ void LiveLogsModel::_setupSignals(bool doSetup)
     
 void LiveLogsModel::slotLogMessage(const areg::SharedBuffer& logMessage)
 {
-    if (logMessage.is_empty() == false)
+    if (logMessage.is_empty())
+        return;
+
+    if (static_cast<uint32_t>(mLogs.size()) >= LiveLogsModel::LIVE_LOG_CAPACITY)
     {
-        int count {static_cast<int>(mLogs.size())};
-        beginInsertRows(QModelIndex(), count, count);
-        mLogs.push_back(logMessage);
-        ++ mLogCount;
-        endInsertRows();
+        _evictOldest(LiveLogsModel::LIVE_LOG_EVICT_BLOCK);
+    }
+
+    const int row{ static_cast<int>(mLogs.size()) };
+    beginInsertRows(QModelIndex(), row, row);
+    mLogs.push_back(logMessage);
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endInsertRows();
+}
+
+void LiveLogsModel::_evictOldest(uint32_t count)
+{
+    count = std::min<uint32_t>(count, static_cast<uint32_t>(mLogs.size()));
+    if (count == 0)
+        return;
+
+    const QModelIndex selected{ getSelectedLog() };
+    const int selectedRow{ selected.isValid() ? selected.row()    : -1 };
+    const int selectedCol{ selected.isValid() ? selected.column() :  0 };
+
+    beginRemoveRows(QModelIndex(), 0, static_cast<int>(count) - 1);
+    mLogs.erase(mLogs.begin(), mLogs.begin() + count);
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endRemoveRows();
+
+    if (selectedRow >= 0)
+    {
+        // The remembered entry moved up by the number of dropped rows, or is gone with them.
+        const int row{ selectedRow - static_cast<int>(count) };
+        setSelectedLog(row >= 0 ? index(row, selectedCol) : QModelIndex());
     }
 }
 

@@ -37,6 +37,25 @@ class LiveLogsModel : public LoggingModelBase
     Q_OBJECT
     
 //////////////////////////////////////////////////////////////////////////
+// Constants
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   The number of received log entries the live view keeps in memory.
+     *          When it is reached, the oldest entries are dropped. They stay
+     *          readable in the log database, which the offline view opens.
+     **/
+    static constexpr uint32_t   LIVE_LOG_CAPACITY   { 100000u };
+
+    /**
+     * \brief   The number of oldest entries dropped in one block once the capacity
+     *          is reached. Dropping a block keeps the cost of one received message
+     *          close to a plain append.
+     **/
+    static constexpr uint32_t   LIVE_LOG_EVICT_BLOCK{ 10000u };
+
+//////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -163,9 +182,15 @@ private slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    
+
     void _setupSignals(bool doSetup);
-    
+
+    /**
+     * \brief   Drops the given number of oldest entries from the top of the list.
+     * \param   count   The number of entries to drop. Limited by the number of entries in the list.
+     **/
+    void _evictOldest(uint32_t count);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variable
 //////////////////////////////////////////////////////////////////////////
