@@ -57,32 +57,6 @@ class DocRuleChecks
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   The rule number the host engine files each shared shape under. An engine that
-     *          reports two shapes under one number simply repeats it here.
-     **/
-    struct RuleIds
-    {
-        int missingName         { 0 };  //!< A declaration with no name at all.
-        int invalidIdentifier   { 0 };  //!< A name the generated code could not carry.
-        int duplicateName       { 0 };  //!< A name already taken in the same name space.
-        int unresolvedType      { 0 };  //!< A declared type nothing answers to.
-        int badLiteral          { 0 };  //!< A value that does not read as its declared type.
-        int unreferenced        { 0 };  //!< Advisory: nothing in the document uses the declaration.
-        int duplicateEnumValue  { 0 };  //!< Two enumerators of one enumeration counting the same.
-        int deprecated          { 0 };  //!< Advisory: the declaration is marked deprecated.
-    };
-
-    /**
-     * \brief   The rule numbers the host engine files the two data type document shapes under.
-     *          Kept apart from \ref RuleIds because only a document that reads types from
-     *          elsewhere has them.
-     **/
-    struct ImportRuleIds
-    {
-        int brokenImport { 0 };  //!< An included data type document that contributes nothing.
-        int unusedImport { 0 };  //!< Advisory: the document reads no type out of it.
-    };
 
     /**
      * \brief   The shared shapes, used to look up the one explanation each of them has.
@@ -104,10 +78,23 @@ public:
     };
 
     /**
-     * \brief   A warning or an advisory note `n` is reported with the rule id
-     *          (`ADVISORY_RULE_BASE + n`). A band, not a second severity of the same rule.
+     * \brief   The rule id of a warning: rule `n` reported at warning severity is `100 + n`.
+     *          A band, not a second severity of the same rule, so `4` and `104` are two
+     *          unrelated rules.
      **/
-    static constexpr int ADVISORY_RULE_BASE { 100 };
+    static constexpr int WARNING_RULE_BASE      { 100 };
+
+    /**
+     * \brief   The rule id of an information finding: rule `n` reported at information
+     *          severity is `200 + n`. Held apart from the warning band so a finding that
+     *          blocks nothing never enters the error and warning comparison.
+     **/
+    static constexpr int INFORMATION_RULE_BASE  { 200 };
+
+    /**
+     * \brief   The lowest rule id of any banded finding. An id below it is an error.
+     **/
+    static constexpr int LOWEST_BANDED_RULE     { WARNING_RULE_BASE };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -117,7 +104,7 @@ public:
      * \brief   Binds the checks to the finding list they append to and to the registry every
      *          type question is answered against.
      **/
-    DocRuleChecks(QList<DocIssue>& issues, const DataTypeDataSection& types, const RuleIds& rules);
+    DocRuleChecks(QList<DocIssue>& issues, const DataTypeDataSection& types);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations, engine independent answers
@@ -155,9 +142,22 @@ public:
     QString unresolvedFragment(const QString& typeName) const;
 
     /**
-     * \brief   The rule id a finding of this severity carries, advisory band applied.
+     * \brief   The rule id a finding of this severity carries: the bare number for an error,
+     *          the warning band for a warning, the information band for information.
      **/
     int ruleId(int rule, DocIssue::eSeverity severity) const;
+
+    /**
+     * \brief   The rule number behind a finding's id, with the band of its severity removed.
+     * \param   ruleId  The id a finding carries.
+     **/
+    static int bareRule(int ruleId);
+
+    /**
+     * \brief   True when the id carries a band, which is to say the finding is not an error.
+     * \param   ruleId  The id a finding carries.
+     **/
+    static bool isBanded(int ruleId);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations, the shared rules
@@ -273,7 +273,6 @@ public:
 private:
     QList<DocIssue>&            mIssues;    //!< The run's findings.
     const DataTypeDataSection&  mTypes;     //!< The document's data type registry.
-    RuleIds                     mRules;     //!< The numbers this engine files the shapes under.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

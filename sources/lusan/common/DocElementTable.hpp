@@ -115,6 +115,26 @@ namespace DocElementTable
     QString sourcePath(eDocument doc);
 
     /**
+     * \brief   The format that files of \p suffix are read as.
+     * \param   suffix  The file suffix, with or without a leading dot.
+     * \param   doc     On success, receives the format.
+     * \return  True when a format claims the suffix, false when none does.
+     **/
+    bool documentOfSuffix(QStringView suffix, eDocument& doc);
+
+    /**
+     * \brief   One line naming the format description \p doc was read from and which of the
+     *          two copies it is, short enough for a status bar.
+     **/
+    QString sourceSummary(eDocument doc);
+
+    /**
+     * \brief   One line per format, each naming its description file and full path, for a
+     *          diagnostics view.
+     **/
+    QStringList sourceReport();
+
+    /**
      * \brief   Reads every format description again. The tables are built once on first use;
      *          this exists so a test can put a schema beside the executable and see it taken.
      **/

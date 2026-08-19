@@ -321,7 +321,7 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
         // An advisory finding is filed under a shifted id. Reading one as a plain number lands on
         // a different check entirely -- plain 14 is the operand-type rule, not the description
         // one -- and the landing would quietly lose the field it is supposed to accent.
-        check(SMValidator::fieldOfRule(DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_MISSING_DESCRIPTION)
+        check(SMValidator::fieldOfRule(DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_MISSING_DESCRIPTION)
                     == eIssueField::Description
              , "S15: a missing-description finding points at the Description field");
         check(SMValidator::fieldOfRule(DocRules::RULE_MISSING_DESCRIPTION) == eIssueField::None

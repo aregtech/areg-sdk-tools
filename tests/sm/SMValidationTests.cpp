@@ -116,12 +116,32 @@ namespace
     //!< A 10.2 warning is stored with the offset rule id; these target it by its 10.2 number.
     int countWarn(const QList<SMIssue>& issues, int warnNumber)
     {
-        return countRule(issues, DocRuleChecks::ADVISORY_RULE_BASE + warnNumber);
+        return countRule(issues, DocRuleChecks::WARNING_RULE_BASE + warnNumber);
     }
 
     bool hasWarn(const QList<SMIssue>& issues, int warnNumber)
     {
         return countWarn(issues, warnNumber) > 0;
+    }
+
+    //!< An information finding is stored in its own band; these target it by its rule number.
+    int countInfo(const QList<SMIssue>& issues, int infoNumber)
+    {
+        return countRule(issues, DocRuleChecks::INFORMATION_RULE_BASE + infoNumber);
+    }
+
+    bool hasInfo(const QList<SMIssue>& issues, int infoNumber)
+    {
+        return countInfo(issues, infoNumber) > 0;
+    }
+
+    //!< True when EVERY information finding of rule \p infoNumber carries \p severity.
+    bool infoSeverityIs(const QList<SMIssue>& issues, int infoNumber, SMIssue::eSeverity severity)
+    {
+        for (const SMIssue& i : issues)
+            if ((i.rule == (DocRuleChecks::INFORMATION_RULE_BASE + infoNumber)) && (i.severity != severity))
+                return false;
+        return true;
     }
 
     //!< True when EVERY finding of 10.2 rule \p warnNumber carries \p severity (vacuously true when
@@ -130,7 +150,7 @@ namespace
     bool warnSeverityIs(const QList<SMIssue>& issues, int warnNumber, SMIssue::eSeverity severity)
     {
         for (const SMIssue& i : issues)
-            if ((i.rule == (DocRuleChecks::ADVISORY_RULE_BASE + warnNumber)) && (i.severity != severity))
+            if ((i.rule == (DocRuleChecks::WARNING_RULE_BASE + warnNumber)) && (i.severity != severity))
                 return false;
         return true;
     }
@@ -903,7 +923,7 @@ namespace
             CHECK(warnSeverityIs(issues, 1, SMIssue::eSeverity::Warning));
             bool named = false;
             for (const SMIssue& i : issues)
-                named = named || ((i.rule == (DocRuleChecks::ADVISORY_RULE_BASE + 1)) && i.message.contains(QStringLiteral("'Orphan'")));
+                named = named || ((i.rule == (DocRuleChecks::WARNING_RULE_BASE + 1)) && i.message.contains(QStringLiteral("'Orphan'")));
             CHECK(named);
         }
         {   // Rule 2, negative: the state the level's Start descends into is reached, not orphaned.
@@ -1704,7 +1724,7 @@ namespace
             bool found = false;
             for (const SMIssue& i : SMValidator::validate(doc))
             {
-                if (i.rule != (DocRuleChecks::ADVISORY_RULE_BASE + 13))
+                if (i.rule != (DocRuleChecks::WARNING_RULE_BASE + 13))
                     continue;
                 found = true;
                 CHECK(i.message.contains(QStringLiteral("uint32")) && i.message.contains(QStringLiteral("uint16")));
@@ -1805,16 +1825,16 @@ namespace
             StateMachineData doc;
             addStart(doc);
             doc.getConstants().createConstant("Unused")->setType("int32");
-            CHECK(hasWarn(SMValidator::validate(doc), 4));
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
+            CHECK(hasInfo(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED));
+            CHECK(infoSeverityIs(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED, SMIssue::eSeverity::Info));
         }
         {   // W4 severity, the other half: an unused ACTION is behaviour wired to nothing, and stays
             // a warning. One rule number, two severities, decided by the kind of the declaration.
             StateMachineData doc;
             addStart(doc);
             doc.getMethods().createMethod("orphan", NEMethod::SmAction);
-            CHECK(hasWarn(SMValidator::validate(doc), 4));
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Warning));
+            CHECK(hasWarn(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED, SMIssue::eSeverity::Warning));
         }
         {   // Negative W4, the guard path: a canonical guard binds by symbol ID, not by name, so a
             // usage scan that only walked the legacy condition rows called this attribute unused.
@@ -1980,14 +2000,14 @@ namespace
             doc.getTimers().createTimer("Tick");
             MethodEntry* action = doc.getMethods().createMethod("run", NEMethod::SmAction);
             action->addElement(MethodParameter(doc.getNextId(), "count", "int32"), true);
-            CHECK(countWarn(SMValidator::validate(doc), 14) == 4);   // machine, timer, method, parameter
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 14, SMIssue::eSeverity::Info));
+            CHECK(countInfo(SMValidator::validate(doc), 14) == 4);   // machine, timer, method, parameter
+            CHECK(infoSeverityIs(SMValidator::validate(doc), 14, SMIssue::eSeverity::Info));
 
             doc.getOverview().setDescription("What the machine does");
             doc.getTimers().getElements()[0].setDescription("How often it ticks");
             action->setDescription("What it runs");
             action->getElements()[0].setDescription("How many");
-            CHECK(countWarn(SMValidator::validate(doc), 14) == 0);
+            CHECK(countInfo(SMValidator::validate(doc), 14) == 0);
         }
     }
 }
@@ -2418,8 +2438,8 @@ namespace
             std::unique_ptr<StateMachineData> patch = hostMachine(at("h3.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.5.1"), 1);
             SMDocumentCache::getInstance().clear();
             const QList<SMIssue> patchIssues = SMValidator::validate(*patch);
-            CHECK(hasWarn(patchIssues, 12));
-            CHECK(warnSeverityIs(patchIssues, 12, SMIssue::eSeverity::Info));
+            CHECK(hasInfo(patchIssues, 12));
+            CHECK(infoSeverityIs(patchIssues, 12, SMIssue::eSeverity::Info));
 
             std::unique_ptr<StateMachineData> exact = hostMachine(at("h4.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.5.7"), 1);
             SMDocumentCache::getInstance().clear();
@@ -2688,7 +2708,7 @@ namespace
             bool warned = false;
             for (const SMIssue& issue : issues)
             {
-                warned = warned || ((issue.rule == (DocRuleChecks::ADVISORY_RULE_BASE + 4))
+                warned = warned || ((issue.rule == (DocRuleChecks::WARNING_RULE_BASE + 4))
                                     && (issue.severity == SMIssue::eSeverity::Warning)
                                     && issue.message.contains(QStringLiteral("more than once")));
             }
@@ -2924,7 +2944,7 @@ namespace
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(explains(issues, DocRules::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
-            CHECK(explains(issues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED
+            CHECK(explains(issues, DocRuleChecks::INFORMATION_RULE_BASE + DocRules::RULE_UNREFERENCED
                           , DocRuleChecks::eShape::Unreferenced));
         }
     }
@@ -2982,7 +3002,7 @@ namespace
             const QList<SMIssue> issues = SMValidator::validate(reloaded);
             CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
             CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 0);
-            CHECK(countRule(issues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+            CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
         }
 
         {   // The document is included but nothing declares with it.
@@ -2995,7 +3015,7 @@ namespace
             StateMachineData reloaded;
             CHECK(reloaded.readFromFile(hostPath));
             CHECK(countRule(SMValidator::validate(reloaded)
-                           , DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 1);
+                           , DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 1);
         }
 
         {   // The row leads nowhere, so it contributes no type and is reported for that.
@@ -3011,7 +3031,7 @@ namespace
 
             const QList<SMIssue> issues = SMValidator::validate(reloaded);
             CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 1);
-            CHECK(countRule(issues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+            CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
         }
     }
 }

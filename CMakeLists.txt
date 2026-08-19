@@ -176,4 +176,29 @@ endif()
 option(LUSAN_BUILD_TESTS "Build Lusan unit tests" OFF)
 if(LUSAN_BUILD_TESTS)
     include("${LUSAN_ROOT}/tests/CMakeLists.txt")
+
+    # The tests that drive real widgets run on the offscreen platform. windeployqt installs the
+    # plugins the application itself needs and the offscreen one is not among them, so without
+    # this copy those tests abort before main behind a modal dialog that names no test.
+    #
+    # Copied while configuring rather than after a build: windeployqt resets the plugin directory
+    # whenever it runs, and a step tied to the application target does not run when only the test
+    # targets are rebuilt.
+    if (WIN32)
+        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(LUSAN_OFFSCREEN_PLUGIN "qoffscreend.dll")
+        else()
+            set(LUSAN_OFFSCREEN_PLUGIN "qoffscreen.dll")
+        endif()
+
+        set(LUSAN_QT_PLUGIN_SOURCE "${_qt_bin_dir}/../plugins/platforms/${LUSAN_OFFSCREEN_PLUGIN}")
+        if (EXISTS "${LUSAN_QT_PLUGIN_SOURCE}")
+            file(COPY "${LUSAN_QT_PLUGIN_SOURCE}"
+                 DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/platforms")
+            message(STATUS "LUSAN: >>> ${LUSAN_OFFSCREEN_PLUGIN} placed beside the executable for the widget tests")
+        else()
+            message(WARNING "LUSAN: ${LUSAN_QT_PLUGIN_SOURCE} was not found. The widget tests abort "
+                            "before main until it is placed beside the executable.")
+        endif()
+    endif()
 endif()

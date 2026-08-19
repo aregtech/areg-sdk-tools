@@ -50,6 +50,7 @@ class SourceViewer;
 QT_BEGIN_NAMESPACE
 class QActionGroup;
 class QDockWidget;
+class QLabel;
 class QListView;
 class QMdiArea;
 class QMdiSubWindow;
@@ -609,6 +610,13 @@ private:
     void _createStatusBar();
 
     /**
+     * \brief   Puts the format description of \p active on the status bar, or clears the
+     *          indicator when the window edits no document format.
+     * \param   active  The active child window, or nullptr when there is none.
+     **/
+    void _updateSchemaIndicator(MdiChild* active);
+
+    /**
      * \brief   Creates the dock windows for the main window.
      **/
     void _createDockWindows();
@@ -819,8 +827,9 @@ private:
     //!< Actions for Help sub-menus.
     QAction*        mActHelpAbout;
 
-    QAction*        mActsRecentFiles[MaxRecentFiles];   //!< Actions for opening recent files.    
+    QAction*        mActsRecentFiles[MaxRecentFiles];   //!< Actions for opening recent files.
     bool            mSIWarmupDone;                       //!< True if SI warmup routine already ran.
+    QLabel*         mSchemaIndicator;                    //!< Names the format description the active document is judged by.
 };
 
 //////////////////////////////////////////////////////////////////////////

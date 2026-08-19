@@ -193,7 +193,7 @@ static void testQualifiedResolution()
     const QList<DocIssue> issues = SIValidator::validate(data);
     CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
     CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 0);
-    CHECK(countRule(issues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+    CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
 }
 
 //!< A qualified name whose namespace is imported but whose type is not declared there is a fault;
@@ -329,7 +329,7 @@ static void testBrokenImport()
     // nothing because it is broken is already being reported.
     const QList<DocIssue> issues = SIValidator::validate(data);
     CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 2);
-    CHECK(countRule(issues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+    CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
 }
 
 //!< A document included but never declared with is worth a word; one used inside a template is not.
@@ -348,7 +348,7 @@ static void testUnusedImport()
     ServiceInterfaceData data;
     CHECK(data.readFromFile(host));
     const QList<DocIssue> issues = SIValidator::validate(data);
-    CHECK(countRule(issues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 1);
+    CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 1);
 
     // Declared with inside a container's element type, which is where the name is not the whole
     // spelling: still a use.
@@ -369,7 +369,7 @@ static void testUnusedImport()
     ServiceInterfaceData used;
     CHECK(used.readFromFile(nested));
     const QList<DocIssue> nestedIssues = SIValidator::validate(used);
-    CHECK(countRule(nestedIssues, DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+    CHECK(countRule(nestedIssues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
     CHECK(countRule(nestedIssues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
 }
 

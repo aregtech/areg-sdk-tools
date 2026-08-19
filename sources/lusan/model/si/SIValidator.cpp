@@ -56,24 +56,6 @@ namespace
         return label.isEmpty() ? vtr("Method") : label;
     }
 
-    //!< The numbers this engine has always filed the shared shapes under.
-    const DocRuleChecks::RuleIds& siRules()
-    {
-        static const DocRuleChecks::RuleIds _rules
-        {
-              DocRules::RULE_INVALID_IDENTIFIER
-            , DocRules::RULE_INVALID_IDENTIFIER
-            , DocRules::RULE_DUPLICATE_NAME
-            , DocRules::RULE_UNRESOLVED_TYPE
-            , DocRules::RULE_BAD_LITERAL
-            , DocRules::RULE_UNREFERENCED
-            , DocRules::RULE_DUPLICATE_ENUM_VALUE
-            , DocRules::RULE_DEPRECATED
-        };
-
-        return _rules;
-    }
-
     /**
      * \class   Ctx
      * \brief   One validation run: the document, the findings it produced, and the registry
@@ -85,7 +67,7 @@ namespace
         explicit Ctx(const ServiceInterfaceData& data)
             : mData     (data)
             , mIssues   ( )
-            , mChecks   (mIssues, data.getDataTypeData(), siRules())
+            , mChecks   (mIssues, data.getDataTypeData())
             , mTypesUsed( )
             , mConstsUsed( )
         {
@@ -196,8 +178,8 @@ namespace
 
         if (overview.getVersion().isValid() == false)
         {
-            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
-                       , vtr("The service interface has no version"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
+            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_MISSING_VERSION
+                       , vtr("The service interface has no version"), SIValidator::explainRule(DocRules::RULE_MISSING_VERSION, eSeverity::Error));
         }
 
         if (overview.getIsDeprecated())
@@ -473,7 +455,7 @@ eIssueField SIValidator::fieldOfRule(int rule)
     {
     case DocRules::RULE_INVALID_IDENTIFIER:
     case DocRules::RULE_DUPLICATE_NAME:
-    case DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_FILE_NAME_MISMATCH:
+    case DocRuleChecks::INFORMATION_RULE_BASE + DocRules::RULE_FILE_NAME_MISMATCH:
         return eIssueField::Name;
 
     case DocRules::RULE_UNRESOLVED_TYPE:
@@ -493,9 +475,9 @@ eIssueField SIValidator::fieldOfRule(int rule)
 
 QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
 {
-    if (rule > DocRuleChecks::ADVISORY_RULE_BASE)
+    if (DocRuleChecks::isBanded(rule))
     {
-        switch (rule - DocRuleChecks::ADVISORY_RULE_BASE)
+        switch (DocRuleChecks::bareRule(rule))
         {
         case DocRules::RULE_EMPTY_TYPE:
             return QCoreApplication::translate("SIValidator", "The type generates an empty declaration. Give it its members, or remove it.");
@@ -526,6 +508,8 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case DocRules::RULE_RESPONSE_LINK:
         return QCoreApplication::translate("SIValidator", "A caller waits for the named response. Declare it, or clear the connection so the request answers with nothing.");
+    case DocRules::RULE_MISSING_VERSION:
+        return QCoreApplication::translate("SIValidator", "The version is generated into the interface and tells a client which contract it was built against. Give the document one.");
     case DocRules::RULE_DEFAULT_ORDER:
         return QCoreApplication::translate("SIValidator", "A caller may only leave out trailing arguments, so every parameter after a defaulted one needs a default too.");
     case DocRules::RULE_BROKEN_IMPORT:

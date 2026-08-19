@@ -125,7 +125,8 @@ namespace
         }
     }
 
-    const int ADVISORY = DocRuleChecks::ADVISORY_RULE_BASE;
+    const int ADVISORY    = DocRuleChecks::WARNING_RULE_BASE;
+    const int INFORMATION = DocRuleChecks::INFORMATION_RULE_BASE;
 }
 
 #define CHECK(cond)  check((cond), #cond)
@@ -345,7 +346,7 @@ void testValidatorDeprecation()
         old->setIsDeprecated(true);
 
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        const int deprecated = ADVISORY + DocRules::RULE_DEPRECATED;
+        const int deprecated = INFORMATION + DocRules::RULE_DEPRECATED;
         CHECK(countRule(issues, deprecated) == 1);
         CHECK(namesIt(issues, deprecated, QStringLiteral("OldUnit")));
         for (const DocIssue& issue : issues)

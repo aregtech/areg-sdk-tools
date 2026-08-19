@@ -900,7 +900,7 @@ namespace
 
     void testValidatorUnreferenced()
     {
-        const int unreferenced = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED;
+        const int unreferenced = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED;
 
         {   // The reported case: a container nothing declares with is a warning, and the container
             // itself is complete, so it must not also be reported as an unresolved type.
@@ -960,7 +960,7 @@ namespace
     //!< nothing declares with, are exercised over real files by the import tests.
     void testValidatorUnusedImport()
     {
-        const int unusedImport = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED;
+        const int unusedImport = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED;
 
         //!< The rows are classified as they load a file; a document built in memory has to be
         //!< asked, which is what the editor does on every include edit.
@@ -1073,7 +1073,7 @@ namespace
                 break;
             }
 
-            const int unbound = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNBOUND_RESPONSE;
+            const int unbound = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNBOUND_RESPONSE;
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(countRule(issues, DocRules::RULE_RESPONSE_LINK) == 1);
             CHECK(namesIt(issues, DocRules::RULE_RESPONSE_LINK, QStringLiteral("'started'")));
@@ -1172,7 +1172,7 @@ namespace
             // unreferenced shape is raised by a data type nothing declares with.
             doc.getDataTypeData().addContainer(QStringLiteral("Unused"));
 
-            const int unreferenced = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED;
+            const int unreferenced = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED;
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(explains(issues, DocRules::RULE_INVALID_IDENTIFIER, DocRuleChecks::eShape::MissingName));
             CHECK(explains(issues, DocRules::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));

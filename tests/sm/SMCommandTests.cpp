@@ -1178,7 +1178,7 @@ namespace
         {
             for (const SMIssue& issue : issues)
             {
-                if ((issue.rule == (DocRuleChecks::ADVISORY_RULE_BASE + 12)) && issue.message.contains(QStringLiteral("updated")))
+                if ((issue.rule == (DocRuleChecks::INFORMATION_RULE_BASE + 12)) && issue.message.contains(QStringLiteral("updated")))
                     return true;
             }
             return false;
@@ -1197,7 +1197,9 @@ namespace
         CHECK(reopened.isDirty() == false);
         bool anyPinIssue = false;
         for (const SMIssue& issue : reopened.getValidationController().issues())
-            anyPinIssue = anyPinIssue || (issue.rule == 22) || (issue.rule == (DocRuleChecks::ADVISORY_RULE_BASE + 12));
+            anyPinIssue = anyPinIssue || (issue.rule == 22)
+                                      || (issue.rule == (DocRuleChecks::WARNING_RULE_BASE + 12))
+                                      || (issue.rule == (DocRuleChecks::INFORMATION_RULE_BASE + 12));
         CHECK(anyPinIssue == false);
     }
 

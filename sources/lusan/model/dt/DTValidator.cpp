@@ -44,24 +44,6 @@ namespace
         return QCoreApplication::translate("DTValidator", text);
     }
 
-    //!< The numbers this engine files the shared shapes under.
-    const DocRuleChecks::RuleIds& dtRules(void)
-    {
-        static const DocRuleChecks::RuleIds _rules
-        {
-              DocRules::RULE_INVALID_IDENTIFIER
-            , DocRules::RULE_INVALID_IDENTIFIER
-            , DocRules::RULE_DUPLICATE_NAME
-            , DocRules::RULE_UNRESOLVED_TYPE
-            , DocRules::RULE_BAD_LITERAL
-            , DocRules::RULE_UNREFERENCED
-            , DocRules::RULE_DUPLICATE_ENUM_VALUE
-            , DocRules::RULE_DEPRECATED
-        };
-
-        return _rules;
-    }
-
     /**
      * \class   Ctx
      * \brief   One validation run: the document, the findings it produced, and the registry
@@ -73,7 +55,7 @@ namespace
         explicit Ctx(const DataTypeDocumentData& data)
             : mData     (data)
             , mIssues   ( )
-            , mChecks   (mIssues, data.getDataTypeData(), dtRules())
+            , mChecks   (mIssues, data.getDataTypeData())
             , mTypesUsed( )
         {
         }
@@ -305,7 +287,7 @@ eIssueField DTValidator::fieldOfRule(int rule)
     {
     case DocRules::RULE_INVALID_IDENTIFIER:
     case DocRules::RULE_DUPLICATE_NAME:
-    case DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_FILE_NAME_MISMATCH:
+    case DocRuleChecks::INFORMATION_RULE_BASE + DocRules::RULE_FILE_NAME_MISMATCH:
         return eIssueField::Name;
 
     case DocRules::RULE_UNRESOLVED_TYPE:
@@ -322,9 +304,9 @@ eIssueField DTValidator::fieldOfRule(int rule)
 
 QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
 {
-    if (rule > DocRuleChecks::ADVISORY_RULE_BASE)
+    if (DocRuleChecks::isBanded(rule))
     {
-        switch (rule - DocRuleChecks::ADVISORY_RULE_BASE)
+        switch (DocRuleChecks::bareRule(rule))
         {
         case DocRules::RULE_EMPTY_TYPE:
             return QCoreApplication::translate("DTValidator", "The type generates an empty declaration. Give it its members, or remove it.");

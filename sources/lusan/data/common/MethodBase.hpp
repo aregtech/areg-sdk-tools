@@ -130,17 +130,30 @@ public:
     void setDescription(const QString& description);
 
     /**
-     * \brief   Adds a new parameter to the method.
+     * \brief   Appends a new parameter to the method.
+     *
+     *          The new parameter takes its "has a default value" flag from the parameter it
+     *          follows, and false when it is the first. A caller may only leave out trailing
+     *          arguments, so a parameter appended after a defaulted one needs a default of its
+     *          own; the new parameter starts out satisfying that rule and the caller changes
+     *          the flag afterwards if it should not.
+     *
      * \param   name    The unique name of the parameter.
-     * \return  Returns the pointer to the added parameter.
+     * \return  Returns the pointer to the added parameter, nullptr when it was not added.
      **/
     MethodParameter* addParam(const QString& name);
 
     /**
-     * \brief   Inserts a new parameter to the method at the specified position.
-     * \param   position    The position to insert the parameter.
+     * \brief   Inserts a new parameter into the method at the given position.
+     *
+     *          The new parameter takes its "has a default value" flag from the parameter at
+     *          \p position - 1, and false when it is inserted first. See \ref addParam for
+     *          what the flag means.
+     *
+     * \param   position    The position to insert the parameter at, from 0 to the parameter count.
      * \param   name        The unique name of the parameter.
-     * \return  Returns the pointer to the added parameter.
+     * \return  Returns the pointer to the added parameter, nullptr when \p position is out of
+     *          range or the parameter was not added.
      **/
     MethodParameter* insertParam(int position, const QString& name);
 

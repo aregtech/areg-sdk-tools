@@ -165,25 +165,6 @@ namespace
                 ? eDocElementKind::Import : eDocElementKind::Include);
     }
 
-    //!< The numbers this engine has always filed the shared shapes under. An empty name is
-    //!< reported as the identifier fault it is, so both shapes carry rule 5 here.
-    const DocRuleChecks::RuleIds& smRules()
-    {
-        static const DocRuleChecks::RuleIds _rules
-        {
-              DocRules::RULE_INVALID_IDENTIFIER
-            , DocRules::RULE_INVALID_IDENTIFIER
-            , DocRules::RULE_DUPLICATE_NAME
-            , DocRules::RULE_UNRESOLVED_TYPE
-            , DocRules::RULE_BAD_LITERAL
-            , DocRules::RULE_UNREFERENCED
-            , DocRules::RULE_DUPLICATE_ENUM_VALUE
-            , DocRules::RULE_DEPRECATED
-        };
-
-        return _rules;
-    }
-
     /**
      * \class   Ctx
      * \brief   One validation run: holds the document, the accumulated findings, and the
@@ -195,7 +176,7 @@ namespace
         explicit Ctx(const StateMachineData& data)
             : mData  (data)
             , mIssues( )
-            , mChecks(mIssues, data.getDataTypes(), smRules())
+            , mChecks(mIssues, data.getDataTypes())
         {
         }
 
@@ -2054,31 +2035,56 @@ QList<SMIssue> SMValidator::validate(const StateMachineData& data)
 
 QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
 {
-    if (rule > DocRuleChecks::ADVISORY_RULE_BASE)
+    if (DocRuleChecks::isBanded(rule))
     {
-        switch (rule - DocRuleChecks::ADVISORY_RULE_BASE)
+        switch (DocRuleChecks::bareRule(rule))
         {
-        case 1:  return vtr("The state cannot be reached by any transition, so its behaviour never runs.");
-        case 2:  return vtr("The state has no way out. Once the machine enters it, it stays there.");
-        case 3:  return vtr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
+        case DocRules::RULE_UNREACHABLE_STATE:
+            return vtr("The state cannot be reached by any transition, so its behaviour never runs.");
+        case DocRules::RULE_DEAD_END_STATE:
+            return vtr("The state has no way out. Once the machine enters it, it stays there.");
+        case DocRules::RULE_SHADOWED_TRANSITION:
+            return vtr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
         case DocRules::RULE_UNREFERENCED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
-        case 5:  return vtr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
-        case 6:  return vtr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
-        case 7:  return vtr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
-        case 10: return vtr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
-        case 11: return vtr("The inline code block generates nothing. Write the code, or remove the block.");
+        case DocRules::RULE_ONE_SIDED_EVENT:
+            return vtr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
+        case DocRules::RULE_ONE_SIDED_TIMER:
+            return vtr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
+        case DocRules::RULE_EMPTY_INTERNAL:
+            return vtr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
+        case DocRules::RULE_CONSTANT_COMPARE:
+            return vtr("Both sides of the comparison are fixed before the machine runs, so the result is always the same. Compare against something the machine changes.");
+        case DocRules::RULE_UNUSED_HISTORY:
+            return vtr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
+        case DocRules::RULE_IMPORT_PATCH:
+            return vtr("The imported document has moved on since the version recorded here. Accept the new version, or pin the import to the file you mean.");
+        case DocRules::RULE_ARGUMENT_TYPE:
+            return vtr("The value reaches the target through a conversion that can lose part of it. Match the types, or accept that the stored value may differ from the written one.");
+        case DocRules::RULE_MISSING_DESCRIPTION:
+            return vtr("The code generator writes the description as the comment of the generated element. Add one so the generated code explains itself.");
+        case DocRules::RULE_GUARD:
+            return vtr("The guard holds text this tool passes through untouched. It reaches the generated code exactly as written, and nothing here checks it.");
+        case DocRules::RULE_PARAM_SHADOWS:
+            return vtr("The parameter hides a declaration of the same name for the whole body. Rename the parameter to reach both.");
+        case DocRules::RULE_ACTION_PREFIX:
+            return vtr("The generated name begins with a prefix this framework reserves, so the declaration is easy to mistake for a generated one. Rename it.");
         case DocRules::RULE_DEPRECATED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
+        case DocRules::RULE_FILE_NAME_MISMATCH:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::FileNameMismatch);
         default: return vtr("Advisory only. The document still generates.");
         }
     }
 
     switch (rule)
     {
-    case 1:  return vtr("Every machine level needs exactly one Start state; it marks where execution begins.");
-    case 2:  return vtr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
-    case 3:  return vtr("A Final state is terminal and cannot have outgoing transitions.");
+    case DocRules::RULE_START_STATE:
+        return vtr("Every machine level needs exactly one Start state; it marks where execution begins.");
+    case DocRules::RULE_DUPLICATE_ID:
+        return vtr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
+    case DocRules::RULE_STATE_NAME:
+        return vtr("Two states of the same level carry this name, so a transition naming it does not say which one it means.");
     case DocRules::RULE_DUPLICATE_NAME:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
     case DocRules::RULE_INVALID_IDENTIFIER:
@@ -2087,20 +2093,52 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
     case DocRules::RULE_UNRESOLVED_ELEMENT:
         return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
-    case 7:  return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
-    case 8:  return vtr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
-    case 9:  return vtr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");
-    case 10: return vtr("The argument does not match the parameter it is bound to.");
-    case 11: return vtr("The call passes a different number of arguments than the declaration takes.");
-    case 12: return vtr("A Param reference resolves against the stimulus of its own transition; this stimulus declares no such parameter.");
-    case 13: return vtr("The literal cannot be read as a value of the target type.");
-    case 14: return vtr("The two operands have no common type, so the comparison has no defined result.");
-    case 16: return vtr("The declared type is not in the data-type registry.");
-    case 18: return vtr("A submachine belongs on a composite state; Start and Final cannot carry one.");
-    case 20: return vtr("The condition row is incomplete: an operator needs both operands.");
-    case 21: return vtr("A condition that takes parameters may appear as the left operand only. The right side must be a plain value.");
-    case 23: return vtr("The value source and the target disagree; pick a source of a compatible kind.");
-    case 24: return vtr("The element refers to itself, directly or through a cycle.");
+    case DocRules::RULE_TARGET_SIBLING:
+        return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
+    case DocRules::RULE_FINAL_STATE:
+        return vtr("A Final state is terminal: it ends the level, so it can neither lead anywhere nor contain anything.");
+    case DocRules::RULE_START_SUBSTATES:
+        return vtr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");
+    case DocRules::RULE_ARGUMENT_MAPPING:
+        return vtr("The argument does not match the parameter it is bound to.");
+    case DocRules::RULE_NESTED_START:
+        return vtr("A submachine level begins where its Start state is. Without one, entering the level has no defined first state.");
+    case DocRules::RULE_SOURCE_SCOPE:
+        return vtr("A Param reference resolves against the stimulus of its own transition; this stimulus declares no such parameter.");
+    case DocRules::RULE_ARGUMENT_TYPE:
+        return vtr("The value cannot reach the parameter: the two types have no conversion between them.");
+    case DocRules::RULE_ATTRIBUTE_TYPE:
+        return vtr("The value cannot reach the attribute: the two types have no conversion between them.");
+    case DocRules::RULE_BAD_LITERAL:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
+    case DocRules::RULE_COMPARE_OPERAND:
+        return vtr("The two operands have no common type, so the comparison has no defined result.");
+    case DocRules::RULE_BOOLEAN_OPERAND:
+        return vtr("A boolean test reads its operand as true or false, and this operand is of a type that carries neither.");
+    case DocRules::RULE_STATE_SHAPE:
+        return vtr("A submachine belongs on a composite state; Start and Final cannot carry one.");
+    case DocRules::RULE_CONDITION_BODY:
+        return vtr("An Embedded condition is the code it carries. Write the body, or make it a condition of another kind.");
+    case DocRules::RULE_PARAMETERIZED_COND:
+        return vtr("A condition that takes parameters may appear as the left operand only. The right side must be a plain value.");
+    case DocRules::RULE_IMPORT_MAJOR:
+        return vtr("The imported document has changed in a way that can break what reads it. Open it, check what moved, then accept the new version.");
+    case DocRules::RULE_SOURCE_KIND:
+        return vtr("The value source and the target disagree; pick a source of a compatible kind.");
+    case DocRules::RULE_SOURCE_EMPTY:
+        return vtr("The row names a source but carries nothing to read from it. Fill it in, or remove the row.");
+    case DocRules::RULE_PSEUDO_START:
+        return vtr("A Start state is a marker: it records where the level begins and performs nothing itself. Move what it carries to the state it enters.");
+    case DocRules::RULE_TRANSITION_KIND:
+        return vtr("The transition is of a kind this state cannot own, or it names no target. Connect it, or change its kind.");
+    case DocRules::RULE_HANDLER_NAME:
+        return vtr("Two declarations generate one handler of this name, so only one of them can be reached. Rename one.");
+    case DocRules::RULE_ATTRIBUTE_STIMULUS:
+        return vtr("The name is already an attribute's. An attribute and a stimulus generate different members and cannot share a name.");
+    case DocRules::RULE_RESERVED_PREFIX:
+        return vtr("The generated member would take a name the machine class already uses. Rename the declaration.");
+    case DocRules::RULE_DEFAULT_ORDER:
+        return vtr("A caller may only leave out trailing arguments, so every parameter after a defaulted one needs a default too.");
     case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case DocRules::RULE_BROKEN_IMPORT:
@@ -2113,12 +2151,12 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
 
 eIssueField SMValidator::fieldOfRule(int rule)
 {
-    // Errors keep the plain number; everything advisory is stored shifted, so the two classes
-    // have to be told apart before the number means anything.
-    const bool advisory = (rule > DocRuleChecks::ADVISORY_RULE_BASE);
-    const int plain = advisory ? (rule - DocRuleChecks::ADVISORY_RULE_BASE) : rule;
+    // An error keeps the plain number, a warning and an information finding carry a band, so
+    // the band comes off before the number means anything.
+    const bool banded = DocRuleChecks::isBanded(rule);
+    const int plain = DocRuleChecks::bareRule(rule);
 
-    if (advisory)
+    if (banded)
     {
         switch (plain)
         {

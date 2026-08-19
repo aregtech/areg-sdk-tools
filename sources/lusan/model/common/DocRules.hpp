@@ -30,7 +30,7 @@
  *
  *          The number below is the rule identity. The id a finding carries adds the band of
  *          its severity: an error keeps the bare number, a warning adds
- *          \a DocRuleChecks::ADVISORY_RULE_BASE, and information adds the information base.
+ *          \a DocRuleChecks::WARNING_RULE_BASE, and information adds the information base.
  *          `4`, `104` and `204` are therefore three unrelated rules, not one rule at three
  *          severities, and a number reserved for one band is not free in another.
  **/
@@ -61,11 +61,11 @@ namespace DocRules
     constexpr int RULE_DUPLICATE_NAME       {  4 };
 
     /**
-     * \brief   A declaration nothing in the document uses, an included document it takes
-     *          nothing from included. Advisory, so the emitted id is the banded one and never
-     *          the bare number, which belongs to \a RULE_DUPLICATE_NAME.
+     * \brief   A declaration nothing in the document uses, or an included document it takes
+     *          nothing from. Never an error -- code that nothing reaches still generates -- so
+     *          the bare number is reserved and only the banded ids are ever reported.
      **/
-    constexpr int RULE_UNREFERENCED         {  4 };
+    constexpr int RULE_UNREFERENCED         { 26 };
 
     /**
      * \brief   A name the generated code could not carry: it must start with a letter or an
@@ -321,6 +321,198 @@ namespace DocRules
      *          response the request is answered by.
      **/
     constexpr int RULE_RESPONSE_LINK        { 51 };
+
+    /**
+     * \brief   A service interface that declares no version. The version reaches the generated
+     *          code, so a document without one cannot be generated.
+     **/
+    constexpr int RULE_MISSING_VERSION      { 52 };
+
+//////////////////////////////////////////////////////////////////////////
+// Rules that exist only in a band
+//
+// The rule number is the identity within one band, so a rule reported only as a warning may
+// carry a number an unrelated error already uses. `1` is a missing Start state and `101` is a
+// state nothing reaches: two rules, two bands, one bare number. The constants below name the
+// banded half so that no call site or explanation is written against a bare integer.
+//////////////////////////////////////////////////////////////////////////
+
+    /**
+     * \brief   Warning 101: a state no transition targets and no Start enters, so nothing it
+     *          does ever runs.
+     **/
+    constexpr int RULE_UNREACHABLE_STATE    {  1 };
+
+    /**
+     * \brief   Warning 102: a state with no outgoing transition. The machine stays in it once
+     *          it is entered.
+     **/
+    constexpr int RULE_DEAD_END_STATE       {  2 };
+
+    /**
+     * \brief   Warning 103: a transition an earlier unconditional transition on the same
+     *          stimulus always takes first.
+     **/
+    constexpr int RULE_SHADOWED_TRANSITION  {  3 };
+
+    /**
+     * \brief   Warning 105: an event that is sent and never reacted to, or reacted to and
+     *          never sent.
+     **/
+    constexpr int RULE_ONE_SIDED_EVENT      {  5 };
+
+    /**
+     * \brief   Warning 106: a timer that is started and never reacted to, or reacted to and
+     *          never started.
+     **/
+    constexpr int RULE_ONE_SIDED_TIMER      {  6 };
+
+    /**
+     * \brief   Warning 107: an internal transition that carries no operation and no condition,
+     *          so reacting to the stimulus changes nothing.
+     **/
+    constexpr int RULE_EMPTY_INTERNAL       {  7 };
+
+    /**
+     * \brief   Warning 109: a comparison whose operands are both fixed at design time, so the
+     *          result is decided before the machine runs.
+     **/
+    constexpr int RULE_CONSTANT_COMPARE     {  9 };
+
+    /**
+     * \brief   Warning 110: a state carrying History that no transition ever re-enters, so the
+     *          remembered substate is never restored.
+     **/
+    constexpr int RULE_UNUSED_HISTORY       { 10 };
+
+    /**
+     * \brief   Warning 112 and information 212: an import pinned to a version the file no
+     *          longer carries, where the difference is below the major version.
+     **/
+    constexpr int RULE_IMPORT_PATCH         { 12 };
+
+//////////////////////////////////////////////////////////////////////////
+// The registry, and the check that keeps it honest
+//////////////////////////////////////////////////////////////////////////
+
+    /**
+     * \enum    eBand
+     * \brief   The severity bands a rule may be reported in. A rule number identifies one fault
+     *          within one band, so the same number in two bands is two unrelated rules.
+     **/
+    enum eBand : unsigned int
+    {
+          BandError         = 1u << 0   //!< Reported as an error, under the bare number.
+        , BandWarning       = 1u << 1   //!< Reported as a warning, under the number plus 100.
+        , BandInformation   = 1u << 2   //!< Reported as information, under the number plus 200.
+    };
+
+    /**
+     * \struct  Rule
+     * \brief   One rule: its number, and every band it is reported in.
+     **/
+    struct Rule
+    {
+        int             number; //!< The rule number, without any band applied.
+        unsigned int    bands;  //!< The bands it is reported in, as a set of \ref eBand flags.
+    };
+
+    /**
+     * \brief   Every rule the three validators emit, with the bands each is reported in.
+     *
+     *          The numbers come from the constants above rather than being written again, so a
+     *          row cannot drift from the rule it describes. The bands are read from the severity
+     *          each rule is emitted at.
+     **/
+    constexpr Rule REGISTRY[]
+    {
+          { RULE_START_STATE          , BandError                     }
+        , { RULE_DUPLICATE_ID         , BandError                     }
+        , { RULE_STATE_NAME           , BandError                     }
+        , { RULE_DUPLICATE_NAME       , BandError   | BandWarning     }
+        , { RULE_INVALID_IDENTIFIER   , BandError                     }
+        , { RULE_UNRESOLVED_TYPE      , BandError                     }
+        , { RULE_TARGET_SIBLING       , BandError                     }
+        , { RULE_FINAL_STATE          , BandError                     }
+        , { RULE_START_SUBSTATES      , BandError                     }
+        , { RULE_ARGUMENT_MAPPING     , BandError                     }
+        , { RULE_NESTED_START         , BandError                     }
+        , { RULE_SOURCE_SCOPE         , BandError                     }
+        , { RULE_ARGUMENT_TYPE        , BandError   | BandWarning     }
+        , { RULE_COMPARE_OPERAND      , BandError                     }
+        , { RULE_BAD_LITERAL          , BandError                     }
+        , { RULE_BOOLEAN_OPERAND      , BandError                     }
+        , { RULE_ATTRIBUTE_TYPE       , BandError   | BandWarning     }
+        , { RULE_STATE_SHAPE          , BandError                     }
+        , { RULE_BROKEN_IMPORT        , BandError                     }
+        , { RULE_CONDITION_BODY       , BandError                     }
+        , { RULE_PARAMETERIZED_COND   , BandError                     }
+        , { RULE_IMPORT_MAJOR         , BandError                     }
+        , { RULE_SOURCE_KIND          , BandError                     }
+        , { RULE_SOURCE_EMPTY         , BandError                     }
+        , { RULE_GUARD                , BandError   | BandWarning | BandInformation }
+        , { RULE_UNREFERENCED         , BandWarning | BandInformation }
+        , { RULE_PSEUDO_START         , BandError                     }
+        , { RULE_TRANSITION_KIND      , BandError                     }
+        , { RULE_HANDLER_NAME         , BandError                     }
+        , { RULE_ATTRIBUTE_STIMULUS   , BandError                     }
+        , { RULE_RESERVED_PREFIX      , BandError                     }
+        , { RULE_UNKNOWN_ELEMENT      , BandError                     }
+        , { RULE_PARAM_SHADOWS        , BandWarning                   }
+        , { RULE_UNBOUND_RESPONSE     , BandWarning                   }
+        , { RULE_DEFAULT_ORDER        , BandError                     }
+        , { RULE_ACTION_PREFIX        , BandWarning                   }
+        , { RULE_NOT_A_HEADER         , BandError                     }
+        , { RULE_DUPLICATE_ENUM_VALUE , BandError                     }
+        , { RULE_DEPRECATED           , BandWarning | BandInformation }
+        , { RULE_UNRESOLVED_ELEMENT   , BandError                     }
+        , { RULE_EMPTY_TYPE           , BandWarning                   }
+        , { RULE_EMPTY_DOCUMENT       , BandWarning                   }
+        , { RULE_FILE_NAME_MISMATCH   , BandInformation               }
+        , { RULE_RESPONSE_LINK        , BandError                     }
+        , { RULE_MISSING_VERSION      , BandError                     }
+        , { RULE_MISSING_DESCRIPTION  , BandInformation               }
+        , { RULE_UNREACHABLE_STATE    , BandWarning                   }
+        , { RULE_DEAD_END_STATE       , BandWarning                   }
+        , { RULE_SHADOWED_TRANSITION  , BandWarning                   }
+        , { RULE_ONE_SIDED_EVENT      , BandWarning                   }
+        , { RULE_ONE_SIDED_TIMER      , BandWarning                   }
+        , { RULE_EMPTY_INTERNAL       , BandWarning                   }
+        , { RULE_CONSTANT_COMPARE     , BandWarning                   }
+        , { RULE_UNUSED_HISTORY       , BandWarning                   }
+        , { RULE_IMPORT_PATCH         , BandWarning | BandInformation }
+    };
+
+    /**
+     * \brief   True when no two rules report the same number at the same severity.
+     *
+     *          Two rules may share a number in different bands, which is what makes `1` a
+     *          missing Start state and `101` a state nothing reaches. Sharing a number within
+     *          one band means one reported id stands for two faults, which no reader can tell
+     *          apart.
+     **/
+    constexpr bool registryIsUnique()
+    {
+        constexpr int count = static_cast<int>(sizeof(REGISTRY) / sizeof(REGISTRY[0]));
+        for (int i = 0; i < count; ++i)
+        {
+            for (int j = i + 1; j < count; ++j)
+            {
+                if ((REGISTRY[i].number == REGISTRY[j].number)
+                    && ((REGISTRY[i].bands & REGISTRY[j].bands) != 0u))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    static_assert(registryIsUnique()
+                , "Two rules report the same number at the same severity. One reported id would "
+                  "stand for two different faults. Give one of them a number of its own, and give "
+                  "the same number to the code generator.");
 }
 
 #endif  // LUSAN_MODEL_COMMON_DOCRULES_HPP

@@ -19,6 +19,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/DocElementTable.hpp"
 #include "lusan/app/NEAppThemes.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
@@ -202,6 +203,7 @@ MdiMainWindow::MdiMainWindow()
     , mActWindowMenuSeparator(this)
     , mActHelpAbout (nullptr)
     , mSIWarmupDone (false)
+    , mSchemaIndicator (nullptr)
 {
     _createActions();
     _createMenus();
@@ -1019,7 +1021,15 @@ void MdiMainWindow::onToolsOptions()
 
 void MdiMainWindow::onHelpAbout()
 {
-    QMessageBox::about(this, tr("About Lusan"), tr("The <b>Lusan</b> in under construction."));
+    const QStringList schemas = DocElementTable::sourceReport();
+    QString text = tr("<b>Lusan</b><p>Document formats in use:</p><ul>");
+    for (const QString& line : schemas)
+    {
+        text += QStringLiteral("<li>%1</li>").arg(line.toHtmlEscaped());
+    }
+
+    text += QStringLiteral("</ul>");
+    QMessageBox::about(this, tr("About Lusan"), text);
 }
 
 bool MdiMainWindow::hasRecentFiles()
@@ -1268,6 +1278,7 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
         mdiActive->onWindowActivated();
     }
 
+    _updateSchemaIndicator(mdiActive);
     syncDesignWidgets();
 }
 
@@ -1883,6 +1894,28 @@ void MdiMainWindow::_createToolBars()
 void MdiMainWindow::_createStatusBar()
 {
     statusBar()->showMessage(tr("Ready"));
+
+    mSchemaIndicator = new QLabel(this);
+    mSchemaIndicator->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    statusBar()->addPermanentWidget(mSchemaIndicator);
+    _updateSchemaIndicator(nullptr);
+}
+
+void MdiMainWindow::_updateSchemaIndicator(MdiChild* active)
+{
+    if (mSchemaIndicator == nullptr)
+        return;
+
+    DocElementTable::eDocument doc{ DocElementTable::eDocument::StateMachine };
+    if ((active == nullptr) || (DocElementTable::documentOfSuffix(active->fileSuffix(), doc) == false))
+    {
+        mSchemaIndicator->clear();
+        mSchemaIndicator->setToolTip(QString());
+        return;
+    }
+
+    mSchemaIndicator->setText(DocElementTable::sourceSummary(doc));
+    mSchemaIndicator->setToolTip(DocElementTable::sourcePath(doc));
 }
 
 void MdiMainWindow::_createDockWindows()
