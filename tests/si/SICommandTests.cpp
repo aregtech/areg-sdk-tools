@@ -22,6 +22,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/data/common/AttributeEntry.hpp"
 #include "lusan/data/common/ConstantEntry.hpp"
@@ -899,7 +900,7 @@ namespace
 
     void testValidatorUnreferenced()
     {
-        const int unreferenced = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNREFERENCED;
+        const int unreferenced = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED;
 
         {   // The reported case: a container nothing declares with is a warning, and the container
             // itself is complete, so it must not also be reported as an unresolved type.
@@ -911,7 +912,7 @@ namespace
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(countRule(issues, unreferenced) == 1);
             CHECK(namesIt(issues, unreferenced, QStringLiteral("'NewDataType1'")));
-            CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 0);
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
         }
 
         {   // A type an attribute declares with is referenced, and so is a type reached only
@@ -933,24 +934,16 @@ namespace
             CHECK(countRule(SIValidator::validate(doc), unreferenced) == 0);
         }
 
-        {   // A constant nothing reads is advisory, not a warning, and a constant used as a
-            // parameter default is read.
+        {   // An interface declares constants for whoever includes it, so one this document
+            // does not read itself is the normal case and is not reported at all -- read or
+            // unread.
             ServiceInterfaceData doc;
             makeUsable(doc);
             ConstantEntry* limit = doc.getConstantData().createConstant(QStringLiteral("MaxItems"));
             CHECK(limit != nullptr);
             limit->setType(QStringLiteral("uint32"));
             limit->setValue(QStringLiteral("64"));
-
-            QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, unreferenced) == 1);
-            for (const DocIssue& issue : issues)
-            {
-                if (issue.rule == unreferenced)
-                {
-                    CHECK(issue.severity == DocIssue::eSeverity::Info);
-                }
-            }
+            CHECK(countRule(SIValidator::validate(doc), unreferenced) == 0);
 
             MethodEntry* request = doc.getMethodData().createMethod(QStringLiteral("fetch"), NEMethod::SiRequest);
             CHECK(request != nullptr);
@@ -967,7 +960,7 @@ namespace
     //!< nothing declares with, are exercised over real files by the import tests.
     void testValidatorUnusedImport()
     {
-        const int unusedImport = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT;
+        const int unusedImport = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED;
 
         //!< The rows are classified as they load a file; a document built in memory has to be
         //!< asked, which is what the editor does on every include edit.
@@ -985,7 +978,7 @@ namespace
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(countRule(issues, unusedImport) == 0);
-            CHECK(countRule(issues, SIValidator::RULE_BROKEN_IMPORT) == 0);
+            CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 0);
         }
 
         {   // The row names a file nothing can be read from, so it contributes no type and is
@@ -996,8 +989,8 @@ namespace
             resolveImports(doc);
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, SIValidator::RULE_BROKEN_IMPORT) == 1);
-            CHECK(namesIt(issues, SIValidator::RULE_BROKEN_IMPORT, QStringLiteral("'shared/Types.dtml'")));
+            CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_BROKEN_IMPORT, QStringLiteral("'shared/Types.dtml'")));
             CHECK(countRule(issues, unusedImport) == 0);
         }
 
@@ -1013,7 +1006,7 @@ namespace
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(countRule(issues, unusedImport) == 0);
-            CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 1);
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 1);
         }
     }
 
@@ -1032,10 +1025,10 @@ namespace
             list->setValue(QStringLiteral("Nothing"));
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 2);
-            CHECK(namesIt(issues, SIValidator::RULE_UNRESOLVED_TYPE, QStringLiteral("'Missing'")));
-            CHECK(namesIt(issues, SIValidator::RULE_UNRESOLVED_TYPE, QStringLiteral("'Nothing'")));
-            CHECK(countRule(issues, SIValidator::RULE_INVALID_IDENTIFIER) == 1);
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 2);
+            CHECK(namesIt(issues, DocRules::RULE_UNRESOLVED_TYPE, QStringLiteral("'Missing'")));
+            CHECK(namesIt(issues, DocRules::RULE_UNRESOLVED_TYPE, QStringLiteral("'Nothing'")));
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
         }
 
         {   // Two attributes cannot share a name, and a constant's value has to read as its type.
@@ -1055,8 +1048,8 @@ namespace
             bad->setValue(QStringLiteral("not a number"));
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, SIValidator::RULE_DUPLICATE_NAME) == 1);
-            CHECK(countRule(issues, SIValidator::RULE_BAD_LITERAL) == 1);
+            CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 1);
+            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 1);
         }
 
         {   // A request answers with a declared response and no other. A stale link is what a
@@ -1080,10 +1073,10 @@ namespace
                 break;
             }
 
-            const int unbound = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNBOUND_RESPONSE;
+            const int unbound = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNBOUND_RESPONSE;
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, SIValidator::RULE_RESPONSE_LINK) == 1);
-            CHECK(namesIt(issues, SIValidator::RULE_RESPONSE_LINK, QStringLiteral("'started'")));
+            CHECK(countRule(issues, DocRules::RULE_RESPONSE_LINK) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_RESPONSE_LINK, QStringLiteral("'started'")));
             CHECK(countRule(issues, unbound) == 1);
             CHECK(namesIt(issues, unbound, QStringLiteral("'stopped'")));
         }
@@ -1124,12 +1117,12 @@ namespace
             wrong->setValue(QStringLiteral("Blue"));
 
             QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, SIValidator::RULE_BAD_LITERAL) == 1);
-            CHECK(namesIt(issues, SIValidator::RULE_BAD_LITERAL, QStringLiteral("enumerator")));
+            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_BAD_LITERAL, QStringLiteral("enumerator")));
 
             // The same constant with a declared enumerator is silent.
             wrong->setValue(QStringLiteral("Green"));
-            CHECK(countRule(SIValidator::validate(doc), SIValidator::RULE_BAD_LITERAL) == 0);
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_BAD_LITERAL) == 0);
         }
 
         {   // A structure carries no literal at all, and a name longer than a compiler would
@@ -1151,9 +1144,9 @@ namespace
             longName->setName(QString(NELusanCommon::MAX_IDENTIFIER_LENGTH + 1, QLatin1Char('a')));
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, SIValidator::RULE_BAD_LITERAL) == 1);
-            CHECK(namesIt(issues, SIValidator::RULE_BAD_LITERAL, QStringLiteral("no literal form")));
-            CHECK(countRule(issues, SIValidator::RULE_INVALID_IDENTIFIER) == 1);
+            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_BAD_LITERAL, QStringLiteral("no literal form")));
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
         }
 
         {   // One shape, one explanation: a finding of a shared shape carries the shared text,
@@ -1175,12 +1168,16 @@ namespace
             clash->setType(QStringLiteral("uint32"));
             clash->setName(QStringLiteral("Limit"));
 
-            const int unreferenced = SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNREFERENCED;
+            // A constant an interface does not read itself is its normal state, so the
+            // unreferenced shape is raised by a data type nothing declares with.
+            doc.getDataTypeData().addContainer(QStringLiteral("Unused"));
+
+            const int unreferenced = DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_UNREFERENCED;
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(explains(issues, SIValidator::RULE_MISSING_NAME, DocRuleChecks::eShape::MissingName));
-            CHECK(explains(issues, SIValidator::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
-            CHECK(explains(issues, SIValidator::RULE_DUPLICATE_NAME, DocRuleChecks::eShape::DuplicateName));
-            CHECK(explains(issues, SIValidator::RULE_BAD_LITERAL, DocRuleChecks::eShape::BadLiteral));
+            CHECK(explains(issues, DocRules::RULE_INVALID_IDENTIFIER, DocRuleChecks::eShape::MissingName));
+            CHECK(explains(issues, DocRules::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
+            CHECK(explains(issues, DocRules::RULE_DUPLICATE_NAME, DocRuleChecks::eShape::DuplicateName));
+            CHECK(explains(issues, DocRules::RULE_BAD_LITERAL, DocRuleChecks::eShape::BadLiteral));
             CHECK(explains(issues, unreferenced, DocRuleChecks::eShape::Unreferenced));
         }
     }

@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/si/SIValidator.hpp"
 
 #include "lusan/data/common/AttributeEntry.hpp"
@@ -60,14 +61,14 @@ namespace
     {
         static const DocRuleChecks::RuleIds _rules
         {
-              SIValidator::RULE_MISSING_NAME
-            , SIValidator::RULE_INVALID_IDENTIFIER
-            , SIValidator::RULE_DUPLICATE_NAME
-            , SIValidator::RULE_UNRESOLVED_TYPE
-            , SIValidator::RULE_BAD_LITERAL
-            , SIValidator::RULE_UNREFERENCED
-            , SIValidator::RULE_DUPLICATE_ENUM_VALUE
-            , SIValidator::RULE_DEPRECATED
+              DocRules::RULE_INVALID_IDENTIFIER
+            , DocRules::RULE_INVALID_IDENTIFIER
+            , DocRules::RULE_DUPLICATE_NAME
+            , DocRules::RULE_UNRESOLVED_TYPE
+            , DocRules::RULE_BAD_LITERAL
+            , DocRules::RULE_UNREFERENCED
+            , DocRules::RULE_DUPLICATE_ENUM_VALUE
+            , DocRules::RULE_DEPRECATED
         };
 
         return _rules;
@@ -175,7 +176,7 @@ namespace
             }
             else if (defaulted)
             {
-                add(method.getId(), eDocElementKind::Method, eSeverity::Error, SIValidator::RULE_DEFAULT_ORDER
+                add(method.getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_DEFAULT_ORDER
                    , vtr("Parameter '%1' of %2 '%3' has no default value, but an earlier parameter has one").arg(param.getName(), kindWord.toLower(), method.getName()));
             }
         }
@@ -183,7 +184,7 @@ namespace
 
     void Ctx::checkUnknownElements()
     {
-        mChecks.noteUnknownElements(eDocElementKind::Overview, SIValidator::RULE_UNKNOWN_ELEMENT
+        mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
                                   , mData.getUnknownElements());
     }
 
@@ -191,12 +192,12 @@ namespace
     {
         const SIOverviewData& overview = mData.getOverviewData();
         checkName(overview.getId(), eDocElementKind::Overview, overview.getName(), vtr("The service interface"));
-        mChecks.noteFileNameMismatch(overview.getId(), overview.getName(), mData.getFilePath(), SIValidator::RULE_FILE_NAME_MISMATCH);
+        mChecks.noteFileNameMismatch(overview.getId(), overview.getName(), mData.getFilePath(), DocRules::RULE_FILE_NAME_MISMATCH);
 
         if (overview.getVersion().isValid() == false)
         {
-            add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, SIValidator::RULE_MISSING_NAME
-               , vtr("The service interface has no version"));
+            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                       , vtr("The service interface has no version"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
         }
 
         if (overview.getIsDeprecated())
@@ -209,7 +210,7 @@ namespace
         // perfectly good starting point for a document being written.
         if (mData.getAttributeData().getElementCount() == 0 && mData.getMethodData().getElements().isEmpty())
         {
-            add(overview.getId(), eDocElementKind::Overview, eSeverity::Info, SIValidator::RULE_EMPTY_INTERFACE
+            add(overview.getId(), eDocElementKind::Overview, eSeverity::Warning, DocRules::RULE_EMPTY_DOCUMENT
                , vtr("The interface declares no attribute and no method, so it offers nothing to a client"));
         }
     }
@@ -248,7 +249,7 @@ namespace
 
                 if (structType->getElementCount() == 0)
                 {
-                    add(id, eDocElementKind::DataType, eSeverity::Warning, SIValidator::RULE_EMPTY_TYPE
+                    add(id, eDocElementKind::DataType, eSeverity::Warning, DocRules::RULE_EMPTY_TYPE
                        , vtr("Structure '%1' has no fields").arg(name));
                 }
             }
@@ -267,7 +268,7 @@ namespace
 
                 if (enumType->getElementCount() == 0)
                 {
-                    add(id, eDocElementKind::DataType, eSeverity::Warning, SIValidator::RULE_EMPTY_TYPE
+                    add(id, eDocElementKind::DataType, eSeverity::Warning, DocRules::RULE_EMPTY_TYPE
                        , vtr("Enumeration '%1' has no values").arg(name));
                 }
 
@@ -334,7 +335,7 @@ namespace
             const QString response = request->getReply();
             if ((response.isEmpty() == false) && (mData.getMethodData().findMethod(response, NEMethod::SiResponse) == nullptr))
             {
-                add(request->getId(), eDocElementKind::Method, eSeverity::Error, SIValidator::RULE_RESPONSE_LINK
+                add(request->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_RESPONSE_LINK
                    , vtr("Request '%1' answers with response '%2', which is not declared").arg(request->getName(), response));
             }
         }
@@ -352,7 +353,7 @@ namespace
 
             if (bound == false)
             {
-                add(response->getId(), eDocElementKind::Method, eSeverity::Warning, SIValidator::RULE_UNBOUND_RESPONSE
+                add(response->getId(), eDocElementKind::Method, eSeverity::Warning, DocRules::RULE_UNBOUND_RESPONSE
                    , vtr("Response '%1' is not the answer to any request").arg(response->getName()));
             }
         }
@@ -381,13 +382,13 @@ namespace
             const QString location = include.getLocation();
             if (location.isEmpty())
             {
-                add(include.getId(), eDocElementKind::Include, eSeverity::Error, SIValidator::RULE_MISSING_NAME
-                   , vtr("An include row names no file"));
+                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                           , vtr("An include row names no file"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
             }
             else if (locations.contains(location))
             {
                 // An include is keyed by its location, so the duplicate rule reads the path here.
-                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Warning, SIValidator::RULE_DUPLICATE_NAME
+                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Warning, DocRules::RULE_DUPLICATE_NAME
                            , vtr("'%1' is included more than once").arg(location)
                            , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName));
             }
@@ -397,8 +398,8 @@ namespace
 
         // The type-use record is complete by now, so an imported document that contributes
         // nothing is known rather than guessed at.
-        mChecks.checkImportedDocuments(eDocElementKind::Include, SIValidator::RULE_BROKEN_IMPORT);
-        mChecks.noteUnusedImports(eDocElementKind::Include, SIValidator::RULE_UNUSED_IMPORT, mTypesUsed);
+        mChecks.checkImportedDocuments(eDocElementKind::Include, DocRules::RULE_BROKEN_IMPORT);
+        mChecks.noteUnusedImports(eDocElementKind::Include, DocRules::RULE_UNREFERENCED, mTypesUsed);
     }
 
     void Ctx::checkUnreferenced()
@@ -414,14 +415,6 @@ namespace
             }
         }
 
-        for (const ConstantEntry& constant : mData.getConstantData().getElements())
-        {
-            if (mConstsUsed.contains(constant.getName()) == false)
-            {
-                mChecks.noteUnreferenced(constant.getId(), eDocElementKind::Constant
-                                        , vtr("Constant '%1'").arg(constant.getName()), eSeverity::Info);
-            }
-        }
     }
 
     QList<DocIssue> Ctx::run()
@@ -478,20 +471,19 @@ eIssueField SIValidator::fieldOfRule(int rule)
 {
     switch (rule)
     {
-    case SIValidator::RULE_MISSING_NAME:
-    case SIValidator::RULE_INVALID_IDENTIFIER:
-    case SIValidator::RULE_DUPLICATE_NAME:
-    case SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_FILE_NAME_MISMATCH:
+    case DocRules::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_DUPLICATE_NAME:
+    case DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_FILE_NAME_MISMATCH:
         return eIssueField::Name;
 
-    case SIValidator::RULE_UNRESOLVED_TYPE:
+    case DocRules::RULE_UNRESOLVED_TYPE:
         return eIssueField::Type;
 
-    case SIValidator::RULE_BAD_LITERAL:
-    case SIValidator::RULE_DUPLICATE_ENUM_VALUE:
+    case DocRules::RULE_BAD_LITERAL:
+    case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return eIssueField::Value;
 
-    case SIValidator::RULE_RESPONSE_LINK:
+    case DocRules::RULE_RESPONSE_LINK:
         return eIssueField::Link;
 
     default:
@@ -501,21 +493,19 @@ eIssueField SIValidator::fieldOfRule(int rule)
 
 QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
 {
-    if (rule > SIValidator::ADVISORY_RULE_BASE)
+    if (rule > DocRuleChecks::ADVISORY_RULE_BASE)
     {
-        switch (rule - SIValidator::ADVISORY_RULE_BASE)
+        switch (rule - DocRuleChecks::ADVISORY_RULE_BASE)
         {
-        case SIValidator::RULE_EMPTY_TYPE:
+        case DocRules::RULE_EMPTY_TYPE:
             return QCoreApplication::translate("SIValidator", "The type generates an empty declaration. Give it its members, or remove it.");
-        case SIValidator::RULE_UNREFERENCED:
+        case DocRules::RULE_UNREFERENCED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
-        case SIValidator::RULE_UNBOUND_RESPONSE:
+        case DocRules::RULE_UNBOUND_RESPONSE:
             return QCoreApplication::translate("SIValidator", "A response is what a request answers with. Connect it to the request it belongs to, or remove it.");
-        case SIValidator::RULE_EMPTY_INTERFACE:
+        case DocRules::RULE_EMPTY_DOCUMENT:
             return QCoreApplication::translate("SIValidator", "A client reaches an interface through its attributes and methods. Until there is one, there is nothing to generate.");
-        case SIValidator::RULE_UNUSED_IMPORT:
-            return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnusedImport);
-        case SIValidator::RULE_DEPRECATED:
+        case DocRules::RULE_DEPRECATED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
         default:
             return QCoreApplication::translate("SIValidator", "Advisory only. The interface still generates.");
@@ -524,25 +514,23 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
 
     switch (rule)
     {
-    case SIValidator::RULE_MISSING_NAME:
-        return DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName);
-    case SIValidator::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_INVALID_IDENTIFIER:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::InvalidIdentifier);
-    case SIValidator::RULE_DUPLICATE_NAME:
+    case DocRules::RULE_DUPLICATE_NAME:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
-    case SIValidator::RULE_UNRESOLVED_TYPE:
+    case DocRules::RULE_UNRESOLVED_TYPE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
-    case SIValidator::RULE_BAD_LITERAL:
+    case DocRules::RULE_BAD_LITERAL:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
-    case SIValidator::RULE_DUPLICATE_ENUM_VALUE:
+    case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
-    case SIValidator::RULE_RESPONSE_LINK:
+    case DocRules::RULE_RESPONSE_LINK:
         return QCoreApplication::translate("SIValidator", "A caller waits for the named response. Declare it, or clear the connection so the request answers with nothing.");
-    case SIValidator::RULE_DEFAULT_ORDER:
+    case DocRules::RULE_DEFAULT_ORDER:
         return QCoreApplication::translate("SIValidator", "A caller may only leave out trailing arguments, so every parameter after a defaulted one needs a default too.");
-    case SIValidator::RULE_BROKEN_IMPORT:
+    case DocRules::RULE_BROKEN_IMPORT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BrokenImport);
-    case SIValidator::RULE_UNKNOWN_ELEMENT:
+    case DocRules::RULE_UNKNOWN_ELEMENT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnknownElement);
     default:
         return (severity == DocIssue::eSeverity::Error)

@@ -49,44 +49,6 @@ class ServiceInterfaceData;
 class SIValidator
 {
 //////////////////////////////////////////////////////////////////////////
-// Constants
-//////////////////////////////////////////////////////////////////////////
-public:
-    /**
-     * \brief   A warning or an advisory note `n` is reported with the rule id (`ADVISORY_RULE_BASE + n`).
-     *          A band, not a second severity of the same rule: the id the author reads is the
-     *          rule identity, so `n` and `ADVISORY_RULE_BASE + n` are two unrelated rules.
-     **/
-    static constexpr int ADVISORY_RULE_BASE { DocRuleChecks::ADVISORY_RULE_BASE };
-
-    static constexpr int RULE_MISSING_NAME          { 1 };  //!< The interface, or an entry, has no name.
-    static constexpr int RULE_INVALID_IDENTIFIER    { 2 };  //!< A name the generated code could not carry.
-    static constexpr int RULE_DUPLICATE_NAME        { 3 };  //!< A name already taken in the same registry.
-    static constexpr int RULE_UNRESOLVED_TYPE       { 4 };  //!< A declared type no data type answers to.
-    static constexpr int RULE_BAD_LITERAL           { 5 };  //!< A value that is not readable as its type.
-    static constexpr int RULE_RESPONSE_LINK         { 6 };  //!< A request bound to a response that is not there.
-    static constexpr int RULE_EMPTY_TYPE            { 7 };  //!< A structure or enumeration with no fields.
-    static constexpr int RULE_DEFAULT_ORDER         { 8 };  //!< A defaulted parameter before one without a default.
-    static constexpr int RULE_DUPLICATE_ENUM_VALUE  { 9 };  //!< Two enumerators of one enumeration counting the same.
-    static constexpr int RULE_UNREFERENCED         { 10 };  //!< Advisory: nothing in the document uses the declaration.
-    static constexpr int RULE_UNBOUND_RESPONSE     { 11 };  //!< Advisory: no request leads to this response.
-    static constexpr int RULE_EMPTY_INTERFACE      { 12 };  //!< Advisory: the interface offers nothing to a client.
-    static constexpr int RULE_UNUSED_IMPORT        { 13 };  //!< Advisory: an imported data type document contributes nothing.
-    static constexpr int RULE_DEPRECATED           { 14 };  //!< Advisory: the interface, or a declaration in it, is marked deprecated.
-    static constexpr int RULE_BROKEN_IMPORT        { 15 };  //!< An included data type document that could not be read.
-
-    //!< Advisory: the interface declares one name and lives in a file called another.
-    static constexpr int RULE_FILE_NAME_MISMATCH   { 17 };
-
-    /**
-     * \brief   An element of the opened file the format does not place: an unknown tag, a real
-     *          one written where the format does not allow it, or one the format has dropped.
-     *          The block is kept as written, so a document carrying one still opens and still
-     *          saves without losing it.
-     **/
-    static constexpr int RULE_UNKNOWN_ELEMENT      { 18 };
-
-//////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:

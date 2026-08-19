@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/dt/DTValidator.hpp"
 
 #include "lusan/data/common/DataTypeContainer.hpp"
@@ -48,14 +49,14 @@ namespace
     {
         static const DocRuleChecks::RuleIds _rules
         {
-              DTValidator::RULE_MISSING_NAME
-            , DTValidator::RULE_INVALID_IDENTIFIER
-            , DTValidator::RULE_DUPLICATE_NAME
-            , DTValidator::RULE_UNRESOLVED_TYPE
-            , DTValidator::RULE_BAD_LITERAL
-            , DTValidator::RULE_UNREFERENCED
-            , DTValidator::RULE_DUPLICATE_ENUM_VALUE
-            , DTValidator::RULE_DEPRECATED
+              DocRules::RULE_INVALID_IDENTIFIER
+            , DocRules::RULE_INVALID_IDENTIFIER
+            , DocRules::RULE_DUPLICATE_NAME
+            , DocRules::RULE_UNRESOLVED_TYPE
+            , DocRules::RULE_BAD_LITERAL
+            , DocRules::RULE_UNREFERENCED
+            , DocRules::RULE_DUPLICATE_ENUM_VALUE
+            , DocRules::RULE_DEPRECATED
         };
 
         return _rules;
@@ -132,21 +133,21 @@ namespace
         // can spell. The file it lives in is free to be called something else.
         if (name.isEmpty())
         {
-            add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DTValidator::RULE_MISSING_NAME
-               , vtr("The data type document has no name"));
+            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                       , vtr("The data type document has no name"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
         }
         else if (DocRuleChecks::isIdentifier(name) == false)
         {
-            add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DTValidator::RULE_INVALID_IDENTIFIER
+            add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
                , vtr("'%1' cannot be a namespace, so the document has to be renamed").arg(name));
         }
 
-        mChecks.noteFileNameMismatch(overview.getId(), name, mData.getFilePath(), DTValidator::RULE_FILE_NAME_MISMATCH);
+        mChecks.noteFileNameMismatch(overview.getId(), name, mData.getFilePath(), DocRules::RULE_FILE_NAME_MISMATCH);
 
         if (overview.getVersion().isValid() == false)
         {
-            add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DTValidator::RULE_MISSING_NAME
-               , vtr("The data type document has no version"));
+            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                       , vtr("The data type document has no version"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
         }
 
         if (overview.getIsDeprecated())
@@ -157,7 +158,7 @@ namespace
 
         if (mData.getDataTypeData().getCustomDataTypes().isEmpty())
         {
-            add(overview.getId(), eDocElementKind::Overview, eSeverity::Info, DTValidator::RULE_EMPTY_DOCUMENT
+            add(overview.getId(), eDocElementKind::Overview, eSeverity::Warning, DocRules::RULE_EMPTY_DOCUMENT
                , vtr("The document declares no data type, so nothing that includes it gains anything"));
         }
     }
@@ -196,7 +197,7 @@ namespace
 
                 if (structType->getElementCount() == 0)
                 {
-                    add(id, eDocElementKind::DataType, eSeverity::Warning, DTValidator::RULE_EMPTY_TYPE
+                    add(id, eDocElementKind::DataType, eSeverity::Warning, DocRules::RULE_EMPTY_TYPE
                        , vtr("Structure '%1' has no fields").arg(name));
                 }
             }
@@ -215,7 +216,7 @@ namespace
 
                 if (enumType->getElementCount() == 0)
                 {
-                    add(id, eDocElementKind::DataType, eSeverity::Warning, DTValidator::RULE_EMPTY_TYPE
+                    add(id, eDocElementKind::DataType, eSeverity::Warning, DocRules::RULE_EMPTY_TYPE
                        , vtr("Enumeration '%1' has no values").arg(name));
                 }
 
@@ -245,13 +246,13 @@ namespace
             const QString location = include.getLocation();
             if (location.isEmpty())
             {
-                add(include.getId(), eDocElementKind::Include, eSeverity::Error, DTValidator::RULE_MISSING_NAME
-                   , vtr("An include row names no file"));
+                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                           , vtr("An include row names no file"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
             }
             else if (locations.contains(location))
             {
                 // An include is keyed by its location, so the duplicate rule reads the path here.
-                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Warning, DTValidator::RULE_DUPLICATE_NAME
+                mChecks.add(include.getId(), eDocElementKind::Include, eSeverity::Warning, DocRules::RULE_DUPLICATE_NAME
                            , vtr("'%1' is included more than once").arg(location)
                            , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName));
             }
@@ -260,7 +261,7 @@ namespace
             // nothing else, so a document included here would reach the generated header as is.
             if (includeKindOf(location, QString()) == eIncludeKind::DataType)
             {
-                add(include.getId(), eDocElementKind::Include, eSeverity::Error, DTValidator::RULE_NOT_A_HEADER
+                add(include.getId(), eDocElementKind::Include, eSeverity::Error, DocRules::RULE_NOT_A_HEADER
                    , vtr("'%1' is a data type document, and a data type document includes only C++ headers").arg(location));
             }
 
@@ -277,7 +278,7 @@ namespace
 
     void Ctx::checkUnknownElements(void)
     {
-        mChecks.noteUnknownElements(eDocElementKind::Overview, DTValidator::RULE_UNKNOWN_ELEMENT
+        mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
                                   , mData.getUnknownElements());
     }
 
@@ -302,17 +303,16 @@ eIssueField DTValidator::fieldOfRule(int rule)
 {
     switch (rule)
     {
-    case DTValidator::RULE_MISSING_NAME:
-    case DTValidator::RULE_INVALID_IDENTIFIER:
-    case DTValidator::RULE_DUPLICATE_NAME:
-    case DTValidator::ADVISORY_RULE_BASE + DTValidator::RULE_FILE_NAME_MISMATCH:
+    case DocRules::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_DUPLICATE_NAME:
+    case DocRuleChecks::ADVISORY_RULE_BASE + DocRules::RULE_FILE_NAME_MISMATCH:
         return eIssueField::Name;
 
-    case DTValidator::RULE_UNRESOLVED_TYPE:
+    case DocRules::RULE_UNRESOLVED_TYPE:
         return eIssueField::Type;
 
-    case DTValidator::RULE_BAD_LITERAL:
-    case DTValidator::RULE_DUPLICATE_ENUM_VALUE:
+    case DocRules::RULE_BAD_LITERAL:
+    case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return eIssueField::Value;
 
     default:
@@ -322,17 +322,17 @@ eIssueField DTValidator::fieldOfRule(int rule)
 
 QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
 {
-    if (rule > DTValidator::ADVISORY_RULE_BASE)
+    if (rule > DocRuleChecks::ADVISORY_RULE_BASE)
     {
-        switch (rule - DTValidator::ADVISORY_RULE_BASE)
+        switch (rule - DocRuleChecks::ADVISORY_RULE_BASE)
         {
-        case DTValidator::RULE_EMPTY_TYPE:
+        case DocRules::RULE_EMPTY_TYPE:
             return QCoreApplication::translate("DTValidator", "The type generates an empty declaration. Give it its members, or remove it.");
-        case DTValidator::RULE_UNREFERENCED:
+        case DocRules::RULE_UNREFERENCED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
-        case DTValidator::RULE_DEPRECATED:
+        case DocRules::RULE_DEPRECATED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
-        case DTValidator::RULE_EMPTY_DOCUMENT:
+        case DocRules::RULE_EMPTY_DOCUMENT:
             return QCoreApplication::translate("DTValidator", "A data type document exists to be included by others. Until it declares a type, including it gains nothing.");
         default:
             return QCoreApplication::translate("DTValidator", "Advisory only. The document still generates.");
@@ -341,21 +341,19 @@ QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
 
     switch (rule)
     {
-    case DTValidator::RULE_MISSING_NAME:
-        return DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName);
-    case DTValidator::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_INVALID_IDENTIFIER:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::InvalidIdentifier);
-    case DTValidator::RULE_DUPLICATE_NAME:
+    case DocRules::RULE_DUPLICATE_NAME:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
-    case DTValidator::RULE_UNRESOLVED_TYPE:
+    case DocRules::RULE_UNRESOLVED_TYPE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
-    case DTValidator::RULE_BAD_LITERAL:
+    case DocRules::RULE_BAD_LITERAL:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
-    case DTValidator::RULE_DUPLICATE_ENUM_VALUE:
+    case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
-    case DTValidator::RULE_NOT_A_HEADER:
+    case DocRules::RULE_NOT_A_HEADER:
         return QCoreApplication::translate("DTValidator", "Data types are shared by including this document, not by chaining one into another. Move the types you need in here, or include the header they come from.");
-    case DTValidator::RULE_UNKNOWN_ELEMENT:
+    case DocRules::RULE_UNKNOWN_ELEMENT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnknownElement);
     default:
         return (severity == DocIssue::eSeverity::Error)

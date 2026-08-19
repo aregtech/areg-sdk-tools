@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/sm/SMValidator.hpp"
 
 #include "lusan/common/DocReservedNames.hpp"
@@ -170,14 +171,14 @@ namespace
     {
         static const DocRuleChecks::RuleIds _rules
         {
-              SMValidator::RULE_INVALID_IDENTIFIER
-            , SMValidator::RULE_INVALID_IDENTIFIER
-            , SMValidator::RULE_DUPLICATE_NAME
-            , SMValidator::RULE_UNRESOLVED_REFERENCE
-            , SMValidator::RULE_BAD_LITERAL
-            , SMValidator::RULE_UNREFERENCED
-            , SMValidator::RULE_DUPLICATE_ENUM_VALUE
-            , SMValidator::RULE_DEPRECATED
+              DocRules::RULE_INVALID_IDENTIFIER
+            , DocRules::RULE_INVALID_IDENTIFIER
+            , DocRules::RULE_DUPLICATE_NAME
+            , DocRules::RULE_UNRESOLVED_TYPE
+            , DocRules::RULE_BAD_LITERAL
+            , DocRules::RULE_UNREFERENCED
+            , DocRules::RULE_DUPLICATE_ENUM_VALUE
+            , DocRules::RULE_DEPRECATED
         };
 
         return _rules;
@@ -450,7 +451,7 @@ namespace
                 continue;
             if (seenLocations.contains(i.getLocation()))
             {
-                mChecks.add(i.getId(), kindOfInclude(i), eSeverity::Warning, SMValidator::RULE_DUPLICATE_NAME
+                mChecks.add(i.getId(), kindOfInclude(i), eSeverity::Warning, DocRules::RULE_DUPLICATE_NAME
                            , vtr("'%1' is included more than once").arg(i.getLocation())
                            , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName));
             }
@@ -569,10 +570,10 @@ namespace
 
         // A submachine alias must name a declared import; the completion hook must name an event.
         if (state.isImportedSubmachine() && (mData.findImportByAlias(state.getSubmachine()) == nullptr))
-            add(id, eDocElementKind::State, eSeverity::Error, 6, vtr("Submachine import '%1' is not declared").arg(state.getSubmachine()));
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Submachine import '%1' is not declared").arg(state.getSubmachine()));
         if ((state.getOnFinal().isEmpty() == false) && (mData.getEvents().findEvent(state.getOnFinal()) == nullptr))
         {
-            add(id, eDocElementKind::State, eSeverity::Error, 6, vtr("OnFinal event '%1' is not declared").arg(state.getOnFinal()));
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("OnFinal event '%1' is not declared").arg(state.getOnFinal()));
         }
         else if (state.getOnFinal().isEmpty() == false)
         {
@@ -582,7 +583,7 @@ namespace
             {
                 if (param.hasDefault() == false)
                 {
-                    add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_ARGUMENT_MAPPING
+                    add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_ARGUMENT_MAPPING
                         , vtr("OnFinal event '%1' has parameter '%2' with no default, and a completion hook cannot map one")
                             .arg(state.getOnFinal(), param.getName()));
                 }
@@ -608,10 +609,10 @@ namespace
         const QString& name = state.getName();
 
         if (state.getEntryList().isEmpty() == false)
-            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_PSEUDO_START
                , vtr("Start state '%1' has entry operations; a Start is a marker and performs nothing").arg(name));
         if (state.getExitList().isEmpty() == false)
-            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_PSEUDO_START
                , vtr("Start state '%1' has exit operations; a Start is a marker and performs nothing").arg(name));
 
         // The outgoing transitions are the level's initial transitions
@@ -631,7 +632,7 @@ namespace
 
             if (isRootLevel && tr->hasCondition())
             {
-                add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                add(tr->getId(), eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_PSEUDO_START
                    , vtr("The root Start state '%1' has a conditional initial transition; there is no parent state to remain in, so the condition has no meaning")
                         .arg(name));
             }
@@ -639,21 +640,21 @@ namespace
 
         if (outgoing == 0)
         {
-            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_PSEUDO_START
                , vtr("Start state '%1' has no outgoing transition, so the level never initialises").arg(name));
         }
         else if (isRootLevel)
         {
             if (outgoing > 1)
             {
-                add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_PSEUDO_START
                    , vtr("The root Start state '%1' must have exactly one initial transition, not %2").arg(name).arg(outgoing));
             }
         }
         else if ((outgoing > 1) && (unguarded > 0))
         {
             // Document order is priority order
-            add(id, eDocElementKind::State, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_PSEUDO_START
                , vtr("Start state '%1' has %2 initial transitions, of which %3 carry no condition; with more than one every transition must carry one")
                     .arg(name).arg(outgoing).arg(unguarded));
         }
@@ -672,14 +673,14 @@ namespace
         case SMTransitionEntry::eTransitionKind::External:
             if (startOwned)
             {
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("Start state '%1' owns an External transition; a Start is left on entering the level, so everything it owns is an Initial transition").arg(where));
             }
             if (tr.hasTarget() == false)
             {
                 // The whole reason `Kind` exists: this used to be byte-identical to an internal
                 // transition, so a half-drawn edge silently meant "run the operations in place".
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("The transition on '%1' names no target state: it is an unfinished edge. Connect it, or make it Internal if it was meant to stay in the state").arg(where));
             }
             break;
@@ -687,12 +688,12 @@ namespace
         case SMTransitionEntry::eTransitionKind::Internal:
             if (startOwned)
             {
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("Start state '%1' owns an Internal transition; a Start performs nothing and everything it owns is an Initial transition").arg(where));
             }
             if (tr.hasTarget())
             {
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("The Internal transition on '%1' names a target state; an internal transition runs its operations without leaving the state").arg(where));
             }
             break;
@@ -700,17 +701,17 @@ namespace
         case SMTransitionEntry::eTransitionKind::Initial:
             if (startOwned == false)
             {
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("State '%1' owns an Initial transition, but only a Start state has one: an initial transition is taken on entering the level, and nothing enters a real state that way").arg(where));
             }
             if (tr.hasTarget() == false)
             {
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("The initial transition of '%1' names no target state, so the level never initialises").arg(where));
             }
             if (tr.getStimulus().isEmpty() == false)
             {
-                add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                    , vtr("The initial transition of '%1' names a stimulus ('%2'); it is taken on entering the level, so nothing fires it").arg(where, tr.getStimulus()));
             }
             break;
@@ -719,7 +720,7 @@ namespace
         // Required for the two kinds that react to something
         if ((tr.isInitial() == false) && tr.getStimulus().isEmpty())
         {
-            add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_TRANSITION_KIND
+            add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND
                , vtr("The transition on '%1' names no stimulus; only an initial transition may leave it out").arg(where));
         }
     }
@@ -739,7 +740,7 @@ namespace
             {
                 const SMStateEntry* target = mData.findStateById(targetId);
                 if (target == nullptr)
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target does not resolve"));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND, vtr("Transition target does not resolve"));
                 else
                     add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
             }
@@ -747,10 +748,10 @@ namespace
             {
                 // a pseudo-state exists to be passed through
                 if (targetId == owner.getId())
-                    add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_PSEUDO_START
                        , vtr("The initial transition of Start state '%1' targets the Start itself, so the level never initialises").arg(sibling->getName()));
                 else
-                    add(id, eDocElementKind::Transition, eSeverity::Error, SMValidator::RULE_PSEUDO_START
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_PSEUDO_START
                        , vtr("Transition targets the Start state '%1'; a Start is a marker the machine never occupies").arg(sibling->getName()));
             }
         }
@@ -771,7 +772,7 @@ namespace
             {
                 MethodEntry* m = mData.getMethods().findMethod(stim, NEMethod::SmTrigger);
                 if (m == nullptr)
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Trigger '%1' is not declared").arg(stim));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Trigger '%1' is not declared").arg(stim));
                 scope.stimParams = m;
                 break;
             }
@@ -779,13 +780,13 @@ namespace
             {
                 SMEventEntry* e = mData.getEvents().findEvent(stim);
                 if (e == nullptr)
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Event '%1' is not declared").arg(stim));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Event '%1' is not declared").arg(stim));
                 scope.stimParams = e;
                 break;
             }
             case SMTransitionEntry::eStimulusKind::Timer:
                 if (mData.getTimers().findElement(stim) == nullptr)
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(stim));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Timer '%1' is not declared").arg(stim));
                 break;
             }
         }
@@ -809,7 +810,7 @@ namespace
                 SMActionCall* call = static_cast<SMActionCall*>(op);
                 MethodEntry* action = mData.getMethods().findMethod(call->getAction(), NEMethod::SmAction);
                 if (action == nullptr)
-                    add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Action '%1' is not declared").arg(call->getAction()));
+                    add(id, eDocElementKind::Operation, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Action '%1' is not declared").arg(call->getAction()));
                 validateArguments(id, eDocElementKind::Operation, action, call->getArguments(), scope);
                 break;
             }
@@ -818,7 +819,7 @@ namespace
                 SMAttributeSet* set = static_cast<SMAttributeSet*>(op);
                 const AttributeEntry* attr = mData.getAttributes().findElement(set->getAttribute());
                 if (attr == nullptr)
-                    add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(set->getAttribute()));
+                    add(id, eDocElementKind::Operation, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Attribute '%1' is not declared").arg(set->getAttribute()));
                 validateValueSource(id, eDocElementKind::Operation, set->getSource(), set->getValue(), set->getExpression(), scope, true);
 
                 // The assigned value must fit the attribute's declared type
@@ -830,14 +831,14 @@ namespace
             {
                 SMTimerStart* start = static_cast<SMTimerStart*>(op);
                 if (mData.getTimers().findElement(start->getTimer()) == nullptr)
-                    add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(start->getTimer()));
+                    add(id, eDocElementKind::Operation, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Timer '%1' is not declared").arg(start->getTimer()));
                 break;
             }
             case SMOperationBase::eOperation::TimerStop:
             {
                 SMTimerStop* stop = static_cast<SMTimerStop*>(op);
                 if (mData.getTimers().findElement(stop->getTimer()) == nullptr)
-                    add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(stop->getTimer()));
+                    add(id, eDocElementKind::Operation, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Timer '%1' is not declared").arg(stop->getTimer()));
                 break;
             }
             case SMOperationBase::eOperation::EventSend:
@@ -845,7 +846,7 @@ namespace
                 SMEventSend* send = static_cast<SMEventSend*>(op);
                 SMEventEntry* event = mData.getEvents().findEvent(send->getEvent());
                 if (event == nullptr)
-                    add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Event '%1' is not declared").arg(send->getEvent()));
+                    add(id, eDocElementKind::Operation, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Event '%1' is not declared").arg(send->getEvent()));
                 validateArguments(id, eDocElementKind::Operation, event, send->getArguments(), scope);
                 break;
             }
@@ -887,17 +888,17 @@ namespace
             break;
         case eValueSource::Attribute:
             if (mData.getAttributes().findElement(ref) == nullptr)
-                add(ownerId, kind, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(ref));
+                add(ownerId, kind, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Attribute '%1' is not declared").arg(ref));
             break;
         case eValueSource::Constant:
             if (mData.getConstants().findElement(ref) == nullptr)
-                add(ownerId, kind, eSeverity::Error, 6, vtr("Constant '%1' is not declared").arg(ref));
+                add(ownerId, kind, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Constant '%1' is not declared").arg(ref));
             break;
         case eValueSource::Condition:
         {
             MethodEntry* c = mData.getMethods().findMethod(ref, NEMethod::SmCondition);
             if (c == nullptr)
-                add(ownerId, kind, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
+                add(ownerId, kind, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Condition '%1' is not declared").arg(ref));
             else if (valuePosition && c->hasElements())
                 add(ownerId, kind, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
             break;
@@ -911,7 +912,7 @@ namespace
         case eValueSource::Lambda:
             break;      // A lambda is only valid as a condition left operand; degenerate as a value source.
         case eValueSource::Invalid:
-            add(ownerId, kind, eSeverity::Error, 6, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
+            add(ownerId, kind, eSeverity::Error, DocRules::RULE_SOURCE_KIND, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
             break;
         }
     }
@@ -992,26 +993,26 @@ namespace
 
         case eValueSource::Attribute:
             if (mData.getAttributes().findElement(ref) == nullptr)
-                add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(ref));
+                add(ownerId, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Attribute '%1' is not declared").arg(ref));
             break;
 
         case eValueSource::Constant:
             if (mData.getConstants().findElement(ref) == nullptr)
-                add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Constant '%1' is not declared").arg(ref));
+                add(ownerId, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Constant '%1' is not declared").arg(ref));
             break;
 
         case eValueSource::Condition:
         {
             MethodEntry* c = mData.getMethods().findMethod(ref, NEMethod::SmCondition);
             if (c == nullptr)
-                add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
+                add(ownerId, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
         }
         break;
 
         case eValueSource::Invalid:
-            add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
+            add(ownerId, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_SOURCE_KIND, vtr("This argument uses a value source that is no longer supported. Re-map it to a parameter, attribute, constant, or a typed value."));
             break;
         }
     }
@@ -1269,7 +1270,7 @@ namespace
         }
 
         mChecks.noteFileNameMismatch(mData.getOverview().getId(), mData.getOverview().getName()
-                                    , mData.getFilePath(), SMValidator::RULE_FILE_NAME_MISMATCH);
+                                    , mData.getFilePath(), DocRules::RULE_FILE_NAME_MISMATCH);
 
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {
@@ -1319,7 +1320,7 @@ namespace
     {
         // A data type document is included, not instantiated: it has no alias, hosts no state and
         // pins no version. All it has to do is lead to a file that reads as one.
-        mChecks.checkImportedDocuments(eDocElementKind::Include, SMValidator::RULE_BROKEN_IMPORT);
+        mChecks.checkImportedDocuments(eDocElementKind::Include, DocRules::RULE_BROKEN_IMPORT);
 
         QSet<QString> brokenAliases;
         for (const IncludeEntry* import : mData.machineImports())
@@ -1599,7 +1600,7 @@ namespace
 
     void Ctx::checkUnknownElements()
     {
-        mChecks.noteUnknownElements(eDocElementKind::Overview, SMValidator::RULE_UNKNOWN_ELEMENT
+        mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
                                   , mData.getUnknownElements());
     }
 
@@ -1654,8 +1655,8 @@ namespace
             // An unbound call parameter is the argument-mapping fault wherever it is found, so it
             // keeps that number here rather than being filed as a guard fault.
             const int rule = (finding.kind == SMGuardValidation::eKind::UnmappedArg)
-                                ? SMValidator::RULE_ARGUMENT_MAPPING
-                                : SMValidator::RULE_GUARD;
+                                ? DocRules::RULE_ARGUMENT_MAPPING
+                                : DocRules::RULE_GUARD;
             // Through add(), so a non-error guard finding carries the same offset number the
             // generator uses instead of the bare rule id.
             add(finding.target.getId(), kind, finding.severity, rule
@@ -1672,7 +1673,7 @@ namespace
         {
             if (description.trimmed().isEmpty())
             {
-                add(id, kind, eSeverity::Info, SMValidator::RULE_MISSING_DESCRIPTION, message, detail);
+                add(id, kind, eSeverity::Info, DocRules::RULE_MISSING_DESCRIPTION, message, detail);
             }
         };
 
@@ -2024,7 +2025,7 @@ namespace
             if ((d != nullptr) && (typesUsed.contains(d->getName()) == false))
                 mChecks.noteUnreferenced(d->getId(), eDocElementKind::DataType, vtr("Data type '%1'").arg(d->getName()), eSeverity::Warning);
         }
-        mChecks.noteUnusedImports(eDocElementKind::Include, SMValidator::RULE_UNUSED_IMPORT, typesUsed);
+        mChecks.noteUnusedImports(eDocElementKind::Include, DocRules::RULE_UNREFERENCED, typesUsed);
 
         // Warning 5: an event reacted to but never sent, or sent but never reacted to.
         for (const Use& u : reactedEvents)
@@ -2053,24 +2054,22 @@ QList<SMIssue> SMValidator::validate(const StateMachineData& data)
 
 QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
 {
-    if (rule > SMValidator::WARNING_RULE_BASE)
+    if (rule > DocRuleChecks::ADVISORY_RULE_BASE)
     {
-        switch (rule - SMValidator::WARNING_RULE_BASE)
+        switch (rule - DocRuleChecks::ADVISORY_RULE_BASE)
         {
         case 1:  return vtr("The state cannot be reached by any transition, so its behaviour never runs.");
         case 2:  return vtr("The state has no way out. Once the machine enters it, it stays there.");
         case 3:  return vtr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
-        case SMValidator::RULE_UNREFERENCED:
+        case DocRules::RULE_UNREFERENCED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
         case 5:  return vtr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
         case 6:  return vtr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
         case 7:  return vtr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
         case 10: return vtr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
         case 11: return vtr("The inline code block generates nothing. Write the code, or remove the block.");
-        case SMValidator::RULE_DEPRECATED:
+        case DocRules::RULE_DEPRECATED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
-        case SMValidator::RULE_UNUSED_IMPORT:
-            return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnusedImport);
         default: return vtr("Advisory only. The document still generates.");
         }
     }
@@ -2080,11 +2079,13 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
     case 1:  return vtr("Every machine level needs exactly one Start state; it marks where execution begins.");
     case 2:  return vtr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
     case 3:  return vtr("A Final state is terminal and cannot have outgoing transitions.");
-    case SMValidator::RULE_DUPLICATE_NAME:
+    case DocRules::RULE_DUPLICATE_NAME:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
-    case SMValidator::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_INVALID_IDENTIFIER:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::InvalidIdentifier);
-    case SMValidator::RULE_UNRESOLVED_REFERENCE:
+    case DocRules::RULE_UNRESOLVED_TYPE:
+        return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
+    case DocRules::RULE_UNRESOLVED_ELEMENT:
         return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
     case 7:  return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
     case 8:  return vtr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
@@ -2100,9 +2101,9 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
     case 21: return vtr("A condition that takes parameters may appear as the left operand only. The right side must be a plain value.");
     case 23: return vtr("The value source and the target disagree; pick a source of a compatible kind.");
     case 24: return vtr("The element refers to itself, directly or through a cycle.");
-    case SMValidator::RULE_DUPLICATE_ENUM_VALUE:
+    case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
-    case SMValidator::RULE_BROKEN_IMPORT:
+    case DocRules::RULE_BROKEN_IMPORT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BrokenImport);
     default: return (severity == DocIssue::eSeverity::Error)
                         ? vtr("The document will not generate until this is resolved.")
@@ -2114,26 +2115,30 @@ eIssueField SMValidator::fieldOfRule(int rule)
 {
     // Errors keep the plain number; everything advisory is stored shifted, so the two classes
     // have to be told apart before the number means anything.
-    const bool advisory = (rule > SMValidator::WARNING_RULE_BASE);
-    const int plain = advisory ? (rule - SMValidator::WARNING_RULE_BASE) : rule;
+    const bool advisory = (rule > DocRuleChecks::ADVISORY_RULE_BASE);
+    const int plain = advisory ? (rule - DocRuleChecks::ADVISORY_RULE_BASE) : rule;
 
     if (advisory)
     {
         switch (plain)
         {
-        case SMValidator::RULE_MISSING_DESCRIPTION:     return eIssueField::Description;
-        case SMValidator::RULE_FILE_NAME_MISMATCH:      return eIssueField::Name;
+        case DocRules::RULE_MISSING_DESCRIPTION:     return eIssueField::Description;
+        case DocRules::RULE_FILE_NAME_MISMATCH:      return eIssueField::Name;
         default:                                        return eIssueField::None;
         }
     }
 
     switch (plain)
     {
-    case SMValidator::RULE_DUPLICATE_NAME:
-    case SMValidator::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_DUPLICATE_NAME:
+    case DocRules::RULE_INVALID_IDENTIFIER:
+    case DocRules::RULE_UNRESOLVED_ELEMENT:
         return eIssueField::Name;
 
-    case SMValidator::RULE_DUPLICATE_ENUM_VALUE:
+    case DocRules::RULE_UNRESOLVED_TYPE:
+        return eIssueField::Type;
+
+    case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return eIssueField::Value;
 
     default:
