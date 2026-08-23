@@ -20,6 +20,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
@@ -124,7 +125,8 @@ namespace
         }
     }
 
-    const int ADVISORY = DTValidator::ADVISORY_RULE_BASE;
+    const int ADVISORY    = DocRuleChecks::WARNING_RULE_BASE;
+    const int INFORMATION = DocRuleChecks::INFORMATION_RULE_BASE;
 }
 
 #define CHECK(cond)  check((cond), #cond)
@@ -256,13 +258,13 @@ void testValidatorDuplicateEnumValue()
         numbers->addField(QStringLiteral("two"))->setValue(QStringLiteral("1"));
 
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        CHECK(countRule(issues, DTValidator::RULE_DUPLICATE_ENUM_VALUE) == 1);
-        CHECK(namesIt(issues, DTValidator::RULE_DUPLICATE_ENUM_VALUE, QStringLiteral("two")));
-        CHECK(explains(issues, DTValidator::RULE_DUPLICATE_ENUM_VALUE, DocRuleChecks::eShape::DuplicateEnumValue));
+        CHECK(countRule(issues, DocRules::RULE_DUPLICATE_ENUM_VALUE) == 1);
+        CHECK(namesIt(issues, DocRules::RULE_DUPLICATE_ENUM_VALUE, QStringLiteral("two")));
+        CHECK(explains(issues, DocRules::RULE_DUPLICATE_ENUM_VALUE, DocRuleChecks::eShape::DuplicateEnumValue));
 
         // Give the second one a value of its own and the finding goes.
         numbers->getElements()[1].setValue(QStringLiteral("2"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_DUPLICATE_ENUM_VALUE) == 0);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_DUPLICATE_ENUM_VALUE) == 0);
     }
 
     {   // The counting follows C++: enum { one, two = 0 } collides just the same, because an
@@ -273,7 +275,7 @@ void testValidatorDuplicateEnumValue()
         CHECK(implicit != nullptr);
         implicit->addField(QStringLiteral("one"));
         implicit->addField(QStringLiteral("two"))->setValue(QStringLiteral("0"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_DUPLICATE_ENUM_VALUE) == 1);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_DUPLICATE_ENUM_VALUE) == 1);
     }
 
     {   // ... and the plain ascending case is silent, however it is written.
@@ -285,7 +287,7 @@ void testValidatorDuplicateEnumValue()
         ok->addField(QStringLiteral("b"));
         ok->addField(QStringLiteral("c"))->setValue(QStringLiteral("10"));
         ok->addField(QStringLiteral("d"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_DUPLICATE_ENUM_VALUE) == 0);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_DUPLICATE_ENUM_VALUE) == 0);
     }
 
     {   // 0x10 and 16 are one value, written two ways.
@@ -295,7 +297,7 @@ void testValidatorDuplicateEnumValue()
         CHECK(hex != nullptr);
         hex->addField(QStringLiteral("low"))->setValue(QStringLiteral("0x10"));
         hex->addField(QStringLiteral("high"))->setValue(QStringLiteral("16"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_DUPLICATE_ENUM_VALUE) == 1);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_DUPLICATE_ENUM_VALUE) == 1);
     }
 
     {   // A value that is not a plain number cannot be counted, so it is left out rather than
@@ -306,7 +308,7 @@ void testValidatorDuplicateEnumValue()
         CHECK(named != nullptr);
         named->addField(QStringLiteral("base"))->setValue(QStringLiteral("SomeConstant"));
         named->addField(QStringLiteral("next"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_DUPLICATE_ENUM_VALUE) == 0);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_DUPLICATE_ENUM_VALUE) == 0);
     }
 }
 
@@ -321,7 +323,7 @@ void testValidatorDeprecation()
         doc.getOverviewData().setDeprecateHint(QStringLiteral("Use Shared.dtml"));
 
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        const int deprecated = ADVISORY + DTValidator::RULE_DEPRECATED;
+        const int deprecated = ADVISORY + DocRules::RULE_DEPRECATED;
         CHECK(countRule(issues, deprecated) == 1);
         CHECK(namesIt(issues, deprecated, QStringLiteral("Use Shared.dtml")));
         CHECK(explains(issues, deprecated, DocRuleChecks::eShape::Deprecated));
@@ -344,7 +346,7 @@ void testValidatorDeprecation()
         old->setIsDeprecated(true);
 
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        const int deprecated = ADVISORY + DTValidator::RULE_DEPRECATED;
+        const int deprecated = INFORMATION + DocRules::RULE_DEPRECATED;
         CHECK(countRule(issues, deprecated) == 1);
         CHECK(namesIt(issues, deprecated, QStringLiteral("OldUnit")));
         for (const DocIssue& issue : issues)
@@ -370,13 +372,13 @@ void testValidatorTypes()
         reading->addField(QStringLiteral("unit"))->setType(QStringLiteral("Unit"));
 
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        CHECK(countRule(issues, DTValidator::RULE_UNRESOLVED_TYPE) == 1);
-        CHECK(namesIt(issues, DTValidator::RULE_UNRESOLVED_TYPE, QStringLiteral("Unit")));
-        CHECK(explains(issues, DTValidator::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
+        CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 1);
+        CHECK(namesIt(issues, DocRules::RULE_UNRESOLVED_TYPE, QStringLiteral("Unit")));
+        CHECK(explains(issues, DocRules::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
 
         // Declare it here and the field resolves.
         doc.getDataTypeData().addEnum(QStringLiteral("Unit"))->addField(QStringLiteral("Celsius"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_UNRESOLVED_TYPE) == 0);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_UNRESOLVED_TYPE) == 0);
     }
 
     {   // Two declarations of one name, and a name generated code could not carry.
@@ -384,15 +386,15 @@ void testValidatorTypes()
         makeUsable(doc);
         doc.getDataTypeData().addEnum(QStringLiteral("Point"))->addField(QStringLiteral("a"));
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        CHECK(countRule(issues, DTValidator::RULE_DUPLICATE_NAME) == 1);
-        CHECK(explains(issues, DTValidator::RULE_DUPLICATE_NAME, DocRuleChecks::eShape::DuplicateName));
+        CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 1);
+        CHECK(explains(issues, DocRules::RULE_DUPLICATE_NAME, DocRuleChecks::eShape::DuplicateName));
     }
 
     {   // A structure with no fields generates an empty declaration.
         DataTypeDocumentData doc;
         makeUsable(doc);
         CHECK(doc.getDataTypeData().addStructure(QStringLiteral("Hollow")) != nullptr);
-        CHECK(countRule(DTValidator::validate(doc), ADVISORY + DTValidator::RULE_EMPTY_TYPE) == 1);
+        CHECK(countRule(DTValidator::validate(doc), ADVISORY + DocRules::RULE_EMPTY_TYPE) == 1);
     }
 }
 
@@ -405,8 +407,8 @@ void testValidatorDocumentName()
         makeUsable(doc);
         doc.getOverviewData().setName(QStringLiteral("my-types"));
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        CHECK(countRule(issues, DTValidator::RULE_INVALID_IDENTIFIER) == 1);
-        CHECK(namesIt(issues, DTValidator::RULE_INVALID_IDENTIFIER, QStringLiteral("namespace")));
+        CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        CHECK(namesIt(issues, DocRules::RULE_INVALID_IDENTIFIER, QStringLiteral("namespace")));
     }
 
     {   // A document that declares nothing is worth a note, not a complaint.
@@ -414,7 +416,7 @@ void testValidatorDocumentName()
         doc.getOverviewData().setName(QStringLiteral("Empty"));
         doc.getOverviewData().setVersion(1, 0, 0);
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        CHECK(countRule(issues, ADVISORY + DTValidator::RULE_EMPTY_DOCUMENT) == 1);
+        CHECK(countRule(issues, ADVISORY + DocRules::RULE_EMPTY_DOCUMENT) == 1);
     }
 }
 
@@ -426,7 +428,7 @@ void testValidatorIncludes()
         DataTypeDocumentData doc;
         makeUsable(doc);
         doc.getIncludeData().createInclude(QStringLiteral("my/legacy_types.hpp"));
-        CHECK(countRule(DTValidator::validate(doc), DTValidator::RULE_NOT_A_HEADER) == 0);
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_NOT_A_HEADER) == 0);
     }
 
     {   // Another data type document is not.
@@ -434,8 +436,8 @@ void testValidatorIncludes()
         makeUsable(doc);
         doc.getIncludeData().createInclude(QStringLiteral("../shared/Base.dtml"));
         const QList<DocIssue> issues = DTValidator::validate(doc);
-        CHECK(countRule(issues, DTValidator::RULE_NOT_A_HEADER) == 1);
-        CHECK(namesIt(issues, DTValidator::RULE_NOT_A_HEADER, QStringLiteral("Base.dtml")));
+        CHECK(countRule(issues, DocRules::RULE_NOT_A_HEADER) == 1);
+        CHECK(namesIt(issues, DocRules::RULE_NOT_A_HEADER, QStringLiteral("Base.dtml")));
     }
 
     {   // The page refuses to register one file twice, so the only way a document holds a
@@ -455,7 +457,7 @@ void testValidatorIncludes()
             "  </IncludeList>"
             "</DataTypeDocument>")));
         CHECK(fromFile.getIncludeData().getElements().size() == 2);
-        CHECK(countRule(DTValidator::validate(fromFile), ADVISORY + DTValidator::RULE_DUPLICATE_NAME) == 1);
+        CHECK(countRule(DTValidator::validate(fromFile), ADVISORY + DocRules::RULE_DUPLICATE_NAME) == 1);
     }
 }
 
@@ -463,13 +465,13 @@ void testFieldOfRule()
 {
     std::printf("[dt] a finding says which field to fix\n");
 
-    CHECK(DTValidator::fieldOfRule(DTValidator::RULE_INVALID_IDENTIFIER) == eIssueField::Name);
-    CHECK(DTValidator::fieldOfRule(DTValidator::RULE_DUPLICATE_NAME) == eIssueField::Name);
-    CHECK(DTValidator::fieldOfRule(DTValidator::RULE_UNRESOLVED_TYPE) == eIssueField::Type);
-    CHECK(DTValidator::fieldOfRule(DTValidator::RULE_BAD_LITERAL) == eIssueField::Value);
+    CHECK(DTValidator::fieldOfRule(DocRules::RULE_INVALID_IDENTIFIER) == eIssueField::Name);
+    CHECK(DTValidator::fieldOfRule(DocRules::RULE_DUPLICATE_NAME) == eIssueField::Name);
+    CHECK(DTValidator::fieldOfRule(DocRules::RULE_UNRESOLVED_TYPE) == eIssueField::Type);
+    CHECK(DTValidator::fieldOfRule(DocRules::RULE_BAD_LITERAL) == eIssueField::Value);
     // The one the new rule adds: the enumerator's value is what has to change.
-    CHECK(DTValidator::fieldOfRule(DTValidator::RULE_DUPLICATE_ENUM_VALUE) == eIssueField::Value);
-    CHECK(DTValidator::fieldOfRule(ADVISORY + DTValidator::RULE_DEPRECATED) == eIssueField::None);
+    CHECK(DTValidator::fieldOfRule(DocRules::RULE_DUPLICATE_ENUM_VALUE) == eIssueField::Value);
+    CHECK(DTValidator::fieldOfRule(ADVISORY + DocRules::RULE_DEPRECATED) == eIssueField::None);
 }
 
 //////////////////////////////////////////////////////////////////////////

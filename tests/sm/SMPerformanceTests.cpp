@@ -482,10 +482,17 @@ int main(int argc, char* argv[])
     // ---- design page over the large document ----------------------------------------------
     timer.restart();
     SMDesign design(model);
+    const qint64 buildMs = timer.elapsed();
     design.resize(1600, 1000);
+    const qint64 resizeMs = timer.elapsed() - buildMs;
     design.show();
+    const qint64 showMs = timer.elapsed() - buildMs - resizeMs;
     QApplication::processEvents();
     report("first paint of the 200-node root level", timer.elapsed(), BUDGET_ONESHOT_MS);
+    std::printf("    of which: construct %lld ms, resize %lld ms, show %lld ms, events %lld ms\n",
+                static_cast<long long>(buildMs), static_cast<long long>(resizeMs),
+                static_cast<long long>(showMs),
+                static_cast<long long>(timer.elapsed() - buildMs - resizeMs - showMs));
 
     SMScene& scene = design.getScene();
     SMGraphicsView& view = design.getView();

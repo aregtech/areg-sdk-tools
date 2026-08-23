@@ -21,6 +21,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/common/AttributeDataSection.hpp"
 #include "lusan/data/sm/SMMethodKind.hpp"
@@ -320,12 +321,12 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
         // An advisory finding is filed under a shifted id. Reading one as a plain number lands on
         // a different check entirely -- plain 14 is the operand-type rule, not the description
         // one -- and the landing would quietly lose the field it is supposed to accent.
-        check(SMValidator::fieldOfRule(SMValidator::WARNING_RULE_BASE + SMValidator::RULE_MISSING_DESCRIPTION)
+        check(SMValidator::fieldOfRule(DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_MISSING_DESCRIPTION)
                     == eIssueField::Description
              , "S15: a missing-description finding points at the Description field");
-        check(SMValidator::fieldOfRule(SMValidator::RULE_MISSING_DESCRIPTION) == eIssueField::None
+        check(SMValidator::fieldOfRule(DocRules::RULE_MISSING_DESCRIPTION) == eIssueField::None
              , "S15: the same number unshifted is a different check and names no field");
-        check(SMValidator::fieldOfRule(SMValidator::RULE_DUPLICATE_NAME) == eIssueField::Name
+        check(SMValidator::fieldOfRule(DocRules::RULE_DUPLICATE_NAME) == eIssueField::Name
              , "S15: a duplicate-name finding points at the Name field");
 
         // Whatever this document happens to carry must agree with that mapping.

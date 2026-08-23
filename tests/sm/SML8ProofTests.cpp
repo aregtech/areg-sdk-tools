@@ -32,6 +32,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -377,7 +378,7 @@ namespace
         bool reported = false;
         for (const SMIssue& issue : issues)
         {
-            reported = reported || ((issue.rule == SMValidator::RULE_PSEUDO_START)
+            reported = reported || ((issue.rule == DocRules::RULE_PSEUDO_START)
                                     && (issue.severity == SMIssue::eSeverity::Error)
                                     && issue.message.contains(QStringLiteral("never initialises")));
         }

@@ -593,12 +593,11 @@ namespace
         CHECK(doc.openSucceeded() == false);
     }
 
-    //!< A document of a version this build reads keeps every element the format does not
-    //!< define, wherever it sits. The block is reported as an error, and it still survives the
-    //!< save: that is what lets the author take the document to a build that understands it.
+    //!< A document of a version this build reads reports every element the format does not
+    //!< define, wherever it sits, and the save drops the block.
     void testUnknownPreservation()
     {
-        std::printf("[SM-03] unknown elements survive a save, nested and at the root\n");
+        std::printf("[SM-03] unknown elements are reported and dropped on save, nested and at the root\n");
 
         const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
         CHECK(original.isEmpty() == false);
@@ -635,9 +634,9 @@ namespace
         CHECK(doc.writeToFile(outPath));
 
         const QByteArray written = readAllBytes(outPath);
-        CHECK(written.contains("<Time "));
-        CHECK(written.contains("<FutureSection"));
-        CHECK(written.contains("<FutureLeaf"));
+        CHECK(written.contains("<Time ") == false);
+        CHECK(written.contains("<FutureSection") == false);
+        CHECK(written.contains("<FutureLeaf") == false);
     }
 
     void testRejectNewerMajor()

@@ -23,6 +23,7 @@
 #include "lusan/common/VersionNumber.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
+#include <QCoreApplication>
 #include <QFile>
 #include <QLoggingCategory>
 
@@ -213,6 +214,49 @@ DocElementTable::eSource DocElementTable::source(eDocument doc)
 QString DocElementTable::sourcePath(eDocument doc)
 {
     return tableOf(doc).path;
+}
+
+bool DocElementTable::documentOfSuffix(QStringView suffix, eDocument& doc)
+{
+    const QStringView bare = suffix.startsWith(QLatin1Char('.')) ? suffix.mid(1) : suffix;
+    for (int i = 0; i < DOCUMENT_COUNT; ++i)
+    {
+        const QLatin1StringView schema{ SCHEMA_FILE[i] };
+        if (bare.compare(schema.left(schema.size() - 4), Qt::CaseInsensitive) == 0)
+        {
+            doc = static_cast<eDocument>(i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+QString DocElementTable::sourceSummary(eDocument doc)
+{
+    const Table& table = tableOf(doc);
+    const QString name = QString::fromLatin1(SCHEMA_FILE[static_cast<int>(doc)]);
+    if (table.rows.isEmpty())
+    {
+        return QCoreApplication::translate("DocElementTable", "%1: not readable").arg(name);
+    }
+
+    return (table.source == eSource::Delivered)
+                ? QCoreApplication::translate("DocElementTable", "%1: delivered").arg(name)
+                : QCoreApplication::translate("DocElementTable", "%1: built-in").arg(name);
+}
+
+QStringList DocElementTable::sourceReport()
+{
+    QStringList report;
+    for (int i = 0; i < DOCUMENT_COUNT; ++i)
+    {
+        const eDocument doc = static_cast<eDocument>(i);
+        report.append(QCoreApplication::translate("DocElementTable", "%1 -- %2")
+                        .arg(DocElementTable::sourceSummary(doc), DocElementTable::sourcePath(doc)));
+    }
+
+    return report;
 }
 
 void DocElementTable::reload()

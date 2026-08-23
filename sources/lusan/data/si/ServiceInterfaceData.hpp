@@ -166,6 +166,12 @@ public:
      **/
     inline const QList<DocUnknownElement>& getUnknownElements() const;
 
+    /**
+     * \brief   Every attribute of the opened document that the format does not define, in
+     *          document order. Empty for a document written by this build.
+     **/
+    inline const QList<DocUnknownAttribute>& getUnknownAttributes() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -180,8 +186,11 @@ private:
     IncludeDataSection mIncludeData; //!< The include data.
     bool            mOpenSuccess;   //!< File, indicating if opening file succeeded.
 
-    //!< The blocks of the opened file this build could not place, kept so a save puts them back.
+    //!< The blocks of the opened file this build could not place, dropped on the next save.
     QList<DocUnknownElement> mUnknownElements;
+
+    //!< The root attributes of the opened file the format does not define, dropped on the next save.
+    QList<DocUnknownAttribute> mUnknownAttributes;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -271,6 +280,11 @@ inline const VersionNumber& ServiceInterfaceData::getCurrentDocumentVersion() co
 inline const QList<DocUnknownElement>& ServiceInterfaceData::getUnknownElements() const
 {
     return mUnknownElements;
+}
+
+inline const QList<DocUnknownAttribute>& ServiceInterfaceData::getUnknownAttributes() const
+{
+    return mUnknownAttributes;
 }
 
 #endif // LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP

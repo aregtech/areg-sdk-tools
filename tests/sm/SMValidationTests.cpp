@@ -20,6 +20,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/model/common/DocRuleChecks.hpp"
 #include "lusan/common/NELusanCommon.hpp"
@@ -115,12 +116,32 @@ namespace
     //!< A 10.2 warning is stored with the offset rule id; these target it by its 10.2 number.
     int countWarn(const QList<SMIssue>& issues, int warnNumber)
     {
-        return countRule(issues, SMValidator::WARNING_RULE_BASE + warnNumber);
+        return countRule(issues, DocRuleChecks::WARNING_RULE_BASE + warnNumber);
     }
 
     bool hasWarn(const QList<SMIssue>& issues, int warnNumber)
     {
         return countWarn(issues, warnNumber) > 0;
+    }
+
+    //!< An information finding is stored in its own band; these target it by its rule number.
+    int countInfo(const QList<SMIssue>& issues, int infoNumber)
+    {
+        return countRule(issues, DocRuleChecks::INFORMATION_RULE_BASE + infoNumber);
+    }
+
+    bool hasInfo(const QList<SMIssue>& issues, int infoNumber)
+    {
+        return countInfo(issues, infoNumber) > 0;
+    }
+
+    //!< True when EVERY information finding of rule \p infoNumber carries \p severity.
+    bool infoSeverityIs(const QList<SMIssue>& issues, int infoNumber, SMIssue::eSeverity severity)
+    {
+        for (const SMIssue& i : issues)
+            if ((i.rule == (DocRuleChecks::INFORMATION_RULE_BASE + infoNumber)) && (i.severity != severity))
+                return false;
+        return true;
     }
 
     //!< True when EVERY finding of 10.2 rule \p warnNumber carries \p severity (vacuously true when
@@ -129,7 +150,7 @@ namespace
     bool warnSeverityIs(const QList<SMIssue>& issues, int warnNumber, SMIssue::eSeverity severity)
     {
         for (const SMIssue& i : issues)
-            if ((i.rule == (SMValidator::WARNING_RULE_BASE + warnNumber)) && (i.severity != severity))
+            if ((i.rule == (DocRuleChecks::WARNING_RULE_BASE + warnNumber)) && (i.severity != severity))
                 return false;
         return true;
     }
@@ -257,6 +278,69 @@ namespace
             addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
             CHECK(countRule(SMValidator::validate(doc), 3) == 0);
+        }
+    }
+
+    void testMissingVersion()
+    {
+        std::printf("- a machine that declares no version\n");
+        {   // Positive: nothing set the version, so the generated code would claim one nobody wrote.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setVersion(VersionNumber(0, 0, 0));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_MISSING_VERSION));
+        }
+        {   // Negative: a version the document states.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setVersion(VersionNumber(1, 0, 0));
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_MISSING_VERSION) == 0);
+        }
+    }
+
+    void testRetiredElement()
+    {
+        std::printf("- an element the format has retired\n");
+        {   // Positive: the retired child names what to write instead.
+            const DocRules::Retired* found = DocRuleChecks::retiredElement(
+                        QStringLiteral("Value"), QStringLiteral("Constant"), QStringLiteral("siml"));
+            CHECK(found != nullptr);
+            CHECK((found != nullptr) && (QLatin1String(found->fix).size() > 0));
+        }
+        {   // Negative: the same tag somewhere the format never retired it.
+            CHECK(DocRuleChecks::retiredElement(QStringLiteral("Value"), QStringLiteral("Attribute"),
+                                                QStringLiteral("siml")) == nullptr);
+        }
+        {   // Negative: a tag nothing ever defined stays an unknown element.
+            CHECK(DocRuleChecks::retiredElement(QStringLiteral("Wobble"), QStringLiteral("Constant"),
+                                                QStringLiteral("siml")) == nullptr);
+        }
+    }
+
+    void testDeprecatedDeclarations()
+    {
+        std::printf("- declarations marked deprecated\n");
+        {   // The document itself is a warning: everything taken from it is deprecated with it.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setIsDeprecated(true);
+            CHECK(hasWarn(SMValidator::validate(doc), DocRules::RULE_DEPRECATED));
+        }
+        {   // One declaration inside a current document is information, not a warning.
+            StateMachineData doc;
+            addStart(doc);
+            AttributeEntry* attribute = doc.getAttributes().createAttribute("LegacyFlag");
+            attribute->setIsDeprecated(true);
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(hasInfo(issues, DocRules::RULE_DEPRECATED));
+            CHECK(countWarn(issues, DocRules::RULE_DEPRECATED) == 0);
+        }
+        {   // Negative: nothing is marked, so nothing is said.
+            StateMachineData doc;
+            addStart(doc);
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countInfo(issues, DocRules::RULE_DEPRECATED) == 0);
+            CHECK(countWarn(issues, DocRules::RULE_DEPRECATED) == 0);
         }
     }
 }
@@ -466,7 +550,7 @@ namespace
             SMActionCall* call = new SMActionCall(0, "act");
             call->addArgument("x", eSource::Invalid, "IsReady");
             s->getEntryList().addOperation(call);
-            CHECK(hasRule(SMValidator::validate(doc), 6));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_SOURCE_KIND));
         }
     }
 }
@@ -506,14 +590,14 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addWorkingState(doc);
             s->getTransitions().createTransition(eStim::Trigger, "ghost", stateId(doc, "Idle"));
-            CHECK(hasRule(SMValidator::validate(doc), 6));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_UNRESOLVED_ELEMENT));
         }
         {   // Positive: an unresolved transition target.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Nowhere"));
-            CHECK(hasRule(SMValidator::validate(doc), 6));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_TRANSITION_KIND));
         }
         {   // Positive: a target that exists but is not a sibling (it is nested).
             StateMachineData doc;
@@ -528,7 +612,7 @@ namespace
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             s->getEntryList().addOperation(new SMActionCall(0, "ghostAction"));
-            CHECK(hasRule(SMValidator::validate(doc), 6));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_UNRESOLVED_ELEMENT));
         }
         {   // Negative: every reference resolves to a sibling / declared name.
             StateMachineData doc;
@@ -537,7 +621,7 @@ namespace
             doc.getMethods().createMethod("go", NEMethod::SmTrigger);
             start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Work"));
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(countRule(issues, 6) == 0);
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_ELEMENT) == 0);
             CHECK(countRule(issues, 7) == 0);
         }
     }
@@ -607,7 +691,7 @@ namespace
     void testPseudoStartRules()
     {
         std::printf("- L1: Kind=\"Start\" is a pseudo-state (rule 27)\n");
-        const int rule = SMValidator::RULE_PSEUDO_START;
+        const int rule = DocRules::RULE_PSEUDO_START;
 
         {   // Rule 1: a Start with an entry action is refused, and the message names the state.
             StateMachineData doc;
@@ -668,7 +752,7 @@ namespace
             start->getTransitions().createTransition(eStim::Trigger, QString(), 0u, eTrans::Initial);
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(countRule(issues, rule) == 1);
-            CHECK(countRule(issues, SMValidator::RULE_TRANSITION_KIND) == 1);
+            CHECK(countRule(issues, DocRules::RULE_TRANSITION_KIND) == 1);
         }
         {   // Rule 5: two initial transitions where one carries no condition.
             StateMachineData doc;
@@ -731,7 +815,7 @@ namespace
     void testTransitionKindRules()
     {
         std::printf("- L2: the transition Kind contract (rule 28)\n");
-        const int rule = SMValidator::RULE_TRANSITION_KIND;
+        const int rule = DocRules::RULE_TRANSITION_KIND;
 
         {   // An External transition with no target: the unfinished edge that used to be
             // byte-identical to a deliberate internal transition, and so meant something.
@@ -800,7 +884,7 @@ namespace
             CHECK(named);
             // The level does initialise -- the transition has a target -- so rule 27 stays quiet
             // and one mistake is one finding.
-            CHECK(countRule(issues, SMValidator::RULE_PSEUDO_START) == 0);
+            CHECK(countRule(issues, DocRules::RULE_PSEUDO_START) == 0);
         }
         {
             StateMachineData doc;
@@ -822,7 +906,7 @@ namespace
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(countRule(issues, rule) == 1);
             // ...and never a second time as an unresolved reference.
-            CHECK(countRule(issues, 6) == 0);
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_ELEMENT) == 0);
         }
         {   // Negative: the three kinds in their correct shapes, in one document, are clean.
             StateMachineData doc;
@@ -902,7 +986,7 @@ namespace
             CHECK(warnSeverityIs(issues, 1, SMIssue::eSeverity::Warning));
             bool named = false;
             for (const SMIssue& i : issues)
-                named = named || ((i.rule == (SMValidator::WARNING_RULE_BASE + 1)) && i.message.contains(QStringLiteral("'Orphan'")));
+                named = named || ((i.rule == (DocRuleChecks::WARNING_RULE_BASE + 1)) && i.message.contains(QStringLiteral("'Orphan'")));
             CHECK(named);
         }
         {   // Rule 2, negative: the state the level's Start descends into is reached, not orphaned.
@@ -917,9 +1001,9 @@ namespace
             start->getTransitions().createTransition(eStim::Trigger, QString(), start->getId(), eTrans::Initial);
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(hasRule(issues, SMValidator::RULE_PSEUDO_START));
+            CHECK(hasRule(issues, DocRules::RULE_PSEUDO_START));
             for (const SMIssue& i : issues)
-                if (i.rule == SMValidator::RULE_PSEUDO_START) CHECK(i.severity == SMIssue::eSeverity::Error);
+                if (i.rule == DocRules::RULE_PSEUDO_START) CHECK(i.severity == SMIssue::eSeverity::Error);
         }
         {   // Rule 4: a Start with no outgoing transition. Error, under rule 27.
             StateMachineData doc;
@@ -927,9 +1011,9 @@ namespace
             doc.getStates().createState(QStringLiteral("Work"), eKind::Normal);
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(countRule(issues, SMValidator::RULE_PSEUDO_START) == 1);
+            CHECK(countRule(issues, DocRules::RULE_PSEUDO_START) == 1);
             for (const SMIssue& i : issues)
-                if (i.rule == SMValidator::RULE_PSEUDO_START) CHECK(i.severity == SMIssue::eSeverity::Error);
+                if (i.rule == DocRules::RULE_PSEUDO_START) CHECK(i.severity == SMIssue::eSeverity::Error);
         }
     }
 }
@@ -975,7 +1059,7 @@ namespace
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Next", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Next"), eTrans::Initial);
-            CHECK(countRule(SMValidator::validate(doc), 6) == 0);
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_UNRESOLVED_ELEMENT) == 0);
         }
         {   // The same empty Stimulus on an ordinary state is a transition nobody finished writing.
             // Rule 28 says that in those words; it used to arrive as "Trigger '' is not declared".
@@ -986,8 +1070,8 @@ namespace
             start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Mid"), eTrans::Initial);
             mid->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "End"));
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(hasRule(issues, SMValidator::RULE_TRANSITION_KIND));
-            CHECK(countRule(issues, 6) == 0);
+            CHECK(hasRule(issues, DocRules::RULE_TRANSITION_KIND));
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_ELEMENT) == 0);
         }
         {   // Positive: OnFinal names an event with a parameter that has no default. The hook is a
             // bare attribute with no ArgumentList anywhere, so nothing can ever supply that value.
@@ -1703,7 +1787,7 @@ namespace
             bool found = false;
             for (const SMIssue& i : SMValidator::validate(doc))
             {
-                if (i.rule != (SMValidator::WARNING_RULE_BASE + 13))
+                if (i.rule != (DocRuleChecks::WARNING_RULE_BASE + 13))
                     continue;
                 found = true;
                 CHECK(i.message.contains(QStringLiteral("uint32")) && i.message.contains(QStringLiteral("uint16")));
@@ -1804,16 +1888,16 @@ namespace
             StateMachineData doc;
             addStart(doc);
             doc.getConstants().createConstant("Unused")->setType("int32");
-            CHECK(hasWarn(SMValidator::validate(doc), 4));
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
+            CHECK(hasInfo(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED));
+            CHECK(infoSeverityIs(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED, SMIssue::eSeverity::Info));
         }
         {   // W4 severity, the other half: an unused ACTION is behaviour wired to nothing, and stays
             // a warning. One rule number, two severities, decided by the kind of the declaration.
             StateMachineData doc;
             addStart(doc);
             doc.getMethods().createMethod("orphan", NEMethod::SmAction);
-            CHECK(hasWarn(SMValidator::validate(doc), 4));
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Warning));
+            CHECK(hasWarn(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), DocRules::RULE_UNREFERENCED, SMIssue::eSeverity::Warning));
         }
         {   // Negative W4, the guard path: a canonical guard binds by symbol ID, not by name, so a
             // usage scan that only walked the legacy condition rows called this attribute unused.
@@ -1979,14 +2063,14 @@ namespace
             doc.getTimers().createTimer("Tick");
             MethodEntry* action = doc.getMethods().createMethod("run", NEMethod::SmAction);
             action->addElement(MethodParameter(doc.getNextId(), "count", "int32"), true);
-            CHECK(countWarn(SMValidator::validate(doc), 14) == 4);   // machine, timer, method, parameter
-            CHECK(warnSeverityIs(SMValidator::validate(doc), 14, SMIssue::eSeverity::Info));
+            CHECK(countInfo(SMValidator::validate(doc), 14) == 4);   // machine, timer, method, parameter
+            CHECK(infoSeverityIs(SMValidator::validate(doc), 14, SMIssue::eSeverity::Info));
 
             doc.getOverview().setDescription("What the machine does");
             doc.getTimers().getElements()[0].setDescription("How often it ticks");
             action->setDescription("What it runs");
             action->getElements()[0].setDescription("How many");
-            CHECK(countWarn(SMValidator::validate(doc), 14) == 0);
+            CHECK(countInfo(SMValidator::validate(doc), 14) == 0);
         }
     }
 }
@@ -2025,7 +2109,7 @@ namespace
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
             start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Work"), eTrans::Initial);
-            CHECK(hasRule(SMValidator::validate(doc), 6) == false);
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_UNRESOLVED_ELEMENT) == false);
         }
         {   // Positive: an ordinary state still has to name a declared stimulus.
             StateMachineData doc;
@@ -2034,7 +2118,7 @@ namespace
             start->getTransitions().createTransition(eStim::Trigger, "begin", work->getId());
             doc.getMethods().createMethod("begin", NEMethod::SmTrigger);
             work->getTransitions().createTransition(eStim::Trigger, "ghost", stateId(doc, "Idle"));
-            CHECK(hasRule(SMValidator::validate(doc), 6));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_UNRESOLVED_ELEMENT));
         }
 
         {   // Negative: a trigger, an action and a condition may all be called `on`. They become
@@ -2101,7 +2185,7 @@ namespace
             int mappingFindings = 0;
             for (const SMIssue& issue : issues)
             {
-                if (issue.rule == SMValidator::RULE_ARGUMENT_MAPPING)
+                if (issue.rule == DocRules::RULE_ARGUMENT_MAPPING)
                 {
                     ++mappingFindings;
                     CHECK(issue.message.contains("waiting"));
@@ -2124,7 +2208,7 @@ namespace
         {
             DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
             CHECK(SMOperationValidation::worstForState(doc, stateId, worst) == false);
-            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_ARGUMENT_MAPPING) == 0);
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_ARGUMENT_MAPPING) == 0);
         }
 
         // An orphan argument is a mapping fault on both paths too.
@@ -2132,7 +2216,7 @@ namespace
         {
             DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
             CHECK(SMOperationValidation::worstForState(doc, stateId, worst));
-            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_ARGUMENT_MAPPING) == 1);
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_ARGUMENT_MAPPING) == 1);
         }
 
         // Every finding of the one run speaks the one severity ladder, ordered so that a
@@ -2417,8 +2501,8 @@ namespace
             std::unique_ptr<StateMachineData> patch = hostMachine(at("h3.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.5.1"), 1);
             SMDocumentCache::getInstance().clear();
             const QList<SMIssue> patchIssues = SMValidator::validate(*patch);
-            CHECK(hasWarn(patchIssues, 12));
-            CHECK(warnSeverityIs(patchIssues, 12, SMIssue::eSeverity::Info));
+            CHECK(hasInfo(patchIssues, 12));
+            CHECK(infoSeverityIs(patchIssues, 12, SMIssue::eSeverity::Info));
 
             std::unique_ptr<StateMachineData> exact = hostMachine(at("h4.fsml"), QStringLiteral("Pinned"), QStringLiteral("./pinned.fsml"), QStringLiteral("2.5.7"), 1);
             SMDocumentCache::getInstance().clear();
@@ -2479,14 +2563,14 @@ namespace
             StateMachineData opened;
             CHECK(opened.readFromFile(at("inert.fsml")));
             SMDocumentCache::getInstance().clear();
-            CHECK(hasRule(SMValidator::validate(opened), SMValidator::RULE_PSEUDO_START));
+            CHECK(hasRule(SMValidator::validate(opened), DocRules::RULE_PSEUDO_START));
 
             // Opened as a host, none of it appears: the host reports the relationship only, and
             // the relationship is sound -- the file is there, it parses, the pin matches.
             std::unique_ptr<StateMachineData> host = hostMachine(at("inerthost.fsml"), QStringLiteral("Inert"), QStringLiteral("./inert.fsml"), QStringLiteral("1.0.0"), 1);
             SMDocumentCache::getInstance().clear();
             const QList<SMIssue> hostIssues = SMValidator::validate(*host);
-            CHECK(countRule(hostIssues, SMValidator::RULE_PSEUDO_START) == 0);
+            CHECK(countRule(hostIssues, DocRules::RULE_PSEUDO_START) == 0);
             CHECK(countRule(hostIssues, 19) == 0);
         }
 
@@ -2687,7 +2771,7 @@ namespace
             bool warned = false;
             for (const SMIssue& issue : issues)
             {
-                warned = warned || ((issue.rule == (SMValidator::WARNING_RULE_BASE + 4))
+                warned = warned || ((issue.rule == (DocRuleChecks::WARNING_RULE_BASE + 4))
                                     && (issue.severity == SMIssue::eSeverity::Warning)
                                     && issue.message.contains(QStringLiteral("more than once")));
             }
@@ -2871,7 +2955,7 @@ namespace
             addStart(doc);
             doc.getAttributes().createAttribute(QString(NELusanCommon::MAX_IDENTIFIER_LENGTH + 1, QLatin1Char('a')))
                               ->setType(QStringLiteral("uint32"));
-            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_INVALID_IDENTIFIER) == 1);
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
         }
 
         {   // A declaration with no name at all is the same fault under the same number, and it
@@ -2881,11 +2965,11 @@ namespace
             doc.getConstants().createConstant(QString());
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(countRule(issues, SMValidator::RULE_INVALID_IDENTIFIER) == 1);
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
             bool saysMissing = false;
             for (const SMIssue& issue : issues)
             {
-                saysMissing = saysMissing || ((issue.rule == SMValidator::RULE_INVALID_IDENTIFIER)
+                saysMissing = saysMissing || ((issue.rule == DocRules::RULE_INVALID_IDENTIFIER)
                                               && issue.message.contains(QStringLiteral("has no name")));
             }
 
@@ -2903,11 +2987,11 @@ namespace
             clash->setName(QStringLiteral("speed"));
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(countRule(issues, SMValidator::RULE_DUPLICATE_NAME) == 1);
+            CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 1);
             bool namesIt = false;
             for (const SMIssue& issue : issues)
             {
-                namesIt = namesIt || ((issue.rule == SMValidator::RULE_DUPLICATE_NAME)
+                namesIt = namesIt || ((issue.rule == DocRules::RULE_DUPLICATE_NAME)
                                       && issue.message.contains(QStringLiteral("Attribute 'speed'")));
             }
 
@@ -2922,8 +3006,8 @@ namespace
             doc.getConstants().createConstant(QStringLiteral("Unused"))->setType(QStringLiteral("uint32"));
 
             const QList<SMIssue> issues = SMValidator::validate(doc);
-            CHECK(explains(issues, SMValidator::RULE_UNRESOLVED_REFERENCE, DocRuleChecks::eShape::UnresolvedType));
-            CHECK(explains(issues, SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNREFERENCED
+            CHECK(explains(issues, DocRules::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
+            CHECK(explains(issues, DocRuleChecks::INFORMATION_RULE_BASE + DocRules::RULE_UNREFERENCED
                           , DocRuleChecks::eShape::Unreferenced));
         }
     }
@@ -2979,9 +3063,9 @@ namespace
             CHECK(registry.findCustomDataType(QStringLiteral("Unit")) == nullptr);
 
             const QList<SMIssue> issues = SMValidator::validate(reloaded);
-            CHECK(countRule(issues, SMValidator::RULE_UNRESOLVED_REFERENCE) == 0);
-            CHECK(countRule(issues, SMValidator::RULE_BROKEN_IMPORT) == 0);
-            CHECK(countRule(issues, SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNUSED_IMPORT) == 0);
+            CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
+            CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 0);
+            CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
         }
 
         {   // The document is included but nothing declares with it.
@@ -2994,7 +3078,7 @@ namespace
             StateMachineData reloaded;
             CHECK(reloaded.readFromFile(hostPath));
             CHECK(countRule(SMValidator::validate(reloaded)
-                           , SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNUSED_IMPORT) == 1);
+                           , DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 1);
         }
 
         {   // The row leads nowhere, so it contributes no type and is reported for that.
@@ -3009,8 +3093,8 @@ namespace
             CHECK(reloaded.openSucceeded());
 
             const QList<SMIssue> issues = SMValidator::validate(reloaded);
-            CHECK(countRule(issues, SMValidator::RULE_BROKEN_IMPORT) == 1);
-            CHECK(countRule(issues, SMValidator::WARNING_RULE_BASE + SMValidator::RULE_UNUSED_IMPORT) == 0);
+            CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 1);
+            CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
         }
     }
 }
@@ -3051,6 +3135,9 @@ int main(int /*argc*/, char* /*argv*/[])
     testDefaultOrderAndCallableNames();
     testSharedRuleShapes();
     testDataTypeDocumentImport();
+    testMissingVersion();
+    testDeprecatedDeclarations();
+    testRetiredElement();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

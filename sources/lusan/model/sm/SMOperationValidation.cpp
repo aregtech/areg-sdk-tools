@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/sm/SMOperationValidation.hpp"
 
 #include "lusan/data/common/MethodBase.hpp"
@@ -74,7 +75,7 @@ QList<DocIssue> SMOperationValidation::argumentIssues( const MethodBase& callee
         issue.elementId = ownerId;
         issue.kind      = kind;
         issue.severity  = DocIssue::eSeverity::Error;
-        issue.rule      = SMValidator::RULE_ARGUMENT_MAPPING;
+        issue.rule      = DocRules::RULE_ARGUMENT_MAPPING;
         issue.message   = message;
         issue.location  = location;
         issue.detail    = detail;

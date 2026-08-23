@@ -29,6 +29,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/common/DocElementCommands.hpp
     ${LUSAN}/model/common/DocModelNotifier.hpp
     ${LUSAN}/model/common/DocRuleChecks.hpp
+    ${LUSAN}/model/common/DocRules.hpp
     ${LUSAN}/model/common/DocUndoStack.hpp
     ${LUSAN}/model/common/DocUnknownScan.hpp
     ${LUSAN}/model/common/FileSystemEntry.hpp

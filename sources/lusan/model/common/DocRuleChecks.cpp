@@ -24,6 +24,7 @@
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
 #include <QFileInfo>
@@ -41,10 +42,9 @@ namespace
     }
 }
 
-DocRuleChecks::DocRuleChecks(QList<DocIssue>& issues, const DataTypeDataSection& types, const RuleIds& rules)
+DocRuleChecks::DocRuleChecks(QList<DocIssue>& issues, const DataTypeDataSection& types)
     : mIssues   (issues)
     , mTypes    (types)
-    , mRules    (rules)
 {
 }
 
@@ -93,7 +93,17 @@ QString DocRuleChecks::explainShape(eShape shape)
 
     case eShape::UnknownElement:
         return tr("The code generator refuses the whole document, so nothing generates until the tag is removed or corrected. "
-                  "The block is kept as written until then.");
+                  "The block is kept while the document is open and is dropped when it is saved.");
+
+    case eShape::RetiredElement:
+        return tr("The format used to define this element here and no longer does, so the document reads as one written for an earlier version. "
+                  "The block is kept while the document is open and is dropped when it is saved.");
+
+    case eShape::UnknownAttribute:
+        return tr("Nothing reads the attribute, so it reaches no generated code. It is dropped the next time the document is saved.");
+
+    case eShape::DroppedElement:
+        return tr("The block is kept only while the document is open. Take what you need out of it before saving, or open the document in a build that defines the element.");
 
     default:
         return QString();
@@ -164,7 +174,32 @@ QString DocRuleChecks::unresolvedFragment(const QString& typeName) const
 
 int DocRuleChecks::ruleId(int rule, DocIssue::eSeverity severity) const
 {
-    return (severity == DocIssue::eSeverity::Error) ? rule : (DocRuleChecks::ADVISORY_RULE_BASE + rule);
+    switch (severity)
+    {
+    case DocIssue::eSeverity::Warning:
+        return (DocRuleChecks::WARNING_RULE_BASE + rule);
+
+    case DocIssue::eSeverity::Info:
+        return (DocRuleChecks::INFORMATION_RULE_BASE + rule);
+
+    default:
+        return rule;
+    }
+}
+
+int DocRuleChecks::bareRule(int ruleId)
+{
+    if (ruleId >= DocRuleChecks::INFORMATION_RULE_BASE)
+        return (ruleId - DocRuleChecks::INFORMATION_RULE_BASE);
+    else if (ruleId >= DocRuleChecks::WARNING_RULE_BASE)
+        return (ruleId - DocRuleChecks::WARNING_RULE_BASE);
+    else
+        return ruleId;
+}
+
+bool DocRuleChecks::isBanded(int ruleId)
+{
+    return (ruleId >= DocRuleChecks::LOWEST_BANDED_RULE);
 }
 
 void DocRuleChecks::add(uint32_t id, eDocElementKind kind, DocIssue::eSeverity severity, int rule
@@ -184,13 +219,13 @@ void DocRuleChecks::checkIdentifier(uint32_t id, eDocElementKind kind, const QSt
 {
     if (name.isEmpty())
     {
-        add(id, kind, DocIssue::eSeverity::Error, mRules.missingName
+        add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
            , what.isEmpty() ? tr("A declaration has no name") : tr("%1 has no name").arg(what)
            , explainShape(eShape::MissingName));
     }
     else if (isIdentifier(name) == false)
     {
-        add(id, kind, DocIssue::eSeverity::Error, mRules.invalidIdentifier
+        add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
            , tr("'%1' is not a valid identifier").arg(name)
            , explainShape(eShape::InvalidIdentifier));
     }
@@ -203,7 +238,7 @@ QString DocRuleChecks::checkDeclaredType(uint32_t id, eDocElementKind kind, cons
     {
         if (required)
         {
-            add(id, kind, DocIssue::eSeverity::Error, mRules.unresolvedType
+            add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_UNRESOLVED_TYPE
                , what.isEmpty() ? tr("A declaration names no type") : tr("%1 declares no type").arg(what)
                , explainShape(eShape::UnresolvedType));
         }
@@ -216,7 +251,7 @@ QString DocRuleChecks::checkDeclaredType(uint32_t id, eDocElementKind kind, cons
     const QString missing = unresolvedFragment(typeName);
     if (missing.isEmpty() == false)
     {
-        add(id, kind, DocIssue::eSeverity::Error, mRules.unresolvedType
+        add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_UNRESOLVED_TYPE
            , what.isEmpty() ? tr("Data type '%1' does not resolve").arg(missing)
                             : tr("%1 declares type '%2', which does not exist").arg(what, missing)
            , explainShape(eShape::UnresolvedType));
@@ -232,7 +267,7 @@ void DocRuleChecks::checkLiteral(uint32_t id, eDocElementKind kind, const QStrin
     if (reason.isEmpty())
         return;
 
-    add(id, kind, DocIssue::eSeverity::Error, mRules.badLiteral
+    add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_BAD_LITERAL
        , what.isEmpty() ? tr("Invalid %1 literal '%2': %3").arg(typeName, literal, reason)
                         : tr("%1 has value '%2': %3").arg(what, literal, reason)
        , explainShape(eShape::BadLiteral));
@@ -241,7 +276,7 @@ void DocRuleChecks::checkLiteral(uint32_t id, eDocElementKind kind, const QStrin
 void DocRuleChecks::reportDuplicate(uint32_t id, eDocElementKind kind, const QString& subject
                                    , DocIssue::eSeverity severity)
 {
-    add(id, kind, severity, mRules.duplicateName
+    add(id, kind, severity, DocRules::RULE_DUPLICATE_NAME
        , tr("%1 is declared more than once").arg(subject)
        , explainShape(eShape::DuplicateName));
 }
@@ -249,7 +284,7 @@ void DocRuleChecks::reportDuplicate(uint32_t id, eDocElementKind kind, const QSt
 void DocRuleChecks::noteUnreferenced(uint32_t id, eDocElementKind kind, const QString& subject
                                     , DocIssue::eSeverity severity, const QString& message)
 {
-    add(id, kind, severity, mRules.unreferenced
+    add(id, kind, severity, DocRules::RULE_UNREFERENCED
        , message.isEmpty() ? tr("%1 is never referenced").arg(subject) : message
        , explainShape(eShape::Unreferenced));
 }
@@ -282,7 +317,7 @@ void DocRuleChecks::checkEnumeratorValues(eDocElementKind kind, const QString& t
         const auto found = taken.constFind(value);
         if (found != taken.constEnd())
         {
-            add(entry.getId(), kind, DocIssue::eSeverity::Error, mRules.duplicateEnumValue
+            add(entry.getId(), kind, DocIssue::eSeverity::Error, DocRules::RULE_DUPLICATE_ENUM_VALUE
                , tr("Value '%1' of enumeration '%2' counts %3, the same as '%4'")
                     .arg(entry.getName(), typeName).arg(value).arg(found.value())
                , explainShape(eShape::DuplicateEnumValue));
@@ -299,7 +334,7 @@ void DocRuleChecks::checkEnumeratorValues(eDocElementKind kind, const QString& t
 void DocRuleChecks::noteDeprecated(uint32_t id, eDocElementKind kind, const QString& subject
                                   , DocIssue::eSeverity severity, const QString& hint)
 {
-    add(id, kind, severity, mRules.deprecated
+    add(id, kind, severity, DocRules::RULE_DEPRECATED
        , hint.trimmed().isEmpty() ? tr("%1 is deprecated").arg(subject)
                                   : tr("%1 is deprecated: %2").arg(subject, hint.trimmed())
        , explainShape(eShape::Deprecated));
@@ -319,16 +354,74 @@ void DocRuleChecks::noteFileNameMismatch(uint32_t id, const QString& name, const
        , explainShape(eShape::FileNameMismatch));
 }
 
-void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown)
+const DocRules::Retired* DocRuleChecks::retiredElement(const QString& tag, const QString& parent, const QString& document)
+{
+    for (const DocRules::Retired& entry : DocRules::RETIRED)
+    {
+        if (tag.compare(QLatin1String(entry.tag), Qt::CaseInsensitive) != 0)
+            continue;
+
+        const QLatin1String owner{ entry.parent };
+        if ((owner.size() != 0) && (parent.compare(owner, Qt::CaseInsensitive) != 0))
+            continue;
+
+        const QLatin1String formats{ entry.documents };
+        if ((formats.size() != 0) && (document.isEmpty() == false)
+            && (QString(formats).split(QLatin1Char(' '), Qt::SkipEmptyParts).contains(document, Qt::CaseInsensitive) == false))
+        {
+            continue;
+        }
+
+        return &entry;
+    }
+
+    return nullptr;
+}
+
+void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown
+                                       , const QString& document)
 {
     for (const DocUnknownElement& entry : unknown)
     {
+        // The block does not reach the file the next time it is written, so the loss is said
+        // before it happens, beside the fault itself.
+        add(0u, kind, DocIssue::eSeverity::Warning, DocRules::RULE_DROPPED_ELEMENT
+           , tr("The <%1> block, line %2, is removed when the document is saved").arg(entry.name).arg(entry.line)
+           , explainShape(eShape::DroppedElement));
+        mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+
+        // An element the format used to define here is a different fault from one it never had:
+        // the author is moving something rather than correcting a spelling, so the finding says
+        // where it went instead of only that the tag is not recognised.
+        const DocRules::Retired* retired = retiredElement(entry.name, entry.parent, document);
+        if (retired != nullptr)
+        {
+            add(0u, kind, DocIssue::eSeverity::Error, DocRules::RULE_RETIRED_ELEMENT
+               , tr("'%1' is no longer a child of <%2>, line %3. %4")
+                    .arg(entry.name, entry.parent).arg(entry.line).arg(QLatin1String(retired->fix))
+               , explainShape(eShape::RetiredElement));
+            mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+            continue;
+        }
+
         // The tag is the only thing to point at: an element the format does not define has no
         // document element behind it, and so nothing to select. The line is what lets the author
         // find the first one, which matters because a mistyped tag travels by copy.
         const QString message = tr("Unknown tag '%1', line %2").arg(entry.name).arg(entry.line);
         add(0u, kind, DocIssue::eSeverity::Error, rule, message, explainShape(eShape::UnknownElement));
         mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+    }
+}
+
+void DocRuleChecks::noteUnknownAttributes(eDocElementKind kind, int rule, const QList<DocUnknownAttribute>& unknown)
+{
+    for (const DocUnknownAttribute& entry : unknown)
+    {
+        add(0u, kind, DocIssue::eSeverity::Warning, rule
+           , tr("Unknown attribute '%1' on <%2>. The value is not used and is removed when the document is saved.")
+                .arg(entry.name, entry.element)
+           , explainShape(eShape::UnknownAttribute));
+        mIssues.last().location = tr("in <%1>").arg(entry.element);
     }
 }
 
@@ -351,7 +444,7 @@ void DocRuleChecks::checkImportedDocuments(eDocElementKind kind, int rule)
             break;
 
         case DataTypeDataSection::eImportState::DuplicateSpace:
-            add(group.id, kind, DocIssue::eSeverity::Error, mRules.duplicateName
+            add(group.id, kind, DocIssue::eSeverity::Error, DocRules::RULE_DUPLICATE_NAME
                , tr("'%1' and an earlier include both carry the name '%2', so both generate one namespace")
                     .arg(group.location, group.space)
                , explainShape(eShape::DuplicateName));

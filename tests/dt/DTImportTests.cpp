@@ -20,6 +20,7 @@
  *
  ************************************************************************/
 
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
@@ -190,9 +191,9 @@ static void testQualifiedResolution()
     CHECK((attribute != nullptr) && (attribute->getParamType() != nullptr));
 
     const QList<DocIssue> issues = SIValidator::validate(data);
-    CHECK(countRule(issues, SIValidator::RULE_UNRESOLVED_TYPE) == 0);
-    CHECK(countRule(issues, SIValidator::RULE_BROKEN_IMPORT) == 0);
-    CHECK(countRule(issues, SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT) == 0);
+    CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
+    CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 0);
+    CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
 }
 
 //!< A qualified name whose namespace is imported but whose type is not declared there is a fault;
@@ -211,7 +212,7 @@ static void testUnresolvedQualifiedName()
 
     ServiceInterfaceData data;
     CHECK(data.readFromFile(host));
-    CHECK(countRule(SIValidator::validate(data), SIValidator::RULE_UNRESOLVED_TYPE) == 1);
+    CHECK(countRule(SIValidator::validate(data), DocRules::RULE_UNRESOLVED_TYPE) == 1);
 
     // The same spelling with a namespace nothing includes: a hand-written C++ name, not a finding.
     resetCache();
@@ -222,7 +223,7 @@ static void testUnresolvedQualifiedName()
 
     ServiceInterfaceData other;
     CHECK(other.readFromFile(bare));
-    CHECK(countRule(SIValidator::validate(other), SIValidator::RULE_UNRESOLVED_TYPE) == 0);
+    CHECK(countRule(SIValidator::validate(other), DocRules::RULE_UNRESOLVED_TYPE) == 0);
 }
 
 //!< A type the host declares itself wins over an imported one of the same name.
@@ -295,7 +296,7 @@ static void testDuplicateNamespace()
     for (const DocIssue& issue : issues)
     {
         blamedSecond = blamedSecond
-                    || ((issue.rule == SIValidator::RULE_DUPLICATE_NAME) && (issue.elementId == 21u));
+                    || ((issue.rule == DocRules::RULE_DUPLICATE_NAME) && (issue.elementId == 21u));
     }
 
     CHECK(blamedSecond);
@@ -327,8 +328,8 @@ static void testBrokenImport()
     // Two errors, one per row, and no unused-import advisory on top: a row that contributes
     // nothing because it is broken is already being reported.
     const QList<DocIssue> issues = SIValidator::validate(data);
-    CHECK(countRule(issues, SIValidator::RULE_BROKEN_IMPORT) == 2);
-    CHECK(countRule(issues, SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT) == 0);
+    CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 2);
+    CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
 }
 
 //!< A document included but never declared with is worth a word; one used inside a template is not.
@@ -347,7 +348,7 @@ static void testUnusedImport()
     ServiceInterfaceData data;
     CHECK(data.readFromFile(host));
     const QList<DocIssue> issues = SIValidator::validate(data);
-    CHECK(countRule(issues, SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT) == 1);
+    CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 1);
 
     // Declared with inside a container's element type, which is where the name is not the whole
     // spelling: still a use.
@@ -368,8 +369,8 @@ static void testUnusedImport()
     ServiceInterfaceData used;
     CHECK(used.readFromFile(nested));
     const QList<DocIssue> nestedIssues = SIValidator::validate(used);
-    CHECK(countRule(nestedIssues, SIValidator::ADVISORY_RULE_BASE + SIValidator::RULE_UNUSED_IMPORT) == 0);
-    CHECK(countRule(nestedIssues, SIValidator::RULE_UNRESOLVED_TYPE) == 0);
+    CHECK(countRule(nestedIssues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+    CHECK(countRule(nestedIssues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
 }
 
 //!< The included file changing on disk reaches the reading document on the next resolve.
@@ -503,7 +504,7 @@ static void testHeaderIsNotAnImport()
     ServiceInterfaceData data;
     CHECK(data.readFromFile(host));
     CHECK(data.getDataTypeData().getImports().isEmpty());
-    CHECK(countRule(SIValidator::validate(data), SIValidator::RULE_BROKEN_IMPORT) == 0);
+    CHECK(countRule(SIValidator::validate(data), DocRules::RULE_BROKEN_IMPORT) == 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
