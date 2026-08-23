@@ -95,6 +95,10 @@ QString DocRuleChecks::explainShape(eShape shape)
         return tr("The code generator refuses the whole document, so nothing generates until the tag is removed or corrected. "
                   "The block is kept as written until then.");
 
+    case eShape::RetiredElement:
+        return tr("The format used to define this element here and no longer does, so the document reads as one written for an earlier version. "
+                  "The block is kept as written until it is moved.");
+
     default:
         return QString();
     }
@@ -344,10 +348,49 @@ void DocRuleChecks::noteFileNameMismatch(uint32_t id, const QString& name, const
        , explainShape(eShape::FileNameMismatch));
 }
 
-void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown)
+const DocRules::Retired* DocRuleChecks::retiredElement(const QString& tag, const QString& parent, const QString& document)
+{
+    for (const DocRules::Retired& entry : DocRules::RETIRED)
+    {
+        if (tag.compare(QLatin1String(entry.tag), Qt::CaseInsensitive) != 0)
+            continue;
+
+        const QLatin1String owner{ entry.parent };
+        if ((owner.size() != 0) && (parent.compare(owner, Qt::CaseInsensitive) != 0))
+            continue;
+
+        const QLatin1String formats{ entry.documents };
+        if ((formats.size() != 0) && (document.isEmpty() == false)
+            && (QString(formats).split(QLatin1Char(' '), Qt::SkipEmptyParts).contains(document, Qt::CaseInsensitive) == false))
+        {
+            continue;
+        }
+
+        return &entry;
+    }
+
+    return nullptr;
+}
+
+void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown
+                                       , const QString& document)
 {
     for (const DocUnknownElement& entry : unknown)
     {
+        // An element the format used to define here is a different fault from one it never had:
+        // the author is moving something rather than correcting a spelling, so the finding says
+        // where it went instead of only that the tag is not recognised.
+        const DocRules::Retired* retired = retiredElement(entry.name, entry.parent, document);
+        if (retired != nullptr)
+        {
+            add(0u, kind, DocIssue::eSeverity::Error, DocRules::RULE_RETIRED_ELEMENT
+               , tr("'%1' is no longer a child of <%2>, line %3. %4")
+                    .arg(entry.name, entry.parent).arg(entry.line).arg(QLatin1String(retired->fix))
+               , explainShape(eShape::RetiredElement));
+            mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+            continue;
+        }
+
         // The tag is the only thing to point at: an element the format does not define has no
         // document element behind it, and so nothing to select. The line is what lets the author
         // find the first one, which matters because a mistyped tag travels by copy.

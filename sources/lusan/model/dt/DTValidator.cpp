@@ -128,8 +128,9 @@ namespace
 
         if (overview.getVersion().isValid() == false)
         {
-            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
-                       , vtr("The data type document has no version"), DocRuleChecks::explainShape(DocRuleChecks::eShape::MissingName));
+            mChecks.add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_MISSING_VERSION
+                       , vtr("The data type document has no version")
+                       , DTValidator::explainRule(DocRules::RULE_MISSING_VERSION, eSeverity::Error));
         }
 
         if (overview.getIsDeprecated())
@@ -175,6 +176,7 @@ namespace
                     checkType(id, eDocElementKind::DataType, field.getType(), where);
                     mChecks.checkLiteral(id, eDocElementKind::DataType, field.getType(), field.getValue(), where);
                     fields.claim(id, field.getName(), where);
+                    mChecks.noteDeprecatedElement(field, eDocElementKind::DataType, where);
                 }
 
                 if (structType->getElementCount() == 0)
@@ -192,6 +194,7 @@ namespace
                     const QString where = vtr("Value '%1' of enumeration '%2'").arg(field.getName(), name);
                     mChecks.checkIdentifier(id, eDocElementKind::DataType, field.getName(), where);
                     fields.claim(id, field.getName(), where);
+                    mChecks.noteDeprecatedElement(field, eDocElementKind::DataType, where);
                 }
 
                 mChecks.checkEnumeratorValues(eDocElementKind::DataType, name, enumType->getElements());
@@ -248,6 +251,8 @@ namespace
             }
 
             locations.insert(location);
+            mChecks.noteDeprecatedElement(include, eDocElementKind::Include
+                                         , vtr("Include '%1'").arg(location));
         }
     }
 
@@ -261,7 +266,7 @@ namespace
     void Ctx::checkUnknownElements(void)
     {
         mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
-                                  , mData.getUnknownElements());
+                                  , mData.getUnknownElements(), QStringLiteral("dtml"));
     }
 
     QList<DocIssue> Ctx::run(void)
@@ -335,6 +340,8 @@ QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case DocRules::RULE_NOT_A_HEADER:
         return QCoreApplication::translate("DTValidator", "Data types are shared by including this document, not by chaining one into another. Move the types you need in here, or include the header they come from.");
+    case DocRules::RULE_MISSING_VERSION:
+        return QCoreApplication::translate("DTValidator", "The version is generated into the code and tells a client which contract it was built against. Give the document one.");
     case DocRules::RULE_UNKNOWN_ELEMENT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnknownElement);
     default:

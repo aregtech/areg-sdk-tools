@@ -514,6 +514,45 @@ namespace
     //!< The shared method section over a service interface: request, response and broadcast, the
     //!< request-to-response link, per-kind names, parameters with defaults, and the written shape
     //!< -- a `Response` attribute, a `<Value IsDefault>` child, and never `Return`/`Implement`.
+    void testConstantDeprecationRoundTrip()
+    {
+        std::printf("- a deprecated constant survives a read and a write\n");
+        const QString source = QStringLiteral(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            "<ServiceInterface FormatVersion=\"1.1.0\">"
+            "  <Overview ID=\"1\" Name=\"Sample\" Version=\"1.0.0\"/>"
+            "  <ConstantList>"
+            "    <Constant ID=\"20\" Name=\"OldLimit\" DataType=\"uint32\" Value=\"5\""
+            "              IsDeprecated=\"true\" DeprecateHint=\"Use NewLimit instead.\">"
+            "      <Description>The old limit.</Description>"
+            "    </Constant>"
+            "    <Constant ID=\"21\" Name=\"NewLimit\" DataType=\"uint32\" Value=\"10\"/>"
+            "  </ConstantList>"
+            "</ServiceInterface>");
+
+        ServiceInterfaceData doc;
+        QXmlStreamReader reader(source);
+        while (reader.readNextStartElement())
+        {
+            CHECK(doc.readFromXml(reader));
+            break;
+        }
+
+        const ConstantEntry* marked = doc.getConstantData().findElement(QStringLiteral("OldLimit"));
+        CHECK(marked != nullptr);
+        CHECK((marked != nullptr) && marked->getIsDeprecated());
+        CHECK((marked != nullptr) && (marked->getDeprecateHint() == QStringLiteral("Use NewLimit instead.")));
+
+        const ConstantEntry* plain = doc.getConstantData().findElement(QStringLiteral("NewLimit"));
+        CHECK(plain != nullptr);
+        CHECK((plain != nullptr) && (plain->getIsDeprecated() == false));
+
+        // The write has to put both back, or the mark is lost on the next save.
+        const QString written = serialize(doc);
+        CHECK(written.contains(QStringLiteral("IsDeprecated=\"true\"")));
+        CHECK(written.contains(QStringLiteral("DeprecateHint=\"Use NewLimit instead.\"")));
+    }
+
     void testMethodSection()
     {
         ServiceInterfaceData doc;
@@ -1199,6 +1238,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testIncludeSection();
     testAttributeSection();
     testAttributeRoundTrip();
+    testConstantDeprecationRoundTrip();
     testMethodSection();
     testMethodParamDefaultRoundTrip();
     testLegacyTypeNames();

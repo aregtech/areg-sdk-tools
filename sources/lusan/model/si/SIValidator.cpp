@@ -149,6 +149,7 @@ namespace
             checkType(method.getId(), eDocElementKind::Method, param.getType(), where);
             checkLiteral(method.getId(), eDocElementKind::Method, param.getType(), param.getValue(), where);
             names.claim(method.getId(), param.getName(), where);
+            mChecks.noteDeprecatedElement(param, eDocElementKind::Method, where);
 
             // A caller may only leave out the trailing parameters, so once one carries a default
             // every parameter after it has to carry one too.
@@ -167,7 +168,7 @@ namespace
     void Ctx::checkUnknownElements()
     {
         mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
-                                  , mData.getUnknownElements());
+                                  , mData.getUnknownElements(), QStringLiteral("siml"));
     }
 
     void Ctx::checkOverview()
@@ -227,6 +228,7 @@ namespace
                     checkType(id, eDocElementKind::DataType, field.getType(), where);
                     checkLiteral(id, eDocElementKind::DataType, field.getType(), field.getValue(), where);
                     fields.claim(id, field.getName(), where);
+                    mChecks.noteDeprecatedElement(field, eDocElementKind::DataType, where);
                 }
 
                 if (structType->getElementCount() == 0)
@@ -244,6 +246,7 @@ namespace
                     const QString where = vtr("Value '%1' of enumeration '%2'").arg(field.getName(), name);
                     checkName(id, eDocElementKind::DataType, field.getName(), where);
                     fields.claim(id, field.getName(), where);
+                    mChecks.noteDeprecatedElement(field, eDocElementKind::DataType, where);
                 }
 
                 mChecks.checkEnumeratorValues(eDocElementKind::DataType, name, enumType->getElements());
@@ -283,6 +286,7 @@ namespace
             checkName(id, eDocElementKind::Attribute, name, vtr("The attribute"));
             checkType(id, eDocElementKind::Attribute, attribute.getType(), where);
             names.claim(id, name, where);
+            mChecks.noteDeprecatedElement(attribute, eDocElementKind::Attribute, where);
         }
     }
 
@@ -303,6 +307,8 @@ namespace
             checkParameters(*method);
             names.claimKeyed(id, QString::number(method->getKind()) + QLatin1Char(':') + name
                             , vtr("%1 '%2'").arg(kindWord, name));
+            mChecks.noteDeprecatedElement(*method, eDocElementKind::Method
+                                         , vtr("%1 '%2'").arg(kindWord, name));
         }
 
         // A request either answers with a declared response or answers with nothing at all; a name
@@ -353,6 +359,7 @@ namespace
             checkType(id, eDocElementKind::Constant, constant.getType(), where);
             checkLiteral(id, eDocElementKind::Constant, constant.getType(), constant.getValue(), where);
             names.claim(id, name, where);
+            mChecks.noteDeprecatedElement(constant, eDocElementKind::Constant, where);
         }
     }
 
@@ -376,6 +383,8 @@ namespace
             }
 
             locations.insert(location);
+            mChecks.noteDeprecatedElement(include, eDocElementKind::Include
+                                         , vtr("Include '%1'").arg(location));
         }
 
         // The type-use record is complete by now, so an imported document that contributes

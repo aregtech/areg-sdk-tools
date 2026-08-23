@@ -401,26 +401,48 @@ namespace
         for (SMEventEntry* e : mData.getEvents().getElements())
         {
             if (e != nullptr)
+            {
                 events.claim(e->getId(), e->getName(), vtr("Event '%1'").arg(e->getName()));
+                mChecks.noteDeprecatedElement(*e, eDocElementKind::Event, vtr("Event '%1'").arg(e->getName()));
+                for (const MethodParameter& p : e->getElements())
+                {
+                    mChecks.noteDeprecatedElement(p, eDocElementKind::Event
+                                                 , vtr("Parameter '%1' of event '%2'").arg(p.getName(), e->getName()));
+                }
+            }
         }
 
         DocNameSet timers(mChecks, eDocElementKind::Timer);
         for (const SMTimerEntry& t : mData.getTimers().getElements())
+        {
             timers.claim(t.getId(), t.getName(), vtr("Timer '%1'").arg(t.getName()));
+            mChecks.noteDeprecatedElement(t, eDocElementKind::Timer, vtr("Timer '%1'").arg(t.getName()));
+        }
 
         DocNameSet attributes(mChecks, eDocElementKind::Attribute);
         for (const AttributeEntry& a : mData.getAttributes().getElements())
+        {
             attributes.claim(a.getId(), a.getName(), vtr("Attribute '%1'").arg(a.getName()));
+            mChecks.noteDeprecatedElement(a, eDocElementKind::Attribute, vtr("Attribute '%1'").arg(a.getName()));
+        }
 
         DocNameSet constants(mChecks, eDocElementKind::Constant);
         for (const ConstantEntry& c : mData.getConstants().getElements())
+        {
             constants.claim(c.getId(), c.getName(), vtr("Constant '%1'").arg(c.getName()));
+            mChecks.noteDeprecatedElement(c, eDocElementKind::Constant, vtr("Constant '%1'").arg(c.getName()));
+        }
 
         // The include registry is keyed by location, so getName() is the path -- the alias is the
         // registry name here, and collecting getName() would quietly check the wrong thing.
         DocNameSet imports(mChecks, eDocElementKind::Import);
         for (const IncludeEntry* i : mData.machineImports())
             imports.claim(i->getId(), i->getAlias(), vtr("Import '%1'").arg(i->getAlias()));
+
+        for (const IncludeEntry& i : mData.getIncludes().getElements())
+        {
+            mChecks.noteDeprecatedElement(i, kindOfInclude(i), vtr("Include '%1'").arg(i.getLocation()));
+        }
 
         // A file listed twice is redundant rather than wrong. The UI cannot create one, so this
         // only fires on a hand-edited or merged file. An include is keyed by its location, so the
@@ -1243,6 +1265,13 @@ namespace
             else
                 checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias(), vtr("The import"));
         }
+        if (mData.getOverview().getVersion().isValid() == false)
+        {
+            mChecks.add(mData.getOverview().getId(), eDocElementKind::Overview, eSeverity::Error
+                       , DocRules::RULE_MISSING_VERSION, vtr("The state machine has no version")
+                       , SMValidator::explainRule(DocRules::RULE_MISSING_VERSION, eSeverity::Error));
+        }
+
         if (mData.getOverview().getIsDeprecated())
         {
             mChecks.noteDeprecated(mData.getOverview().getId(), eDocElementKind::Overview
@@ -1259,6 +1288,23 @@ namespace
                 continue;
 
             checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName(), vtr("The data type"));
+            if (d->isStructure())
+            {
+                for (const FieldEntry& f : static_cast<const DataTypeStructure*>(d)->getElements())
+                {
+                    mChecks.noteDeprecatedElement(f, eDocElementKind::DataType
+                                                 , vtr("Field '%1' of structure '%2'").arg(f.getName(), d->getName()));
+                }
+            }
+            else if (d->isEnumeration())
+            {
+                for (const EnumEntry& e : static_cast<const DataTypeEnum*>(d)->getElements())
+                {
+                    mChecks.noteDeprecatedElement(e, eDocElementKind::DataType
+                                                 , vtr("Value '%1' of enumeration '%2'").arg(e.getName(), d->getName()));
+                }
+            }
+
             if (d->getIsDeprecated())
             {
                 mChecks.noteDeprecated(d->getId(), eDocElementKind::DataType
@@ -1582,7 +1628,7 @@ namespace
     void Ctx::checkUnknownElements()
     {
         mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
-                                  , mData.getUnknownElements());
+                                  , mData.getUnknownElements(), QStringLiteral("fsml"));
     }
 
     void Ctx::checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName)
@@ -2095,6 +2141,8 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
     case DocRules::RULE_TARGET_SIBLING:
         return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
+    case DocRules::RULE_MISSING_VERSION:
+        return vtr("The version is generated into the code and tells a client which contract it was built against. Give the document one.");
     case DocRules::RULE_FINAL_STATE:
         return vtr("A Final state is terminal: it ends the level, so it can neither lead anywhere nor contain anything.");
     case DocRules::RULE_START_SUBSTATES:

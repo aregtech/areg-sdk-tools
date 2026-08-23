@@ -280,6 +280,69 @@ namespace
             CHECK(countRule(SMValidator::validate(doc), 3) == 0);
         }
     }
+
+    void testMissingVersion()
+    {
+        std::printf("- a machine that declares no version\n");
+        {   // Positive: nothing set the version, so the generated code would claim one nobody wrote.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setVersion(VersionNumber(0, 0, 0));
+            CHECK(hasRule(SMValidator::validate(doc), DocRules::RULE_MISSING_VERSION));
+        }
+        {   // Negative: a version the document states.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setVersion(VersionNumber(1, 0, 0));
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_MISSING_VERSION) == 0);
+        }
+    }
+
+    void testRetiredElement()
+    {
+        std::printf("- an element the format has retired\n");
+        {   // Positive: the retired child names what to write instead.
+            const DocRules::Retired* found = DocRuleChecks::retiredElement(
+                        QStringLiteral("Value"), QStringLiteral("Constant"), QStringLiteral("siml"));
+            CHECK(found != nullptr);
+            CHECK((found != nullptr) && (QLatin1String(found->fix).size() > 0));
+        }
+        {   // Negative: the same tag somewhere the format never retired it.
+            CHECK(DocRuleChecks::retiredElement(QStringLiteral("Value"), QStringLiteral("Attribute"),
+                                                QStringLiteral("siml")) == nullptr);
+        }
+        {   // Negative: a tag nothing ever defined stays an unknown element.
+            CHECK(DocRuleChecks::retiredElement(QStringLiteral("Wobble"), QStringLiteral("Constant"),
+                                                QStringLiteral("siml")) == nullptr);
+        }
+    }
+
+    void testDeprecatedDeclarations()
+    {
+        std::printf("- declarations marked deprecated\n");
+        {   // The document itself is a warning: everything taken from it is deprecated with it.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setIsDeprecated(true);
+            CHECK(hasWarn(SMValidator::validate(doc), DocRules::RULE_DEPRECATED));
+        }
+        {   // One declaration inside a current document is information, not a warning.
+            StateMachineData doc;
+            addStart(doc);
+            AttributeEntry* attribute = doc.getAttributes().createAttribute("LegacyFlag");
+            attribute->setIsDeprecated(true);
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(hasInfo(issues, DocRules::RULE_DEPRECATED));
+            CHECK(countWarn(issues, DocRules::RULE_DEPRECATED) == 0);
+        }
+        {   // Negative: nothing is marked, so nothing is said.
+            StateMachineData doc;
+            addStart(doc);
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countInfo(issues, DocRules::RULE_DEPRECATED) == 0);
+            CHECK(countWarn(issues, DocRules::RULE_DEPRECATED) == 0);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -3072,6 +3135,9 @@ int main(int /*argc*/, char* /*argv*/[])
     testDefaultOrderAndCallableNames();
     testSharedRuleShapes();
     testDataTypeDocumentImport();
+    testMissingVersion();
+    testDeprecatedDeclarations();
+    testRetiredElement();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

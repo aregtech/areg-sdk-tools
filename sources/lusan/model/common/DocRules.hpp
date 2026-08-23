@@ -19,6 +19,12 @@
  *
  ************************************************************************/
 
+//////////////////////////////////////////////////////////////////////////
+// Generated from sources/lusan/res/rules/rules.xml. Do not edit by hand:
+// the build regenerates this file and fails when the two disagree. Change
+// the rule there, and both this tool and the code generator follow.
+//////////////////////////////////////////////////////////////////////////
+
 /**
  * \brief   The rule numbers, for every document kind at once.
  *
@@ -54,9 +60,10 @@ namespace DocRules
 
     /**
      * \brief   A name that is already taken: two entries of the same kind in one registry, a
-     *          repeated parameter name, or a stimulus name claimed by a trigger, an event and
-     *          a timer at once. Reported on every entry after the first, so the finding names
-     *          the copy the author has to rename.
+     *          repeated parameter name, or a stimulus name claimed by a trigger, an event and a
+     *          timer at once. Reported on every entry after the first, so the finding names the
+     *          copy the author has to rename. The code generator reports it for two included
+     *          documents that declare one name.
      **/
     constexpr int RULE_DUPLICATE_NAME       {  4 };
 
@@ -68,6 +75,13 @@ namespace DocRules
     constexpr int RULE_UNREFERENCED         { 26 };
 
     /**
+     * \brief   A document that declares no version. The version reaches the generated code and
+     *          tells a client which contract it was built against. Every document kind carries
+     *          one, so the fault is shared rather than owned by a single kind.
+     **/
+    constexpr int RULE_MISSING_VERSION      { 29 };
+
+    /**
      * \brief   A name the generated code could not carry: it must start with a letter or an
      *          underscore and continue with letters, digits or underscores. A declaration with
      *          no name at all is the same fault and carries the same number.
@@ -76,9 +90,9 @@ namespace DocRules
 
     /**
      * \brief   A declared data type that answers to nothing: the type of an attribute, a
-     *          parameter, a constant, a structure field, or a container key or value. The
-     *          field to correct is the type itself, which is what tells it apart from a
-     *          reference to a declared element (\a RULE_UNRESOLVED_ELEMENT).
+     *          parameter, a constant, a structure field, or a container key or value. The field
+     *          to correct is the type itself, which is what tells it apart from a reference to a
+     *          declared element (\a RULE_UNRESOLVED_ELEMENT).
      **/
     constexpr int RULE_UNRESOLVED_TYPE      {  6 };
 
@@ -103,9 +117,9 @@ namespace DocRules
     constexpr int RULE_ARGUMENT_MAPPING     { 10 };
 
     /**
-     * \brief   A submachine level with no `Kind="Start"` state. The root level is
-     *          \a RULE_START_STATE; a nested one is told apart so the message can name the
-     *          level that is missing its beginning.
+     * \brief   A submachine level with no `Kind="Start"` state. The root level is \a
+     *          RULE_START_STATE; a nested one is told apart so the message can name the level
+     *          that is missing its beginning.
      **/
     constexpr int RULE_NESTED_START         { 11 };
 
@@ -115,8 +129,9 @@ namespace DocRules
     constexpr int RULE_SOURCE_SCOPE         { 12 };
 
     /**
-     * \brief   An argument type with no conversion to the parameter it binds to, or a
-     *          comparison between two types with no implicit conversion.
+     * \brief   An argument type with no conversion to the parameter it binds to, or a comparison
+     *          between two types with no implicit conversion. A conversion that only narrows is
+     *          a warning, and the generated code casts explicitly.
      **/
     constexpr int RULE_ARGUMENT_TYPE        { 13 };
 
@@ -127,16 +142,15 @@ namespace DocRules
     constexpr int RULE_COMPARE_OPERAND      { 14 };
 
     /**
-     * \brief   Advisory: a declaration with no description, so the generated element
-     *          carries no comment. Only ever banded -- the bare number belongs to
-     *          \a RULE_COMPARE_OPERAND.
+     * \brief   Advisory: a declaration with no description, so the generated element carries no
+     *          comment. Only ever banded -- the bare number belongs to \a RULE_COMPARE_OPERAND.
      **/
     constexpr int RULE_MISSING_DESCRIPTION  { 14 };
 
     /**
-     * \brief   A value that does not read as its declared type: a malformed literal, a name
-     *          that is not an enumerator of its enumeration, or a literal on a type that has
-     *          no literal form.
+     * \brief   A value that does not read as its declared type: a malformed literal, a name that
+     *          is not an enumerator of its enumeration, or a literal on a type that has no
+     *          literal form.
      **/
     constexpr int RULE_BAD_LITERAL          { 15 };
 
@@ -146,7 +160,9 @@ namespace DocRules
     constexpr int RULE_BOOLEAN_OPERAND      { 16 };
 
     /**
-     * \brief   An `AttributeSet` whose source type does not convert to the attribute's type.
+     * \brief   An `AttributeSet` whose source type does not convert to the attribute's type. A
+     *          conversion that only narrows is a warning, and the generated code casts
+     *          explicitly.
      **/
     constexpr int RULE_ATTRIBUTE_TYPE       { 17 };
 
@@ -158,9 +174,12 @@ namespace DocRules
     constexpr int RULE_STATE_SHAPE          { 18 };
 
     /**
-     * \brief   An include that does not resolve: no file named, the file missing, unreadable,
-     *          a cycle, or nested too deep. An included data type document that could not be
-     *          read is the same fault -- every type it was to contribute is missing.
+     * \brief   An include that does not resolve: no file named, the file missing, unreadable, a
+     *          cycle, or nested too deep. An included data type document that could not be read
+     *          is the same fault -- every type it was to contribute is missing. The editor
+     *          always refuses; the code generator softens it to a warning, or to information
+     *          when the generated output of the missing document is already on disk and is used
+     *          as it stands.
      **/
     constexpr int RULE_BROKEN_IMPORT        { 19 };
 
@@ -171,8 +190,8 @@ namespace DocRules
     constexpr int RULE_CONDITION_BODY       { 20 };
 
     /**
-     * \brief   A parameterized condition named as a value source, which only a left operand
-     *          may be.
+     * \brief   A parameterized condition named as a value source, which only a left operand may
+     *          be.
      **/
     constexpr int RULE_PARAMETERIZED_COND   { 21 };
 
@@ -182,8 +201,8 @@ namespace DocRules
     constexpr int RULE_IMPORT_MAJOR         { 22 };
 
     /**
-     * \brief   A value source the format does not define, or one written where another kind
-     *          of row belongs.
+     * \brief   A value source the format does not define, or one written where another kind of
+     *          row belongs.
      **/
     constexpr int RULE_SOURCE_KIND          { 23 };
 
@@ -199,26 +218,24 @@ namespace DocRules
     constexpr int RULE_GUARD                { 25 };
 
     /**
-     * \brief   The `Kind="Start"` pseudo-state faults: operations on a Start, a stimulus on
-     *          one of its initial transitions, a Start nothing leaves, a Start something enters
-     *          (its own transition included), two or more initial transitions where any carries
-     *          no condition, and a root Start that does not have exactly one unconditional
+     * \brief   The `Kind="Start"` pseudo-state faults: operations on a Start, a stimulus on one
+     *          of its initial transitions, a Start nothing leaves, a Start something enters (its
+     *          own transition included), two or more initial transitions where any carries no
+     *          condition, and a root Start that does not have exactly one unconditional
      *          transition. One id, because they are one rule (a Start is not a state) and
      *          because the code generator has to file the same faults under the same number.
      **/
     constexpr int RULE_PSEUDO_START         { 27 };
 
     /**
-     * \brief   The transition `Kind`: an `External` transition with no target
-     *          (the unfinished edge that used to be indistinguishable from an internal one),
-     *          an `Internal` one that names a target, an `Initial` one with no target or with a
-     *          stimulus, an `External`/`Internal` one with no stimulus, an `Initial` transition
-     *          on a state that is not a `Kind="Start"`, and a `Start` owning anything other
-     *          than `Initial` transitions.
-     *
-     *          One id, because they are one rule (`Kind` says what the transition is, and `To`
-     *          and `Stimulus` then mean only what they say) and because the code generator has
-     *          to file the same faults under the same number.
+     * \brief   The transition `Kind`: an `External` transition with no target (the unfinished
+     *          edge that used to be indistinguishable from an internal one), an `Internal` one
+     *          that names a target, an `Initial` one with no target or with a stimulus, an
+     *          `External`/`Internal` one with no stimulus, an `Initial` transition on a state
+     *          that is not a `Kind="Start"`, and a `Start` owning anything other than `Initial`
+     *          transitions. One id, because they are one rule (`Kind` says what the transition
+     *          is, and `To` and `Stimulus` then mean only what they say) and because the code
+     *          generator has to file the same faults under the same number.
      **/
     constexpr int RULE_TRANSITION_KIND      { 28 };
 
@@ -246,14 +263,14 @@ namespace DocRules
     constexpr int RULE_UNKNOWN_ELEMENT      { 34 };
 
     /**
-     * \brief   Advisory: a parameter carrying the name of its own trigger or condition. The
-     *          bare number belongs to \a RULE_UNKNOWN_ELEMENT; this one is only ever banded.
+     * \brief   Advisory: a parameter carrying the name of its own trigger or condition. The bare
+     *          number belongs to \a RULE_UNKNOWN_ELEMENT; this one is only ever banded.
      **/
     constexpr int RULE_PARAM_SHADOWS        { 34 };
 
     /**
-     * \brief   Advisory: a response no request leads to. Only ever banded -- the bare number
-     *          is not in use.
+     * \brief   Advisory: a response no request leads to. Only ever banded -- the bare number is
+     *          not in use.
      **/
     constexpr int RULE_UNBOUND_RESPONSE     { 36 };
 
@@ -263,8 +280,8 @@ namespace DocRules
     constexpr int RULE_DEFAULT_ORDER        { 38 };
 
     /**
-     * \brief   Advisory: a condition whose name already begins with the prefix an action
-     *          method carries. Only ever banded.
+     * \brief   Advisory: a condition whose name already begins with the prefix an action method
+     *          carries. Only ever banded.
      **/
     constexpr int RULE_ACTION_PREFIX        { 39 };
 
@@ -272,20 +289,20 @@ namespace DocRules
      * \brief   A reference to a declared element that is not there: a trigger, an event, a
      *          timer, an action, an attribute, a constant, a condition, a parameter, or the
      *          alias of a hosted machine. The field to correct is the name that was written,
-     *          which is what tells it apart from a data type that answers to nothing
-     *          (\a RULE_UNRESOLVED_TYPE).
+     *          which is what tells it apart from a data type that answers to nothing (\a
+     *          RULE_UNRESOLVED_TYPE).
      **/
     constexpr int RULE_UNRESOLVED_ELEMENT   { 46 };
 
     /**
-     * \brief   A data type document whose include list names another document. It declares
-     *          types and nothing else, and its include list carries C++ headers.
+     * \brief   A data type document whose include list names another document. It declares types
+     *          and nothing else, and its include list carries C++ headers.
      **/
     constexpr int RULE_NOT_A_HEADER         { 40 };
 
     /**
-     * \brief   Two enumerators of one enumeration counting the same, so a value read back
-     *          cannot be told apart from the other one.
+     * \brief   Two enumerators of one enumeration counting the same, so a value read back cannot
+     *          be told apart from the other one.
      **/
     constexpr int RULE_DUPLICATE_ENUM_VALUE { 41 };
 
@@ -316,17 +333,18 @@ namespace DocRules
     constexpr int RULE_FILE_NAME_MISMATCH   { 49 };
 
     /**
-     * \brief   A request whose Response names nothing, or names a method the document
-     *          declares as something other than a response. The field to correct is the
-     *          response the request is answered by.
+     * \brief   A request whose Response names nothing, or names a method the document declares
+     *          as something other than a response. The field to correct is the response the
+     *          request is answered by.
      **/
     constexpr int RULE_RESPONSE_LINK        { 51 };
 
     /**
-     * \brief   A service interface that declares no version. The version reaches the generated
-     *          code, so a document without one cannot be generated.
+     * \brief   An element the format used to define in this place and no longer does. Told apart
+     *          from a tag the format never had, because the author is moving something rather
+     *          than correcting a spelling, and the finding can name what to do instead.
      **/
-    constexpr int RULE_MISSING_VERSION      { 52 };
+    constexpr int RULE_RETIRED_ELEMENT      { 30 };
 
 //////////////////////////////////////////////////////////////////////////
 // Rules that exist only in a band
@@ -344,8 +362,8 @@ namespace DocRules
     constexpr int RULE_UNREACHABLE_STATE    {  1 };
 
     /**
-     * \brief   Warning 102: a state with no outgoing transition. The machine stays in it once
-     *          it is entered.
+     * \brief   Warning 102: a state with no outgoing transition. The machine stays in it once it
+     *          is entered.
      **/
     constexpr int RULE_DEAD_END_STATE       {  2 };
 
@@ -356,8 +374,8 @@ namespace DocRules
     constexpr int RULE_SHADOWED_TRANSITION  {  3 };
 
     /**
-     * \brief   Warning 105: an event that is sent and never reacted to, or reacted to and
-     *          never sent.
+     * \brief   Warning 105: an event that is sent and never reacted to, or reacted to and never
+     *          sent.
      **/
     constexpr int RULE_ONE_SIDED_EVENT      {  5 };
 
@@ -386,8 +404,8 @@ namespace DocRules
     constexpr int RULE_UNUSED_HISTORY       { 10 };
 
     /**
-     * \brief   Warning 112 and information 212: an import pinned to a version the file no
-     *          longer carries, where the difference is below the major version.
+     * \brief   Warning 112 and information 212: an import pinned to a version the file no longer
+     *          carries, where the difference is below the major version.
      **/
     constexpr int RULE_IMPORT_PATCH         { 12 };
 
@@ -426,61 +444,62 @@ namespace DocRules
      **/
     constexpr Rule REGISTRY[]
     {
-          { RULE_START_STATE          , BandError                     }
-        , { RULE_DUPLICATE_ID         , BandError                     }
-        , { RULE_STATE_NAME           , BandError                     }
-        , { RULE_DUPLICATE_NAME       , BandError   | BandWarning     }
-        , { RULE_INVALID_IDENTIFIER   , BandError                     }
-        , { RULE_UNRESOLVED_TYPE      , BandError                     }
-        , { RULE_TARGET_SIBLING       , BandError                     }
-        , { RULE_FINAL_STATE          , BandError                     }
-        , { RULE_START_SUBSTATES      , BandError                     }
-        , { RULE_ARGUMENT_MAPPING     , BandError                     }
-        , { RULE_NESTED_START         , BandError                     }
-        , { RULE_SOURCE_SCOPE         , BandError                     }
-        , { RULE_ARGUMENT_TYPE        , BandError   | BandWarning     }
-        , { RULE_COMPARE_OPERAND      , BandError                     }
-        , { RULE_BAD_LITERAL          , BandError                     }
-        , { RULE_BOOLEAN_OPERAND      , BandError                     }
-        , { RULE_ATTRIBUTE_TYPE       , BandError   | BandWarning     }
-        , { RULE_STATE_SHAPE          , BandError                     }
-        , { RULE_BROKEN_IMPORT        , BandError                     }
-        , { RULE_CONDITION_BODY       , BandError                     }
-        , { RULE_PARAMETERIZED_COND   , BandError                     }
-        , { RULE_IMPORT_MAJOR         , BandError                     }
-        , { RULE_SOURCE_KIND          , BandError                     }
-        , { RULE_SOURCE_EMPTY         , BandError                     }
-        , { RULE_GUARD                , BandError   | BandWarning | BandInformation }
-        , { RULE_UNREFERENCED         , BandWarning | BandInformation }
-        , { RULE_PSEUDO_START         , BandError                     }
-        , { RULE_TRANSITION_KIND      , BandError                     }
-        , { RULE_HANDLER_NAME         , BandError                     }
-        , { RULE_ATTRIBUTE_STIMULUS   , BandError                     }
-        , { RULE_RESERVED_PREFIX      , BandError                     }
-        , { RULE_UNKNOWN_ELEMENT      , BandError                     }
-        , { RULE_PARAM_SHADOWS        , BandWarning                   }
-        , { RULE_UNBOUND_RESPONSE     , BandWarning                   }
-        , { RULE_DEFAULT_ORDER        , BandError                     }
-        , { RULE_ACTION_PREFIX        , BandWarning                   }
-        , { RULE_NOT_A_HEADER         , BandError                     }
-        , { RULE_DUPLICATE_ENUM_VALUE , BandError                     }
-        , { RULE_DEPRECATED           , BandWarning | BandInformation }
-        , { RULE_UNRESOLVED_ELEMENT   , BandError                     }
-        , { RULE_EMPTY_TYPE           , BandWarning                   }
-        , { RULE_EMPTY_DOCUMENT       , BandWarning                   }
-        , { RULE_FILE_NAME_MISMATCH   , BandInformation               }
-        , { RULE_RESPONSE_LINK        , BandError                     }
-        , { RULE_MISSING_VERSION      , BandError                     }
-        , { RULE_MISSING_DESCRIPTION  , BandInformation               }
-        , { RULE_UNREACHABLE_STATE    , BandWarning                   }
-        , { RULE_DEAD_END_STATE       , BandWarning                   }
-        , { RULE_SHADOWED_TRANSITION  , BandWarning                   }
-        , { RULE_ONE_SIDED_EVENT      , BandWarning                   }
-        , { RULE_ONE_SIDED_TIMER      , BandWarning                   }
-        , { RULE_EMPTY_INTERNAL       , BandWarning                   }
-        , { RULE_CONSTANT_COMPARE     , BandWarning                   }
-        , { RULE_UNUSED_HISTORY       , BandWarning                   }
-        , { RULE_IMPORT_PATCH         , BandWarning | BandInformation }
+          { RULE_START_STATE         , BandError }
+        , { RULE_DUPLICATE_ID        , BandError }
+        , { RULE_STATE_NAME          , BandError }
+        , { RULE_DUPLICATE_NAME      , BandError | BandWarning }
+        , { RULE_UNREFERENCED        , BandWarning | BandInformation }
+        , { RULE_MISSING_VERSION     , BandError }
+        , { RULE_INVALID_IDENTIFIER  , BandError }
+        , { RULE_UNRESOLVED_TYPE     , BandError }
+        , { RULE_TARGET_SIBLING      , BandError }
+        , { RULE_FINAL_STATE         , BandError }
+        , { RULE_START_SUBSTATES     , BandError }
+        , { RULE_ARGUMENT_MAPPING    , BandError }
+        , { RULE_NESTED_START        , BandError }
+        , { RULE_SOURCE_SCOPE        , BandError }
+        , { RULE_ARGUMENT_TYPE       , BandError | BandWarning }
+        , { RULE_COMPARE_OPERAND     , BandError }
+        , { RULE_MISSING_DESCRIPTION , BandInformation }
+        , { RULE_BAD_LITERAL         , BandError }
+        , { RULE_BOOLEAN_OPERAND     , BandError }
+        , { RULE_ATTRIBUTE_TYPE      , BandError | BandWarning }
+        , { RULE_STATE_SHAPE         , BandError }
+        , { RULE_BROKEN_IMPORT       , BandError }
+        , { RULE_CONDITION_BODY      , BandError }
+        , { RULE_PARAMETERIZED_COND  , BandError }
+        , { RULE_IMPORT_MAJOR        , BandError }
+        , { RULE_SOURCE_KIND         , BandError }
+        , { RULE_SOURCE_EMPTY        , BandError }
+        , { RULE_GUARD               , BandError | BandWarning | BandInformation }
+        , { RULE_PSEUDO_START        , BandError }
+        , { RULE_TRANSITION_KIND     , BandError }
+        , { RULE_HANDLER_NAME        , BandError }
+        , { RULE_ATTRIBUTE_STIMULUS  , BandError }
+        , { RULE_RESERVED_PREFIX     , BandError }
+        , { RULE_UNKNOWN_ELEMENT     , BandError }
+        , { RULE_PARAM_SHADOWS       , BandWarning }
+        , { RULE_UNBOUND_RESPONSE    , BandWarning }
+        , { RULE_DEFAULT_ORDER       , BandError }
+        , { RULE_ACTION_PREFIX       , BandWarning }
+        , { RULE_UNRESOLVED_ELEMENT  , BandError }
+        , { RULE_NOT_A_HEADER        , BandError }
+        , { RULE_DUPLICATE_ENUM_VALUE, BandError }
+        , { RULE_DEPRECATED          , BandWarning | BandInformation }
+        , { RULE_EMPTY_TYPE          , BandWarning }
+        , { RULE_EMPTY_DOCUMENT      , BandWarning }
+        , { RULE_FILE_NAME_MISMATCH  , BandInformation }
+        , { RULE_RESPONSE_LINK       , BandError }
+        , { RULE_UNREACHABLE_STATE   , BandWarning }
+        , { RULE_DEAD_END_STATE      , BandWarning }
+        , { RULE_SHADOWED_TRANSITION , BandWarning }
+        , { RULE_ONE_SIDED_EVENT     , BandWarning }
+        , { RULE_ONE_SIDED_TIMER     , BandWarning }
+        , { RULE_EMPTY_INTERNAL      , BandWarning }
+        , { RULE_CONSTANT_COMPARE    , BandWarning }
+        , { RULE_UNUSED_HISTORY      , BandWarning }
+        , { RULE_IMPORT_PATCH        , BandWarning | BandInformation }
+        , { RULE_RETIRED_ELEMENT     , BandError }
     };
 
     /**
@@ -513,6 +532,35 @@ namespace DocRules
                 , "Two rules report the same number at the same severity. One reported id would "
                   "stand for two different faults. Give one of them a number of its own, and give "
                   "the same number to the code generator.");
+
+//////////////////////////////////////////////////////////////////////////
+// Elements a format has retired
+//////////////////////////////////////////////////////////////////////////
+
+    /**
+     * \struct  Retired
+     * \brief   One element a format used to define in a place it no longer defines it, and what
+     *          the author writes instead.
+     **/
+    struct Retired
+    {
+        const char* tag;        //!< The element as the older document spells it.
+        const char* parent;     //!< The element it used to sit in, empty when it stood anywhere.
+        const char* documents;  //!< The document extensions it was retired from, space separated.
+        const char* fix;        //!< What to do instead, in words the author can act on.
+    };
+
+    /**
+     * \brief   Every retired element, so one mistake reads as one finding.
+     *
+     *          Without this an older document produces two findings that do not look related:
+     *          an element nobody recognises, and then whatever that element used to supply
+     *          reported as missing. Matched here, the reader gets one finding that names the fix.
+     **/
+    constexpr Retired RETIRED[]
+    {
+          { "Value", "Constant", "siml", "Write it as the Value attribute, or run tools/migrate-siml-constants" }
+    };
 }
 
 #endif  // LUSAN_MODEL_COMMON_DOCRULES_HPP

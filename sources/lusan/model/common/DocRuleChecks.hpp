@@ -25,6 +25,7 @@
 #include "lusan/data/common/EnumEntry.hpp"
 #include "lusan/model/common/DocIssue.hpp"
 #include "lusan/model/common/DocUnknownScan.hpp"
+#include "lusan/model/common/DocRules.hpp"
 
 #include <QCoreApplication>
 #include <QList>
@@ -75,6 +76,7 @@ public:
         , UnusedImport
         , FileNameMismatch
         , UnknownElement
+        , RetiredElement
     };
 
     /**
@@ -230,6 +232,17 @@ public:
                        , DocIssue::eSeverity severity, const QString& hint = QString());
 
     /**
+     * \brief   Notes one declaration inside the document when its author marked it deprecated,
+     *          and does nothing otherwise. Reported as information: the document around it is
+     *          current, and only this one declaration is not.
+     * \param   subject The whole subject, such as `Attribute 'LegacyFlag'`.
+     * \param   marked  Whether the declaration carries the mark.
+     * \param   hint    The author's own note about what to use instead. Left out when empty.
+     **/
+    template<typename Element>
+    inline void noteDeprecatedElement(const Element& element, eDocElementKind kind, const QString& subject);
+
+    /**
      * \brief   Every data type document the host includes has to lead to a file that reads as
      *          one, and no two of them may carry one namespace: the namespace is the file's base
      *          name, and two files of that name generate one namespace twice.
@@ -265,7 +278,18 @@ public:
      * \param   rule    The number this engine files an unknown element under.
      * \param   unknown The blocks the read could not place, in document order.
      **/
-    void noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown);
+    void noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown
+                            , const QString& document = QString());
+
+    /**
+     * rief   Returns the retired element matching the given tag, or nullptr when the format
+     *          never defined it there and the tag is simply unknown.
+     * \param   tag         The element as the document spells it.
+     * \param   parent      The element it was read inside.
+     * \param   document    The document extension, empty to match any.
+     **/
+    static const DocRules::Retired* retiredElement(const QString& tag, const QString& parent
+                                                  , const QString& document);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -332,5 +356,18 @@ private:
     DocNameSet(const DocNameSet& /*src*/) = delete;
     DocNameSet& operator = (const DocNameSet& /*src*/) = delete;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// DocRuleChecks inline methods
+//////////////////////////////////////////////////////////////////////////
+
+template<typename Element>
+inline void DocRuleChecks::noteDeprecatedElement(const Element& element, eDocElementKind kind, const QString& subject)
+{
+    if (element.getIsDeprecated())
+    {
+        noteDeprecated(element.getId(), kind, subject, DocIssue::eSeverity::Info, element.getDeprecateHint());
+    }
+}
 
 #endif  // LUSAN_MODEL_COMMON_DOCRULECHECKS_HPP
