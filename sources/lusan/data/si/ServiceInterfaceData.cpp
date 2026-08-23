@@ -51,6 +51,7 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
     mOpenSuccess = false;
     mFilePath.clear();
     mUnknownElements.clear();
+    mUnknownAttributes.clear();
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly))
     {
@@ -105,10 +106,6 @@ bool ServiceInterfaceData::writeToFile(const QString& filePath /*= ""*/)
             writeToXml(xml);
         }
 
-        // An element this build cannot show goes back where it was found. Dropping it would
-        // destroy the very document the author has to open elsewhere to recover.
-        buffer = DocUnknownScan::restore(DocElementTable::eDocument::ServiceInterface, buffer, mUnknownElements);
-
         QFile file(path);
         if (file.open(QFile::WriteOnly | QFile::Text))
         {
@@ -136,6 +133,14 @@ bool ServiceInterfaceData::readFromXml(QXmlStreamReader& xml)
         }
 
         mXmlVersion = version;
+
+        for (const QXmlStreamAttribute& attr : attributes)
+        {
+            if (attr.name() != XmlSI::xmlSIAttributeFormatVersion)
+            {
+                mUnknownAttributes.push_back({ QString(XmlSI::xmlSIElementServiceInterface), attr.name().toString() });
+            }
+        }
 
         while (xml.readNextStartElement())
         {

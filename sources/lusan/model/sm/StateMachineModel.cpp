@@ -198,7 +198,8 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
     mUndoStack.setClean();
     mSelectionModel.reset();
     mNotifier.notifyDocumentReloaded();
-    if ((sourcePath.isEmpty() == false) || anyPatchAutoFixed)
+    // A renumbered element only reaches the file on the next save, so the document is dirty.
+    if ((sourcePath.isEmpty() == false) || anyPatchAutoFixed || (mData->getRepairedIds().isEmpty() == false))
     {
         markDirty();
     }

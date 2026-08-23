@@ -20,6 +20,8 @@
 #include "lusan/view/common/DocValidationPanel.hpp"
 
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/common/DocRuleChecks.hpp"
+#include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/common/DocValidationController.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
 
@@ -27,6 +29,8 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QLabel>
+#include <QMainWindow>
+#include <QStatusBar>
 #include <QFontMetrics>
 #include <QHeaderView>
 #include <QTreeWidget>
@@ -429,6 +433,19 @@ void DocValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
     const eDocElementKind kind = static_cast<eDocElementKind>(item->data(ColumnSeverity, RoleKind).toInt());
     const int rule = item->data(ColumnSeverity, RoleRule).toInt();
     QObject* owner = item->data(ColumnSeverity, RoleOwner).value<QObject*>();
+
+    // The block and the attribute the format does not define are not built into the model, so
+    // there is nothing to select. The status line says so instead of leaving the click silent.
+    const int bareRule = DocRuleChecks::bareRule(rule);
+    if ((bareRule == DocRules::RULE_UNKNOWN_ATTRIBUTE) || (bareRule == DocRules::RULE_DROPPED_ELEMENT))
+    {
+        if (QMainWindow* host = qobject_cast<QMainWindow*>(window()))
+        {
+            host->statusBar()->showMessage(tr("This element cannot be displayed in the editor."), 4000);
+        }
+
+        return;
+    }
 
     // The row remembers its owning window as a plain pointer, so match it against the documents
     // still listed: a window closed since the last rebuild leaves rows with a dangling owner.

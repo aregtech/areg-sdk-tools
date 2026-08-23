@@ -21,6 +21,10 @@
 
 #include "lusan/data/dt/DataTypeImportResolver.hpp"
 #include "lusan/common/XmlSM.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/sm/SMCondition.hpp"
+#include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
 
 #include <QByteArray>
 #include <QFile>
@@ -235,110 +239,111 @@ namespace
         return -1;
     }
 
-    void writeStartElementWithAttributes(QXmlStreamWriter& xml, const QXmlStreamReader& src)
+    //!< Calls \p visit for every element of the level, its transitions, operations and
+    //!< conditions, then for every level below it.
+    template<typename Visitor>
+    void visitLevelIds(const SMStateData& level, Visitor& visit)
     {
-        xml.writeStartElement(src.name().toString());
-        const QXmlStreamAttributes attrs = src.attributes();
-        for (const QXmlStreamAttribute& attr : attrs)
+        auto visitOperations = [&visit](const SMOperationList& operations)
         {
-            xml.writeAttribute(attr.name().toString(), attr.value().toString());
+            for (SMOperationBase* op : operations.getOperations())
+            {
+                if (op == nullptr)
+                    continue;
+
+                visit(*op);
+                if (SMActionCall* action = dynamic_cast<SMActionCall*>(op))
+                {
+                    for (const SMArgumentEntry& arg : action->getArguments())
+                    {
+                        visit(arg);
+                    }
+                }
+                else if (SMEventSend* send = dynamic_cast<SMEventSend*>(op))
+                {
+                    for (const SMArgumentEntry& arg : send->getArguments())
+                    {
+                        visit(arg);
+                    }
+                }
+            }
+        };
+
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+                continue;
+
+            visit(*state);
+            visitOperations(state->getEntryList());
+            visitOperations(state->getExitList());
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if (transition == nullptr)
+                    continue;
+
+                visit(*transition);
+                visitOperations(transition->getOperations());
+                for (SMConditionEntry* leaf : transition->getConditions().collectLeaves())
+                {
+                    if (leaf == nullptr)
+                        continue;
+
+                    visit(*leaf);
+                    for (const SMArgumentEntry& arg : leaf->getArguments())
+                    {
+                        visit(arg);
+                    }
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                visitLevelIds(*state->getNestedStates(), visit);
+            }
         }
     }
 
-    QString captureCurrentElementXml(QXmlStreamReader& xml)
+    //!< Calls \p visit for every element of the document that carries an ID, in document order.
+    template<typename Visitor>
+    void visitDocumentIds(const StateMachineData& doc, Visitor& visit)
     {
-        QByteArray buffer;
-        QXmlStreamWriter writer(&buffer);
-        writeStartElementWithAttributes(writer, xml);
+        visitLevelIds(doc.getStates(), visit);
 
-        int depth = 1;
-        while ((depth > 0) && (xml.atEnd() == false) && (xml.hasError() == false))
+        for (MethodEntry* method : doc.getMethods().getElements())
         {
-            const QXmlStreamReader::TokenType token = xml.readNext();
-            switch (token)
+            if (method == nullptr)
+                continue;
+
+            visit(*method);
+            for (const MethodParameter& param : method->getElements())
             {
-            case QXmlStreamReader::StartElement:
-                writeStartElementWithAttributes(writer, xml);
-                ++depth;
-                break;
-
-            case QXmlStreamReader::EndElement:
-                writer.writeEndElement();
-                --depth;
-                break;
-
-            case QXmlStreamReader::Characters:
-                if (xml.isCDATA())
-                {
-                    writer.writeCDATA(xml.text().toString());
-                }
-                else
-                {
-                    writer.writeCharacters(xml.text().toString());
-                }
-                break;
-
-            case QXmlStreamReader::Comment:
-                writer.writeComment(xml.text().toString());
-                break;
-
-            case QXmlStreamReader::ProcessingInstruction:
-                writer.writeProcessingInstruction(xml.processingInstructionTarget().toString(), xml.processingInstructionData().toString());
-                break;
-
-            case QXmlStreamReader::EntityReference:
-                writer.writeEntityReference(xml.name().toString());
-                break;
-
-            default:
-                break;
+                visit(param);
             }
         }
 
-        return QString::fromUtf8(buffer);
-    }
-
-    void writeRawElementXml(QXmlStreamWriter& xml, const QString& rawElement)
-    {
-        QXmlStreamReader reader(rawElement);
-        while ((reader.atEnd() == false) && (reader.hasError() == false))
+        for (SMEventEntry* event : doc.getEvents().getElements())
         {
-            const QXmlStreamReader::TokenType token = reader.readNext();
-            switch (token)
+            if (event == nullptr)
+                continue;
+
+            visit(*event);
+            for (const MethodParameter& param : event->getElements())
             {
-            case QXmlStreamReader::StartElement:
-                writeStartElementWithAttributes(xml, reader);
-                break;
+                visit(param);
+            }
+        }
 
-            case QXmlStreamReader::EndElement:
-                xml.writeEndElement();
-                break;
+        for (const SMTimerEntry& timer : doc.getTimers().getElements())             visit(timer);
+        for (const AttributeEntry& attribute : doc.getAttributes().getElements())   visit(attribute);
+        for (const ConstantEntry& constant : doc.getConstants().getElements())      visit(constant);
+        for (const IncludeEntry& include : doc.getIncludes().getElements())         visit(include);
 
-            case QXmlStreamReader::Characters:
-                if (reader.isCDATA())
-                {
-                    xml.writeCDATA(reader.text().toString());
-                }
-                else
-                {
-                    xml.writeCharacters(reader.text().toString());
-                }
-                break;
-
-            case QXmlStreamReader::Comment:
-                xml.writeComment(reader.text().toString());
-                break;
-
-            case QXmlStreamReader::ProcessingInstruction:
-                xml.writeProcessingInstruction(reader.processingInstructionTarget().toString(), reader.processingInstructionData().toString());
-                break;
-
-            case QXmlStreamReader::EntityReference:
-                xml.writeEntityReference(reader.name().toString());
-                break;
-
-            default:
-                break;
+        for (DataTypeCustom* type : doc.getDataTypes().getCustomDataTypes())
+        {
+            if (type != nullptr)
+            {
+                visit(*type);
             }
         }
     }
@@ -354,9 +359,6 @@ namespace
             data.writeToXml(xml);
         }
 
-        // An element this build cannot show goes back where it was found. Dropping it would
-        // destroy the very document the author has to open elsewhere to recover.
-        buffer = DocUnknownScan::restore(DocElementTable::eDocument::StateMachine, buffer, data.getUnknownElements());
         buffer.append('\n');
         return buffer;
     }
@@ -434,6 +436,7 @@ bool StateMachineData::readFromFile(const QString& filePath)
         if (mOpenSuccess)
         {
             mUnknownElements = DocUnknownScan::scan(DocElementTable::eDocument::StateMachine, content);
+            repairDuplicateIds();
             DataTypeImportResolver::refresh(mDataTypes, mFilePath, mIncludes);
             mDataTypes.validate(mDataTypes);
             mAttributes.validate(mDataTypes);
@@ -565,7 +568,7 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     {
         if (attr.name() != XmlSM::xmlSMAttributeFormatVersion)
         {
-            mUnknownRootAttributes.push_back({ attr.name().toString(), attr.value().toString() });
+            mUnknownAttributes.push_back({ QString(XmlSM::xmlSMElementStateMachine), attr.name().toString() });
         }
     }
 
@@ -581,7 +584,6 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
         return false;
     }
 
-    int unknownBucket = 0;
     while (xml.readNextStartElement())
     {
         const QStringView name = xml.name();
@@ -589,61 +591,50 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
         if (sectionIndex == 0)
         {
             mOverview.readFromXml(xml);
-            unknownBucket = 1;
         }
         else if (sectionIndex == 1)
         {
             mDataTypes.readFromXml(xml);
-            unknownBucket = 2;
         }
         else if (sectionIndex == 2)
         {
             mAttributes.readFromXml(xml);
-            unknownBucket = 3;
         }
         else if (sectionIndex == 3)
         {
             mEvents.readFromXml(xml);
-            unknownBucket = 4;
         }
         else if (sectionIndex == 4)
         {
             mTimers.readFromXml(xml);
-            unknownBucket = 5;
         }
         else if (sectionIndex == 5)
         {
             mMethods.readFromXml(xml);
-            unknownBucket = 6;
         }
         else if (sectionIndex == 6)
         {
             mConstants.readFromXml(xml);
-            unknownBucket = 7;
         }
         else if (sectionIndex == 7)
         {
             mIncludes.readFromXml(xml);
-            unknownBucket = 8;
         }
         else if (sectionIndex == 8)
         {
             readLegacyImportList(xml);
-            unknownBucket = 9;
         }
         else if (sectionIndex == 9)
         {
             mStates.readFromXml(xml);
-            unknownBucket = 10;
         }
         else if (sectionIndex == 10)
         {
             mLayout.readFromXml(xml);
-            unknownBucket = 11;
         }
         else
         {
-            mUnknownRootElements.push_back({ unknownBucket, captureCurrentElementXml(xml) });
+            xml.skipCurrentElement();
         }
     }
 
@@ -672,50 +663,24 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
 
 void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
 {
-    auto writeUnknownBucket = [this, &xml](int bucket) {
-        for (const UnknownElement& unknown : mUnknownRootElements)
-        {
-            if (unknown.bucket == bucket)
-            {
-                writeRawElementXml(xml, unknown.xml);
-            }
-        }
-    };
-
     xml.writeStartElement(XmlSM::xmlSMElementStateMachine);
     xml.writeAttribute(XmlSM::xmlSMAttributeFormatVersion, mFormatVersion.toString());
-    for (const UnknownAttribute& attr : mUnknownRootAttributes)
-    {
-        xml.writeAttribute(attr.name, attr.value);
-    }
 
-    writeUnknownBucket(0);
     mOverview.writeToXml(xml);
-    writeUnknownBucket(1);
     mDataTypes.writeToXml(xml);
-    writeUnknownBucket(2);
     mAttributes.writeToXml(xml);
-    writeUnknownBucket(3);
     mEvents.writeToXml(xml);
-    writeUnknownBucket(4);
     mTimers.writeToXml(xml);
-    writeUnknownBucket(5);
     mMethods.writeToXml(xml);
-    writeUnknownBucket(6);
     mConstants.writeToXml(xml);
-    writeUnknownBucket(7);
     mIncludes.writeToXml(xml);
-    writeUnknownBucket(8);
-    writeUnknownBucket(9);
     mStates.writeToXml(xml);
-    writeUnknownBucket(10);
     // A not-real submachine is omitted from the StateList above, so its layout goes too. An orphan
     // node would otherwise linger and a future element could inherit it through id reuse.
     QSet<uint32_t> dropOwners;
     QSet<uint32_t> dropLevels;
     collectDroppedLayout(mStates, dropOwners, dropLevels);
     mLayout.writeToXml(xml, dropOwners, dropLevels);
-    writeUnknownBucket(11);
 
     xml.writeEndElement();
 }
@@ -829,9 +794,41 @@ bool StateMachineData::migrateTo110(const VersionNumber& sourceVersion)
 
 void StateMachineData::clearUnknownContent()
 {
-    mUnknownRootAttributes.clear();
-    mUnknownRootElements.clear();
+    mUnknownAttributes.clear();
     mUnknownElements.clear();
+    mRepairedIds.clear();
+}
+
+bool StateMachineData::repairDuplicateIds()
+{
+    mRepairedIds.clear();
+
+    uint32_t highest = 0u;
+    auto findHighest = [&highest](const ElementBase& element)
+    {
+        const uint32_t id = static_cast<uint32_t>(element.getId());
+        highest = (id > highest ? id : highest);
+    };
+    visitDocumentIds(*this, findHighest);
+
+    QSet<uint32_t> taken;
+    auto renumber = [this, &taken, &highest](const ElementBase& element)
+    {
+        const uint32_t id = static_cast<uint32_t>(element.getId());
+        if (taken.contains(id) == false)
+        {
+            taken.insert(id);
+            return;
+        }
+
+        ++highest;
+        element.setId(highest);
+        taken.insert(highest);
+        mRepairedIds.append({ id, highest });
+    };
+    visitDocumentIds(*this, renumber);
+
+    return (mRepairedIds.isEmpty() == false);
 }
 
 StateMachineData::StimulusRef StateMachineData::findStimulus(const QString& name) const

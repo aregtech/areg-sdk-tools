@@ -267,6 +267,8 @@ namespace
     {
         mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
                                   , mData.getUnknownElements(), QStringLiteral("dtml"));
+        mChecks.noteUnknownAttributes(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ATTRIBUTE
+                                    , mData.getUnknownAttributes());
     }
 
     QList<DocIssue> Ctx::run(void)

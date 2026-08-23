@@ -972,7 +972,7 @@ set_target_properties(lusan_dt_import_tests PROPERTIES WIN32_EXECUTABLE OFF)
 # ---------------------------------------------------------------------------
 # The element table each document format is validated against: what the reader makes
 # of a schema, that the copy delivered with the SDK is preferred over the compiled-in
-# one, and that an element none of them defines is reported and still survives a save.
+# one, and that an element none of them defines is reported and dropped on save.
 # ---------------------------------------------------------------------------
 qt_add_executable(lusan_doc_schema_tests
     ${LUSAN_SI_SUPPORT_SRC}

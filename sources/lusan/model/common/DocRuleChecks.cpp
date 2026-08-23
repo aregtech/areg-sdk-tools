@@ -93,11 +93,17 @@ QString DocRuleChecks::explainShape(eShape shape)
 
     case eShape::UnknownElement:
         return tr("The code generator refuses the whole document, so nothing generates until the tag is removed or corrected. "
-                  "The block is kept as written until then.");
+                  "The block is kept while the document is open and is dropped when it is saved.");
 
     case eShape::RetiredElement:
         return tr("The format used to define this element here and no longer does, so the document reads as one written for an earlier version. "
-                  "The block is kept as written until it is moved.");
+                  "The block is kept while the document is open and is dropped when it is saved.");
+
+    case eShape::UnknownAttribute:
+        return tr("Nothing reads the attribute, so it reaches no generated code. It is dropped the next time the document is saved.");
+
+    case eShape::DroppedElement:
+        return tr("The block is kept only while the document is open. Take what you need out of it before saving, or open the document in a build that defines the element.");
 
     default:
         return QString();
@@ -377,6 +383,13 @@ void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QL
 {
     for (const DocUnknownElement& entry : unknown)
     {
+        // The block does not reach the file the next time it is written, so the loss is said
+        // before it happens, beside the fault itself.
+        add(0u, kind, DocIssue::eSeverity::Warning, DocRules::RULE_DROPPED_ELEMENT
+           , tr("The <%1> block, line %2, is removed when the document is saved").arg(entry.name).arg(entry.line)
+           , explainShape(eShape::DroppedElement));
+        mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+
         // An element the format used to define here is a different fault from one it never had:
         // the author is moving something rather than correcting a spelling, so the finding says
         // where it went instead of only that the tag is not recognised.
@@ -397,6 +410,18 @@ void DocRuleChecks::noteUnknownElements(eDocElementKind kind, int rule, const QL
         const QString message = tr("Unknown tag '%1', line %2").arg(entry.name).arg(entry.line);
         add(0u, kind, DocIssue::eSeverity::Error, rule, message, explainShape(eShape::UnknownElement));
         mIssues.last().location = entry.parent.isEmpty() ? QString() : tr("in <%1>").arg(entry.parent);
+    }
+}
+
+void DocRuleChecks::noteUnknownAttributes(eDocElementKind kind, int rule, const QList<DocUnknownAttribute>& unknown)
+{
+    for (const DocUnknownAttribute& entry : unknown)
+    {
+        add(0u, kind, DocIssue::eSeverity::Warning, rule
+           , tr("Unknown attribute '%1' on <%2>. The value is not used and is removed when the document is saved.")
+                .arg(entry.name, entry.element)
+           , explainShape(eShape::UnknownAttribute));
+        mIssues.last().location = tr("in <%1>").arg(entry.element);
     }
 }
 

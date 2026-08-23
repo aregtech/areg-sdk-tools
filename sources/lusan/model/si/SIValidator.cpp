@@ -169,6 +169,8 @@ namespace
     {
         mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
                                   , mData.getUnknownElements(), QStringLiteral("siml"));
+        mChecks.noteUnknownAttributes(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ATTRIBUTE
+                                    , mData.getUnknownAttributes());
     }
 
     void Ctx::checkOverview()

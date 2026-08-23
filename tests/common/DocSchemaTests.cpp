@@ -206,8 +206,8 @@ void testBuiltInCopyIsComplete()
 // A document carrying what the format does not define
 //////////////////////////////////////////////////////////////////////////
 
-// The service interface: the tag is reported, and the block is still there after a save.
-void testServiceInterfaceKeepsUnknownBlock()
+// The service interface: the tag is reported, and the save drops the block.
+void testServiceInterfaceDropsUnknownBlock()
 {
     std::printf("[siml] an element the format does not define\n");
 
@@ -245,13 +245,13 @@ void testServiceInterfaceKeepsUnknownBlock()
 
     CHECK(data.writeToFile());
     const QByteArray written = readFile(path);
-    CHECK(written.contains("<FutureThing"));
-    CHECK(written.contains("Mode=\"loud\""));
+    CHECK(written.contains("<FutureThing") == false);
+    CHECK(written.contains("Mode=\"loud\"") == false);
     CHECK(written.contains("speed"));
 }
 
 // The data type document, the same way.
-void testDataTypeDocumentKeepsUnknownBlock()
+void testDataTypeDocumentDropsUnknownBlock()
 {
     std::printf("[dtml] an element the format does not define\n");
 
@@ -289,8 +289,8 @@ void testDataTypeDocumentKeepsUnknownBlock()
 
     CHECK(data.writeToFile());
     const QByteArray written = readFile(path);
-    CHECK(written.contains("<Palette"));
-    CHECK(written.contains("Depth=\"8\""));
+    CHECK(written.contains("<Palette") == false);
+    CHECK(written.contains("Depth=\"8\"") == false);
     CHECK(written.contains("Colour"));
 }
 
@@ -406,8 +406,8 @@ int main(int argc, char* argv[])
     testReaderShapes();
     testTablesLoad();
     testBuiltInCopyIsComplete();
-    testServiceInterfaceKeepsUnknownBlock();
-    testDataTypeDocumentKeepsUnknownBlock();
+    testServiceInterfaceDropsUnknownBlock();
+    testDataTypeDocumentDropsUnknownBlock();
     testCleanDocumentReportsNothing();
     testDeliveredCopyWins();
 

@@ -52,6 +52,7 @@ bool DataTypeDocumentData::readFromFile(const QString& filePath)
     mOpenSuccess = false;
     mFilePath.clear();
     mUnknownElements.clear();
+    mUnknownAttributes.clear();
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly))
     {
@@ -99,10 +100,6 @@ bool DataTypeDocumentData::writeToFile(const QString& filePath /*= QString()*/)
         writeToXml(xml);
     }
 
-    // An element this build cannot show goes back where it was found. Dropping it would
-    // destroy the very document the author has to open elsewhere to recover.
-    buffer = DocUnknownScan::restore(DocElementTable::eDocument::DataType, buffer, mUnknownElements);
-
     QFile file(path);
     if (file.open(QFile::WriteOnly | QFile::Text) == false)
         return false;
@@ -118,13 +115,22 @@ bool DataTypeDocumentData::readFromXml(QXmlStreamReader& xml)
     if (xml.name() != XmlDT::xmlDTElementDocument)
         return false;
 
-    QString version = xml.attributes().value(XmlDT::xmlDTAttributeFormatVersion).toString();
+    const QXmlStreamAttributes attributes = xml.attributes();
+    QString version = attributes.value(XmlDT::xmlDTAttributeFormatVersion).toString();
     if (VersionNumber(version).isCompatible(VersionNumber(XML_FORMAT_DEFAULT)) == false)
     {
         version = XML_FORMAT_DEFAULT;
     }
 
     mXmlVersion = version;
+
+    for (const QXmlStreamAttribute& attr : attributes)
+    {
+        if (attr.name() != XmlDT::xmlDTAttributeFormatVersion)
+        {
+            mUnknownAttributes.push_back({ QString(XmlDT::xmlDTElementDocument), attr.name().toString() });
+        }
+    }
 
     while (xml.readNextStartElement())
     {

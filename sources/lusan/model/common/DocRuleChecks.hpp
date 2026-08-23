@@ -77,6 +77,8 @@ public:
         , FileNameMismatch
         , UnknownElement
         , RetiredElement
+        , UnknownAttribute
+        , DroppedElement
     };
 
     /**
@@ -280,6 +282,16 @@ public:
      **/
     void noteUnknownElements(eDocElementKind kind, int rule, const QList<DocUnknownElement>& unknown
                             , const QString& document = QString());
+
+    /**
+     * \brief   Files every attribute of the opened file that the format does not define on an
+     *          element it does define. Nothing reads the value and the save drops it, so the
+     *          finding is what tells the author it is going.
+     * \param   kind    The element kind these findings carry; they point at no element of their own.
+     * \param   rule    The number this engine files an unknown attribute under.
+     * \param   unknown The attributes the read could not place, in document order.
+     **/
+    void noteUnknownAttributes(eDocElementKind kind, int rule, const QList<DocUnknownAttribute>& unknown);
 
     /**
      * rief   Returns the retired element matching the given tag, or nullptr when the format

@@ -328,6 +328,14 @@ namespace
 
     void Ctx::checkDuplicateIds()
     {
+        // A document that arrived with one ID on two elements was renumbered while it was read,
+        // so the finding names what changed rather than what is still wrong.
+        for (const StateMachineData::IdRepair& repair : mData.getRepairedIds())
+        {
+            add(repair.assigned, eDocElementKind::State, eSeverity::Error, DocRules::RULE_DUPLICATE_ID,
+                vtr("Element ID %1 was duplicated and has been changed to %2").arg(repair.duplicated).arg(repair.assigned));
+        }
+
         QHash<uint32_t, int> counts;
         collectIds(mData.getStates(), counts);
         for (MethodEntry* m : mData.getMethods().getElements())
@@ -353,7 +361,7 @@ namespace
         {
             if (it.value() > 1)
             {
-                add(it.key(), eDocElementKind::State, eSeverity::Error, 2,
+                add(it.key(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_DUPLICATE_ID,
                     vtr("Duplicate element ID %1 (used %2 times)").arg(it.key()).arg(it.value()));
             }
         }
@@ -373,7 +381,7 @@ namespace
                     continue;
                 if (++seen[name] > 1)
                 {
-                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 3,
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_NAME,
                         vtr("Duplicate state name '%1'").arg(name));
                 }
             }
@@ -480,7 +488,7 @@ namespace
             if (it == firstOwner.end())
                 firstOwner.insert(name, kind);
             else if (it.value() != kind)
-                add(id, kind, eSeverity::Error, 4, vtr("Stimulus name '%1' collides across trigger/event/timer").arg(name));
+                add(id, kind, eSeverity::Error, DocRules::RULE_DUPLICATE_NAME, vtr("Stimulus name '%1' collides across trigger/event/timer").arg(name));
         };
         for (MethodEntry* m : mData.getMethods().getElements())
             if ((m != nullptr) && NESMMethod::isTrigger(m)) stimulus(m->getName(), m->getId(), eDocElementKind::Method);
@@ -515,7 +523,7 @@ namespace
                 if (firstStart == nullptr)
                     firstStart = state;
                 else
-                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 1,
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_START_STATE,
                         vtr("More than one Start state on this machine level"));
             }
         }
@@ -523,9 +531,9 @@ namespace
         if (startCount == 0)
         {
             if (info.isRoot)
-                add(0, eDocElementKind::State, eSeverity::Error, 1, vtr("The machine has no Start state"));
+                add(0, eDocElementKind::State, eSeverity::Error, DocRules::RULE_START_STATE, vtr("The machine has no Start state"));
             else
-                add(info.ownerId, eDocElementKind::State, eSeverity::Error, 11,
+                add(info.ownerId, eDocElementKind::State, eSeverity::Error, DocRules::RULE_NESTED_START,
                     vtr("Submachine level has no Start state"));
         }
 
@@ -548,14 +556,14 @@ namespace
         if (state.getKind() == SMStateEntry::eStateKind::Final)
         {
             if (state.getTransitions().hasElements())
-                add(id, eDocElementKind::State, eSeverity::Error, 8, vtr("A Final state cannot have outgoing transitions"));
+                add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_FINAL_STATE, vtr("A Final state cannot have outgoing transitions"));
             if (hasSubstates)
-                add(id, eDocElementKind::State, eSeverity::Error, 8, vtr("A Final state cannot have substates"));
+                add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_FINAL_STATE, vtr("A Final state cannot have substates"));
         }
         else if (state.isPseudoStart())
         {
             if (hasSubstates)
-                add(id, eDocElementKind::State, eSeverity::Error, 9, vtr("A Start state cannot own substates"));
+                add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_START_SUBSTATES, vtr("A Start state cannot own substates"));
 
             validatePseudoStart(state, isRootLevel);
         }
@@ -563,13 +571,13 @@ namespace
         // A painted submachine and an imported one are mutually exclusive, neither belongs on
         // a Start or Final state, and history/completion hooks need a composite to act on.
         if (state.hasNestedStates() && state.isImportedSubmachine())
-            add(id, eDocElementKind::State, eSeverity::Error, 18, vtr("A state cannot have both a Submachine and a painted StateList"));
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("A state cannot have both a Submachine and a painted StateList"));
         if (state.isImportedSubmachine() && (state.getKind() != SMStateEntry::eStateKind::Normal))
-            add(id, eDocElementKind::State, eSeverity::Error, 18, vtr("A Submachine is not allowed on a Start or Final state"));
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("A Submachine is not allowed on a Start or Final state"));
         if ((state.getHistory() != SMStateEntry::eHistory::None) && (composite == false))
-            add(id, eDocElementKind::State, eSeverity::Error, 18, vtr("History is only allowed on a composite state"));
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("History is only allowed on a composite state"));
         if ((state.getOnFinal().isEmpty() == false) && (composite == false))
-            add(id, eDocElementKind::State, eSeverity::Error, 18, vtr("OnFinal is only allowed on a composite state"));
+            add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("OnFinal is only allowed on a composite state"));
 
         // A submachine alias must name a declared import; the completion hook must name an event.
         if (state.isImportedSubmachine() && (mData.findImportByAlias(state.getSubmachine()) == nullptr))
@@ -745,7 +753,8 @@ namespace
                 if (target == nullptr)
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND, vtr("Transition target does not resolve"));
                 else
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TARGET_SIBLING
+                       , vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
             }
             else if (sibling->isPseudoStart())
             {
@@ -827,7 +836,7 @@ namespace
 
                 // The assigned value must fit the attribute's declared type
                 if (attr != nullptr)
-                    checkAssignment(id, eDocElementKind::Operation, set->getSource(), set->getValue(), attr->getType(), scope, 17);
+                    checkAssignment(id, eDocElementKind::Operation, set->getSource(), set->getValue(), attr->getType(), scope, DocRules::RULE_ATTRIBUTE_TYPE);
                 break;
             }
             case SMOperationBase::eOperation::TimerStart:
@@ -876,7 +885,7 @@ namespace
 
             auto it = paramTypes.constFind(arg.getName());
             if (it != paramTypes.constEnd())
-                checkAssignment(ownerId, kind, arg.getSource(), arg.getValue(), it.value(), scope, 13);
+                checkAssignment(ownerId, kind, arg.getSource(), arg.getValue(), it.value(), scope, DocRules::RULE_ARGUMENT_TYPE);
         }
     }
 
@@ -903,14 +912,14 @@ namespace
             if (c == nullptr)
                 add(ownerId, kind, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Condition '%1' is not declared").arg(ref));
             else if (valuePosition && c->hasElements())
-                add(ownerId, kind, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
+                add(ownerId, kind, eSeverity::Error, DocRules::RULE_PARAMETERIZED_COND, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
             break;
         }
         case eValueSource::Expression:
             if (expr.trimmed().isEmpty())
-                add(ownerId, kind, eSeverity::Error, 24, vtr("Expression source has an empty expression"));
+                add(ownerId, kind, eSeverity::Error, DocRules::RULE_SOURCE_EMPTY, vtr("Expression source has an empty expression"));
             if (ref.isEmpty() == false)
-                add(ownerId, kind, eSeverity::Error, 23, vtr("Expression source must not also carry a Value"));
+                add(ownerId, kind, eSeverity::Error, DocRules::RULE_SOURCE_KIND, vtr("Expression source must not also carry a Value"));
             break;
         case eValueSource::Lambda:
             break;      // A lambda is only valid as a condition left operand; degenerate as a value source.
@@ -924,15 +933,15 @@ namespace
     {
         if (scope.inTransition == false)
         {
-            add(ownerId, kind, eSeverity::Error, 12, vtr("Param source '%1' is only valid on a transition").arg(paramName));
+            add(ownerId, kind, eSeverity::Error, DocRules::RULE_SOURCE_SCOPE, vtr("Param source '%1' is only valid on a transition").arg(paramName));
         }
         else if (scope.stimKind == SMTransitionEntry::eStimulusKind::Timer)
         {
-            add(ownerId, kind, eSeverity::Error, 12, vtr("Param source '%1' is not available on a timer transition").arg(paramName));
+            add(ownerId, kind, eSeverity::Error, DocRules::RULE_SOURCE_SCOPE, vtr("Param source '%1' is not available on a timer transition").arg(paramName));
         }
         else if ((scope.stimParams != nullptr) && (hasParam(scope.stimParams, paramName) == false))
         {
-            add(ownerId, kind, eSeverity::Error, 12, vtr("The stimulus declares no parameter '%1'").arg(paramName));
+            add(ownerId, kind, eSeverity::Error, DocRules::RULE_SOURCE_SCOPE, vtr("The stimulus declares no parameter '%1'").arg(paramName));
         }
     }
 
@@ -949,21 +958,21 @@ namespace
             {
                 // An expression row carries only its verbatim text, and that text must be present.
                 if (leaf->getExpression().trimmed().isEmpty())
-                    add(id, eDocElementKind::Condition, eSeverity::Error, 24, vtr("Expression row has an empty expression"));
+                    add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_SOURCE_EMPTY, vtr("Expression row has an empty expression"));
                 if (leaf->hasOperator() || (leaf->getRhs().isEmpty() == false) || (leaf->getLhs().isEmpty() == false))
-                    add(id, eDocElementKind::Condition, eSeverity::Error, 23, vtr("An expression row must not carry LHS/Operator/RHS"));
+                    add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_SOURCE_KIND, vtr("An expression row must not carry LHS/Operator/RHS"));
                 continue;
             }
             if (leaf->isLambdaRow())
             {
                 if (leaf->getBody().trimmed().isEmpty())
-                    add(id, eDocElementKind::Condition, eSeverity::Error, 24, vtr("Lambda row has an empty body"));
+                    add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_SOURCE_EMPTY, vtr("Lambda row has an empty body"));
                 continue;
             }
 
             // A comparison row keeps its operands in the LHS/RHS fields, never as verbatim text.
             if (leaf->getExpression().isEmpty() == false)
-                add(id, eDocElementKind::Condition, eSeverity::Error, 23, vtr("A comparison row must not carry an Expression"));
+                add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_SOURCE_KIND, vtr("A comparison row must not carry an Expression"));
 
             // A parameterized condition call is allowed as the left operand (but not the right).
             validateOperand(id, leaf->getLhsKind(), leaf->getLhs(), scope, false);
@@ -1010,7 +1019,8 @@ namespace
             if (c == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_UNRESOLVED_ELEMENT, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
-                add(ownerId, eDocElementKind::Condition, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
+                add(ownerId, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_PARAMETERIZED_COND
+                   , vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
         }
         break;
 
@@ -1103,7 +1113,7 @@ namespace
 
         if (src == eValueSource::Value)
         {
-            checkLiteral(id, kind, targetType, ref, 15);
+            checkLiteral(id, kind, targetType, ref, DocRules::RULE_BAD_LITERAL);
             return;
         }
         if ((src == eValueSource::Expression) || (src == eValueSource::Lambda))
@@ -1144,13 +1154,13 @@ namespace
             if (leaf.getLhsKind() == eValueSource::Value)
             {
                 if ((leaf.getLhs().isEmpty() == false) && (LiteralValidator::validate("bool", leaf.getLhs()).isEmpty() == false))
-                    add(id, eDocElementKind::Condition, eSeverity::Error, 16, vtr("A boolean-test operand must be a bool value"));
+                    add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_BOOLEAN_OPERAND, vtr("A boolean-test operand must be a bool value"));
             }
             else
             {
                 const eTypeCat cat = categorize(lhsType);
                 if ((cat != eTypeCat::Unknown) && (cat != eTypeCat::Bool))
-                    add(id, eDocElementKind::Condition, eSeverity::Error, 16, vtr("A boolean-test operand must be bool, not '%1'").arg(lhsType));
+                    add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_BOOLEAN_OPERAND, vtr("A boolean-test operand must be bool, not '%1'").arg(lhsType));
             }
             return;
         }
@@ -1165,21 +1175,22 @@ namespace
         bool flagged14 = false;
         if ((lc == eTypeCat::Structure) || (lc == eTypeCat::Container) || (rc == eTypeCat::Structure) || (rc == eTypeCat::Container))
         {
-            add(id, eDocElementKind::Condition, eSeverity::Error, 14, vtr("A structure or container cannot be compared in a condition"));
+            add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_COMPARE_OPERAND, vtr("A structure or container cannot be compared in a condition"));
             flagged14 = true;
         }
         else if (ordering && ((lc == eTypeCat::Bool) || (lc == eTypeCat::StringT) || (lc == eTypeCat::Enum)
                            || (rc == eTypeCat::Bool) || (rc == eTypeCat::StringT) || (rc == eTypeCat::Enum)))
         {
-            add(id, eDocElementKind::Condition, eSeverity::Error, 14, vtr("An ordering operator is not allowed on bool, String or enumeration operands"));
+            add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_COMPARE_OPERAND
+               , vtr("An ordering operator is not allowed on bool, String or enumeration operands"));
             flagged14 = true;
         }
 
         // literal operand must parse against the other operand's declared type.
         if ((leaf.getLhsKind() == eValueSource::Value) && (rhsType.isEmpty() == false))
-            checkLiteral(id, eDocElementKind::Condition, rhsType, leaf.getLhs(), 15);
+            checkLiteral(id, eDocElementKind::Condition, rhsType, leaf.getLhs(), DocRules::RULE_BAD_LITERAL);
         if ((leaf.getRhsKind() == eValueSource::Value) && (lhsType.isEmpty() == false))
-            checkLiteral(id, eDocElementKind::Condition, lhsType, leaf.getRhs(), 15);
+            checkLiteral(id, eDocElementKind::Condition, lhsType, leaf.getRhs(), DocRules::RULE_BAD_LITERAL);
 
         // both operand types known and no implicit widening path between them.
         if ((flagged14 == false) && (lhsType.isEmpty() == false) && (rhsType.isEmpty() == false))
@@ -1190,9 +1201,10 @@ namespace
                 // bool against a number is a comparison C++ builds -- lossy, not illegal --
                 // so it warns like every other narrowing conversion instead of refusing.
                 if (SMTypeCompat::isBoolNumberComparison(lhsType, rhsType))
-                    add(id, eDocElementKind::Condition, eSeverity::Warning, 13, vtr("Comparing '%1' with '%2' narrows: bool converts to 0 or 1 before the comparison").arg(lhsType, rhsType));
+                    add(id, eDocElementKind::Condition, eSeverity::Warning, DocRules::RULE_ARGUMENT_TYPE
+                       , vtr("Comparing '%1' with '%2' narrows: bool converts to 0 or 1 before the comparison").arg(lhsType, rhsType));
                 else
-                    add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
+                    add(id, eDocElementKind::Condition, eSeverity::Error, DocRules::RULE_ARGUMENT_TYPE, vtr("Type mismatch: %1").arg(reason));
             }
         }
 
@@ -1200,7 +1212,7 @@ namespace
         const bool lConst = (leaf.getLhsKind() == eValueSource::Value) || (leaf.getLhsKind() == eValueSource::Constant);
         const bool rConst = (leaf.getRhsKind() == eValueSource::Value) || (leaf.getRhsKind() == eValueSource::Constant);
         if (lConst && rConst)
-            add(id, eDocElementKind::Condition, eSeverity::Warning, 9, vtr("Both operands are constant at design time"));
+            add(id, eDocElementKind::Condition, eSeverity::Warning, DocRules::RULE_CONSTANT_COMPARE, vtr("Both operands are constant at design time"));
     }
 
     QList<SMIssue> Ctx::run()
@@ -1224,9 +1236,9 @@ namespace
             // An embedded condition owns its body and must supply one; every other method has none.
             const bool embedded = NESMMethod::isCondition(m) && (m->getImplement() == MethodEntry::eImplement::Embedded);
             if (embedded && m->getBody().trimmed().isEmpty())
-                add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("Embedded condition '%1' has an empty body").arg(m->getName()));
+                add(m->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_CONDITION_BODY, vtr("Embedded condition '%1' has an empty body").arg(m->getName()));
             if ((embedded == false) && (m->getBody().trimmed().isEmpty() == false))
-                add(m->getId(), eDocElementKind::Method, eSeverity::Error, 20, vtr("A body is only allowed on an Embedded condition"));
+                add(m->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_CONDITION_BODY, vtr("A body is only allowed on an Embedded condition"));
             // Return belongs to a condition method and is a declared type like any other.
             if (NESMMethod::isCondition(m))
             {
@@ -1260,7 +1272,7 @@ namespace
         for (const IncludeEntry* i : mData.machineImports())
         {
             if (i->getAlias().isEmpty())
-                add(i->getId(), eDocElementKind::Import, eSeverity::Error, 18
+                add(i->getId(), eDocElementKind::Import, eSeverity::Error, DocRules::RULE_STATE_SHAPE
                     , vtr("Imported machine '%1' has no alias, so no state can host it").arg(i->getLocation()));
             else
                 checkIdentifier(i->getId(), eDocElementKind::Import, i->getAlias(), vtr("The import"));
@@ -1359,7 +1371,7 @@ namespace
             QStringList cycle;
             if (SMImportResolver::findCycle(mData, entry, cycle))
             {
-                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
                     , vtr("Import '%1' closes a cycle: %2").arg(name, cycle.join(QStringLiteral(" imports "))));
                 brokenAliases.insert(name);
                 continue;
@@ -1369,19 +1381,19 @@ namespace
             switch (resolution.state)
             {
             case SMImportResolver::eState::NoLocation:
-                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
                     , vtr("Import '%1' names no file").arg(name));
                 brokenAliases.insert(name);
                 continue;
 
             case SMImportResolver::eState::NotFound:
-                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
                     , vtr("Import '%1' points at a file that does not exist: %2").arg(name, entry.getLocation()));
                 brokenAliases.insert(name);
                 continue;
 
             case SMImportResolver::eState::ParseFailed:
-                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
                     , vtr("Import '%1' cannot be read as a state machine: %2").arg(name, entry.getLocation()));
                 brokenAliases.insert(name);
                 continue;
@@ -1395,7 +1407,7 @@ namespace
             if (SMImportResolver::importDepth(resolution.absolutePath, SMImportResolver::MAX_IMPORT_DEPTH, deep)
                 > SMImportResolver::MAX_IMPORT_DEPTH)
             {
-                add(id, eDocElementKind::Import, eSeverity::Error, 19
+                add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
                     , vtr("Imported machine '%1' nests more than %2 levels of imports")
                         .arg(name).arg(SMImportResolver::MAX_IMPORT_DEPTH));
                 brokenAliases.insert(name);
@@ -1406,13 +1418,13 @@ namespace
             const VersionNumber& actual = resolution.actualVersion;
             if (pinned.getMajor() != actual.getMajor())
             {
-                add(id, eDocElementKind::Import, eSeverity::Error, 22
+                add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_IMPORT_MAJOR
                     , vtr("Import '%1' is pinned to version %2 but the file is %3; use Update to accept it")
                         .arg(name, pinned.toString(), actual.toString()));
             }
             else if (pinned.getMinor() != actual.getMinor())
             {
-                add(id, eDocElementKind::Import, eSeverity::Warning, 12
+                add(id, eDocElementKind::Import, eSeverity::Warning, DocRules::RULE_IMPORT_PATCH
                     , vtr("Import '%1' is pinned to version %2, the file is %3; updating is recommended")
                         .arg(name, pinned.toString(), actual.toString()));
             }
@@ -1420,13 +1432,13 @@ namespace
             {
                 // A patch-only drift is fixed silently on load (see StateMachineModel::loadFromFile);
                 // this is the one-time notice that it happened, not a finding to act on.
-                add(id, eDocElementKind::Import, eSeverity::Info, 12
+                add(id, eDocElementKind::Import, eSeverity::Info, DocRules::RULE_IMPORT_PATCH
                     , vtr("Import '%1' pin was updated to %2 to match the file's patch level")
                         .arg(name, pinned.toString()));
             }
             else if (pinned.getPatch() != actual.getPatch())
             {
-                add(id, eDocElementKind::Import, eSeverity::Info, 12
+                add(id, eDocElementKind::Import, eSeverity::Info, DocRules::RULE_IMPORT_PATCH
                     , vtr("Import '%1' is pinned to version %2, the file is %3")
                         .arg(name, pinned.toString(), actual.toString()));
             }
@@ -1443,7 +1455,7 @@ namespace
             {
                 if ((state != nullptr) && brokenAliases.contains(state->getSubmachine()))
                 {
-                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 19
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
                         , vtr("State '%1' hosts submachine '%2', which is not available").arg(state->getName(), state->getSubmachine()));
                 }
             }
@@ -1522,7 +1534,7 @@ namespace
             if ((m == nullptr) || (NESMMethod::isTrigger(m) == false))
                 continue;
             if (mData.getAttributes().findElement(m->getName()) != nullptr)
-                add(m->getId(), eDocElementKind::Method, eSeverity::Error, 32
+                add(m->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_ATTRIBUTE_STIMULUS
                   , vtr("Trigger '%1' has the same name as an attribute. An attribute and a trigger must have different names, because both become members of the machine class.").arg(m->getName()));
         }
 
@@ -1544,7 +1556,7 @@ namespace
 
                 if (const DocReservedNames::Row* row = DocReservedNames::fixedMember(member, isShared))
                 {
-                    add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_RESERVED_PREFIX
                       , vtr("Hosting state '%1' generates a member named '%2', which the machine class already uses for %3. Rename the state.")
                             .arg(name, member, QString(row->owner)));
                     continue;
@@ -1555,7 +1567,7 @@ namespace
                     const QLatin1StringView word = DocReservedNames::reservedWord(*row);
                     if ((name.size() > word.size()) && name.startsWith(word))
                     {
-                        add(state->getId(), eDocElementKind::State, eSeverity::Error, 33
+                        add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_RESERVED_PREFIX
                           , vtr("Hosting state '%1' generates a member named '%2', and the prefix '%3' is reserved for %4. Rename the state so that it does not begin with '%5'.")
                                 .arg(name, member, QString(row->member), QString(row->owner), QString(word)));
                         break;
@@ -1569,7 +1581,7 @@ namespace
             const QString member = QStringLiteral("mTimer") + timer.getName();
             if (const DocReservedNames::Row* row = DocReservedNames::fixedMember(member, isShared))
             {
-                add(timer.getId(), eDocElementKind::Timer, eSeverity::Error, 33
+                add(timer.getId(), eDocElementKind::Timer, eSeverity::Error, DocRules::RULE_RESERVED_PREFIX
                   , vtr("Timer '%1' generates a member named '%2', which the machine class already uses for %3. Rename the timer.")
                         .arg(timer.getName(), member, QString(row->owner)));
             }
@@ -1586,7 +1598,7 @@ namespace
             {
                 if (p.getName() == m->getName())
                 {
-                    add(p.getId(), eDocElementKind::Method, eSeverity::Warning, 34
+                    add(p.getId(), eDocElementKind::Method, eSeverity::Warning, DocRules::RULE_PARAM_SHADOWS
                       , vtr("Parameter '%1' has the same name as its %2, and hides the method and its attribute getter inside the body. Rename the parameter.")
                             .arg(m->getName(), NESMMethod::isTrigger(m) ? QStringLiteral("trigger") : QStringLiteral("condition")));
                     break;
@@ -1616,7 +1628,7 @@ namespace
 
             const HostedMachine& first = hosted.at(found.value());
             const HostedMachine& clash = hosted.at(i);
-            add(clash.rootId, eDocElementKind::State, eSeverity::Error, 31
+            add(clash.rootId, eDocElementKind::State, eSeverity::Error, DocRules::RULE_HANDLER_NAME
               , vtr("Hosting states '%1' running '%2' and '%3' running '%4' both name the action handler '%5'")
                     .arg(first.chain.join(QStringLiteral(" -> ")), first.machine
                        , clash.chain.join(QStringLiteral(" -> ")), clash.machine)
@@ -1629,6 +1641,8 @@ namespace
     {
         mChecks.noteUnknownElements(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ELEMENT
                                   , mData.getUnknownElements(), QStringLiteral("fsml"));
+        mChecks.noteUnknownAttributes(eDocElementKind::Overview, DocRules::RULE_UNKNOWN_ATTRIBUTE
+                                    , mData.getUnknownAttributes());
     }
 
     void Ctx::checkDefaultOrder(const MethodBase& owner, eDocElementKind kind, const QString& ownerName)
@@ -1640,7 +1654,7 @@ namespace
         }
 
         const MethodParameter& param = owner.getElements().at(misplaced);
-        add(param.getId(), kind, eSeverity::Error, 38
+        add(param.getId(), kind, eSeverity::Error, DocRules::RULE_DEFAULT_ORDER
           , vtr("Parameter '%1' of '%2' has a default value but is not among the last parameters")
                 .arg(param.getName(), ownerName)
           , vtr("A default value stands in for an argument the caller leaves out, so every parameter after one that has a default must have a default too. "
@@ -1664,7 +1678,7 @@ namespace
 
             if ((name.size() > row->member.size()) && name.startsWith(row->member))
             {
-                add(method.getId(), eDocElementKind::Method, eSeverity::Warning, 39
+                add(method.getId(), eDocElementKind::Method, eSeverity::Warning, DocRules::RULE_ACTION_PREFIX
                   , vtr("Condition '%1' is generated under that exact name, and '%2' is the prefix of %3")
                         .arg(name, QString(row->member), QString(row->owner))
                   , vtr("Two declarations can reach one C++ identifier this way, and the build then refuses whichever comes second. "
@@ -1914,7 +1928,7 @@ namespace
                     const SMStateEntry* owner = (info.isRoot ? nullptr : mData.findStateById(info.ownerId));
                     const QString where = (owner != nullptr ? QLatin1Char('\'') + owner->getName() + QLatin1Char('\'')
                                                             : vtr("the root level"));
-                    add(sid, eDocElementKind::State, eSeverity::Warning, 1
+                    add(sid, eDocElementKind::State, eSeverity::Warning, DocRules::RULE_UNREACHABLE_STATE
                        , vtr("State '%1' on %2 is unreachable: no transition targets it and no Start enters it").arg(st->getName(), where));
                 }
 
@@ -1923,11 +1937,12 @@ namespace
                 if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false)
                     && (hasExit(*st) == false) && (ancestorExits(sid) == false))
                 {
-                    add(sid, eDocElementKind::State, eSeverity::Warning, 2, vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));
+                    add(sid, eDocElementKind::State, eSeverity::Warning, DocRules::RULE_DEAD_END_STATE
+                       , vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));
                 }
 
                 if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (repeats.contains(sid) == false))
-                    add(sid, eDocElementKind::State, eSeverity::Warning, 10, vtr("History on '%1' is never re-entered").arg(st->getName()));
+                    add(sid, eDocElementKind::State, eSeverity::Warning, DocRules::RULE_UNUSED_HISTORY, vtr("History on '%1' is never re-entered").arg(st->getName()));
 
                 QSet<QString> unconditionalStimuli;
                 for (SMTransitionEntry* tr : st->getTransitions().getElements())
@@ -1979,13 +1994,15 @@ namespace
                     const bool unconditional = tr->getConditions().collectLeaves().isEmpty() && (tr->getGuard().hasContent() == false);
 
                     if (tr->isInternal() && tr->getOperations().isEmpty() && unconditional)
-                        add(tid, eDocElementKind::Transition, eSeverity::Warning, 7, vtr("Internal transition on '%1' has no operations or conditions").arg(stim));
+                        add(tid, eDocElementKind::Transition, eSeverity::Warning, DocRules::RULE_EMPTY_INTERNAL
+                           , vtr("Internal transition on '%1' has no operations or conditions").arg(stim));
 
                     if (tr->isInitial() == false)
                     {
                         const QString key = QString::number(static_cast<int>(tr->getStimulusKind())) + QLatin1Char(':') + stim;
                         if (unconditionalStimuli.contains(key))
-                            add(tid, eDocElementKind::Transition, eSeverity::Warning, 3, vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
+                            add(tid, eDocElementKind::Transition, eSeverity::Warning, DocRules::RULE_SHADOWED_TRANSITION
+                               , vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
                         if (unconditional)
                             unconditionalStimuli.insert(key);
                     }
@@ -2057,18 +2074,18 @@ namespace
         // Warning 5: an event reacted to but never sent, or sent but never reacted to.
         for (const Use& u : reactedEvents)
             if (eventsSent.contains(u.name) == false)
-                add(u.id, u.kind, eSeverity::Warning, 5, vtr("Event '%1' is reacted to but never sent").arg(u.name));
+                add(u.id, u.kind, eSeverity::Warning, DocRules::RULE_ONE_SIDED_EVENT, vtr("Event '%1' is reacted to but never sent").arg(u.name));
         for (const Use& u : sentEvents)
             if (eventsReacted.contains(u.name) == false)
-                add(u.id, u.kind, eSeverity::Warning, 5, vtr("Event '%1' is sent but no transition reacts to it").arg(u.name));
+                add(u.id, u.kind, eSeverity::Warning, DocRules::RULE_ONE_SIDED_EVENT, vtr("Event '%1' is sent but no transition reacts to it").arg(u.name));
 
         // Warning 6: a timer reacted to but never started, or started but never reacted to.
         for (const Use& u : reactedTimers)
             if (timersStarted.contains(u.name) == false)
-                add(u.id, u.kind, eSeverity::Warning, 6, vtr("Timer '%1' is reacted to but never started").arg(u.name));
+                add(u.id, u.kind, eSeverity::Warning, DocRules::RULE_ONE_SIDED_TIMER, vtr("Timer '%1' is reacted to but never started").arg(u.name));
         for (const Use& u : startedTimers)
             if (timersReacted.contains(u.name) == false)
-                add(u.id, u.kind, eSeverity::Warning, 6, vtr("Timer '%1' is started but no transition reacts to it").arg(u.name));
+                add(u.id, u.kind, eSeverity::Warning, DocRules::RULE_ONE_SIDED_TIMER, vtr("Timer '%1' is started but no transition reacts to it").arg(u.name));
     }
 
 } // namespace

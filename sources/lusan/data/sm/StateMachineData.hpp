@@ -90,23 +90,13 @@ public:
     static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_FORMAT_110 };
 
     /**
-     * \struct  UnknownAttribute
-     * \brief   One unknown root-level attribute preserved for newer minor/patch formats.
+     * \struct  IdRepair
+     * \brief   One element ID that two elements claimed, and the ID the later one carries now.
      **/
-    struct UnknownAttribute
+    struct IdRepair
     {
-        QString name;
-        QString value;
-    };
-
-    /**
-     * \struct  UnknownElement
-     * \brief   One unknown root-level subtree and the insertion bucket around known sections.
-     **/
-    struct UnknownElement
-    {
-        int     bucket { 0 };
-        QString xml;
+        uint32_t duplicated;
+        uint32_t assigned;
     };
 
 private:
@@ -145,6 +135,26 @@ public:
      *          document order. Empty for a document written by this build.
      **/
     inline const QList<DocUnknownElement>& getUnknownElements() const;
+
+    /**
+     * \brief   Every attribute of the opened document that the format does not define, in
+     *          document order. Empty for a document written by this build.
+     **/
+    inline const QList<DocUnknownAttribute>& getUnknownAttributes() const;
+
+    /**
+     * \brief   Every ID that was claimed twice in the opened document, with the ID the later
+     *          claimant carries now. Empty when nothing had to be renumbered.
+     **/
+    inline const QList<IdRepair>& getRepairedIds() const;
+
+    /**
+     * \brief   Gives every element after the first claimant of an ID a free ID of its own, so
+     *          one ID never stands for two elements.
+     * \return  True when at least one element was renumbered.
+     * \note    Call it once the whole document is read and before anything is shown.
+     **/
+    bool repairDuplicateIds();
 
     inline const SMOverviewData& getOverview() const;
     inline SMOverviewData& getOverview();
@@ -362,9 +372,9 @@ private:
     IncludeDataSection mIncludes;   //!< The IncludeList section, machine imports included.
     SMStateData     mStates;        //!< The root StateList (level 0).
     SMLayoutData    mLayout;        //!< The Layout section.
-    QVector<UnknownAttribute> mUnknownRootAttributes; //!< Unknown root attributes preserved on round-trip.
-    QVector<UnknownElement>   mUnknownRootElements;   //!< Unknown root elements preserved on round-trip.
+    QList<DocUnknownAttribute> mUnknownAttributes;    //!< Every root attribute the format does not define.
     QList<DocUnknownElement>  mUnknownElements;       //!< Every element the format does not define, with its line and text.
+    QList<IdRepair>           mRepairedIds;           //!< Every ID renumbered while the document was read.
     bool            mOpenSuccess;   //!< Whether the document opened successfully.
 };
 
@@ -405,6 +415,16 @@ inline void StateMachineData::setOpenSucceeded(bool succeeded)
 inline const QList<DocUnknownElement>& StateMachineData::getUnknownElements() const
 {
     return mUnknownElements;
+}
+
+inline const QList<DocUnknownAttribute>& StateMachineData::getUnknownAttributes() const
+{
+    return mUnknownAttributes;
+}
+
+inline const QList<StateMachineData::IdRepair>& StateMachineData::getRepairedIds() const
+{
+    return mRepairedIds;
 }
 
 inline const SMOverviewData& StateMachineData::getOverview() const

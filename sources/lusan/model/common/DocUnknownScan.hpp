@@ -34,10 +34,8 @@
  * \struct  DocUnknownElement
  * \brief   One element the format does not define, where it was found, and the text of it.
  *
- *          The text is kept so a save puts the block back exactly as it was written. An
- *          editor that cannot show an element must still not destroy it: the author's way out
- *          of a refusal is to open the document in a build that understands it, and that only
- *          works while the block survives every save in between.
+ *          The text is kept while the document is open, so a finding can quote the block. A
+ *          save does not write it back.
  **/
 struct DocUnknownElement
 {
@@ -47,6 +45,16 @@ struct DocUnknownElement
     uint32_t    ownerId;    //!< The ID of the nearest enclosing element that carries one, 0 at the root.
     QStringList wrappers;   //!< The element names between that owner and this block.
     QString     text;       //!< The block itself, verbatim.
+};
+
+/**
+ * \struct  DocUnknownAttribute
+ * \brief   One attribute the format does not define, and the element it was written on.
+ **/
+struct DocUnknownAttribute
+{
+    QString element;    //!< The element the attribute sits on.
+    QString name;       //!< The attribute name as written.
 };
 
 /**
@@ -62,15 +70,6 @@ namespace DocUnknownScan
      *          somewhere else, in document order.
      **/
     QList<DocUnknownElement> scan(DocElementTable::eDocument doc, const QByteArray& xml);
-
-    /**
-     * \brief   Puts the blocks of \p unknown back into \p written, each inside the element it
-     *          was found in. A block whose element no longer exists is dropped, because the
-     *          author deleted what held it.
-     * \return  \p written unchanged when \p unknown is empty.
-     **/
-    QByteArray restore(DocElementTable::eDocument doc, const QByteArray& written
-                     , const QList<DocUnknownElement>& unknown);
 }
 
 #endif  // LUSAN_MODEL_COMMON_DOCUNKNOWNSCAN_HPP
