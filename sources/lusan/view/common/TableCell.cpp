@@ -278,14 +278,19 @@ void TableCell::onEditorTextChanged(const QString & newText)
     QWidget *editor = qobject_cast<QWidget *>(sender());
     if (editor != nullptr)
     {
+        const QModelIndex index = editor->property("index").toModelIndex();
+        // A preview of what the editor holds, for a page that mirrors the cell elsewhere while
+        // the edit is still open. It commits nothing, so the editor is never closed underneath.
+        emit signalEditorTextChanged(index, newText);
+
         if (mWaitEnd == false)
         {
-            emit signalEditorDataChanged(editor->property("index").toModelIndex(), newText);
+            emit signalEditorDataChanged(index, newText);
         }
         else
         {
             mNewText = newText;
-            mSelIndex = editor->property("index").toModelIndex();
+            mSelIndex = index;
         }
     }
 }
@@ -313,9 +318,17 @@ void TableCell::onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHin
     mSelIndex = QModelIndex();
     mNewText.clear();
 
+    const bool isLineEdit = (qobject_cast<QLineEdit*>(editor) != nullptr);
+
+    // Put back whatever a page mirrored from the keystrokes it previewed.
+    if (isLineEdit && index.isValid())
+    {
+        emit signalEditorTextChanged(index, mEditOriginal);
+    }
+
     // In live mode every keystroke updated the model, cell and details panel, so replay the
     // pre-edit value through the same path. Wait-for-end mode committed nothing.
-    if ((mWaitEnd == false) && (qobject_cast<QLineEdit*>(editor) != nullptr) && index.isValid())
+    if ((mWaitEnd == false) && isLineEdit && index.isValid())
     {
         emit signalEditorDataChanged(index, mEditOriginal);
     }

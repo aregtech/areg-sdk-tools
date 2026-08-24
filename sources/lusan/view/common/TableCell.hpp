@@ -234,7 +234,18 @@ signals:
      * \param   newValue    The new value of the table cell.
      **/
     void signalEditorDataChanged(const QModelIndex &index, const QString &newValue);
-    
+
+    /**
+     * \brief   The signal is triggered on every keystroke of an open line editor, reporting the
+     *          text it holds right now. It is a preview and not a commit: the owning page mirrors
+     *          the text into its details panel while the editor stays open, and the model is
+     *          updated only when signalEditorDataChanged arrives. On Escape the signal is emitted
+     *          once more with the pre-edit text, so the preview is put back.
+     * \param   index       The index of the table cell being edited.
+     * \param   newText     The text currently in the editor.
+     **/
+    void signalEditorTextChanged(const QModelIndex &index, const QString &newText);
+
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////

@@ -130,7 +130,9 @@ void ConstantPage::buildUi(const QString& headline)
     // Name, type and value are editable in the list as well as in the details panel, so a row can
     // be filled in without leaving the keyboard.
     QTreeWidget* table = mList->ctrlTableList();
-    mTableCell = new TableCell(QList<QAbstractItemModel*>{ mTypeNames }, QList<int>{ static_cast<int>(eColumn::ColType) }, table, this, false);
+    // The inline editors commit when the edit is done, not per keystroke: a commit rebuilds the
+    // list, which would tear the open editor down after the first character typed.
+    mTableCell = new TableCell(QList<QAbstractItemModel*>{ mTypeNames }, QList<int>{ static_cast<int>(eColumn::ColType) }, table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(eColumn::ColName), TableCell::eCellValidation::Identifier);
     table->setItemDelegateForColumn(static_cast<int>(eColumn::ColName) , mTableCell);
     table->setItemDelegateForColumn(static_cast<int>(eColumn::ColType) , mTableCell);
@@ -169,6 +171,9 @@ void ConstantPage::setupSignals(void)
 
     // A commit from an inline editor rebuilds the list. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &ConstantPage::onEditorDataChanged, Qt::QueuedConnection);
+    // Live-preview the name typed in a list cell into the details Name field, the mirror image of
+    // what the details field does to the list row. It commits nothing, so the editor stays open.
+    connect(mTableCell, &TableCell::signalEditorTextChanged, this, &ConstantPage::onEditorTextChanged);
 
     // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &ConstantPage::onNameCommitted);
@@ -673,6 +678,22 @@ void ConstantPage::onEditorDataChanged(const QModelIndex& index, const QString& 
 
     // The commit above rebuilt the list; put the details panel back on the edited row.
     selectConstant(id);
+}
+
+void ConstantPage::onEditorTextChanged(const QModelIndex& index, const QString& newText)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->topLevelItem(index.row());
+    if ((index.column() != static_cast<int>(eColumn::ColName))
+        || (item == nullptr) || (item != table->currentItem()))
+    {
+        return;
+    }
+
+    // Blocked: the field re-emits its text as nameEdited, which would write it straight back into
+    // the row whose editor is open.
+    const QSignalBlocker blockName(mDetails->ctrlName());
+    mDetails->ctrlName()->setText(newText);
 }
 
 void ConstantPage::refreshAll(void)

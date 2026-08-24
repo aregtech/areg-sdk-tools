@@ -154,7 +154,9 @@ void AttributePage::buildUi(const QString& headline)
         pickerColumns.append(colExtra);
     }
 
-    mTableCell = new TableCell(pickers, pickerColumns, table, this, false);
+    // The inline editors commit when the edit is done, not per keystroke: a commit rebuilds the
+    // list, which would tear the open editor down after the first character typed.
+    mTableCell = new TableCell(pickers, pickerColumns, table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(AttributeListView::eColumn::ColName), TableCell::eCellValidation::Identifier);
 
     if (hasValueColumn())
@@ -227,6 +229,9 @@ void AttributePage::setupSignals(void)
 
     // A commit from an inline editor rebuilds the list. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &AttributePage::onEditorDataChanged, Qt::QueuedConnection);
+    // Live-preview the name typed in a list cell into the details Name field, the mirror image of
+    // what the details field does to the list row. It commits nothing, so the editor stays open.
+    connect(mTableCell, &TableCell::signalEditorTextChanged, this, &AttributePage::onEditorTextChanged);
 
     // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName(), &QLineEdit::editingFinished, this, &AttributePage::onNameCommitted);
@@ -776,6 +781,22 @@ void AttributePage::onEditorDataChanged(const QModelIndex& index, const QString&
 
     // The commit above rebuilt the list; put the details panel back on the edited row.
     selectAttribute(id);
+}
+
+void AttributePage::onEditorTextChanged(const QModelIndex& index, const QString& newText)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->topLevelItem(index.row());
+    if ((index.column() != static_cast<int>(AttributeListView::eColumn::ColName))
+        || (item == nullptr) || (item != table->currentItem()))
+    {
+        return;
+    }
+
+    // Blocked: the field re-emits its text as nameEdited, which would write it straight back into
+    // the row whose editor is open.
+    const QSignalBlocker blockName(mDetails->ctrlName());
+    mDetails->ctrlName()->setText(newText);
 }
 
 void AttributePage::refreshAll(void)
