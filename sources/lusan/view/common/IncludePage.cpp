@@ -190,6 +190,8 @@ void IncludePage::setupSignals(void)
     mDetails->ctrlDescription()->installEventFilter(this);
 
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &IncludePage::onInlineLocationEdited);
+    connect(mTableCell, &TableCell::signalEditorTextChanged, this, &IncludePage::onInlineLocationTyped);
+    connect(mTableCell, &TableCell::signalEditorClosed     , this, &IncludePage::onEditorClosed);
 
     DocModelNotifier& notifier = mModel.getNotifier();
 
@@ -503,6 +505,24 @@ void IncludePage::onLocationTextChanged(const QString& text)
     item->setText(static_cast<int>(IncludeListView::eColumn::ColType)    , mList->typeForLocation(text));
     item->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , mList->nameForLocation(text));
     mList->ctrlTableList()->setCurrentItem(item);
+}
+
+void IncludePage::onInlineLocationTyped(const QModelIndex& index, const QString& newText)
+{
+    if (index.column() != static_cast<int>(IncludeListView::eColumn::ColLocation))
+        return;
+
+    if (currentIncludeId() != 0)
+    {
+        // Blocked: the field mirrors its text back into the row whose editor is open.
+        const QSignalBlocker blockInclude(mDetails->ctrlInclude());
+        mDetails->ctrlInclude()->setText(newText);
+    }
+}
+
+void IncludePage::onEditorClosed(void)
+{
+    onCurCellChanged(mList->ctrlTableList()->currentItem(), nullptr);
 }
 
 void IncludePage::onInlineLocationEdited(const QModelIndex& index, const QString& newValue)

@@ -154,7 +154,9 @@ void AttributePage::buildUi(const QString& headline)
         pickerColumns.append(colExtra);
     }
 
-    mTableCell = new TableCell(pickers, pickerColumns, table, this, false);
+    // The inline editors commit when the edit is done, not per keystroke: a commit rebuilds the
+    // list, which would tear the open editor down after the first character typed.
+    mTableCell = new TableCell(pickers, pickerColumns, table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(AttributeListView::eColumn::ColName), TableCell::eCellValidation::Identifier);
 
     if (hasValueColumn())
@@ -227,11 +229,11 @@ void AttributePage::setupSignals(void)
 
     // A commit from an inline editor rebuilds the list. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &AttributePage::onEditorDataChanged, Qt::QueuedConnection);
+    connect(mTableCell, &TableCell::signalEditorTextChanged, this, &AttributePage::onEditorTextChanged);
+    connect(mTableCell, &TableCell::signalEditorClosed     , this, &AttributePage::onEditorClosed);
 
     // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName(), &QLineEdit::editingFinished, this, &AttributePage::onNameCommitted);
-    // Live-preview the typed name into the selected attribute's Name column; the rename commits on
-    // editingFinished. Selection sets the field under a QSignalBlocker.
     connect(mDetails, &AttributeDetailsView::nameEdited, this, [this](const QString& text) {
         if (currentAttributeId() != 0)
         {
@@ -776,6 +778,36 @@ void AttributePage::onEditorDataChanged(const QModelIndex& index, const QString&
 
     // The commit above rebuilt the list; put the details panel back on the edited row.
     selectAttribute(id);
+}
+
+void AttributePage::onEditorTextChanged(const QModelIndex& index, const QString& newText)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->topLevelItem(index.row());
+    if ((item == nullptr) || (item != table->currentItem()))
+        return;
+
+    if (index.column() == static_cast<int>(AttributeListView::eColumn::ColName))
+    {
+        // Blocked: the field re-emits its text as nameEdited, which writes it back into the row.
+        const QSignalBlocker blockName(mDetails->ctrlName());
+        mDetails->ctrlName()->setText(newText);
+    }
+    else if (hasValueColumn() && (index.column() == static_cast<int>(AttributeListView::eColumn::ColExtra)))
+    {
+        const AttributeEntry* entry = mModel.findAttribute(currentAttributeId());
+        if (entry == nullptr)
+            return;
+
+        const QSignalBlocker blockValue(mDetails->ctrlValue());
+        mDetails->ctrlValue()->setText(newText);
+        updateValueValidation(entry->getType(), newText);
+    }
+}
+
+void AttributePage::onEditorClosed(void)
+{
+    onCurCellChanged(mList->ctrlTableList()->currentItem(), nullptr);
 }
 
 void AttributePage::refreshAll(void)

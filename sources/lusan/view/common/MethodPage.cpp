@@ -308,6 +308,8 @@ void MethodPage::setupSignals(void)
         table->setItemDelegateForColumn(col, mTableCell);
     }
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &MethodPage::onEditorDataChanged);
+    connect(mTableCell, &TableCell::signalEditorTextChanged, this, &MethodPage::onEditorTextChanged);
+    connect(mTableCell, &TableCell::signalEditorClosed     , this, &MethodPage::onEditorClosed);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1528,6 +1530,35 @@ void MethodPage::onEditorDataChanged(const QModelIndex& index, const QString& ne
     {
         commitInlineEdit(kind, methodId, paramId, col, newValue);
     }, Qt::QueuedConnection);
+}
+
+void MethodPage::onEditorTextChanged(const QModelIndex& index, const QString& newText)
+{
+    const eRowKind kind = currentKind();
+    const int column = index.column();
+    if ((kind == eRowKind::Method) && (column == static_cast<int>(MethodListView::ColName)))
+    {
+        const QSignalBlocker blockName(mDetails->ctrlName());
+        mDetails->ctrlName()->setText(newText);
+    }
+    else if (kind == eRowKind::Param)
+    {
+        if (column == static_cast<int>(MethodListView::ColName))
+        {
+            const QSignalBlocker blockName(mParamDetails->ctrlName());
+            mParamDetails->ctrlName()->setText(newText);
+        }
+        else if (column == static_cast<int>(MethodListView::ColValue))
+        {
+            const QSignalBlocker blockValue(mParamDetails->ctrlValue());
+            mParamDetails->ctrlValue()->setText(newText);
+        }
+    }
+}
+
+void MethodPage::onEditorClosed(void)
+{
+    onCurCellChanged(mList->ctrlTableList()->currentItem(), nullptr);
 }
 
 void MethodPage::commitInlineEdit(int kind, uint32_t methodId, uint32_t paramId, int column, const QString& newValue)

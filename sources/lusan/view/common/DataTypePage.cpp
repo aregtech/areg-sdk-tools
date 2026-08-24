@@ -234,6 +234,8 @@ void DataTypePage::setupSignals(void)
 
     // A commit from an inline editor rebuilds the tree. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &DataTypePage::onEditorDataChanged, Qt::QueuedConnection);
+    connect(mTableCell, &TableCell::signalEditorTextChanged, this, &DataTypePage::onEditorTextChanged);
+    connect(mTableCell, &TableCell::signalEditorClosed     , this, &DataTypePage::onEditorClosed);
 
     // The identifier validator is installed inside the shared DataTypeDetailsView.
     connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &DataTypePage::onNameCommitted);
@@ -1624,6 +1626,49 @@ void DataTypePage::onEditorDataChanged(const QModelIndex& index, const QString& 
 
     // The commit above rebuilt the tree; put the details panel back on the edited row.
     selectDataType(dataType->getId(), fieldId);
+}
+
+void DataTypePage::onEditorTextChanged(const QModelIndex& index, const QString& newText)
+{
+    DataTypeCustom* dataType = currentDataType();
+    if (dataType == nullptr)
+        return;
+
+    const uint32_t fieldId = currentFieldId();
+    const int column = index.column();
+    if (fieldId == 0)
+    {
+        if (column == static_cast<int>(eColumn::ColName))
+        {
+            // Blocked: the field mirrors its text back into the row whose editor is open.
+            const QSignalBlocker blockName(mDetails->ctrlName());
+            mDetails->ctrlName()->setText(newText);
+        }
+    }
+    else if (column == static_cast<int>(eColumn::ColName))
+    {
+        const QSignalBlocker blockName(mFields->ctrlName());
+        mFields->ctrlName()->setText(newText);
+    }
+    else if (column == static_cast<int>(eColumn::ColValue))
+    {
+        const QSignalBlocker blockValue(mFields->ctrlValue());
+        mFields->ctrlValue()->setText(newText);
+
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            const FieldEntry* field = static_cast<DataTypeStructure*>(dataType)->findElement(fieldId);
+            if (field != nullptr)
+            {
+                mFields->showValueHint(validateFieldValue(field->getType(), newText));
+            }
+        }
+    }
+}
+
+void DataTypePage::onEditorClosed(void)
+{
+    onCurCellChanged(mList->ctrlTableList()->currentItem(), nullptr);
 }
 
 void DataTypePage::applyCellEdit(DataTypeCustom* dataType, uint32_t fieldId, int column, const QString& newValue)
