@@ -236,16 +236,21 @@ signals:
     void signalEditorDataChanged(const QModelIndex &index, const QString &newValue);
 
     /**
-     * \brief   The signal is triggered on every keystroke of an open line editor, reporting the
-     *          text it holds right now. It is a preview and not a commit: the owning page mirrors
-     *          the text into its details panel while the editor stays open, and the model is
-     *          updated only when signalEditorDataChanged arrives. A page that previews must put
-     *          its panel right from the model when the editor closes, since an edit that ends
-     *          empty or is cancelled commits nothing at all.
+     * \brief   The signal is triggered on every keystroke of an open line editor and reports the
+     *          text the editor holds. It previews the edit and commits nothing, so the editor
+     *          stays open; the model is updated when signalEditorDataChanged arrives.
      * \param   index       The index of the table cell being edited.
      * \param   newText     The text currently in the editor.
+     * \note    A page that mirrors the preview into a details panel restores that panel from the
+     *          model on signalEditorClosed, because an edit can end without committing anything.
      **/
     void signalEditorTextChanged(const QModelIndex &index, const QString &newText);
+
+    /**
+     * \brief   The signal is triggered after a line editor of a table cell has closed, and after
+     *          the commit it produced, if any, has been dispatched.
+     **/
+    void signalEditorClosed(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -295,12 +300,6 @@ private:
     bool isValidColumn(int col) const;
 
     /**
-     * \brief   Returns true if the given column index is a combo box widget.
-     * \param   col     The column index.
-     **/
-    bool isComboWidget(int col) const;
-
-    /**
      * \brief   Returns the model of the given column.
      * \param   col     The column index.
      * \return  Returns the model of the given column.
@@ -317,7 +316,6 @@ private:
     FuncEditable                mEditable;  //!< Optional per-cell editability predicate (heterogeneous trees).
     FuncEditorModel             mModelOf;   //!< Optional per-cell combo-model resolver (overrides mColumns).
     FuncValidation              mValidOf;   //!< Optional per-cell validation resolver (overrides mValidation).
-    QWidget *                   mParent;    //!< The parent table widget.
     IETableHelper*              mTable;     //!< The table helper object to validate the data.
     bool                        mWaitEnd;   //!< Wait for end of editing. Valid only for line editor, no relevant to combobox.
     mutable QString             mNewText;   //!< The changed text.

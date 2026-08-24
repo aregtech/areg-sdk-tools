@@ -188,9 +188,12 @@ protected slots:
     //!< before the list is rebuilt underneath it.
     void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
 
-    //!< Mirrors the name being typed in a list cell into the details panel, leaving the inline
-    //!< editor open; the rename itself commits once, through onEditorDataChanged.
+    //!< Mirrors the name or value being typed in a list cell into the details panel, leaving the
+    //!< inline editor open; the edit itself commits once, through onEditorDataChanged.
     void onEditorTextChanged(const QModelIndex& index, const QString& newText);
+
+    //!< Fills the details panel from the model once an inline editor has closed.
+    void onEditorClosed(void);
 
     //!< Rebuilds the whole list on any Constant-kind notifier signal.
     void onNotifierChanged(void);

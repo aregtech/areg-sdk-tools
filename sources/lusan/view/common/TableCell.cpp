@@ -39,7 +39,6 @@ TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper, bool waitEndE
     , mEditable ( )
     , mModelOf  ( )
     , mValidOf  ( )
-    , mParent   (parent)
     , mTable    (tableHelper)
     , mWaitEnd  (waitEndEdit)
     , mNewText  ( )
@@ -58,14 +57,12 @@ TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>&
     , mEditable ( )
     , mModelOf  ( )
     , mValidOf  ( )
-    , mParent   (parent)
     , mTable    (tableHelper)
     , mWaitEnd  (waitEndEdit)
     , mNewText  ( )
     , mSelIndex ( )
     , mEditOriginal( )
 {
-    // Escape cancels the edit: the view reports RevertModelCache when the editor closes.
     connect(this, &QAbstractItemDelegate::closeEditor, this, &TableCell::onCloseEditor);
 
     Q_ASSERT(models.size() == columns.size());
@@ -110,22 +107,6 @@ inline bool TableCell::isValidColumn(int col) const
     return (col >= 0) && (col < mTable->getColumnCount());
 }
 
-bool TableCell::isComboWidget(int col) const
-{
-    if (isValidColumn(col))
-    {
-        for (int i = 0; i < static_cast<int>(mColumns.size()); ++i)
-        {
-            if (mColumns[i] == col)
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
 QAbstractItemModel* TableCell::columnToModel(int col) const
 {
     if (isValidColumn(col))
@@ -148,23 +129,18 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
     mSelIndex = QModelIndex();
     mEditOriginal.clear();
 
-    // A heterogeneous tree (e.g. Data Types) suppresses editing on cells that make no sense for
-    // the row's category; when no predicate is set every valid cell stays editable.
     if (mEditable && (mEditable(index) == false))
     {
         return nullptr;
     }
 
-    // The per-cell resolver wins over the per-column model list, so one column can be a combo for
-    // some rows (struct field type) and a text editor for others (imported type, enum derived).
     QAbstractItemModel* model = mModelOf ? mModelOf(index) : columnToModel(index.column());
     if (model != nullptr)
     {
         QComboBox* combo = new QComboBox(parent);
         combo->setModel(model);
         combo->setProperty("index", index);
-        // The platform drop-down inherits the cell width and elides entries such as "uint32_t", so
-        // the popup view is widened to its longest item.
+        // The drop-down inherits the cell width and elides its entries, so it is widened here.
         if (QAbstractItemView* popup = combo->view())
         {
             popup->setTextElideMode(Qt::ElideNone);
@@ -174,8 +150,8 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
                 popup->setMinimumWidth(hint + 24);
             }
         }
-        // Commit only on user activation, never on currentTextChanged: a programmatic
-        // setCurrentText() in setEditorData() would commit stale text over the user's choice.
+
+        // Commit only on user activation, never on currentTextChanged.
         connect(combo, &QComboBox::activated, this, &TableCell::onComboActivated);
 
         return combo;
@@ -183,14 +159,10 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
     else if ( isValidColumn(index.column()) )
     {
         QLineEdit* lineEdit = new QLineEdit(parent);
-        // The index must travel with the editor so the change routes back to the correct
-        // row/column (a missing property yields an invalid index that is silently dropped).
+        // The index travels with the editor. Without it the change routes nowhere and is dropped.
         lineEdit->setProperty("index", index);
-        // Remember the committed cell text so Escape can restore it (see onCloseEditor). In live
-        // mode every keystroke has already been applied, so the original is the only way back.
+        // The committed text, for the rollback an Escape needs.
         mEditOriginal = mTable->getCellText(index);
-        // Forbid invalid characters directly in the table, matching the details panel. The
-        // per-cell resolver wins so the same column can validate differently by row category.
         const eCellValidation kind = mValidOf ? mValidOf(index) : mValidation.value(index.column(), eCellValidation::NoValidation);
         switch (kind)
         {
@@ -224,8 +196,7 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
 
 void TableCell::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
-    // Key off the actual editor type, not the per-column registration: a combo may now be
-    // produced by the per-cell resolver on a column that is not in the combo-column list.
+    // Keyed off the editor type: the resolver can put a combo on any column.
     if (QComboBox* combo = qobject_cast<QComboBox*>(editor))
     {
         if (index.data(Qt::EditRole).isNull())
@@ -243,9 +214,8 @@ void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
 {
     if (editor != nullptr)
     {
-        // A flat list row is often shorter than a comfortable edit control, so the editor grows
-        // vertically (centered on the cell). Its width stays inside the cell: anything wider
-        // covers the first characters of the neighbouring column while the edit is open.
+        // The editor grows vertically, centered on the cell. Its width stays inside the cell:
+        // anything wider covers the neighbouring column while the edit is open.
         QRect rect = option.rect;
         const int minHeight = qMax(editor->sizeHint().height(), 24);
         if (rect.height() < minHeight)
@@ -266,8 +236,7 @@ void TableCell::onComboActivated(int /*index*/)
     QComboBox* combo = qobject_cast<QComboBox*>(sender());
     if (combo != nullptr)
     {
-        // Route the choice through the same signal the line editor uses, then dismiss the drop-down.
-        // The owning controller updates the model, so the base setModelData() stays uncalled.
+        // The owning page updates the model, so the base setModelData() stays uncalled.
         emit signalEditorDataChanged(combo->property("index").toModelIndex(), combo->currentText());
         emit closeEditor(combo);
     }
@@ -279,8 +248,6 @@ void TableCell::onEditorTextChanged(const QString & newText)
     if (editor != nullptr)
     {
         const QModelIndex index = editor->property("index").toModelIndex();
-        // A preview of what the editor holds, for a page that mirrors the cell elsewhere while
-        // the edit is still open. It commits nothing, so the editor is never closed underneath.
         emit signalEditorTextChanged(index, newText);
 
         if (mWaitEnd == false)
@@ -297,7 +264,8 @@ void TableCell::onEditorTextChanged(const QString & newText)
 
 void TableCell::onEditorTextChangeFinished()
 {
-    if (mWaitEnd && mSelIndex.isValid() && (mNewText.isEmpty() == false))
+    // An emptied cell is a text edit like any other; the page decides whether it is allowed.
+    if (mWaitEnd && mSelIndex.isValid())
     {
         emit signalEditorDataChanged(mSelIndex, mNewText);
         mSelIndex = QModelIndex();
@@ -307,23 +275,28 @@ void TableCell::onEditorTextChangeFinished()
 
 void TableCell::onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint)
 {
-    // Only Escape (cancel) is handled here; a normal commit closes the editor with a different
-    // hint and its value has already been routed through signalEditorDataChanged.
-    if (hint != QAbstractItemDelegate::RevertModelCache)
+    if (qobject_cast<QLineEdit*>(editor) == nullptr)
         return;
 
-    // Drop any pending wait-for-end text so the queued editingFinished (fired as the editor loses
-    // focus while it is being torn down) cannot commit the cancelled value.
-    const QModelIndex index = (editor != nullptr) ? editor->property("index").toModelIndex() : QModelIndex();
-    mSelIndex = QModelIndex();
-    mNewText.clear();
-
-    // In live mode every keystroke updated the model, cell and details panel, so replay the
-    // pre-edit value through the same path. Wait-for-end mode committed nothing.
-    if ((mWaitEnd == false) && (qobject_cast<QLineEdit*>(editor) != nullptr) && index.isValid())
+    const QModelIndex index = editor->property("index").toModelIndex();
+    if (hint == QAbstractItemDelegate::RevertModelCache)
     {
-        emit signalEditorDataChanged(index, mEditOriginal);
+        // Escape. Drop the pending text before the lost focus turns it into a commit.
+        mSelIndex = QModelIndex();
+        mNewText.clear();
+
+        // Live mode already applied every keystroke, so the pre-edit value is replayed.
+        if ((mWaitEnd == false) && index.isValid())
+        {
+            emit signalEditorDataChanged(index, mEditOriginal);
+        }
     }
 
     mEditOriginal.clear();
+
+    // Queued, so a commit that the closing editor still has to report is dispatched first.
+    if (index.isValid())
+    {
+        QMetaObject::invokeMethod(this, [this]() { emit signalEditorClosed(); }, Qt::QueuedConnection);
+    }
 }

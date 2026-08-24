@@ -166,6 +166,13 @@ protected slots:
     //!< Type/Name columns then refresh from the notifier. Escape is handled by the delegate.
     void onInlineLocationEdited(const QModelIndex& index, const QString& newValue);
 
+    //!< Mirrors the path being typed in a list cell into the details panel, leaving the inline
+    //!< editor open; the edit itself commits once, through onInlineLocationEdited.
+    void onInlineLocationTyped(const QModelIndex& index, const QString& newText);
+
+    //!< Fills the details panel from the model once an inline editor has closed.
+    void onEditorClosed(void);
+
     void onBrowseClicked(void);
     void onDeprecatedToggled(bool checked);
     void onDeprecateHintCommitted(void);
