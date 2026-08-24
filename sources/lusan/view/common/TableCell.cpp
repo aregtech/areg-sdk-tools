@@ -318,17 +318,9 @@ void TableCell::onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHin
     mSelIndex = QModelIndex();
     mNewText.clear();
 
-    const bool isLineEdit = (qobject_cast<QLineEdit*>(editor) != nullptr);
-
-    // Put back whatever a page mirrored from the keystrokes it previewed.
-    if (isLineEdit && index.isValid())
-    {
-        emit signalEditorTextChanged(index, mEditOriginal);
-    }
-
     // In live mode every keystroke updated the model, cell and details panel, so replay the
     // pre-edit value through the same path. Wait-for-end mode committed nothing.
-    if ((mWaitEnd == false) && isLineEdit && index.isValid())
+    if ((mWaitEnd == false) && (qobject_cast<QLineEdit*>(editor) != nullptr) && index.isValid())
     {
         emit signalEditorDataChanged(index, mEditOriginal);
     }

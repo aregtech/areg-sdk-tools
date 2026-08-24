@@ -229,9 +229,14 @@ void AttributePage::setupSignals(void)
 
     // A commit from an inline editor rebuilds the list. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &AttributePage::onEditorDataChanged, Qt::QueuedConnection);
-    // Live-preview the name typed in a list cell into the details Name field, the mirror image of
-    // what the details field does to the list row. It commits nothing, so the editor stays open.
+    // Live-preview what is typed in a list cell into the matching details field, the mirror image
+    // of what the details fields do to the list row. It commits nothing, so the editor stays open.
     connect(mTableCell, &TableCell::signalEditorTextChanged, this, &AttributePage::onEditorTextChanged);
+    // An edit can end without committing anything: an emptied cell is refused, and Escape cancels.
+    // Rebuilding once the editor is gone puts the row and the previewed details back to what the
+    // model actually holds. Queued, so the view has finished with the editor, and so a commit that
+    // is on its way is applied on top.
+    connect(mTableCell, &QAbstractItemDelegate::closeEditor, this, [this]() { refreshAll(); }, Qt::QueuedConnection);
 
     // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName(), &QLineEdit::editingFinished, this, &AttributePage::onNameCommitted);
@@ -787,16 +792,31 @@ void AttributePage::onEditorTextChanged(const QModelIndex& index, const QString&
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->topLevelItem(index.row());
-    if ((index.column() != static_cast<int>(AttributeListView::eColumn::ColName))
-        || (item == nullptr) || (item != table->currentItem()))
-    {
+    if ((item == nullptr) || (item != table->currentItem()))
         return;
-    }
 
-    // Blocked: the field re-emits its text as nameEdited, which would write it straight back into
-    // the row whose editor is open.
-    const QSignalBlocker blockName(mDetails->ctrlName());
-    mDetails->ctrlName()->setText(newText);
+    // The row itself is deliberately left alone: writing to the cell under an open editor makes
+    // the view re-seed that editor from the cell, which would wipe what is being typed. The
+    // editor covers the cell anyway, so only the details panel has anything to show.
+    if (index.column() == static_cast<int>(AttributeListView::eColumn::ColName))
+    {
+        // Blocked: the field re-emits its text as nameEdited, which would write it straight back
+        // into the row whose editor is open.
+        const QSignalBlocker blockName(mDetails->ctrlName());
+        mDetails->ctrlName()->setText(newText);
+    }
+    else if (hasValueColumn() && (index.column() == static_cast<int>(AttributeListView::eColumn::ColExtra)))
+    {
+        const AttributeEntry* entry = mModel.findAttribute(currentAttributeId());
+        if (entry == nullptr)
+            return;
+
+        const QSignalBlocker blockValue(mDetails->ctrlValue());
+        mDetails->ctrlValue()->setText(newText);
+        // The literal is judged as it is typed, exactly as it is when the details Value field is
+        // the one being typed in.
+        updateValueValidation(entry->getType(), newText);
+    }
 }
 
 void AttributePage::refreshAll(void)
