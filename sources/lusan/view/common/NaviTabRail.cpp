@@ -40,7 +40,7 @@ namespace
     constexpr int   RAIL_WIDTH_MIN      { 56 };     //!< Narrowest labelled rail.
     constexpr int   RAIL_WIDTH_MAX      { 72 };     //!< Widest labelled rail.
     constexpr int   CAPTION_LINES       { 2 };      //!< Most lines one caption may take.
-    constexpr int   ICON_EXTENT         { 20 };     //!< Edge of the icon square.
+    constexpr int   ICON_EXTENT         { 20 };     //!< Edge of the icon square, as on the main toolbar.
     constexpr int   PADDING_TOP         { 6 };      //!< Free space above the first item.
     constexpr int   ITEM_SPACING        { 2 };      //!< Free space between two items.
     constexpr int   MARKER_WIDTH        { 3 };      //!< Width of the current item marker.

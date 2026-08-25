@@ -307,11 +307,11 @@ void NaviFileSystem::onWorkspaceSelected(int index)
 
 void NaviFileSystem::setupToolbar()
 {
-    mToolRefresh = addToolButton( QIcon::fromTheme(QStringLiteral("view-refresh"))
+    mToolRefresh = addToolButton( NELusanCommon::iconRefresh(NELusanCommon::SizeBig)
                                 , tr("Refresh file system view")
                                 , tr("Refresh file system view"));
 
-    mToolShowAll = addToolButton( QIcon::fromTheme(QStringLiteral("user-bookmarks"))
+    mToolShowAll = addToolButton( NELusanCommon::iconShowAll(NELusanCommon::SizeBig)
                                 , tr("Show / Hide all files")
                                 , tr("Show / Hide all files")
                                 , true);
@@ -323,7 +323,7 @@ void NaviFileSystem::setupToolbar()
 
     addToolSeparator();
 
-    mToolNaviRoot = addToolButton( QIcon::fromTheme(QStringLiteral("computer"))
+    mToolNaviRoot = addToolButton( NELusanCommon::iconComputer(NELusanCommon::SizeBig)
                                  , tr("Show computer file system")
                                  , tr("Show computer file system")
                                  , true);
@@ -331,24 +331,24 @@ void NaviFileSystem::setupToolbar()
 
     addToolSeparator();
 
-    mToolOpen = addToolButton( QIcon::fromTheme(QStringLiteral("document-open"))
+    mToolOpen = addToolButton( NELusanCommon::iconOpenFile(NELusanCommon::SizeBig)
                              , tr("Open selected file")
                              , tr("Open selected file"));
 
-    mToolNewFolder = addToolButton( QIcon::fromTheme(QStringLiteral("folder-new"))
+    mToolNewFolder = addToolButton( NELusanCommon::iconNewFolder(NELusanCommon::SizeBig)
                                   , tr("Add new folder")
                                   , tr("Add new folder"));
     mToolNewFolder->setWhatsThis(tr("Add new folder"));
 
-    mToolNewFile = addToolButton( QIcon::fromTheme(QStringLiteral("document-new"))
+    mToolNewFile = addToolButton( NELusanCommon::iconNewFile(NELusanCommon::SizeBig)
                                 , tr("Add new file")
                                 , tr("Add new file"));
 
-    mToolEdit = addToolButton( QIcon::fromTheme(QStringLiteral("mail-message-new"))
+    mToolEdit = addToolButton( NELusanCommon::iconRename(NELusanCommon::SizeBig)
                              , tr("Rename selected file / folder")
                              , tr("Rename selected file / folder"));
 
-    mToolDelete = addToolButton( QIcon::fromTheme(QStringLiteral("user-trash"))
+    mToolDelete = addToolButton( NELusanCommon::iconDelete(NELusanCommon::SizeBig)
                                , tr("Delete selected file / folder")
                                , tr("Delete selected file / folder"));
 

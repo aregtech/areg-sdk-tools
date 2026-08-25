@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: create a workspace, a project board carrying an add sign -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="2.9" y="3.4" width="18.2" height="17.2" rx="2.4"/>
+<path d="M2.9 9.2h18.2"/>
+<path d="M9.4 9.2v11.4"/>
+<path d="M12.7 14.9h5.1"/>
+<path d="M15.25 12.35v5.1"/>
+</g>
+</svg>

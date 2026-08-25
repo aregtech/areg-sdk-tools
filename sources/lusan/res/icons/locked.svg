@@ -1,9 +1,0 @@
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns="http://www.w3.org/2000/svg" width="64px" height="64px" viewBox="0 0 100 100" xml:space="preserve">
-  <g fill="none" stroke="#1C274C" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M34,45 V31 A16,16 0 0 1 66,31 V45"/>
-    <path d="M32,45 H68 A6,6 0 0 1 74,51 V83 A6,6 0 0 1 68,89 H32 A6,6 0 0 1 26,83 V51 A6,6 0 0 1 32,45 Z"/>
-    <path d="M50,63 V74"/>
-  </g>
-  <circle cx="50" cy="62" r="6" fill="#1C274C"/>
-</svg>

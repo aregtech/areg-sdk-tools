@@ -56,6 +56,9 @@ QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& 
     button->setAccessibleName(toolTip);
     button->setCheckable(checkable);
     button->setAutoRaise(true);
+    // One extent for every navigation panel toolbar, so their marks carry the same stroke
+    // weight as the rail beside them instead of whatever the active style would pick.
+    button->setIconSize(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON));
     mToolLayout->addWidget(button);
     return button;
 }

@@ -118,7 +118,17 @@ protected:
      *          unless they share one edge. Call it after the tool buttons are created.
      * \param   iconExtent  The square icon edge in logical pixels.
      **/
-    void capToolButtonIconSizes(int iconExtent = 12);
+    void capToolButtonIconSizes(int iconExtent = NAVI_TOOL_ICON_SMALL);
+
+//////////////////////////////////////////////////////////////////////////
+// Constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< The icon edge a navigation panel tool button carries.
+    static constexpr int NAVI_TOOL_ICON         { 18 };
+
+    //!< The icon edge of the panels that pack their tool buttons tighter.
+    static constexpr int NAVI_TOOL_ICON_SMALL   { 16 };
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

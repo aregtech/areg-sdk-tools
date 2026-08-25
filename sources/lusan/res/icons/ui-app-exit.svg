@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: leave the application, a door with an outgoing arrow -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M14.4 20.4H5.9a1.9 1.9 0 0 1-1.9-1.9V5.5a1.9 1.9 0 0 1 1.9-1.9h8.5"/>
+<path d="M16.4 16.1l4-4.1-4-4.1"/>
+<path d="M20.4 12H9.5"/>
+</g>
+</svg>

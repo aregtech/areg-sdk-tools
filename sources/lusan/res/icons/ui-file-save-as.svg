@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: save the document elsewhere, a disk and an outgoing arrow -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M13.6 6.1V17a1.9 1.9 0 0 1-1.9 1.9H4.8A1.9 1.9 0 0 1 2.9 17V6.9A1.9 1.9 0 0 1 4.8 5h6.1z"/>
+<path d="M6.5 5v3.3h3.8V5"/>
+<path d="M6.1 18.9v-3.6a0.9 0.9 0 0 1 .9-.9h3.4a0.9 0.9 0 0 1 .9.9v3.6"/>
+<path d="M16.4 12h5"/>
+<path d="M19.1 9.3l2.3 2.7-2.3 2.7"/>
+</g>
+</svg>

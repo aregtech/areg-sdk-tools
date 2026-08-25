@@ -1698,7 +1698,7 @@ void MdiMainWindow::_createActions()
     mActEditFind.setEnabled(false);
     connect(&mActEditFind, &QAction::triggered, this, &MdiMainWindow::onEditFind);
 
-    initAction(mActEditWhereUsed, NELusanCommon::iconSearch(NELusanCommon::SizeBig), tr("Find &Usages"));
+    initAction(mActEditWhereUsed, NELusanCommon::iconSearchUsages(NELusanCommon::SizeBig), tr("Find &Usages"));
     mActEditWhereUsed.setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F12));
     mActEditWhereUsed.setStatusTip(tr("List everywhere the selected entry is referenced"));
     mActEditWhereUsed.setEnabled(false);
@@ -1984,7 +1984,13 @@ void MdiMainWindow::_createMenus()
 
 void MdiMainWindow::_createToolBars()
 {
+    // One extent for the three toolbars, the same the navigation rail draws at, instead of
+    // whatever the active style would pick.
+    const QSize iconSize{ NELusanCommon::SizeToolbar };
+
     mFileToolBar = addToolBar(tr("File"));
+    mFileToolBar->setObjectName(QStringLiteral("lusanMainToolBar"));
+    mFileToolBar->setIconSize(iconSize);
     mFileToolBar->addAction(&mActFileNewSI);
     mFileToolBar->addAction(&mActFileNewFSM);
     mFileToolBar->addAction(&mActFileNewDT);
@@ -1995,6 +2001,8 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar->addSeparator();
 
     mEditToolBar = addToolBar(tr("Edit"));
+    mEditToolBar->setObjectName(QStringLiteral("lusanMainToolBar"));
+    mEditToolBar->setIconSize(iconSize);
     mEditToolBar->addAction(&mActEditUndo);
     mEditToolBar->addAction(&mActEditRedo);
     mEditToolBar->addSeparator();
@@ -2004,6 +2012,8 @@ void MdiMainWindow::_createToolBars()
     mEditToolBar->addSeparator();
     
     mViewToolBar = addToolBar(tr("View"));
+    mViewToolBar->setObjectName(QStringLiteral("lusanMainToolBar"));
+    mViewToolBar->setIconSize(iconSize);
     mViewToolBar->addAction(&mActViewNavigator);
     mViewToolBar->addAction(&mActViewOutput);
 }

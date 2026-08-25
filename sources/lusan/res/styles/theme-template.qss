@@ -436,6 +436,20 @@ QToolBar
     padding: 2px;
 }
 
+/* The main window toolbars carry icon-only buttons, so the row is kept as short as the icon
+   and its hover frame need. Only these three bars are matched, by the name they are given. */
+QToolBar#lusanMainToolBar
+{
+    padding: 0px 3px;
+    min-height: 28px;
+    max-height: 28px;
+}
+
+QToolBar#lusanMainToolBar QToolButton
+{
+    padding: 1px 4px;
+}
+
 QStatusBar
 {
     background: ${panel};

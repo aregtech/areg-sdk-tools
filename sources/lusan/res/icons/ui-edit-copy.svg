@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: copy the selection, a sheet laid over another -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="8.6" y="8.6" width="12.5" height="12.5" rx="2.1"/>
+<path d="M5.4 15.4H4.8A1.9 1.9 0 0 1 2.9 13.5V4.8A1.9 1.9 0 0 1 4.8 2.9h8.7a1.9 1.9 0 0 1 1.9 1.9v.6"/>
+</g>
+</svg>

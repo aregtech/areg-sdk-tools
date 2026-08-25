@@ -64,24 +64,24 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
                                , tr("Open log file")
                                , tr("Opens log file"));
 
-    mToolDbClose = addToolButton( QIcon::fromTheme(QStringLiteral("system-log-out"))
+    mToolDbClose = addToolButton( NELusanCommon::iconClose(NELusanCommon::SizeBig)
                                 , tr("Close log file")
                                 , tr("Close log file"));
 
-    mToolRefresh = addToolButton( QIcon::fromTheme(QStringLiteral("view-refresh"))
+    mToolRefresh = addToolButton( NELusanCommon::iconRefresh(NELusanCommon::SizeBig)
                                 , tr("Refresh Navigator")
                                 , tr("Refresh Navigator and reset filters"));
 }
 
 void NaviOfflineLogsScopes::addMoveTools(void)
 {
-    mToolMoveBottom = addToolButton( QIcon::fromTheme(QStringLiteral("go-down"))
+    mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
                                    , tr("Move at bottom of logs")
                                    , tr("Move at bottom of logs"));
     mToolMoveBottom->setArrowType(Qt::ArrowType::DownArrow);
     mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
 
-    mToolMoveTop = addToolButton( QIcon::fromTheme(QStringLiteral("go-up"))
+    mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
                                 , tr("Move at top of logs")
                                 , tr("Move at top of logs"));
     mToolMoveTop->setArrowType(Qt::ArrowType::UpArrow);

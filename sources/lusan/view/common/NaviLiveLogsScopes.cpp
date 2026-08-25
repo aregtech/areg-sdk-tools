@@ -83,7 +83,7 @@ void NaviLiveLogsScopes::addSpecificTools(void)
                                 , true);
     mToolConnect->setStyleSheet(NELusanCommon::getStyleToolbutton());
 
-    mToolSettings = addToolButton( QIcon::fromTheme(QStringLiteral("applications-development"))
+    mToolSettings = addToolButton( NELusanCommon::iconSettings(NELusanCommon::SizeBig)
                                  , tr("Change log collector connection settings")
                                  , tr("Change log collector service connection settings"));
 
@@ -94,7 +94,7 @@ void NaviLiveLogsScopes::addSpecificTools(void)
 
 void NaviLiveLogsScopes::addMoveTools(void)
 {
-    mToolMoveBottom = addToolButton( QIcon::fromTheme(QStringLiteral("emblem-downloads"))
+    mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
                                    , tr("Move at bottom of logs")
                                    , tr("Move at bottom of logs"));
     mToolMoveBottom->setArrowType(Qt::ArrowType::DownArrow);

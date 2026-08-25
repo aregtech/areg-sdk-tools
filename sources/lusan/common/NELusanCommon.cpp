@@ -24,12 +24,15 @@
 #include <QDir>
 #include <QEvent>
 #include <QFileInfo>
+#include <QGuiApplication>
+#include <QHash>
 #include <QImage>
 #include <QPainter>
 #include <QPen>
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QScreen>
 #include <QStandardPaths>
 #include <QStyle>
 #include <QStyleOptionToolButton>
@@ -88,20 +91,51 @@ namespace
 
 QIcon NELusanCommon::loadIcon(const QString & fileName, const QSize & size /*= QSize{32, 32}*/)
 {
-    if (_darkThemeIcons == false)
+    static QHash<QString, QIcon> _icons;
+    static bool _builtForDark{ false };
+
+    if (_builtForDark != _darkThemeIcons)
     {
-        QIcon icon;
-        icon.addFile(fileName, size, QIcon::Mode::Normal, QIcon::State::On);
-        return icon;
+        _icons.clear();
+        _builtForDark = _darkThemeIcons;
     }
 
-    QIcon source;
-    source.addFile(fileName, size, QIcon::Mode::Normal, QIcon::State::On);
-    QPixmap pixmap = source.pixmap(size);
-    if (pixmap.isNull())
-        return source;
+    const auto found = _icons.constFind(fileName);
+    if (found != _icons.constEnd())
+        return found.value();
 
-    return QIcon(QPixmap::fromImage(adaptImageToDark(pixmap.toImage())));
+    QIcon source(fileName);
+    QIcon result{ source };
+    if (_darkThemeIcons && (source.isNull() == false))
+    {
+        // A lightened mark can only be handed over as ready pixmaps, so each extent the tool
+        // draws at is rendered here. A single rescaled pixmap would blur the strokes.
+        QList<int> extents{ 12, 16, 20, 22, 24, 25, 32, 48, 64 };
+        if (extents.contains(size.height()) == false)
+            extents.append(size.height());
+
+        const QScreen* screen = QGuiApplication::primaryScreen();
+        const qreal ratio = screen != nullptr ? screen->devicePixelRatio() : 1.0;
+
+        QIcon lightened;
+        for (int extent : extents)
+        {
+            QPixmap pixmap = source.pixmap(QSize(extent, extent), ratio);
+            if (pixmap.isNull())
+                continue;
+
+            QPixmap adapted = QPixmap::fromImage(adaptImageToDark(pixmap.toImage()));
+            adapted.setDevicePixelRatio(ratio);
+            lightened.addPixmap(adapted, QIcon::Mode::Normal, QIcon::State::Off);
+            lightened.addPixmap(adapted, QIcon::Mode::Normal, QIcon::State::On);
+        }
+
+        if (lightened.isNull() == false)
+            result = lightened;
+    }
+
+    _icons.insert(fileName, result);
+    return result;
 }
 
 void NELusanCommon::setIconsForDarkTheme(bool isDark)

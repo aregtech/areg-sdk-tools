@@ -461,6 +461,9 @@ namespace NELusanCommon
     //! Default middle size of icons
     const QSize     SizeMiddle  { 24, 24 };
 
+    //! Size of the icons on the main window toolbars and on the navigation rail
+    const QSize     SizeToolbar { 20, 20 };
+
     //! Default big size of icons
     const QSize     SizeBig     { 32, 32 };
 
@@ -645,6 +648,9 @@ namespace NELusanCommon
     //!< Loads search button icon and sets the specified size
     inline QIcon iconSearch(const QSize & size = QSize{ 32, 32 });
 
+    //!< Loads the find usages icon and sets the specified size
+    inline QIcon iconSearchUsages(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads search by match case button icon and sets the specified size
     inline QIcon iconSearchMatchCase(const QSize & size = QSize{ 32, 32 });
 
@@ -674,6 +680,36 @@ namespace NELusanCommon
 
     //<! Loads clear button icon and sets the specified size
     inline QIcon iconClear(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the delete entry icon and sets the specified size
+    inline QIcon iconDelete(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the read again icon and sets the specified size
+    inline QIcon iconRefresh(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the create file icon and sets the specified size
+    inline QIcon iconNewFile(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the create folder icon and sets the specified size
+    inline QIcon iconNewFolder(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the show every entry icon and sets the specified size
+    inline QIcon iconShowAll(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the browse the machine icon and sets the specified size
+    inline QIcon iconComputer(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the rename entry icon and sets the specified size
+    inline QIcon iconRename(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the close icon and sets the specified size
+    inline QIcon iconClose(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the jump to the first row icon and sets the specified size
+    inline QIcon iconScrollTop(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the jump to the last row icon and sets the specified size
+    inline QIcon iconScrollBottom(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads prio scope log icon and sets the specified size
     inline QIcon iconLogScope(const QSize & size = QSize{ 32, 32 });
@@ -841,7 +877,7 @@ inline QIcon NELusanCommon::iconScopeExit(const QSize & size)
 
 inline QIcon NELusanCommon::iconServiceInterfaceTab(const QSize & size)
 {
-    return loadIcon(":/icons/new-service", size);
+    return loadIcon(":/icons/doc-service", size);
 }
 
 inline QIcon NELusanCommon::iconSearchMatchCase(const QSize & size)
@@ -861,82 +897,97 @@ inline QIcon NELusanCommon::iconSearchWildCard(const QSize & size)
 
 inline QIcon NELusanCommon::iconGotoDefinition(const QSize & size)
 {
-    // "go-jump" is the freedesktop standard name; Qt's ThemeIcon enum has no GoJump member.
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("go-jump")) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/goto-declaration", size);
 }
 
 inline QIcon NELusanCommon::iconGoUp(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::GoUp) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("go-up")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/arrow-up", size);
 }
 
 inline QIcon NELusanCommon::iconPause(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("media-playback-pause") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/media-pause", size);
 }
 
 inline QIcon NELusanCommon::iconStop(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("media-playback-stop") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/media-stop", size);
 }
 
 inline QIcon NELusanCommon::iconPlay(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("media-playback-start") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/media-play", size);
 }
 
 inline QIcon NELusanCommon::iconRecord(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("media-record") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/media-record", size);
 }
 
 inline QIcon NELusanCommon::iconClear(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditClear) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-clear")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/trash", size);
+}
+
+inline QIcon NELusanCommon::iconDelete(const QSize & size)
+{
+    return loadIcon(":/icons/trash", size);
+}
+
+inline QIcon NELusanCommon::iconRefresh(const QSize & size)
+{
+    return loadIcon(":/icons/Update Item", size);
+}
+
+inline QIcon NELusanCommon::iconNewFile(const QSize & size)
+{
+    return loadIcon(":/icons/file-new", size);
+}
+
+inline QIcon NELusanCommon::iconNewFolder(const QSize & size)
+{
+    return loadIcon(":/icons/folder-new", size);
+}
+
+inline QIcon NELusanCommon::iconShowAll(const QSize & size)
+{
+    return loadIcon(":/icons/visibility", size);
+}
+
+inline QIcon NELusanCommon::iconComputer(const QSize & size)
+{
+    return loadIcon(":/icons/computer", size);
+}
+
+inline QIcon NELusanCommon::iconRename(const QSize & size)
+{
+    return loadIcon(":/icons/rename", size);
+}
+
+inline QIcon NELusanCommon::iconClose(const QSize & size)
+{
+    return loadIcon(":/icons/close", size);
+}
+
+inline QIcon NELusanCommon::iconScrollTop(const QSize & size)
+{
+    return loadIcon(":/icons/scroll-top", size);
+}
+
+inline QIcon NELusanCommon::iconScrollBottom(const QSize & size)
+{
+    return loadIcon(":/icons/scroll-bottom", size);
 }
 
 inline QIcon NELusanCommon::iconEditUndo(const QSize& size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditUndo)};
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-undo")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/edit-undo", size);
 }
 
 inline QIcon NELusanCommon::iconEditRedo(const QSize& size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditRedo)};
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-redo")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/edit-redo", size);
 }
 
 inline QIcon NELusanCommon::iconLogScope(const QSize & size)
@@ -951,38 +1002,27 @@ inline QIcon NELusanCommon::iconLogSelected(const QSize & size)
 
 inline QIcon NELusanCommon::iconNodeCollapsed(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("list-add")};
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/tree-expand", size);
 }
 
 inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("list-remove")};
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/tree-collapse", size);
 }
 
 inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::FolderOpen) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("folder-open")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/file-open", size);
 }
 
 inline QIcon NELusanCommon::iconSearch(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditFind) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-find")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/edit-find", size);
+}
+
+inline QIcon NELusanCommon::iconSearchUsages(const QSize & size)
+{
+    return loadIcon(":/icons/edit-find-usages", size);
 }
 
 inline QIcon NELusanCommon::iconMethodRequest(const QSize & size)
@@ -1017,13 +1057,7 @@ inline QIcon NELusanCommon::iconMethodCondition(const QSize & size)
 
 inline QIcon NELusanCommon::iconDefaultValue(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("tools-check-spelling")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/check", size);
 }
 
 inline QIcon NELusanCommon::iconMethodParam(const QSize & size)
@@ -1088,56 +1122,42 @@ inline QIcon NELusanCommon::iconTimer(const QSize & size)
 
 inline QIcon NELusanCommon::iconWarning(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("dialog-warning")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/warning", size);
 }
 
 inline QIcon NELusanCommon::iconTypeWarning(const QSize & size)
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning) };
-#else
-    QIcon icon{ QIcon::fromTheme(QStringLiteral("dialog-warning")) };
-#endif
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/warning", size);
 }
 
 inline QIcon NELusanCommon::iconSettings(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("applications-development") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/app-settings", size);
 }
 
 inline QIcon NELusanCommon::iconViewOutputWindow(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/view-status", size);
+    return loadIcon(":/icons/view-output", size);
 }
 
 inline QIcon NELusanCommon::iconViewOfflineLogs(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/view-offline-logs", size);
+    return loadIcon(":/icons/nav-offline-logs", size);
 }
 
 inline QIcon NELusanCommon::iconViewFsmDesign(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/view-fsm-design", size);
+    return loadIcon(":/icons/nav-design-toolbar", size);
 }
 
 inline QIcon NELusanCommon::iconViewLiveLogs(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/view-live-logs", size);
+    return loadIcon(":/icons/nav-live-logs", size);
 }
 
 inline QIcon NELusanCommon::iconViewWorkspace(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/workspace-explorer", size);
+    return loadIcon(":/icons/nav-workspace", size);
 }
 
 inline QIcon NELusanCommon::iconViewNavigationWindow(const QSize & size /*= QSize{32, 32}*/)
@@ -1147,93 +1167,77 @@ inline QIcon NELusanCommon::iconViewNavigationWindow(const QSize & size /*= QSiz
 
 inline QIcon NELusanCommon::iconPaste(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("edit-paste", QIcon(":/images/paste.png")) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/edit-paste", size);
 }
 
 inline QIcon NELusanCommon::iconCopy(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("edit-copy", QIcon(":/images/copy.png")) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/edit-copy", size);
 }
 
 inline QIcon NELusanCommon::iconCut(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("edit-cut", QIcon(":/images/cut.png")) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/edit-cut", size);
 }
 
 inline QIcon NELusanCommon::iconApplicationExit(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("application-exit") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/app-exit", size);
 }
 
 inline QIcon NELusanCommon::iconSaveAsDocument(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("document-save-as") };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/file-save-as", size);
 }
 
 inline QIcon NELusanCommon::iconSaveDocument(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("document-save", QIcon(":/images/save.png")) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/file-save", size);
 }
 
 inline QIcon NELusanCommon::iconOpenDocument(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("document-open", QIcon(":/images/open.png")) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/file-open", size);
 }
 
 inline QIcon NELusanCommon::iconOpenFile(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/open-file", size);
+    return loadIcon(":/icons/file-open", size);
 }
 
 inline QIcon NELusanCommon::iconNewOfflineLogs(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/new-offline-logs", size);
+    return loadIcon(":/icons/nav-offline-logs", size);
 }
 
 inline QIcon NELusanCommon::iconLiveLogWindow(const QSize & size /*= QSize{ 32, 32 }*/)
 {
-    return loadIcon(":/icons/view-live-logs", size);
+    return loadIcon(":/icons/nav-live-logs", size);
 }
 
 inline QIcon NELusanCommon::iconOfflineLogWindow(const QSize & size /*= QSize{ 32, 32 }*/)
 {
-    return loadIcon(":/icons/view-offline-logs", size);
+    return loadIcon(":/icons/nav-offline-logs", size);
 }
 
 inline QIcon NELusanCommon::iconNewLiveLogs(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme("network-wireless")};
-    icon.actualSize(QSize{32, 32}, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/nav-live-logs", size);
 }
 
 inline QIcon NELusanCommon::iconServiceInterface(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/new-service", size);
+    return loadIcon(":/icons/doc-service", size);
 }
 
 inline QIcon NELusanCommon::iconStateMachine(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/workflow-algorithm", size);
+    return loadIcon(":/icons/doc-state-machine", size);
 }
 
 inline QIcon NELusanCommon::iconDataTypeDocument(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/new-datatype", size);
+    return loadIcon(":/icons/doc-data-types", size);
 }
 
 inline QIcon NELusanCommon::iconLocked(const QSize & size /*= QSize{32, 32}*/)
@@ -1243,26 +1247,22 @@ inline QIcon NELusanCommon::iconLocked(const QSize & size /*= QSize{32, 32}*/)
 
 inline QIcon NELusanCommon::iconLiveLogConnected(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("network-wireless")};
-    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/signal-on", size);
 }
 
 inline QIcon NELusanCommon::iconLiveLogDisconnected(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme("network-offline")};
-    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/signal-off", size);
 }
 
 inline QIcon NELusanCommon::iconNewWorkspace(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/new-workspace", size);
+    return loadIcon(":/icons/workspace-new", size);
 }
 
 inline QIcon NELusanCommon::iconWorkspace(const QSize & size /*= QSize{32, 32}*/)
 {
-    return loadIcon(":/icons/workspace-entry", size);
+    return loadIcon(":/icons/workspace-item", size);
 }
 
 inline QIcon NELusanCommon::iconManageWorkspaces(const QSize & size /*= QSize{32, 32}*/)
