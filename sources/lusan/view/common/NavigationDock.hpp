@@ -25,6 +25,7 @@
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "lusan/view/common/NaviTabRail.hpp"
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QKeySequence>
 #include <QSize>
@@ -179,6 +180,21 @@ public:
      **/
     bool railLabels(void) const;
 
+    /**
+     * \brief   Hides the navigator body and leaves the rail alone, or brings the body back.
+     **/
+    void setContentCollapsed(bool collapsed);
+
+    /**
+     * \brief   True while the panel shows the rail without a navigator body.
+     **/
+    inline bool isContentCollapsed(void) const;
+
+    /**
+     * \brief   Returns the width of the rail, which is the width of a collapsed panel.
+     **/
+    inline int railWidth(void) const;
+
 signals:
 
     /**
@@ -190,6 +206,11 @@ signals:
      * \brief   The user asked to close the whole navigation panel.
      **/
     void signalCollapseRequested(void);
+
+    /**
+     * \brief   The navigator body was hidden or brought back.
+     **/
+    void signalContentCollapsed(bool collapsed);
 
     /**
      * \brief   The user dropped a design widget from the rail context menu.
@@ -236,6 +257,12 @@ private:
      **/
     void updateRailSide(void);
 
+    /**
+     * \brief   True shortly after a click opened the panel, used to swallow the double-click
+     *          that the same gesture produces.
+     **/
+    bool justExpanded(void) const;
+
 private slots:
 
     /**
@@ -268,6 +295,8 @@ private:
     NaviFileSystem          mFileSystem;    //!< The file system widget.
     QHash<int, NavigationWindow*> mPanels;  //!< The hosted navigators by navigator type.
     bool                    mRailOrdered;   //!< False until the rail side is applied the first time.
+    bool                    mCollapsed;     //!< True while only the rail is shown.
+    QElapsedTimer           mExpandStamp;   //!< Marks the last time a click opened the panel.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -287,6 +316,16 @@ inline NaviLiveLogsScopes& NavigationDock::getLiveScopes(void)
 inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes(void)
 {
     return mOfflineScopes;
+}
+
+inline bool NavigationDock::isContentCollapsed(void) const
+{
+    return mCollapsed;
+}
+
+inline int NavigationDock::railWidth(void) const
+{
+    return mRail->width();
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP

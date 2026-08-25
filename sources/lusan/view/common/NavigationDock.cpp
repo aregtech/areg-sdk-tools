@@ -141,6 +141,8 @@ NavigationDock::NavigationDock(MdiMainWindow* parent)
     , mFileSystem   (parent, this)
     , mPanels       ( )
     , mRailOrdered  (false)
+    , mCollapsed    (false)
+    , mExpandStamp  ( )
 {
     mEmptyHint->setAlignment(Qt::AlignmentFlag::AlignCenter);
     mEmptyHint->setWordWrap(true);
@@ -164,10 +166,18 @@ NavigationDock::NavigationDock(MdiMainWindow* parent)
 
     connect(mRail, &NaviTabRail::signalItemActivated, this, [this](int id) {
         setCurrentPanel(static_cast<NavigationDock::eNaviWindow>(id));
+        setContentCollapsed(false);
     });
 
-    // Clicking the navigator that is already up moves the keyboard focus into its body.
+    // Clicking the navigator that is already up opens a collapsed panel, otherwise it moves the
+    // keyboard focus into the navigator body.
     connect(mRail, &NaviTabRail::signalCurrentItemClicked, this, [this]() {
+        if (mCollapsed)
+        {
+            setContentCollapsed(false);
+            return;
+        }
+
         NavigationWindow* panel = getPanel(currentPanel());
         if (panel != nullptr)
         {
@@ -176,6 +186,14 @@ NavigationDock::NavigationDock(MdiMainWindow* parent)
     });
 
     connect(mRail, &NaviTabRail::signalHidePanelRequested, this, &NavigationDock::signalCollapseRequested);
+    // A double-click that lands right after a click opened the panel is the second half of that
+    // gesture, not a request to close it again.
+    connect(mRail, &NaviTabRail::signalToggleCollapseRequested, this, [this]() {
+        if (justExpanded() == false)
+        {
+            setContentCollapsed(mCollapsed == false);
+        }
+    });
 
     connect(mRail, &NaviTabRail::signalItemVisibilityToggled, this, [this](int id, bool visible) {
         const NavigationDock::eNaviWindow navi{ static_cast<NavigationDock::eNaviWindow>(id) };
@@ -355,6 +373,34 @@ void NavigationDock::setLiveLogsConnected(bool connected)
 {
     mRail->setItemBadge(static_cast<int>(NavigationDock::eNaviWindow::NaviLiveLogs)
                       , connected ? NaviTabRail::eBadge::Active : NaviTabRail::eBadge::None);
+}
+
+void NavigationDock::setContentCollapsed(bool collapsed)
+{
+    if (mCollapsed == collapsed)
+        return;
+
+    mCollapsed = collapsed;
+    mRail->setCollapsed(collapsed);
+
+    if (collapsed)
+    {
+        mStack->hide();
+    }
+    else
+    {
+        mStack->show();
+        mExpandStamp.start();
+    }
+
+    // The dock reads its floor from this widget, so the floor has to drop before the panel can.
+    setMinimumWidth(collapsed ? mRail->width() : static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH_ABS));
+    emit signalContentCollapsed(collapsed);
+}
+
+bool NavigationDock::justExpanded(void) const
+{
+    return (mExpandStamp.isValid() && (mExpandStamp.elapsed() < 400));
 }
 
 void NavigationDock::setRailLabels(bool labels)

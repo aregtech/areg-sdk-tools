@@ -27,6 +27,7 @@
 #include <QPainter>
 #include <QPen>
 #include <QPixmap>
+#include <QResizeEvent>
 #include <QScrollBar>
 #include <QWheelEvent>
 
@@ -91,6 +92,14 @@ SMGraphicsView::SMGraphicsView(QWidget* parent /*= nullptr*/)
     // No CacheBackground: scrolling blits the cached pixmap and repaints only the exposed
     // strip, which misaligns the grid lines by a subpixel at non-integer zoom levels.
     setFocusPolicy(Qt::StrongFocus);
+}
+
+void SMGraphicsView::resizeEvent(QResizeEvent* event)
+{
+    QGraphicsView::resizeEvent(event);
+    // The view keeps its centre while it is resized, so every pixel of the scene moves. The
+    // default minimal repaint only covers the strip that was added and leaves the rest stale.
+    viewport()->update();
 }
 
 void SMGraphicsView::setZoom(int percent)

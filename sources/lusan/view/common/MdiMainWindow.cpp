@@ -42,6 +42,7 @@
 
 #include "areg/base/SocketDefs.hpp"
 
+#include <DockAreaTitleBar.h>
 #include <DockAreaWidget.h>
 #include <DockManager.h>
 #include <DockWidget.h>
@@ -64,6 +65,7 @@
 #include <QSignalBlocker>
 #include <QStatusBar>
 #include <QSplitter>
+
 #include <QTimer>
 
 #include <algorithm>
@@ -191,6 +193,9 @@ MdiMainWindow::MdiMainWindow()
     , mActNavLiveLogs(nullptr)
     , mActNavOfflineLogs(nullptr)
     , mActNavLabels(nullptr)
+    , mActNavCollapse(nullptr)
+    , mNaviWidthAnimation(nullptr)
+    , mNaviExpandedWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH))
     , mActNavToolbar(nullptr)
     , mActNavProperties(nullptr)
     , mActNavOutline(nullptr)
@@ -449,15 +454,6 @@ MdiMainWindow::eDesignWidget MdiMainWindow::designWidgetOf(NavigationDock::eNavi
     }
 }
 
-void MdiMainWindow::onNaviPanelChanged(NavigationDock::eNaviWindow navi)
-{
-    if (mNaviDockWidget == nullptr)
-        return;
-
-    const QString name{ NavigationDock::panelName(navi) };
-    mNaviDockWidget->setWindowTitle(name.isEmpty() ? tr("Navigation") : name);
-}
-
 QString MdiMainWindow::openLogFile()
 {
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open Log Database"), LusanApplication::getWorkspaceLogs(), _filterLoggingFiles());
@@ -677,6 +673,7 @@ void MdiMainWindow::onShowMenuNavigation()
     set(mActNavLiveLogs, mNaviDock.isPanelVisible(NavigationDock::NaviLiveLogs));
     set(mActNavOfflineLogs, mNaviDock.isPanelVisible(NavigationDock::NaviOfflineLogs));
     set(mActNavLabels, mNaviDock.railLabels());
+    set(mActNavCollapse, mNaviDock.isContentCollapsed());
     updatePlacementActions();
 }
 
@@ -1873,6 +1870,22 @@ void MdiMainWindow::_createMenus()
 
     mNavigationMenu->addSeparator();
 
+    mActNavCollapse = mNavigationMenu->addAction(tr("&Collapse to Rail"));
+    mActNavCollapse->setCheckable(true);
+    mActNavCollapse->setShortcut(QKeySequence(QStringLiteral("Ctrl+B")));
+    connect(mActNavCollapse, &QAction::toggled, this, [this](bool on) {
+        // The shortcut also serves a closed panel: it brings it back rather than collapsing it.
+        if ((mNaviDockWidget != nullptr) && mNaviDockWidget->isClosed())
+        {
+            showDock(mNaviDockWidget);
+            mNaviDock.setContentCollapsed(false);
+        }
+        else
+        {
+            mNaviDock.setContentCollapsed(on);
+        }
+    });
+
     mActNavLabels = mNavigationMenu->addAction(tr("Show Rail La&bels"));
     mActNavLabels->setCheckable(true);
     connect(mActNavLabels, &QAction::toggled, this, [this](bool on) {
@@ -2034,8 +2047,7 @@ void MdiMainWindow::_createDockWindows()
     mNaviDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
     mDockManager->addDockWidget(ads::LeftDockWidgetArea, mNaviDockWidget);
 
-    // The dock title carries the name of the navigator that fills the panel.
-    connect(&mNaviDock, &NavigationDock::signalPanelChanged, this, &MdiMainWindow::onNaviPanelChanged);
+    connect(&mNaviDock, &NavigationDock::signalContentCollapsed, this, &MdiMainWindow::onNaviCollapsed);
     connect(&mNaviDock, &NavigationDock::signalCollapseRequested, this, [this]() {
         if (mNaviDockWidget != nullptr)
         {
@@ -2048,7 +2060,6 @@ void MdiMainWindow::_createDockWindows()
     });
 
     mNaviDockWidget->setTabToolTip(tr("Navigation panel"));
-    onNaviPanelChanged(mNaviDock.currentPanel());
 
     mOutputDockWidget = new ads::CDockWidget(mDockManager, tr("Output"));
     mOutputDockWidget->setObjectName(QStringLiteral("OutputDock"));
@@ -2092,6 +2103,85 @@ void MdiMainWindow::_createMdiArea()
     });
 
     connect(&mDocWatcher, &QFileSystemWatcher::fileChanged, this, &MdiMainWindow::onDocumentFileChanged);
+}
+
+void MdiMainWindow::onNaviCollapsed(bool collapsed)
+{
+    ads::CDockAreaWidget* area = (mNaviDockWidget != nullptr) ? mNaviDockWidget->dockAreaWidget() : nullptr;
+    if (area == nullptr)
+        return;
+
+    // The splitter sizes the dock area, so the width has to be driven there, not on the content.
+    // The area title bar cannot render its name and buttons at rail width, so it steps aside.
+    if (area->titleBar() != nullptr)
+    {
+        area->titleBar()->setVisible(collapsed == false);
+    }
+
+    if (collapsed)
+    {
+        mNaviExpandedWidth = qMax(area->width(), static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
+    }
+
+    const int target = collapsed ? mNaviDock.railWidth() : mNaviExpandedWidth;
+
+    // A maximum-width clamp alone only reaches the splitter when something else already forces
+    // it to lay out again, so the splitter sizes are moved directly instead. The clamp is kept,
+    // but it lands after the run, otherwise the panel would jump to its end width at once.
+    area->setMaximumWidth(QWIDGETSIZE_MAX);
+
+    // The dock area carries its own floor, and the splitter obeys that floor rather than the
+    // size it is handed. Without this the panel stops short of the rail and leaves a dead strip.
+    area->setMinimumWidth(collapsed ? target : 0);
+    mNaviDockWidget->setMinimumWidth(collapsed ? target : 0);
+
+    if (mNaviWidthAnimation == nullptr)
+    {
+        mNaviWidthAnimation = new QVariantAnimation(this);
+        mNaviWidthAnimation->setDuration(120);
+        mNaviWidthAnimation->setEasingCurve(QEasingCurve::Type::InOutQuad);
+        connect(mNaviWidthAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+            applyNaviWidth(value.toInt());
+        });
+        connect(mNaviWidthAnimation, &QVariantAnimation::finished, this, [this]() {
+            ads::CDockAreaWidget* done = mNaviDockWidget->dockAreaWidget();
+            if (done == nullptr)
+                return;
+
+            const bool folded = mNaviDock.isContentCollapsed();
+            applyNaviWidth(folded ? mNaviDock.railWidth() : mNaviExpandedWidth);
+            done->setMaximumWidth(folded ? mNaviDock.railWidth() : QWIDGETSIZE_MAX);
+            // The editor kept up with the run frame by frame; this settles the last one.
+            mMdiArea.viewport()->update();
+        });
+    }
+
+    mNaviWidthAnimation->stop();
+    mNaviWidthAnimation->setStartValue(area->width());
+    mNaviWidthAnimation->setEndValue(target);
+    mNaviWidthAnimation->start();
+}
+
+void MdiMainWindow::applyNaviWidth(int width)
+{
+    ads::CDockAreaWidget* area = (mNaviDockWidget != nullptr) ? mNaviDockWidget->dockAreaWidget() : nullptr;
+    if (area == nullptr)
+        return;
+
+    QSplitter* splitter = qobject_cast<QSplitter*>(area->parentWidget());
+    const int index = (splitter != nullptr) ? splitter->indexOf(area) : -1;
+    QList<int> sizes = (splitter != nullptr) ? splitter->sizes() : QList<int>();
+    if ((index < 0) || (sizes.size() < 2))
+    {
+        area->setMaximumWidth(width);
+        return;
+    }
+
+    // What the panel gives up goes to the pane next to it, so the editor grows by the same amount.
+    const int neighbour = (index == 0) ? 1 : (index - 1);
+    sizes[neighbour] += (sizes.at(index) - width);
+    sizes[index] = width;
+    splitter->setSizes(sizes);
 }
 
 void MdiMainWindow::showDock(ads::CDockWidget* dock)

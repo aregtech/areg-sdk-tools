@@ -23,6 +23,7 @@
 #include <QAction>
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QVariantAnimation>
 #include <QSize>
 
 #include "lusan/view/common/MdiArea.hpp"
@@ -478,11 +479,6 @@ private slots:
     void onFsmToolbarStyle(QAction* action);
 
     /**
-     * \brief   Keeps the navigation dock title on the navigator that fills the panel.
-     **/
-    void onNaviPanelChanged(NavigationDock::eNaviWindow navi);
-
-    /**
      * \brief   Rebuilds the Design menu from the active StateMachine window's Design page
      *          actions; shows a disabled placeholder when none is active/built (the Design
      *          page is never built eagerly).
@@ -653,6 +649,18 @@ private:
      *          QWidget show()/raise() used before the navigation/output docks moved to ADS.
      **/
     void showDock(ads::CDockWidget* dock);
+
+    /**
+     * \brief   Runs the navigation dock area between its rail width and its full width, and
+     *          takes the area title bar out of the way while only the rail is shown.
+     **/
+    void onNaviCollapsed(bool collapsed);
+
+    /**
+     * rief   Gives the navigation dock area the requested width by moving the splitter, and
+     *          hands what it gives up to the pane beside it.
+     **/
+    void applyNaviWidth(int width);
 
     /**
      * \brief   Creates the three Navigation Window host widgets (drawing toolbar, Properties,
@@ -838,6 +846,9 @@ private:
     QAction*        mActNavLiveLogs;    //!< Shows/hides the Live Logs tab.
     QAction*        mActNavOfflineLogs; //!< Shows/hides the Offline Logs tab.
     QAction*        mActNavLabels;      //!< Shows/hides the captions under the rail icons.
+    QAction*        mActNavCollapse;    //!< Collapses the navigation panel to its rail.
+    QVariantAnimation* mNaviWidthAnimation; //!< Runs the navigation dock area width on collapse.
+    int             mNaviExpandedWidth; //!< Width the navigation dock area returns to.
     QAction*        mActNavToolbar;     //!< Places the drawing toolbar in the Navigation Window.
     QAction*        mActNavProperties;  //!< Places the Properties panel in the Navigation Window.
     QAction*        mActNavOutline;     //!< Places the Outline panel in the Navigation Window.

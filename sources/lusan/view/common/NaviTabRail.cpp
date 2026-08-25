@@ -28,6 +28,7 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPalette>
 #include <QPixmap>
 #include <QResizeEvent>
@@ -47,6 +48,9 @@ namespace
     constexpr int   BADGE_RADIUS        { 4 };      //!< Radius of the badge circle.
     constexpr int   CONTENT_ROOM        { 140 };    //!< Room the content needs before captions appear.
     constexpr int   OVERFLOW_MARK       { -2 };     //!< The value indexAt returns over the overflow button.
+    constexpr int   CHEVRON_MARK        { -3 };     //!< The value indexAt returns over the collapse button.
+    constexpr int   CHEVRON_HEIGHT      { 18 };     //!< Height of the collapse button at the rail foot.
+    constexpr int   CHEVRON_BOTTOM      { 3 };      //!< Free space under the collapse button.
 
     //!< Breaks a caption on its spaces into no more than CAPTION_LINES lines.
     QStringList splitCaption(const QString& label)
@@ -125,6 +129,9 @@ NaviTabRail::NaviTabRail(QWidget* parent)
     , mLabelledWidth    (RAIL_WIDTH_MIN)
     , mOverflowRect     ( )
     , mOverflowHovered  (false)
+    , mChevronRect      ( )
+    , mChevronHovered   (false)
+    , mCollapsed        (false)
 {
     setObjectName(QStringLiteral("naviTabRail"));
     setMouseTracking(true);
@@ -307,6 +314,9 @@ int NaviTabRail::indexOf(int id) const
 
 int NaviTabRail::indexAt(const QPoint& pos) const
 {
+    if (mChevronRect.isNull() == false && mChevronRect.contains(pos))
+        return CHEVRON_MARK;
+
     if (mOverflowRect.isNull() == false && mOverflowRect.contains(pos))
         return OVERFLOW_MARK;
 
@@ -373,6 +383,11 @@ void NaviTabRail::relayout(void)
     mOverflowRect = QRect();
     mOverflowHovered = false;
 
+    // The collapse button is pinned to the foot of the rail; the navigators fill what is left.
+    mChevronRect = QRect(0, qMax(0, height() - CHEVRON_BOTTOM - CHEVRON_HEIGHT), mRailWidth, CHEVRON_HEIGHT);
+    if (mChevronRect.top() < PADDING_TOP)
+        mChevronRect = QRect();
+
     QList<int> visible;
     for (int i = 0; i < mItems.size(); ++i)
     {
@@ -384,7 +399,8 @@ void NaviTabRail::relayout(void)
         return;
 
     const int slot = mItemHeight + ITEM_SPACING;
-    const int room = qMax(0, height() - (2 * PADDING_TOP) + ITEM_SPACING);
+    const int foot = mChevronRect.isNull() ? 0 : (CHEVRON_HEIGHT + ITEM_SPACING);
+    const int room = qMax(0, height() - (2 * PADDING_TOP) - foot + ITEM_SPACING);
     int fits = qMax(0, room / slot);
     if (fits >= visible.size())
     {
@@ -411,7 +427,8 @@ void NaviTabRail::relayout(void)
 
     if (shown.size() < visible.size())
     {
-        mOverflowRect = QRect(0, top, mRailWidth, qMin(mItemHeight, qMax(0, height() - top - PADDING_TOP)));
+        const int footTop = mChevronRect.isNull() ? height() : mChevronRect.top() - ITEM_SPACING;
+        mOverflowRect = QRect(0, top, mRailWidth, qMin(mItemHeight, qMax(0, footTop - top - PADDING_TOP)));
         if (mOverflowRect.height() < 12)
             mOverflowRect = QRect();
     }
@@ -534,6 +551,39 @@ void NaviTabRail::paintEvent(QPaintEvent* /*event*/)
             painter.drawEllipse(QPointF(dotX, dotY + (step * 5.0)), 1.7, 1.7);
         }
     }
+
+    if (mChevronRect.isNull() == false)
+    {
+        painter.setPen(withAlpha(foreground, 30));
+        painter.drawLine(mChevronRect.left() + 6, mChevronRect.top() - 1, mChevronRect.right() - 6, mChevronRect.top() - 1);
+
+        painter.setPen(Qt::PenStyle::NoPen);
+        if (mChevronHovered)
+        {
+            painter.setBrush(withAlpha(foreground, 26));
+            painter.drawRoundedRect(mChevronRect.adjusted(3, 1, -3, -1), 6.0, 6.0);
+        }
+
+        // The arrow points the way the content travels, so it flips with the rail side too.
+        const bool toLeft = (mSide == eSide::West) ? (mCollapsed == false) : mCollapsed;
+        const qreal midX  = mRailWidth / 2.0;
+        const qreal midY  = mChevronRect.center().y() + 0.5;
+        const qreal step  = toLeft ? -2.6 : 2.6;
+        QPen arrow(mChevronHovered ? foreground : withAlpha(foreground, 150), 1.4);
+        arrow.setCapStyle(Qt::PenCapStyle::RoundCap);
+        arrow.setJoinStyle(Qt::PenJoinStyle::RoundJoin);
+        painter.setPen(arrow);
+        painter.setBrush(Qt::BrushStyle::NoBrush);
+        for (int wing = 0; wing < 2; ++wing)
+        {
+            const qreal x = midX + (step * (wing == 0 ? -0.4 : 1.4));
+            QPainterPath path;
+            path.moveTo(x - (step * 0.5), midY - 3.0);
+            path.lineTo(x + (step * 0.5), midY);
+            path.lineTo(x - (step * 0.5), midY + 3.0);
+            painter.drawPath(path);
+        }
+    }
 }
 
 void NaviTabRail::mousePressEvent(QMouseEvent* event)
@@ -545,7 +595,11 @@ void NaviTabRail::mousePressEvent(QMouseEvent* event)
     }
 
     const int index = indexAt(event->position().toPoint());
-    if (index == OVERFLOW_MARK)
+    if (index == CHEVRON_MARK)
+    {
+        emit signalToggleCollapseRequested();
+    }
+    else if (index == OVERFLOW_MARK)
     {
         showOverflowMenu();
     }
@@ -569,18 +623,51 @@ void NaviTabRail::mousePressEvent(QMouseEvent* event)
     }
 }
 
+void NaviTabRail::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    // Only the item that is already current collapses the panel, so the gesture cannot fire while
+    // the first click of the pair is still switching navigators.
+    if ((event->button() == Qt::MouseButton::LeftButton) && (indexAt(event->position().toPoint()) == mCurrent) && (mCurrent >= 0))
+    {
+        emit signalToggleCollapseRequested();
+        event->accept();
+    }
+    else
+    {
+        QWidget::mouseDoubleClickEvent(event);
+    }
+}
+
 void NaviTabRail::mouseMoveEvent(QMouseEvent* event)
 {
     const QPoint pos = event->position().toPoint();
     const int index = indexAt(pos);
     const int hovered = (index >= 0) ? index : -1;
     const bool overflow = (index == OVERFLOW_MARK);
+    const bool chevron  = (index == CHEVRON_MARK);
 
-    if ((hovered != mHovered) || (overflow != mOverflowHovered))
+    if ((hovered != mHovered) || (overflow != mOverflowHovered) || (chevron != mChevronHovered))
     {
         mHovered = hovered;
         mOverflowHovered = overflow;
-        setToolTip(hovered >= 0 ? toolTipOf(hovered) : (overflow ? tr("More navigators") : QString()));
+        mChevronHovered = chevron;
+        QString tip;
+        if (hovered >= 0)
+        {
+            tip = toolTipOf(hovered);
+        }
+        else if (overflow)
+        {
+            tip = tr("More navigators");
+        }
+        else if (chevron)
+        {
+            tip = QStringLiteral("<b>%1</b><br>%2")
+                    .arg((mCollapsed ? tr("Expand the panel") : tr("Collapse the panel")).toHtmlEscaped()
+                       , QStringLiteral("Ctrl+B"));
+        }
+
+        setToolTip(tip);
         update();
     }
 
@@ -589,10 +676,11 @@ void NaviTabRail::mouseMoveEvent(QMouseEvent* event)
 
 void NaviTabRail::leaveEvent(QEvent* event)
 {
-    if ((mHovered >= 0) || mOverflowHovered)
+    if ((mHovered >= 0) || mOverflowHovered || mChevronHovered)
     {
         mHovered = -1;
         mOverflowHovered = false;
+        mChevronHovered = false;
         setToolTip(QString());
         update();
     }
@@ -807,5 +895,23 @@ QString NaviTabRail::toolTipOf(int index) const
         result += QStringLiteral("<br>%1").arg(item.shortcut.toHtmlEscaped());
     }
 
+    if (mCollapsed)
+    {
+        result += QStringLiteral("<br>%1").arg(tr("Click to open").toHtmlEscaped());
+    }
+    else if (index == mCurrent)
+    {
+        result += QStringLiteral("<br>%1").arg(tr("Double-click to collapse the panel").toHtmlEscaped());
+    }
+
     return result;
+}
+
+void NaviTabRail::setCollapsed(bool collapsed)
+{
+    if (mCollapsed == collapsed)
+        return;
+
+    mCollapsed = collapsed;
+    update();
 }

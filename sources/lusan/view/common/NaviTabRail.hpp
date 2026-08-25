@@ -154,6 +154,12 @@ public:
     void setLabelsPreferred(bool labels);
 
     /**
+     * \brief   Tells the rail that the panel shows the rail alone, so the arrow and the
+     *          tooltips match the state.
+     **/
+    void setCollapsed(bool collapsed);
+
+    /**
      * \brief   Returns the caption choice of the user.
      **/
     inline bool labelsPreferred(void) const;
@@ -193,12 +199,18 @@ signals:
      **/
     void signalHidePanelRequested(void);
 
+    /**
+     * \brief   The user double-clicked the current item, asking the panel to fold or unfold.
+     **/
+    void signalToggleCollapseRequested(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
     virtual void paintEvent(QPaintEvent* event) override;
     virtual void mousePressEvent(QMouseEvent* event) override;
+    virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
     virtual void mouseMoveEvent(QMouseEvent* event) override;
     virtual void leaveEvent(QEvent* event) override;
     virtual void keyPressEvent(QKeyEvent* event) override;
@@ -276,6 +288,9 @@ private:
     int                 mLabelledWidth;     //!< The width the rail needs to carry captions.
     QRect               mOverflowRect;      //!< The area of the overflow button, empty when unused.
     bool                mOverflowHovered;   //!< True while the mouse rests on the overflow button.
+    QRect               mChevronRect;       //!< The area of the collapse button at the rail foot.
+    bool                mChevronHovered;    //!< True while the mouse rests on the collapse button.
+    bool                mCollapsed;         //!< True while the panel shows the rail alone.
 };
 
 //////////////////////////////////////////////////////////////////////////
