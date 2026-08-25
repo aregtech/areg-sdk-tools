@@ -44,10 +44,6 @@ class QToolButton;
 class QTreeView;
 class QAction;
 
-namespace Ui {
-    class NaviLiveLogsScopes;
-}
-
 //////////////////////////////////////////////////////////////////////////
 // NaviLiveLogsScopes class declaration
 //////////////////////////////////////////////////////////////////////////
@@ -56,27 +52,9 @@ namespace Ui {
  **/
 class NaviLiveLogsScopes : public NaviLogScopeBase
 {
+    Q_OBJECT
+
 private:
-
-    //!< The priority indexes for the context menu entries.
-    enum eLogActions
-    {
-          PrioNotset    = 0 //!< Reset priorities
-        , PrioDebug         //!< Set debug priority
-        , PrioInfo          //!< Set info priority
-        , PrioWarn          //!< Set warning priority
-        , PrioError         //!< Set error priority
-        , PrioFatal         //!< Set fatal priority
-        , PrioScope         //!< Set scope priority
-        , ExpandSelected    //!< Expands selected node
-        , CollapseSelected  //!< Collapse selected node
-        , ExpandAll         //!< Expand all nodes
-        , CollapseAll       //!< Collapse all nodes
-        , SavePrioTarget    //!< Save priority settings of the selected target
-        , SavePrioAll       //!< Save priority settings of all targets
-
-        , PrioCount         //!< The number of entries in the menu
-    };
 
     //!< The logging states.
     enum eLoggingStates
@@ -179,48 +157,41 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
-private:
-
-    //!< Returns the control object to expand or collapse entries of scopes.
-    QToolButton* ctrlCollapse();
-
-    //!< Returns the control object to connect to log observer service.
-    QToolButton* ctrlConnect();
-
-    //!< Returns the control object to open settings.
-    QToolButton* ctrlSettings();
-
-    //!< Returns the control object to save current settings.
-    QToolButton* ctrlSaveSettings();
-
-    //!< Returns the control object to find a string.
-    QToolButton* ctrlFind();
-
-    //!< Returns the control object to set error level of the logs
-    QToolButton* ctrlLogError();
-
-    //!< Returns the control object to set warning level of the logs
-    QToolButton* ctrlLogWarning();
-
-    //!< Returns the control object to set information level of the logs
-    QToolButton* ctrlLogInfo();
-
-    //!< Returns the control object to set debug level of the logs
-    QToolButton* ctrlLogDebug();
-
-    //!< Returns the control object to enable log scopes of the logs
-    QToolButton* ctrlLogScopes();
-
-    //!< Returns the control object to move to the bottom of log window.
-    QToolButton* ctrlMoveBottom();
-
-    //!< Returns the control object of the log messages
-    QTreeView* ctrlTable();
+protected:
 
     /**
-     * \brief   Updates the data of the file system.
+     * \brief   Adds the connect, settings and save settings tool buttons.
      **/
-    void updateData();
+    void addSpecificTools(void) override;
+
+    /**
+     * \brief   Adds the move to bottom tool button.
+     **/
+    void addMoveTools(void) override;
+
+    /**
+     * \brief   Returns true, the live explorer can save priorities on the logging targets.
+     **/
+    bool hasSavePrioMenu(void) const override;
+
+    /**
+     * \brief   Returns true if the log collector service is connected.
+     **/
+    bool canSavePrio(void) const override;
+
+private:
+
+    //!< Returns the control object to connect to log observer service.
+    inline QToolButton* ctrlConnect(void) const;
+
+    //!< Returns the control object to open settings.
+    inline QToolButton* ctrlSettings(void) const;
+
+    //!< Returns the control object to save current settings.
+    inline QToolButton* ctrlSaveSettings(void) const;
+
+    //!< Returns the control object to move to the bottom of log window.
+    inline QToolButton* ctrlMoveBottom(void) const;
 
     /**
      * \brief   Initializes the widgets.
@@ -336,12 +307,6 @@ private slots:
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
     /**
-     * \brief   Slot triggered when the user makes right click on the scope navigation window.
-     * \param   pos     The mouse right click cursor position on scope navigation window.
-     **/
-    void onTreeViewContextMenuRequested(const QPoint& pos);
-
-    /**
      * \brief   The slot is triggered when the application is about to exit.
      * \param   mdiChild    The MDI child window that is about to be closed.
      **/
@@ -358,7 +323,10 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::NaviLiveLogsScopes*        ui;      //!< The user interface object.
+    QToolButton*            mToolConnect;   //!< The tool button to connect or disconnect the log collector.
+    QToolButton*            mToolSettings;  //!< The tool button to open the logging options.
+    QToolButton*            mToolSave;      //!< The tool button to save the log settings.
+    QToolButton*            mToolMoveBottom;//!< The tool button to move to the bottom of the log window.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
@@ -366,12 +334,31 @@ private:
     QString                 mLogLocation;   //!< The location of log files.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
-    QList<QAction*>         mMenuActions;   //!< The list of menu actions
 };
 
 //////////////////////////////////////////////////////////////////////////
 // NaviLiveLogsScopes inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline QToolButton* NaviLiveLogsScopes::ctrlConnect(void) const
+{
+    return mToolConnect;
+}
+
+inline QToolButton* NaviLiveLogsScopes::ctrlSettings(void) const
+{
+    return mToolSettings;
+}
+
+inline QToolButton* NaviLiveLogsScopes::ctrlSaveSettings(void) const
+{
+    return mToolSave;
+}
+
+inline QToolButton* NaviLiveLogsScopes::ctrlMoveBottom(void) const
+{
+    return mToolMoveBottom;
+}
 inline bool NaviLiveLogsScopes::isConfigured() const
 {
     switch (mState)

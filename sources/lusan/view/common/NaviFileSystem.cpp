@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/common/NaviFileSystem.hpp"
-#include "ui/ui_NaviFileSystem.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/NELusanCommon.hpp"
@@ -27,78 +26,85 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
+#include <QIcon>
 #include <QMessageBox>
 #include <QTreeView>
 #include <QToolButton>
 
 NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
-    : NavigationWindow(static_cast<int>(NavigationDock::eNaviWindow::NaviWorkspace), wndMain, parent)
+    : NaviToolbarWindow(static_cast<int>(NavigationDock::eNaviWindow::NaviWorkspace), wndMain, parent)
     , IETableHelper ()
-    
+
     , mNaviModel    (new FileSystemModel())
     , mGenModel     (nullptr)
     , mFileFilter   (nullptr)
-    , ui            (new Ui::NaviFileSystem)
     , mRootPaths    ( )
     , mTableCell    (nullptr)
+    , mToolRefresh  (nullptr)
+    , mToolShowAll  (nullptr)
+    , mToolCollapse (nullptr)
+    , mToolNaviRoot (nullptr)
+    , mToolOpen     (nullptr)
+    , mToolNewFolder(nullptr)
+    , mToolNewFile  (nullptr)
+    , mToolEdit     (nullptr)
+    , mToolDelete   (nullptr)
 {
-    ui->setupUi(this);
-    ctrlToolShowAll()->setStyleSheet(NELusanCommon::getStyleToolbutton());
-    ctrlToolNaviRoot()->setStyleSheet(NELusanCommon::getStyleToolbutton());
-
+    setupToolbar();
     updateData();
-    setupWidgets();    
+    setupWidgets();
     setupSignals();
 }
 
-QTreeView* NaviFileSystem::ctrlTable() const
+void NaviFileSystem::setupToolbar()
 {
-    return ui->treeView;
-}
+    mToolRefresh = addToolButton( QIcon::fromTheme(QStringLiteral("view-refresh"))
+                                , tr("Refresh file system view")
+                                , tr("Refresh file system view"));
 
-QToolButton* NaviFileSystem::ctrlToolRefresh() const
-{
-    return ui->toolRefresh;
-}
+    mToolShowAll = addToolButton( QIcon::fromTheme(QStringLiteral("user-bookmarks"))
+                                , tr("Show / Hide all files")
+                                , tr("Show / Hide all files")
+                                , true);
+    mToolShowAll->setStyleSheet(NELusanCommon::getStyleToolbutton());
 
-QToolButton* NaviFileSystem::ctrlToolShowAll() const
-{
-    return ui->toolShowAll;
-}
+    mToolCollapse = addToolButton( NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig)
+                                 , tr("Collapse all folders")
+                                 , tr("Collapse all folders"));
 
-QToolButton* NaviFileSystem::ctrlToolNaviRoot() const
-{
-    return ui->toolNaviRoot;
-}
+    addToolSeparator();
 
-QToolButton* NaviFileSystem::ctrlToolCollapse() const
-{
-    return ui->toolCollapseAll;
-}
+    mToolNaviRoot = addToolButton( QIcon::fromTheme(QStringLiteral("computer"))
+                                 , tr("Show computer file system")
+                                 , tr("Show computer file system")
+                                 , true);
+    mToolNaviRoot->setStyleSheet(NELusanCommon::getStyleToolbutton());
 
-QToolButton* NaviFileSystem::ctrlToolNewFolder() const
-{
-    return ui->toolNewFolder;
-}
+    addToolSeparator();
 
-QToolButton* NaviFileSystem::ctrlToolNewFile() const
-{
-    return ui->toolNewFile;
-}
+    mToolOpen = addToolButton( QIcon::fromTheme(QStringLiteral("document-open"))
+                             , tr("Open selected file")
+                             , tr("Open selected file"));
 
-QToolButton* NaviFileSystem::ctrlToolOpen() const
-{
-    return ui->toolOpenSelected;
-}
+    mToolNewFolder = addToolButton( QIcon::fromTheme(QStringLiteral("folder-new"))
+                                  , tr("Add new folder")
+                                  , tr("Add new folder"));
+    mToolNewFolder->setWhatsThis(tr("Add new folder"));
 
-QToolButton* NaviFileSystem::ctrlToolEdit() const
-{
-    return ui->toolEditSelected;
-}
+    mToolNewFile = addToolButton( QIcon::fromTheme(QStringLiteral("document-new"))
+                                , tr("Add new file")
+                                , tr("Add new file"));
 
-QToolButton* NaviFileSystem::ctrlToolDelete() const
-{
-    return ui->toolDeleteSelected;
+    mToolEdit = addToolButton( QIcon::fromTheme(QStringLiteral("mail-message-new"))
+                             , tr("Rename selected file / folder")
+                             , tr("Rename selected file / folder"));
+
+    mToolDelete = addToolButton( QIcon::fromTheme(QStringLiteral("user-trash"))
+                               , tr("Delete selected file / folder")
+                               , tr("Delete selected file / folder"));
+
+    setupTreeView(NELusanCommon::SizeSmall);
+    ctrlTable()->setWordWrap(true);
 }
 
 int NaviFileSystem::getColumnCount() const

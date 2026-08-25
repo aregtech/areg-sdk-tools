@@ -33,6 +33,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/NavigationWindow.cpp
     ${LUSAN}/view/common/NaviLiveLogsScopes.cpp
     ${LUSAN}/view/common/NaviLogScopeBase.cpp
+    ${LUSAN}/view/common/NaviToolbarWindow.cpp
     ${LUSAN}/view/common/NaviOfflineLogsScopes.cpp
     ${LUSAN}/view/common/OptionPageBase.cpp
     ${LUSAN}/view/common/OptionPageLogging.cpp
@@ -86,6 +87,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/NavigationWindow.hpp
     ${LUSAN}/view/common/NaviLiveLogsScopes.hpp
     ${LUSAN}/view/common/NaviLogScopeBase.hpp
+    ${LUSAN}/view/common/NaviToolbarWindow.hpp
     ${LUSAN}/view/common/NaviOfflineLogsScopes.hpp
     ${LUSAN}/view/common/OptionPageBase.hpp
     ${LUSAN}/view/common/OptionPageLogging.hpp

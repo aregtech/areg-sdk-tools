@@ -1,7 +1,4 @@
 ﻿list(APPEND LUSAN_UI
-    ${LUSAN}/view/common/ui/NaviFileSystem.ui
-    ${LUSAN}/view/common/ui/NaviLiveLogsScopes.ui
-    ${LUSAN}/view/common/ui/NaviOfflineLogsScopes.ui
     ${LUSAN}/view/common/ui/OptionPageLogging.ui
     ${LUSAN}/view/common/ui/OptionPageProjectDirs.ui
     ${LUSAN}/view/common/ui/OptionPageWorkspace.ui
