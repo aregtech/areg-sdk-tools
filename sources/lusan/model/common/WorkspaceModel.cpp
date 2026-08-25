@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -61,9 +61,9 @@ void WorkspaceModel::addWorkspaceEntry(const WorkspaceEntry& item)
     endInsertRows();
 }
 
-WorkspaceEntry WorkspaceModel::addWorkspaceEntry(const QString& root, const QString& describe)
+WorkspaceEntry WorkspaceModel::addWorkspaceEntry(const QString& root, const QString& name, const QString& describe)
 {
-    WorkspaceEntry result(root, describe);
+    WorkspaceEntry result(root, name, describe);
     
     beginInsertRows(QModelIndex(), rowCount(), rowCount());
     

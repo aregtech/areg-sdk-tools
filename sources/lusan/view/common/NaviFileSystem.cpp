@@ -26,10 +26,140 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
+#include <QAbstractItemView>
+#include <QAction>
+#include <QComboBox>
+#include <QDir>
+#include <QFontInfo>
 #include <QIcon>
 #include <QMessageBox>
+#include <QPainter>
+#include <QStyledItemDelegate>
 #include <QTreeView>
 #include <QToolButton>
+
+namespace
+{
+    //!< The longest description kept before the popup measures the text.
+    constexpr int MaxDescriptionLength{ 160 };
+
+    //!< The frame and padding added to the text line to get the height of the closed selector.
+    constexpr int SelectorHeightPadding{ 3 };
+
+    //!< The height of the line drawn between the workspaces and the commands.
+    constexpr int SeparatorHeight{ 7 };
+
+    //!< Holds the command of the entries that follow the workspace list.
+    constexpr int CommandRole{ Qt::ItemDataRole::UserRole + 1 };
+
+    //!< The entry switches to the workspace it carries.
+    constexpr int CommandSwitch{ 0 };
+
+    //!< The entry creates a new workspace.
+    constexpr int CommandNew{ 1 };
+
+    //!< The entry opens the workspace page of the options dialog.
+    constexpr int CommandManage{ 2 };
+
+    /**
+     * \brief   Builds the font of the root directory line from the font of the workspace name.
+     *          The directory stays one pixel below the name, and never grows above it.
+     **/
+    QFont directoryFont(const QFont& nameFont)
+    {
+        QFont result(nameFont);
+        const int namePixels{ QFontInfo(nameFont).pixelSize() };
+        result.setPixelSize(qBound(1, qRound(namePixels * 0.85) + 1, namePixels));
+        return result;
+    }
+
+    /**
+     * \brief   Draws a workspace of the selector on two rows: the name, and the root directory
+     *          below it. Entries that carry no directory, such as the command entry, keep the
+     *          plain one row drawing.
+     **/
+    class WorkspaceItemDelegate : public QStyledItemDelegate
+    {
+    public:
+        explicit WorkspaceItemDelegate(QObject* parent)
+            : QStyledItemDelegate(parent)
+        {
+        }
+
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            if (isSeparator(index))
+            {
+                painter->save();
+                painter->setPen(option.palette.color(QPalette::ColorGroup::Normal, QPalette::ColorRole::Mid));
+                const int line{ option.rect.center().y() };
+                painter->drawLine(option.rect.left() + 6, line, option.rect.right() - 6, line);
+                painter->restore();
+                return;
+            }
+
+            const QString root{ index.data(Qt::ItemDataRole::UserRole).toString() };
+            if (root.isEmpty())
+            {
+                QStyledItemDelegate::paint(painter, option, index);
+                return;
+            }
+
+            QStyleOptionViewItem opt(option);
+            initStyleOption(&opt, index);
+            // The name starts where a plain entry puts its text, so both kinds of row line up.
+            const QRect textRect{ opt.widget->style()->subElementRect(QStyle::SubElement::SE_ItemViewItemText, &opt, opt.widget) };
+            opt.text.clear();
+            opt.widget->style()->drawControl(QStyle::ControlElement::CE_ItemViewItem, &opt, painter, opt.widget);
+
+            const bool selected{ (option.state & QStyle::StateFlag::State_Selected) != 0 };
+            const QPalette::ColorRole nameRole{ selected ? QPalette::ColorRole::HighlightedText : QPalette::ColorRole::Text };
+
+            const QFont pathFont{ directoryFont(option.font) };
+            const QFontMetrics nameMetrics(option.font);
+            const QFontMetrics pathMetrics(pathFont);
+            const QRect area{ textRect.left(), option.rect.top() + 3, option.rect.right() - textRect.left() - 6, option.rect.height() - 6 };
+            const QRect nameRect{ area.left(), area.top(), area.width(), nameMetrics.height() };
+            const QRect pathRect{ area.left(), nameRect.bottom(), area.width(), pathMetrics.height() };
+
+            painter->save();
+            painter->setFont(option.font);
+            painter->setPen(option.palette.color(QPalette::ColorGroup::Normal, nameRole));
+            painter->drawText(nameRect, Qt::AlignmentFlag::AlignLeft | Qt::AlignmentFlag::AlignVCenter, index.data(Qt::ItemDataRole::DisplayRole).toString());
+
+            painter->setFont(pathFont);
+            QColor pathColor{ option.palette.color(QPalette::ColorGroup::Normal, nameRole) };
+            pathColor.setAlpha(selected ? 200 : 150);
+            painter->setPen(pathColor);
+            // The tail of a path identifies the workspace, so the middle gives way first.
+            painter->drawText(pathRect, Qt::AlignmentFlag::AlignLeft | Qt::AlignmentFlag::AlignVCenter, pathMetrics.elidedText(root, Qt::TextElideMode::ElideMiddle, pathRect.width()));
+            painter->restore();
+        }
+
+        QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+        {
+            QSize result{ QStyledItemDelegate::sizeHint(option, index) };
+            if (isSeparator(index))
+            {
+                result.setHeight(SeparatorHeight);
+            }
+            else if (index.data(Qt::ItemDataRole::UserRole).toString().isEmpty() == false)
+            {
+                const int rows{ QFontMetrics(option.font).height() + QFontMetrics(directoryFont(option.font)).height() + 8 };
+                result.setHeight(std::max(result.height(), rows));
+            }
+
+            return result;
+        }
+
+    private:
+        //!< True for the line the selector puts between the workspaces and the commands.
+        static bool isSeparator(const QModelIndex& index)
+        {
+            return index.data(Qt::ItemDataRole::AccessibleDescriptionRole).toString() == QLatin1String("separator");
+        }
+    };
+}
 
 NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
     : NaviToolbarWindow(static_cast<int>(NavigationDock::eNaviWindow::NaviWorkspace), wndMain, parent)
@@ -40,6 +170,7 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     , mFileFilter   (nullptr)
     , mRootPaths    ( )
     , mTableCell    (nullptr)
+    , mWorkspaces   (nullptr)
     , mToolRefresh  (nullptr)
     , mToolShowAll  (nullptr)
     , mToolCollapse (nullptr)
@@ -50,10 +181,128 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     , mToolEdit     (nullptr)
     , mToolDelete   (nullptr)
 {
+    setupWorkspaceSelector();
     setupToolbar();
     updateData();
     setupWidgets();
     setupSignals();
+}
+
+void NaviFileSystem::setupWorkspaceSelector()
+{
+    mWorkspaces = new QComboBox(this);
+    mWorkspaces->setObjectName(QStringLiteral("naviWorkspaceSelector"));
+    mWorkspaces->setToolTip(tr("Active workspace"));
+    mWorkspaces->setStatusTip(tr("Switch to another workspace"));
+    mWorkspaces->setAccessibleName(tr("Active workspace"));
+    mWorkspaces->setSizeAdjustPolicy(QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon);
+    mWorkspaces->setMinimumContentsLength(12);
+    mWorkspaces->setItemDelegate(new WorkspaceItemDelegate(mWorkspaces));
+    // The closed selector is one text line high, the popup rows keep their own height.
+    const int lineHeight{ QFontMetrics(mWorkspaces->font()).height() };
+    mWorkspaces->setIconSize(QSize(lineHeight - 2, lineHeight - 2));
+    mWorkspaces->setFixedHeight(lineHeight + SelectorHeightPadding);
+    // The root directory is elided to the width there is, so a sideways scrollbar would only
+    // take the height the last entries need.
+    mWorkspaces->view()->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    setNaviHeader(mWorkspaces);
+    populateWorkspaces();
+}
+
+void NaviFileSystem::populateWorkspaces()
+{
+    const QString active{ LusanApplication::getActiveWorkspace().getWorkspaceRoot() };
+
+    const QSize iconSize{ mWorkspaces->iconSize() };
+    const QIcon iconEntry{ NELusanCommon::iconWorkspace(iconSize) };
+
+    mWorkspaces->blockSignals(true);
+    mWorkspaces->clear();
+    int widest{ 0 };
+    const QFontMetrics metrics{ mWorkspaces->font() };
+    for (const WorkspaceEntry& entry : LusanApplication::getOptions().getWorkspaceList())
+    {
+        const QString root{ entry.getWorkspaceRoot() };
+        mWorkspaces->addItem(iconEntry, entry.getWorkspaceName(), root);
+
+        QString tip{ root };
+        QString describe{ entry.getWorkspaceDescription().section('\n', 0, 0).trimmed() };
+        if (describe.isEmpty() == false)
+        {
+            if (describe.length() > MaxDescriptionLength)
+            {
+                describe = describe.left(MaxDescriptionLength) + "...";
+            }
+
+            tip += "\n" + describe;
+        }
+
+        mWorkspaces->setItemData(mWorkspaces->count() - 1, tip, Qt::ItemDataRole::ToolTipRole);
+        widest = std::max(widest, metrics.horizontalAdvance(root));
+        if (root == active)
+        {
+            mWorkspaces->setCurrentIndex(mWorkspaces->count() - 1);
+        }
+    }
+
+    mWorkspaces->insertSeparator(mWorkspaces->count());
+
+    mWorkspaces->addItem(NELusanCommon::iconNewWorkspace(iconSize), tr("New Workspace"), QString());
+    mWorkspaces->setItemData(mWorkspaces->count() - 1, CommandNew, CommandRole);
+    mWorkspaces->setItemData(mWorkspaces->count() - 1, tr("Create a new workspace, restarts application"), Qt::ItemDataRole::ToolTipRole);
+
+    mWorkspaces->addItem(NELusanCommon::iconManageWorkspaces(iconSize), tr("Manage Workspaces..."), QString());
+    mWorkspaces->setItemData(mWorkspaces->count() - 1, CommandManage, CommandRole);
+    mWorkspaces->setItemData(mWorkspaces->count() - 1, tr("Add, edit or remove workspaces"), Qt::ItemDataRole::ToolTipRole);
+
+    mWorkspaces->blockSignals(false);
+
+    // The popup is a window of its own, so the paths stay readable in a narrow dock.
+    mWorkspaces->view()->setMinimumWidth(std::min(widest + 48 + iconSize.width(), 640));
+}
+
+void NaviFileSystem::restoreWorkspaceSelection()
+{
+    const QString active{ LusanApplication::getActiveWorkspace().getWorkspaceRoot() };
+    const int index = mWorkspaces->findData(active);
+    mWorkspaces->blockSignals(true);
+    mWorkspaces->setCurrentIndex(index >= 0 ? index : 0);
+    mWorkspaces->blockSignals(false);
+}
+
+void NaviFileSystem::onWorkspaceSelected(int index)
+{
+    if (index < 0)
+        return;
+
+    const int command{ mWorkspaces->itemData(index, CommandRole).toInt() };
+    if (command != CommandSwitch)
+    {
+        restoreWorkspaceSelection();
+        if (command == CommandNew)
+        {
+            mMainWindow->actionNewWorkspace().trigger();
+        }
+        else
+        {
+            mMainWindow->showOptionPageWorkspace();
+        }
+
+        return;
+    }
+
+    const QString root{ mWorkspaces->itemData(index).toString() };
+    if (root.isEmpty())
+    {
+        restoreWorkspaceSelection();
+    }
+    else if (LusanApplication::switchWorkspace(root) == false)
+    {
+        restoreWorkspaceSelection();
+        QMessageBox::information( this
+                                , tr("Switch Workspace") + " - Lusan"
+                                , tr("The workspace was not switched. Either its directory is gone, or a document is still open."));
+    }
 }
 
 void NaviFileSystem::setupToolbar()
@@ -418,6 +667,8 @@ void NaviFileSystem::setupSignals()
     connect(ctrlTable()             , &QTreeView::activated,      this, &NaviFileSystem::onTreeViewOpenRequested);
     connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::updateToolButtons);
     connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
+
+    connect(mWorkspaces, &QComboBox::activated, this, &NaviFileSystem::onWorkspaceSelected);
 
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
 

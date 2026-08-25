@@ -68,6 +68,15 @@ void NaviToolbarWindow::addToolSeparator(void)
     mToolLayout->addWidget(line);
 }
 
+void NaviToolbarWindow::setNaviHeader(QWidget* header)
+{
+    if (header != nullptr)
+    {
+        header->setParent(this);
+        mNaviLayout->insertWidget(0, header);
+    }
+}
+
 void NaviToolbarWindow::setupTreeView(const QSize& iconSize)
 {
     mNaviTree->setAutoFillBackground(false);

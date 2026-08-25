@@ -34,6 +34,9 @@
         <file alias="new-datatype">icons/new-datatype.svg</file>
         <file alias="locked">icons/locked.svg</file>
         <file alias="new-workspace">icons/new-workspace.svg</file>
+        <file alias="new-workspace-classic">icons/new-workspace-classic.svg</file>
+        <file alias="workspace-entry">icons/workspace-entry.svg</file>
+        <file alias="workspace-manage">icons/workspace-manage.svg</file>
         <file alias="new-offline-logs">icons/new-offline-logs.svg</file>
         <file alias="view-offline-logs">icons/view-offline-logs.svg</file>
         <file alias="view-live-logs">icons/view-live-logs.svg</file>

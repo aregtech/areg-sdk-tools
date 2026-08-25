@@ -137,6 +137,14 @@ void NaviLiveLogsScopes::setLogCollectorConnection(const QString& address, uint1
     mPort = port;
 }
 
+void NaviLiveLogsScopes::disconnectLogging(void)
+{
+    if (mSignalsActive || isConnected())
+    {
+        onConnectClicked(false);
+    }
+}
+
 void NaviLiveLogsScopes::setupWidgets()
 {
     ctrlCollapse()->setEnabled(true);

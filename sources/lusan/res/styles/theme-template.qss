@@ -182,6 +182,20 @@ QComboBox::drop-down
     subcontrol-position: center right;
 }
 
+/* The workspace selector is fixed to one text line, so the shared padding above would eat the
+   line it has to show. It carries the frame only. */
+QComboBox#naviWorkspaceSelector
+{
+    padding: 0px 6px;
+    min-height: 0px;
+    border-radius: 4px;
+}
+
+QComboBox#naviWorkspaceSelector::drop-down
+{
+    width: 18px;
+}
+
 QComboBox::down-arrow
 {
     image: url(${arrow});

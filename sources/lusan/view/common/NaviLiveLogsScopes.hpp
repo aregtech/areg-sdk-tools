@@ -114,7 +114,14 @@ public:
      * \param   port        The TCP port number of the log collector service to connect.
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
-    
+
+    /**
+     * \brief   Disconnects the log collector service and releases the log observer, if any is
+     *          active. Does nothing when the logging was never started.
+     **/
+    void disconnectLogging(void);
+
+
     //!< Returns true if the logging is configured.
     inline bool isConfigured() const;
 

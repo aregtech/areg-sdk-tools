@@ -18,22 +18,45 @@
  ************************************************************************/
 
 #include "lusan/view/common/OptionPageWorkspace.hpp"
-#include "ui/ui_OptionPageWorkspace.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/app/NEAppThemes.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
-#include <QGridLayout>
+#include <QFormLayout>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QSplitter>
+#include <QVBoxLayout>
 #include <algorithm>
+
+namespace
+{
+    //!< The widest workspace name that still reads well in the workspace lists.
+    constexpr int MaxNameLength{ 48 };
+}
 
 OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
     : OptionPageBase        (parent)
-    , mUi                   (std::make_unique<Ui::OptionPageWorkspace>())
     , mModifiedWorkspaces   ( )
+    , mList                 ( nullptr )
+    , mName                 ( nullptr )
+    , mRootDir              ( nullptr )
+    , mSourceDir            ( nullptr )
+    , mIncludeDir           ( nullptr )
+    , mDeliveryDir          ( nullptr )
+    , mLogDir               ( nullptr )
+    , mDefault              ( nullptr )
+    , mDescription          ( nullptr )
+    , mDelete               ( nullptr )
+    , mHint                 ( nullptr )
     , mSources              ( )
     , mIncludes             ( )
     , mDelivery             ( )
@@ -42,7 +65,7 @@ OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
     , mThemeLabel           ( nullptr )
     , mInitialTheme         ( static_cast<int>(OptionsManager::eAppTheme::SystemDefault) )
 {
-    mUi->setupUi(this);
+    setupWidgets();
     setupUi();
     connectSignalHandlers();
 }
@@ -51,12 +74,100 @@ OptionPageWorkspace::~OptionPageWorkspace()
 {
 }
 
+void OptionPageWorkspace::setupWidgets()
+{
+    setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setSpacing(8);
+
+    QLabel* title = new QLabel(tr("List of Setup Workspaces"), this);
+    QFont titleFont{ title->font() };
+    titleFont.setBold(true);
+    title->setFont(titleFont);
+    layout->addWidget(title, 0);
+
+    QSplitter* splitter = new QSplitter(Qt::Orientation::Horizontal, this);
+
+    mList = new QListWidget(splitter);
+    mList->setToolTip(tr("List of workspaces"));
+    mList->setEditTriggers(QAbstractItemView::EditTrigger::NoEditTriggers);
+    mList->setIconSize(NELusanCommon::SizeSmall);
+    splitter->addWidget(mList);
+
+    QWidget* details = new QWidget(splitter);
+    QFormLayout* form = new QFormLayout(details);
+    form->setContentsMargins(10, 0, 0, 0);
+    form->setFieldGrowthPolicy(QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow);
+    form->setLabelAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+
+    mName = new QLineEdit(details);
+    mName->setMaxLength(MaxNameLength);
+    mName->setToolTip(tr("The name of this workspace. It must differ from the other workspace names."));
+    form->addRow(tr("&Name:"), mName);
+
+    auto addPathRow = [details, form](const QString& label, const QString& tip, const QString& empty) -> QLineEdit*
+    {
+        QLineEdit* edit = new QLineEdit(details);
+        edit->setReadOnly(true);
+        edit->setToolTip(tip);
+        edit->setPlaceholderText(empty);
+        form->addRow(label, edit);
+        return edit;
+    };
+
+    mRootDir     = addPathRow(tr("Root Directory:")    , tr("Root directory of the selected workspace")                       , tr("The root directory path is empty"));
+    mSourceDir   = addPathRow(tr("Source Directory:")  , tr("The source codes directory path of the selected workspace")      , tr("The source codes directory path is empty"));
+    mIncludeDir  = addPathRow(tr("Include Directory:") , tr("The include files directory path of the selected workspace")     , tr("The include directory path is empty"));
+    mDeliveryDir = addPathRow(tr("Delivery Directory:"), tr("The thirdparty delivery directory path of the selected workspace"), tr("The thirdparty delivery directory path is empty"));
+    mLogDir      = addPathRow(tr("Log Directory:")     , tr("The log files directory path of the selected workspace")         , tr("The logs directory path is empty"));
+
+    mDefault = new QCheckBox(details);
+    mDefault->setToolTip(tr("Open this workspace at start and do not ask again"));
+    form->addRow(tr("Is default workspace?"), mDefault);
+
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setPlaceholderText(tr("Add workspace description here"));
+    form->addRow(tr("Description:"), mDescription);
+
+    mThemeLabel = new QLabel(tr("Application Theme:"), details);
+    mThemeCombo = new QComboBox(details);
+    mThemeCombo->setToolTip(tr("Select the application visual style"));
+    form->addRow(mThemeLabel, mThemeCombo);
+
+    splitter->addWidget(details);
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
+    splitter->setChildrenCollapsible(false);
+    layout->addWidget(splitter, 1);
+
+    mHint = new QLabel(this);
+    mHint->setWordWrap(true);
+    mHint->setTextFormat(Qt::TextFormat::PlainText);
+    layout->addWidget(mHint, 0);
+
+    QHBoxLayout* buttons = new QHBoxLayout();
+    buttons->addStretch(1);
+    mDelete = new QPushButton(tr("Delete"), this);
+    mDelete->setToolTip(tr("Delete currently selected not active workspace settings."));
+    buttons->addWidget(mDelete);
+    layout->addLayout(buttons, 0);
+
+    setTabOrder(mList, mName);
+    setTabOrder(mName, mDescription);
+    setTabOrder(mDescription, mDefault);
+    setTabOrder(mDefault, mThemeCombo);
+    setTabOrder(mThemeCombo, mDelete);
+}
+
 void OptionPageWorkspace::connectSignalHandlers()
 {
-    connect(mUi->deleteButton    , &QPushButton::clicked             , this, &OptionPageWorkspace::onDeleteButtonClicked);
-    connect(mUi->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &OptionPageWorkspace::onWorkspaceSelectionChanged);
-    connect(mUi->workspaceEdit   , &QPlainTextEdit::textChanged      , this, &OptionPageWorkspace::onWorkspaceDescChanged);
-    connect(mUi->checkDefault    , &QCheckBox::clicked               , this, &OptionPageWorkspace::onDefaultChecked);
+    connect(mDelete    , &QPushButton::clicked             , this, &OptionPageWorkspace::onDeleteButtonClicked);
+    connect(mList, &QListWidget::itemSelectionChanged, this, &OptionPageWorkspace::onWorkspaceSelectionChanged);
+    connect(mDescription   , &QPlainTextEdit::textChanged      , this, &OptionPageWorkspace::onWorkspaceDescChanged);
+    connect(mName            , &QLineEdit::textEdited            , this, &OptionPageWorkspace::onWorkspaceNameChanged);
+    connect(mDefault    , &QCheckBox::clicked               , this, &OptionPageWorkspace::onDefaultChecked);
     connect(mThemeCombo          , qOverload<int>(&QComboBox::currentIndexChanged), this, &OptionPageWorkspace::onThemeChanged);
 }
 
@@ -68,9 +179,13 @@ void OptionPageWorkspace::initializePathsWithSelectedWorkspaceData(uint32_t cons
     
     OptionsManager& opt { LusanApplication::getOptions() };
     bool isDefault = opt.isDefaultWorkspace(workspace->getId());
-    mUi->checkDefault->setEnabled(true);
-    mUi->checkDefault->setChecked(isDefault);
-    mUi->workspaceEdit->setPlainText(workspace->getWorkspaceDescription());
+    mDefault->setEnabled(true);
+    mDefault->setChecked(isDefault);
+    mDescription->setPlainText(workspace->getWorkspaceDescription());
+    mName->blockSignals(true);
+    mName->setText(workspace->getWorkspaceName());
+    mName->blockSignals(false);
+    mHint->clear();
     
     ctrlRoot()->setText(workspace->getWorkspaceRoot());
     if (opt.isActiveWorkspace(workspace->getId()))
@@ -103,7 +218,7 @@ void OptionPageWorkspace::updateWorkspaceDirectories(  const sWorkspaceDir& sour
     if (logs.isValid)
         mLogs = logs.location;
     
-    QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
+    QListWidgetItem* selectedItem = mList->currentItem();
     if (nullptr == selectedItem)
         return;
     
@@ -127,17 +242,15 @@ void OptionPageWorkspace::populateListOfWorkspaces()
     mDelivery = currentWorkspace.getDirDelivery();
     mLogs = currentWorkspace.getDirLogs();
     
-    QListWidget* list = mUi->listOfWorkspaces;
+    QListWidget* list = mList;
     list->clear();
 
     for (WorkspaceEntry const& workspace : workspaces)
     {
         uint32_t wsId = workspace.getId();
-        QString text(QString::number(wsId));
-        text += " : " + workspace.getWorkspaceRoot();
-
-        QListWidgetItem* item = new QListWidgetItem(NELusanCommon::iconWorkspaceOpen(NELusanCommon::SizeSmall), text, list);
+        QListWidgetItem* item = new QListWidgetItem(NELusanCommon::iconWorkspaceOpen(NELusanCommon::SizeSmall), workspace.getWorkspaceName(), list);
         item->setData(Qt::ItemDataRole::UserRole, wsId);
+        item->setToolTip(workspace.getWorkspaceRoot());
 
         if (currentWorkspace.getId() == wsId)
         {
@@ -148,12 +261,12 @@ void OptionPageWorkspace::populateListOfWorkspaces()
         list->addItem(item);
     }
 
-    mUi->listOfWorkspaces->sortItems();
+    mList->sortItems();
 }
 
 void OptionPageWorkspace::onDeleteButtonClicked()
 {
-    QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
+    QListWidgetItem* selectedItem = mList->currentItem();
     if (nullptr == selectedItem)
         return;
 
@@ -163,7 +276,7 @@ void OptionPageWorkspace::onDeleteButtonClicked()
         if ( LusanApplication::getOptions().isDefaultWorkspace(selectedWorkspaceId) )
         {
             LusanApplication::getOptions().setDefaultWorkspace(static_cast<uint32_t>(0));
-            mUi->checkDefault->setChecked(false);
+            mDefault->setChecked(false);
         }
         
         mModifiedWorkspaces[selectedWorkspaceId] = WorkspaceChangeData{ true, {} };
@@ -173,11 +286,11 @@ void OptionPageWorkspace::onDeleteButtonClicked()
 
 void OptionPageWorkspace::deleteSelectedWorkspaceItem() const
 {
-    disconnect(mUi->workspaceEdit, &QPlainTextEdit::textChanged, this, &OptionPageWorkspace::onWorkspaceDescChanged);
+    disconnect(mDescription, &QPlainTextEdit::textChanged, this, &OptionPageWorkspace::onWorkspaceDescChanged);
 
-    delete mUi->listOfWorkspaces->takeItem(mUi->listOfWorkspaces->currentRow());
+    delete mList->takeItem(mList->currentRow());
 
-    connect(mUi->workspaceEdit, &QPlainTextEdit::textChanged, this, &OptionPageWorkspace::onWorkspaceDescChanged);
+    connect(mDescription, &QPlainTextEdit::textChanged, this, &OptionPageWorkspace::onWorkspaceDescChanged);
 }
 
 void OptionPageWorkspace::onWorkspaceSelectionChanged() const
@@ -186,7 +299,7 @@ void OptionPageWorkspace::onWorkspaceSelectionChanged() const
     if (!selectedItemId)
         return;
 
-    mUi->deleteButton->setDisabled(LusanApplication::getActiveWorkspace().getId() == *selectedItemId);
+    mDelete->setDisabled(LusanApplication::getActiveWorkspace().getId() == *selectedItemId);
     initializePathsWithSelectedWorkspaceData(*selectedItemId);
 }
 
@@ -199,9 +312,9 @@ void OptionPageWorkspace::setupUi()
 
 void OptionPageWorkspace::selectWorkspace(int const index) const
 {
-    if (index < mUi->listOfWorkspaces->count())
+    if (index < mList->count())
     {
-        mUi->listOfWorkspaces->setCurrentItem(mUi->listOfWorkspaces->item(index));
+        mList->setCurrentItem(mList->item(index));
         onWorkspaceSelectionChanged();
     }
 }
@@ -230,9 +343,18 @@ void OptionPageWorkspace::applyChanges()
             {
                 options.removeWorkspace(workspace->getKey());
             }
-            else if (data.newDescription)
+            else if (data.newName || data.newDescription)
             {
-                workspace->setWorkspaceDescription(*data.newDescription);
+                if (data.newName)
+                {
+                    workspace->setWorkspaceName(*data.newName);
+                }
+
+                if (data.newDescription)
+                {
+                    workspace->setWorkspaceDescription(*data.newDescription);
+                }
+
                 options.updateWorkspace(*workspace);
             }
         }
@@ -276,7 +398,51 @@ void OptionPageWorkspace::onWorkspaceDescChanged()
     if (!selectedItemId)
         return;
 
-    mModifiedWorkspaces[*selectedItemId] = WorkspaceChangeData{false, mUi->workspaceEdit->toPlainText()};
+    WorkspaceChangeData& data = mModifiedWorkspaces[*selectedItemId];
+    data.hasDeleted = false;
+    data.newDescription = mDescription->toPlainText();
+}
+
+void OptionPageWorkspace::onWorkspaceNameChanged()
+{
+    std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
+    if (!selectedItemId)
+        return;
+
+    if (validateName() == false)
+        return;
+
+    WorkspaceChangeData& data = mModifiedWorkspaces[*selectedItemId];
+    data.hasDeleted = false;
+    data.newName = mName->text().trimmed();
+
+    QListWidgetItem* item = mList->currentItem();
+    if (item != nullptr)
+    {
+        item->setText(*data.newName);
+    }
+}
+
+bool OptionPageWorkspace::validateName()
+{
+    std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
+    if (!selectedItemId)
+        return false;
+
+    const QString name{ mName->text().trimmed() };
+    if (name.isEmpty())
+    {
+        mHint->setText(tr("A workspace needs a name."));
+        return false;
+    }
+    else if (LusanApplication::getOptions().existsWorkspaceName(name, *selectedItemId))
+    {
+        mHint->setText(tr("Another workspace is already named \"%1\".").arg(name));
+        return false;
+    }
+
+    mHint->clear();
+    return true;
 }
 
 void OptionPageWorkspace::onDefaultChecked(bool checked)
@@ -292,7 +458,7 @@ void OptionPageWorkspace::onDefaultChecked(bool checked)
     }
     else
     {
-        mUi->checkDefault->setChecked(opt.setDefaultWorkspace(*selectedItemId));
+        mDefault->setChecked(opt.setDefaultWorkspace(*selectedItemId));
     }
 }
 
@@ -303,7 +469,7 @@ void OptionPageWorkspace::onThemeChanged(int /*index*/)
 
 std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const
 {
-    QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
+    QListWidgetItem* selectedItem = mList->currentItem();
     if (nullptr != selectedItem)
     {
         return selectedItem->data(Qt::ItemDataRole::UserRole).toUInt();
@@ -316,20 +482,11 @@ std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const
 
 void OptionPageWorkspace::setupThemeControls()
 {
-    QGridLayout* layout = mUi->layoutWidget->findChild<QGridLayout*>("gridLayout");
-    if (layout == nullptr)
-        return;
-
-    mThemeLabel = new QLabel(tr("Application Theme:"), this);
-    mThemeCombo = new QComboBox(this);
-    mThemeCombo->setToolTip(tr("Select the application visual style"));
     const QList<OptionsManager::eAppTheme> themes = NEAppThemes::allThemes();
     for (OptionsManager::eAppTheme theme : themes)
     {
         mThemeCombo->addItem(NEAppThemes::themeDisplayName(theme), static_cast<int>(theme));
     }
-    layout->addWidget(mThemeLabel, 7, 0, 1, 2);
-    layout->addWidget(mThemeCombo, 7, 2, 1, 1);
 
     mInitialTheme = static_cast<int>(LusanApplication::getOptions().getTheme());
     const int index = mThemeCombo->findData(mInitialTheme);
@@ -343,25 +500,25 @@ int OptionPageWorkspace::selectedTheme() const
 
 inline QLineEdit* OptionPageWorkspace::ctrlRoot() const
 {
-    return mUi->rootDirEdit;
+    return mRootDir;
 }
 
 inline QLineEdit* OptionPageWorkspace::ctrlSources() const
 {
-    return mUi->sourceDirEdit;
+    return mSourceDir;
 }
 
 inline QLineEdit* OptionPageWorkspace::ctrlIncludes() const
 {
-    return mUi->includeDirEdit;
+    return mIncludeDir;
 }
 
 inline QLineEdit* OptionPageWorkspace::ctrlDelivery() const
 {
-    return mUi->deliveryDirEdit;
+    return mDeliveryDir;
 }
 
 inline QLineEdit* OptionPageWorkspace::ctrlLogs() const
 {
-    return mUi->logDirEdit;
+    return mLogDir;
 }

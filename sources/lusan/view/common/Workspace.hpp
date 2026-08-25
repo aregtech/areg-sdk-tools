@@ -22,14 +22,14 @@
 #include "lusan/model/common/WorkspaceModel.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 
-namespace Ui {
-class DialogWorkspace;
-}
-
 class OptionsManager;
-
-QT_BEGIN_NAMESPACE
-QT_END_NAMESPACE
+class QCheckBox;
+class QComboBox;
+class QDialogButtonBox;
+class QLabel;
+class QLineEdit;
+class QPlainTextEdit;
+class QPushButton;
 
 /**
  * \class   Workspace
@@ -98,14 +98,49 @@ protected slots:
      * \param   checked     True is checked. False, otherwise.
      **/
     void onDefaultChecked(bool checked);
+
+    /**
+     * \brief   Slot called when the workspace name is edited.
+     * \param   newText The new workspace name.
+     **/
+    void onWorkspaceNameChanged(const QString& newText);
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    /**
+     * \brief   Creates the controls of the dialog.
+     **/
+    void setupDialog();
+
+    /**
+     * \brief   Enables the OK button when the entered workspace can be used, and reports on the
+     *          hint line what is still missing.
+     **/
+    void validateInput();
+
+    /**
+     * \brief   Shows the name of the given workspace, or the name derived from the root when the
+     *          entry carries none, without reporting the change.
+     **/
+    void showWorkspaceName(const WorkspaceEntry& entry);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     OptionsManager &        mOptions;       //!< The options manager.
-    Ui::DialogWorkspace *   mWorkspace;     //!< The UI dialog for workspace setup.
     WorkspaceModel          mModel;         //!< The model for workspace entries.
+    QComboBox*              mRoot;          //!< The workspace root directory selector.
+    QPushButton*            mBrowse;        //!< The button to browse for a workspace directory.
+    QLineEdit*              mName;          //!< The short name of the workspace.
+    QPlainTextEdit*         mDescription;   //!< The optional description of the workspace.
+    QCheckBox*              mDefault;       //!< The flag to open this workspace without asking again.
+    QLabel*                 mHint;          //!< The line reporting why the dialog cannot be accepted.
+    QDialogButtonBox*       mButtons;       //!< The OK and Cancel buttons.
+    bool                    mNameEdited;    //!< True when the name was typed and must not be overwritten.
 };
 
 //////////////////////////////////////////////////////////////////////////

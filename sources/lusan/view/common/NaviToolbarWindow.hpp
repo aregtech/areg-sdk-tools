@@ -101,6 +101,12 @@ protected:
     void addToolSeparator(void);
 
     /**
+     * \brief   Places a widget above the tool button row and takes its ownership.
+     * \param   header  The widget to show on top of the navigation window.
+     **/
+    void setNaviHeader(QWidget* header);
+
+    /**
      * \brief   Applies the tree view setup shared by the navigation windows.
      * \param   iconSize    The size of the icons drawn in the tree items.
      **/

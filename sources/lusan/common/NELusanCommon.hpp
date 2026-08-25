@@ -151,6 +151,7 @@ namespace NELusanCommon
     constexpr QLatin1StringView xmlElementDirectories      { "Directories" };
 
     constexpr QLatin1StringView xmlElementWorspaceRoot     { "WorkspaceRoot" };
+    constexpr QLatin1StringView xmlElementName             { "Name" };
     constexpr QLatin1StringView xmlElementDescription      { "Description" };
     constexpr QLatin1StringView xmlElementSources          { "Sources" };
     constexpr QLatin1StringView xmlElementIncludes         { "Includes" };
@@ -485,6 +486,12 @@ namespace NELusanCommon
 
     //!< Loads new workspace icon and sets the specified size
     inline QIcon iconNewWorkspace(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the icon that marks a single workspace and sets the specified size
+    inline QIcon iconWorkspace(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the manage workspaces icon and sets the specified size
+    inline QIcon iconManageWorkspaces(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads service interface icon and sets the specified size
     inline QIcon iconServiceInterface(const QSize & size = QSize{ 32, 32 });
@@ -1251,6 +1258,16 @@ inline QIcon NELusanCommon::iconLiveLogDisconnected(const QSize & size)
 inline QIcon NELusanCommon::iconNewWorkspace(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/new-workspace", size);
+}
+
+inline QIcon NELusanCommon::iconWorkspace(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/workspace-entry", size);
+}
+
+inline QIcon NELusanCommon::iconManageWorkspaces(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/workspace-manage", size);
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

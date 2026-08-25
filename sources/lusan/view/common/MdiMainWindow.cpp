@@ -147,6 +147,7 @@ MdiMainWindow::MdiMainWindow()
     , mViewMenu     (nullptr)
     , mNavigationMenu(nullptr)
     , mViewDesignMenu(nullptr)
+    , mWorkspacesMenu(nullptr)
     , mThemeMenu    (nullptr)
     , mDesignMenu   (nullptr)
     , mLoggingMenu  (nullptr)
@@ -436,6 +437,10 @@ void MdiMainWindow::closeEvent(QCloseEvent* event)
     }
     else
     {
+        // The session may start again on another workspace, so the logging sources are released
+        // here instead of being left to the process exit.
+        mNaviDock.getLiveScopes().disconnectLogging();
+        mNaviDock.getOfflineScopes().closeDatabase();
         writeSettings();
         event->accept();
     }
@@ -1009,6 +1014,53 @@ void MdiMainWindow::onShowMenuDesign()
 
     // The page owns the menu order so it cannot drift from the drawing toolbar.
     design->populateDesignMenu(*mDesignMenu);
+}
+
+void MdiMainWindow::onShowMenuWorkspaces()
+{
+    mWorkspacesMenu->clear();
+
+    const QString active{ LusanApplication::getActiveWorkspace().getWorkspaceRoot() };
+    for (const WorkspaceEntry& entry : LusanApplication::getOptions().getWorkspaceList())
+    {
+        const QString root{ entry.getWorkspaceRoot() };
+        QAction* action = mWorkspacesMenu->addAction(entry.getWorkspaceName() + "  --  " + root);
+        action->setData(root);
+        action->setToolTip(root);
+        action->setCheckable(true);
+        action->setChecked(root == active);
+        connect(action, &QAction::triggered, this, &MdiMainWindow::onSwitchWorkspace);
+    }
+
+    mWorkspacesMenu->addSeparator();
+    QAction* manage = mWorkspacesMenu->addAction(tr("&Manage Workspaces..."));
+    connect(manage, &QAction::triggered, this, [this]() { showOptionPageWorkspace(); });
+}
+
+void MdiMainWindow::onSwitchWorkspace()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (action == nullptr)
+        return;
+
+    const QString root{ action->data().toString() };
+    if (LusanApplication::switchWorkspace(root) == false)
+    {
+        QMessageBox::information( this
+                                , tr("Switch Workspace") + " - Lusan"
+                                , tr("The workspace was not switched. Either its directory is gone, or a document is still open."));
+    }
+}
+
+int MdiMainWindow::showOptionPageWorkspace()
+{
+    ProjectSettings settings(this);
+    emit signalOptionsOpening();
+    settings.activatePage(ProjectSettings::eOptionPage::PageWorkspace);
+    int result = settings.exec();
+    emit signalOptionsClosed(result == static_cast<int>(QDialog::Accepted));
+
+    return result;
 }
 
 void MdiMainWindow::onToolsOptions()
@@ -1686,6 +1738,9 @@ void MdiMainWindow::_createMenus()
 {
     mFileMenu = menuBar()->addMenu(tr("&File"));
     mFileMenu->addAction(&mActNewWorkspace);
+    mWorkspacesMenu = mFileMenu->addMenu(tr("S&witch Workspace"));
+    connect(mWorkspacesMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuWorkspaces);
+    mFileMenu->addSeparator();
     mFileMenu->addAction(&mActFileNewSI);
     mFileMenu->addAction(&mActFileNewFSM);
     mFileMenu->addAction(&mActFileNewDT);

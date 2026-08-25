@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -128,10 +128,15 @@ void NaviLogScopeBase::setupModel(LoggingScopesModelBase* model)
     mSelModel = model != nullptr ? new QItemSelectionModel(mScopesModel, this) : nullptr;
 
     QTreeView* tree = ctrlTable();
-    if (tree != nullptr)
+    if (tree == nullptr)
+        return;
+
+    // The view rejects a selection model built on a model it does not hold yet, so the model
+    // is set first. Setting it afterwards would replace the selection model with a new one.
+    tree->setModel(mScopesModel);
+    if (mSelModel != nullptr)
     {
         tree->setSelectionModel(mSelModel);
-        tree->setModel(mScopesModel);
         connect(mSelModel, &QItemSelectionModel::currentRowChanged, this, [this](const QModelIndex& current, const QModelIndex& previous) {onRowChanged(current, previous);});
     }
 }

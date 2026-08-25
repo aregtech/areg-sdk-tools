@@ -210,6 +210,18 @@ public:
     void showNaviTab(NavigationDock::eNaviWindow naviTab);
 
     /**
+     * \brief   Opens the options dialog on the workspace page.
+     * \return  The exit code of the dialog.
+     **/
+    int showOptionPageWorkspace();
+
+    /**
+     * \brief   The File menu action that creates a new workspace. Trigger it to run the same
+     *          command from another control.
+     **/
+    inline QAction& actionNewWorkspace();
+
+    /**
      * \brief   Moves one State Machine design widget (toolbar / Properties / Outline) to the
      *          requested home and re-syncs everything (issue #516). Setting a widget to the
      *          Design page or the Navigation Window automatically clears the other home; the
@@ -488,6 +500,16 @@ private slots:
     void onShowMenuRecent();
 
     /**
+     * \brief   Fills the File menu's Workspaces submenu with the known workspaces.
+     **/
+    void onShowMenuWorkspaces();
+
+    /**
+     * \brief   Switches to the workspace named by the triggered submenu entry.
+     **/
+    void onSwitchWorkspace();
+
+    /**
      * \brief   Updates the window menu.
      **/
     void onShowMenuWindow();
@@ -752,6 +774,7 @@ private:
     QMenu*          mViewMenu;      //!< The view menu.
     QMenu*          mNavigationMenu;//!< The View menu's Navigation submenu (dock/tab visibility).
     QMenu*          mViewDesignMenu;//!< The View menu's Design submenu (in-page toolbar/panels).
+    QMenu*          mWorkspacesMenu;//!< The File menu's Workspaces submenu.
     QMenu*          mThemeMenu;     //!< The theme selection submenu of the view menu.
     QMenu*          mDesignMenu;    //!< The design top level menu.
     QMenu*          mLoggingMenu;   //!< The logging menu.
@@ -869,6 +892,11 @@ inline LiveLogViewer* MdiMainWindow::getLiveLogViewer() const
 inline MdiChild* MdiMainWindow::getActiveWindow() const
 {
     return activeMdiChild();
+}
+
+inline QAction& MdiMainWindow::actionNewWorkspace()
+{
+    return mActNewWorkspace;
 }
 
 #endif // LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP

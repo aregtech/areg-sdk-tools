@@ -36,6 +36,7 @@ class FileSystemFilter;
 class GeneralFileSystemModel;
 class MdiMainWindow;
 class TableCell;
+class QComboBox;
 class QFileInfo;
 class QItemSelection;
 class QTreeView;
@@ -229,6 +230,21 @@ private:
     void setupToolbar();
 
     /**
+     * \brief   Creates the workspace selector shown above the tool buttons.
+     **/
+    void setupWorkspaceSelector();
+
+    /**
+     * \brief   Fills the workspace selector with the known workspaces and marks the active one.
+     **/
+    void populateWorkspaces();
+
+    /**
+     * \brief   Moves the workspace selector back to the active workspace without switching.
+     **/
+    void restoreWorkspaceSelection();
+
+    /**
      * \brief   Initializes the widgets.
      **/
     void setupWidgets();
@@ -268,6 +284,12 @@ private slots:
      **/
     void onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace, bool isActiveWorkspace);
 
+    /**
+     * \brief   Triggered when the user picks an entry of the workspace selector.
+     * \param   index   The index of the picked entry.
+     **/
+    void onWorkspaceSelected(int index);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
@@ -277,6 +299,7 @@ private:
     FileSystemFilter*       mFileFilter;    //!< The file filter object.
     WorkspaceElem           mRootPaths;     //!< The list of root paths.
     TableCell*              mTableCell;     //!< The table cell object.
+    QComboBox*              mWorkspaces;    //!< The selector of the active workspace.
     QToolButton*            mToolRefresh;   //!< The tool button to reload the file system tree.
     QToolButton*            mToolShowAll;   //!< The tool button to show every file or only the known ones.
     QToolButton*            mToolCollapse;  //!< The tool button to collapse all folders.

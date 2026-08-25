@@ -66,6 +66,7 @@ LusanApplication::LusanApplication(int& argc, char** argv)
     , mOptions          ( )
     , mIsRestarting     (false)
     , mDefaultEnabled   (true)
+    , mSwitchRoot       ( )
 {
     Q_ASSERT(LusanApplication::theApp == nullptr);
     LusanApplication::theApp = this;
@@ -281,14 +282,45 @@ MdiMainWindow* LusanApplication::getMainWindow()
 void LusanApplication::newWorkspace()
 {
     LusanApplication& theApp{LusanApplication::getApplication()};
-    
+    if (theApp.mMainWindow == nullptr)
+        return;
+
     theApp.mIsRestarting = true;
     theApp.mDefaultEnabled = false;
-    if (theApp.mMainWindow != nullptr)
+    if (theApp.mMainWindow->close() == false)
     {
-        theApp.mMainWindow->close();
-        theApp.mMainWindow = nullptr;
+        // A document refused to close, so the session stays on the current workspace.
+        theApp.mIsRestarting = false;
+        theApp.mDefaultEnabled = true;
+        return;
     }
+
+    theApp.mMainWindow = nullptr;
+}
+
+bool LusanApplication::switchWorkspace(const QString& workspaceRoot)
+{
+    LusanApplication& theApp{ LusanApplication::getApplication() };
+    if (workspaceRoot.isEmpty() || (theApp.mMainWindow == nullptr))
+        return false;
+
+    if (workspaceRoot == theApp.mOptions.getActiveWorkspace().getWorkspaceRoot())
+        return true;
+
+    if ((theApp.mOptions.existsWorkspace(workspaceRoot) == false) || (QDir(workspaceRoot).exists() == false))
+        return false;
+
+    theApp.mSwitchRoot = workspaceRoot;
+    theApp.mIsRestarting = true;
+    if (theApp.mMainWindow->close() == false)
+    {
+        theApp.mSwitchRoot.clear();
+        theApp.mIsRestarting = false;
+        return false;
+    }
+
+    theApp.mMainWindow = nullptr;
+    return true;
 }
 
 void LusanApplication::applyConfiguredTheme()
@@ -324,11 +356,35 @@ bool LusanApplication::isWorkpacePath(const QString & path)
 
 WorkspaceEntry LusanApplication::startupWorkspace(bool enableDefault)
 {
+    if (mSwitchRoot.isEmpty() == false)
+    {
+        const QString root{ mSwitchRoot };
+        mSwitchRoot.clear();
+
+        // The description is carried over, activateWorkspace() overwrites the stored one.
+        QString description;
+        for (const WorkspaceEntry& entry : mOptions.getWorkspaceList())
+        {
+            if (entry.getWorkspaceRoot() == root)
+            {
+                description = entry.getWorkspaceDescription();
+                break;
+            }
+        }
+
+        WorkspaceEntry activated{ mOptions.activateWorkspace(root, description) };
+        if (activated.isValid())
+        {
+            mOptions.writeOptions();
+            return activated;
+        }
+    }
+
     if (enableDefault == false)
     {
         mOptions.setDefaultWorkspace(0);
     }
-    
+
     // The remembered folder can be gone since the last run. Reopening it then gives an empty
     // tree with nothing to explain it, so the workspace dialog is offered instead -- the same
     // check that dialog already makes before it enables its OK button.

@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/Workspace.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -21,62 +21,185 @@
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/app/LusanApplication.hpp"
 
-#include "ui/ui_workspace.h"
-
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDialogButtonBox>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QVBoxLayout>
+
+#include <filesystem>
+
+namespace
+{
+    //!< The widest workspace name that still reads well in the workspace lists.
+    constexpr int MaxNameLength{ 48 };
+}
 
 Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
-    : QDialog   (parent)
-    , mOptions  (options)
-    , mWorkspace(new Ui::DialogWorkspace)
-    , mModel    (options, nullptr)
+    : QDialog       (parent)
+    , mOptions      (options)
+    , mModel        (options, nullptr)
+    , mRoot         (nullptr)
+    , mBrowse       (nullptr)
+    , mName         (nullptr)
+    , mDescription  (nullptr)
+    , mDefault      (nullptr)
+    , mHint         (nullptr)
+    , mButtons      (nullptr)
+    , mNameEdited   (false)
 {
-    mWorkspace->setupUi(static_cast<QDialog *>(this));
-    mWorkspace->buttonBoxOkCancel->button(QDialogButtonBox::StandardButton::Ok)->setEnabled(false);
-    mWorkspace->comboboxWorkspacePath->setEditable(true);
-    mWorkspace->comboboxWorkspacePath->setInsertPolicy(QComboBox::InsertAtBottom);
-    mWorkspace->comboboxWorkspacePath->setDuplicatesEnabled(false);
-    mWorkspace->comboboxWorkspacePath->setModel(&mModel);
+    setupDialog();
+
     if (mModel.rowCount() != 0)
     {
         const WorkspaceEntry & entry{mModel.getData(0)};
-        mWorkspace->comboboxWorkspacePath->setCurrentText(entry.getWorkspaceRoot());
-        mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
-        mWorkspace->comboboxWorkspacePath->setCurrentIndex(0);
+        mRoot->setCurrentText(entry.getWorkspaceRoot());
+        mDescription->setPlainText(entry.getWorkspaceDescription());
+        mRoot->setCurrentIndex(0);
+        showWorkspaceName(entry);
     }
 
-    connect(mWorkspace->buttonBoxOkCancel       , &QDialogButtonBox::accepted   , this, &Workspace::onAccept);
-    connect(mWorkspace->buttonBoxOkCancel       , &QDialogButtonBox::rejected   , this, &Workspace::onReject);
-    connect(mWorkspace->buttonBrowse            , &QPushButton::clicked         , this, &Workspace::onBrowseClicked);
-    connect(mWorkspace->checkDefault            , &QCheckBox::clicked           , this, &Workspace::onDefaultChecked);
-    connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
-    connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::editTextChanged   , this, &Workspace::onWorskpacePathChanged);
-    connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::activated         , this, &Workspace::onWorskpaceIndexChanged);
+    connect(mButtons    , &QDialogButtonBox::accepted   , this, &Workspace::onAccept);
+    connect(mButtons    , &QDialogButtonBox::rejected   , this, &Workspace::onReject);
+    connect(mBrowse     , &QPushButton::clicked         , this, &Workspace::onBrowseClicked);
+    connect(mDefault    , &QCheckBox::clicked           , this, &Workspace::onDefaultChecked);
+    connect(mName       , &QLineEdit::textEdited        , this, &Workspace::onWorkspaceNameChanged);
+    connect(mRoot       , &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
+    connect(mRoot       , &QComboBox::editTextChanged   , this, &Workspace::onWorskpacePathChanged);
+    connect(mRoot       , &QComboBox::activated         , this, &Workspace::onWorskpaceIndexChanged);
     connect(&mModel, &QAbstractItemModel::dataChanged, this, &Workspace::onPathSelectionChanged);
-    
-    QString text {mWorkspace->comboboxWorkspacePath->currentText()};
-    if (text.isEmpty() == false)
-    {
-        mWorkspace->checkDefault->setEnabled(true);
-        onWorskpacePathChanged(text);
-    }
-    else
-    {
-        mWorkspace->checkDefault->setEnabled(false);
-    }
+
+    mDefault->setEnabled(mRoot->currentText().isEmpty() == false);
+    validateInput();
+    mRoot->setFocus();
 }
 
 Workspace::~Workspace()
 {
-    delete mWorkspace;
-    mWorkspace = nullptr;
+}
+
+void Workspace::setupDialog()
+{
+    setWindowTitle(tr("Setup project workspace"));
+    resize(600, 340);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(10, 10, 10, 10);
+    layout->setSpacing(10);
+
+    QGroupBox* group = new QGroupBox(tr("Select Areg based workspace"), this);
+    QFormLayout* form = new QFormLayout(group);
+    form->setFieldGrowthPolicy(QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow);
+    form->setLabelAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+
+    mRoot = new QComboBox(group);
+    mRoot->setEditable(true);
+    mRoot->setInsertPolicy(QComboBox::InsertPolicy::InsertAtBottom);
+    mRoot->setDuplicatesEnabled(false);
+    mRoot->setModel(&mModel);
+    mRoot->setToolTip(tr("Select a known workspace or enter a new one."));
+    mRoot->lineEdit()->setPlaceholderText(tr("Path to project workspace"));
+    mRoot->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Fixed);
+
+    mBrowse = new QPushButton(tr("Browse..."), group);
+    mBrowse->setToolTip(tr("Browse the file system and select the project workspace."));
+
+    QWidget* rootRow = new QWidget(group);
+    QHBoxLayout* rootLayout = new QHBoxLayout(rootRow);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->addWidget(mRoot, 1);
+    rootLayout->addWidget(mBrowse, 0);
+    form->addRow(tr("Workspace &Root:"), rootRow);
+
+    mName = new QLineEdit(group);
+    mName->setMaxLength(MaxNameLength);
+    mName->setPlaceholderText(tr("Short name shown in the workspace list"));
+    mName->setToolTip(tr("The name of this workspace. It must differ from the other workspace names."));
+    form->addRow(tr("Workspace &Name:"), mName);
+
+    mDescription = new QPlainTextEdit(group);
+    mDescription->setPlaceholderText(tr("Describe your workspace here (optional)"));
+    mDescription->setToolTip(tr("A longer note about this workspace."));
+    form->addRow(tr("&Description:"), mDescription);
+
+    mDefault = new QCheckBox(tr("Open this workspace at start and do not ask again."), group);
+    form->addRow(QString(), mDefault);
+
+    layout->addWidget(group, 1);
+
+    mHint = new QLabel(this);
+    mHint->setWordWrap(true);
+    mHint->setTextFormat(Qt::TextFormat::PlainText);
+    layout->addWidget(mHint, 0);
+
+    mButtons = new QDialogButtonBox(QDialogButtonBox::StandardButton::Ok | QDialogButtonBox::StandardButton::Cancel, this);
+    layout->addWidget(mButtons, 0);
+
+    setTabOrder(mRoot, mBrowse);
+    setTabOrder(mBrowse, mName);
+    setTabOrder(mName, mDescription);
+    setTabOrder(mDescription, mDefault);
+    setTabOrder(mDefault, mButtons);
+}
+
+void Workspace::showWorkspaceName(const WorkspaceEntry& entry)
+{
+    const QString name{ entry.getWorkspaceName().isEmpty() ? WorkspaceEntry::nameFromRoot(entry.getWorkspaceRoot()) : entry.getWorkspaceName() };
+    mName->blockSignals(true);
+    mName->setText(name);
+    mName->blockSignals(false);
+    mNameEdited = false;
+}
+
+void Workspace::validateInput()
+{
+    const QString root{ mRoot->currentText() };
+    const QString name{ mName->text().trimmed() };
+
+    QString hint;
+    if (root.isEmpty())
+    {
+        hint = tr("Select the root directory of the workspace.");
+    }
+    else if (QDir(root).exists() == false)
+    {
+        hint = tr("The directory %1 does not exist.").arg(root);
+    }
+    else if (name.isEmpty())
+    {
+        hint = tr("Enter a name for this workspace.");
+    }
+    else
+    {
+        const int index = mModel.find(root);
+        const uint32_t ownId = index >= 0 ? mModel.getData(index).getId() : 0;
+        if (mOptions.existsWorkspaceName(name, ownId))
+        {
+            hint = tr("Another workspace is already named \"%1\".").arg(name);
+        }
+    }
+
+    QPushButton* ok = mButtons->button(QDialogButtonBox::StandardButton::Ok);
+    const bool accept = hint.isEmpty();
+    ok->setEnabled(accept);
+    ok->setDefault(accept);
+    mHint->setText(hint);
 }
 
 void Workspace::onAccept()
 {
-    QString path { mWorkspace->comboboxWorkspacePath->currentText() };
-    QString describe { mWorkspace->editWorkspaceDescription->toPlainText() };
+    QString path { mRoot->currentText() };
+    QString name { mName->text().trimmed() };
+    QString describe { mDescription->toPlainText() };
 
     if (mModel.hasNewWorkspace() && (mModel.getNewWorkspace().getWorkspaceRoot() != path))
     {
@@ -84,13 +207,13 @@ void Workspace::onAccept()
         mModel.removeWorkspaceEntry(removeEntry);
         Q_ASSERT(mModel.hasNewWorkspace() == false);
     }
-    
-    mOptions.addWorkspace(path, describe);
+
+    mOptions.addWorkspace(path, name, describe);
     if (mModel.isDefaultWorkspace(path))
     {
         mOptions.setDefaultWorkspace(path);
     }
-    
+
     mOptions.writeOptions();
     done(static_cast<int>(QDialog::DialogCode::Accepted));
 }
@@ -100,24 +223,36 @@ void Workspace::onReject()
     done(static_cast<int>(QDialog::DialogCode::Rejected));
 }
 
+void Workspace::onWorkspaceNameChanged(const QString& newText)
+{
+    mNameEdited = newText.trimmed().isEmpty() == false;
+    validateInput();
+}
+
 void Workspace::onWorskpacePathChanged(const QString & newText)
 {
-    QPushButton * ok = mWorkspace->buttonBoxOkCancel->button(QDialogButtonBox::StandardButton::Ok);
-    bool enableOK = newText.isEmpty() ? false : QDir(newText).exists();
-    ok->setEnabled(enableOK);
-    ok->setAutoDefault(enableOK);
-    
-    mWorkspace->checkDefault->setEnabled(enableOK);
-    if (enableOK == false)
+    const bool exists = (newText.isEmpty() == false) && QDir(newText).exists();
+    mDefault->setEnabled(exists);
+    if (exists == false)
     {
-        mWorkspace->checkDefault->setChecked(false);
+        mDefault->setChecked(false);
     }
+
+    // A name the user did not type follows the chosen directory.
+    if ((mNameEdited == false) && exists)
+    {
+        mName->blockSignals(true);
+        mName->setText(WorkspaceEntry::nameFromRoot(newText));
+        mName->blockSignals(false);
+    }
+
+    validateInput();
 }
 
 void Workspace::onBrowseClicked(bool checked /*= true*/)
 {
     QDir curDir(QString(std::filesystem::current_path().string().c_str()));
-    QString txt(mWorkspace->comboboxWorkspacePath->currentText());
+    QString txt(mRoot->currentText());
     if (txt.isEmpty() == false)
     {
         QDir dir(txt);
@@ -126,44 +261,47 @@ void Workspace::onBrowseClicked(bool checked /*= true*/)
             curDir = dir;
         }
     }
-    
+
     QString dirPath = curDir.path();
     QString parentName = curDir.filesystemPath().parent_path().string().c_str();
-    
+
     QFileDialog dlgFile(  this
                         , QString(tr("Select Workspace Directory"))
                         , dirPath
                         , QString(""));
     dlgFile.setLabelText(QFileDialog::DialogLabel::FileName, QString(tr("Workspace Root:")));
-    
-    
+
     dlgFile.setOptions(QFileDialog::Option::ShowDirsOnly);
     dlgFile.setFileMode(QFileDialog::Directory);
     dlgFile.setDirectory(parentName);
-    
+
     if (dlgFile.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
         QString newDir = dlgFile.directory().path();
-        int index = mModel.find(newDir);            
+        int index = mModel.find(newDir);
         if (index >= 0)
         {
             mModel.activate(index);
             const WorkspaceEntry& entry = mModel.getData(index);
-            mWorkspace->comboboxWorkspacePath->setCurrentIndex(index);
-            mWorkspace->comboboxWorkspacePath->setCurrentText(newDir);
-            mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
-            mWorkspace->checkDefault->setEnabled(true);
-            mWorkspace->checkDefault->setChecked(mModel.isDefaultWorkspace(entry.getWorkspaceRoot()));
+            mRoot->setCurrentIndex(index);
+            mRoot->setCurrentText(newDir);
+            mDescription->setPlainText(entry.getWorkspaceDescription());
+            showWorkspaceName(entry);
+            mDefault->setEnabled(true);
+            mDefault->setChecked(mModel.isDefaultWorkspace(entry.getWorkspaceRoot()));
         }
         else
         {
-            WorkspaceEntry entry{ mModel.addWorkspaceEntry(newDir, "") };
-            mWorkspace->comboboxWorkspacePath->setCurrentIndex(0);
-            mWorkspace->comboboxWorkspacePath->setCurrentText(newDir);
-            mWorkspace->editWorkspaceDescription->setPlainText("");
-            mWorkspace->checkDefault->setEnabled(false);
-            mWorkspace->checkDefault->setChecked(false);
-        }        
+            WorkspaceEntry entry{ mModel.addWorkspaceEntry(newDir, WorkspaceEntry::nameFromRoot(newDir), "") };
+            mRoot->setCurrentIndex(0);
+            mRoot->setCurrentText(newDir);
+            mDescription->setPlainText("");
+            showWorkspaceName(entry);
+            mDefault->setEnabled(false);
+            mDefault->setChecked(false);
+        }
+
+        validateInput();
     }
 }
 
@@ -171,31 +309,35 @@ void Workspace::onWorskpaceIndexChanged(int index)
 {
     blockSignals(true);
     const WorkspaceEntry& entry = mModel.getData(index);
-    mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
-    if (mWorkspace->comboboxWorkspacePath->currentText() != entry.getWorkspaceRoot())
+    mDescription->setPlainText(entry.getWorkspaceDescription());
+    if (mRoot->currentText() != entry.getWorkspaceRoot())
     {
-        mWorkspace->comboboxWorkspacePath->setCurrentText(entry.getWorkspaceRoot());
+        mRoot->setCurrentText(entry.getWorkspaceRoot());
     }
-    
-    mWorkspace->checkDefault->setChecked(mModel.isDefaultWorkspace(entry.getWorkspaceRoot()));
+
+    showWorkspaceName(entry);
+    mDefault->setChecked(mModel.isDefaultWorkspace(entry.getWorkspaceRoot()));
     blockSignals(false);
+    validateInput();
 }
 
 void Workspace::onPathSelectionChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
 {
     blockSignals(true);
     const WorkspaceEntry & entry = mModel.getData(topLeft.row());
-    mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
-    if (mWorkspace->comboboxWorkspacePath->currentText() != entry.getWorkspaceRoot())
+    mDescription->setPlainText(entry.getWorkspaceDescription());
+    if (mRoot->currentText() != entry.getWorkspaceRoot())
     {
-        mWorkspace->comboboxWorkspacePath->setCurrentText(entry.getWorkspaceRoot());
+        mRoot->setCurrentText(entry.getWorkspaceRoot());
     }
-    
-    mWorkspace->checkDefault->setChecked(mModel.isDefaultWorkspace(entry.getWorkspaceRoot()));
+
+    showWorkspaceName(entry);
+    mDefault->setChecked(mModel.isDefaultWorkspace(entry.getWorkspaceRoot()));
     blockSignals(false);
+    validateInput();
 }
 
 void Workspace::onDefaultChecked(bool checked)
 {
-    mWorkspace->checkDefault->setChecked(mModel.setDefaultWorkspace(checked ? mWorkspace->comboboxWorkspacePath->currentText() : QString()));
+    mDefault->setChecked(mModel.setDefaultWorkspace(checked ? mRoot->currentText() : QString()));
 }
