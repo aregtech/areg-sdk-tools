@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan navigation rail icon: state machine outline, an indented element tree -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M8.2 4.6h12.9"/>
+<path d="M11.9 10.2h9.2"/>
+<path d="M11.9 15.8h9.2"/>
+<path d="M15.6 21.4h5.5"/>
+<circle cx="4.2" cy="4.6" r="1.5" fill="#000000" stroke="none"/>
+<circle cx="7.9" cy="10.2" r="1.5" fill="#000000" stroke="none"/>
+<circle cx="7.9" cy="15.8" r="1.5" fill="#000000" stroke="none"/>
+<circle cx="11.6" cy="21.4" r="1.5" fill="#000000" stroke="none"/>
+</g>
+</svg>

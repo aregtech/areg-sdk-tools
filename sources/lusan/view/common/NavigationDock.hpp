@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
+#ifndef LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
 #define LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NavigationDock.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -23,29 +23,34 @@
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
+#include "lusan/view/common/NaviTabRail.hpp"
 
-#include <QWidget>
+#include <QHash>
+#include <QKeySequence>
 #include <QSize>
-#include <QTabWidget>
-#include "OutputDock.hpp"
+#include <QStackedWidget>
+#include <QWidget>
 
 class MdiMainWindow;
-class NaviFsmToolbar;
+class QHBoxLayout;
+class QLabel;
 
 /**
- * \brief   The navigation window content (a tab widget of the workspace/log/FSM explorers).
- *          It is a plain content widget hosted inside a Qt-Advanced-Docking-System dock widget
- *          (issue #516), so it no longer derives from QDockWidget; the ADS dock provides the
- *          title bar, floating, and cross-window drag/tab behavior.
+ * \brief   The body of the navigation panel: a rail of icons on the window-facing edge
+ *          picks which navigator fills the rest. It is a plain content widget hosted in
+ *          a Qt-Advanced-Docking-System dock widget, which provides the title bar,
+ *          floating and cross-window drag behavior.
  **/
 class NavigationDock : public QWidget
 {
+    Q_OBJECT
+
 //////////////////////////////////////////////////////////////////////////
 // Constants, types and static methods
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    //!< The enumeration of the navigation window types.
+    //!< The navigators of the panel. The order is also the order of the rail.
     enum eNaviWindow
     {
           NaviUnknown       = 0 //!< Unknown navigation window type
@@ -57,149 +62,191 @@ public:
         , NaviDesignOutline     //!< FSM design Outline panel navigation window type
     };
 
-    static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
-    static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
-    static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
-    static QString  TabFsmToolbar;          //!< The name of the tab for the FSM design toolbar.
-    static QString  TabDesignProperties;    //!< The name of the tab for the FSM design Properties panel.
-    static QString  TabDesignOutline;       //!< The name of the tab for the FSM design Outline panel.
+    /**
+     * \brief   Returns the display name of the navigator. It is translated on every call,
+     *          so it must never be used as the identity of a panel; the enumeration is.
+     **/
+    static QString panelName(NavigationDock::eNaviWindow navi);
 
-    //!< Returns the tab name of the specified navigation window
-    static const QString& getTabName(NavigationDock::eNaviWindow navi);
-    
-    //!< Returns the navigation window type by specified tab name.
-    static NavigationDock::eNaviWindow getNaviWindow(const QString & tabName);
-    
+    /**
+     * \brief   Returns the one line description of the navigator, shown in tool tips.
+     **/
+    static QString panelHint(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   Returns the resource path of the monochrome rail icon of the navigator.
+     **/
+    static QString panelIcon(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   Returns the key sequence that brings the navigator up.
+     **/
+    static QKeySequence panelShortcut(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   True for the three design widgets that the Design page may lend to the panel.
+     **/
+    static bool isDesignPanel(NavigationDock::eNaviWindow navi);
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
     NavigationDock(MdiMainWindow* parent);
-    QSize sizeHint() const override;
-    QSize minimumSizeHint() const override;
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Returns the tab widget of the navigation.
-     **/
-    inline QTabWidget& getTabWidget();
-
-    /**
      * \brief   Returns the file system widget.
      **/
-    inline NaviFileSystem& getFileSystem();
+    inline NaviFileSystem& getFileSystem(void);
 
     /**
      * \brief   Returns the live mode log explorer widget.
      **/
-    inline NaviLiveLogsScopes& getLiveScopes();
+    inline NaviLiveLogsScopes& getLiveScopes(void);
 
     /**
      * \brief   Returns the offline log explorer widget.
      **/
-    inline NaviOfflineLogsScopes& getOfflineScopes();
+    inline NaviOfflineLogsScopes& getOfflineScopes(void);
 
     /**
-     * \brief   Adds a new tab with the widget to the tab-control.
-     * \param   widget      The widget to add to the tab-control.
-     * \brief   tabName     The name of the tab to add.
-     * \return  The index of the new added tab.
+     * \brief   Returns the navigator of the given type, or nullptr when it is not hosted here.
      **/
-    inline int addTab(NavigationWindow& widget, const QString& tabName);
-    inline int addTab(NavigationWindow& widget, NavigationDock::eNaviWindow navi);
+    NavigationWindow* getPanel(NavigationDock::eNaviWindow navi) const;
 
     /**
-     * \brief   Returns the pointer to the widget of the given tab name.
-     *          Returns nullptr if the name does not exist.
-     * \param   tabName     The name of tab to return the widget.
-     * \return  Returns the valid pointer of the Widget of the given tab name.
-     *          Returns nullptr if tab name does not exist.
+     * \brief   True when the given navigator is hosted in the panel, visible or not.
      **/
-    NavigationWindow* getTab(const QString& tabName) const;
-    NavigationWindow* getTab(NavigationDock::eNaviWindow navi) const;
-    
+    bool hasPanel(NavigationDock::eNaviWindow navi) const;
 
     /**
-     * \brief   Check if the tab with the given name exists.
-     * @param   tabName     The name of the tab to check.
-     * @return  Returns true if the tab with the given name exists. False, otherwise.
+     * \brief   Brings the given navigator to the front, showing it again when the user had
+     *          hidden it. Returns false when the navigator is not hosted in the panel.
      **/
-    bool tabExists(const QString& tabName) const;
-    bool tabExists(NavigationDock::eNaviWindow navi) const;
+    bool showPanel(NavigationDock::eNaviWindow navi);
 
     /**
-     * \brief   Show tab with specified unique name.
-     * \param   tabName     The unique name of the tab to show.
+     * \brief   Returns the navigator shown at the moment, NaviUnknown when the panel is empty.
      **/
-    bool showTab(const QString& tabName);
-    bool showTab(NavigationDock::eNaviWindow navi);
+    NavigationDock::eNaviWindow currentPanel(void) const;
 
     /**
-     * \brief   Adds (if absent) and shows the movable FSM design widget tab (Design Toolbar,
-     *          State Machine Properties, or State Machine Outline) hosting the given content
-     *          window; the content stays owned by the main window (issue #516). This keeps the
-     *          current tab unchanged; callers that explicitly moved a widget here may raise it
-     *          afterward.
+     * \brief   Adds (if absent) the movable design widget to the panel and gives it a rail
+     *          entry. The content stays owned by the main window. The current navigator is
+     *          left alone, so a document re-sync does not steal the panel from the user.
      * \param   navi        One of NaviDesignToolbar / NaviDesignProperties / NaviDesignOutline.
-     * \param   content     The navigation window to host (NaviFsmToolbar or NaviDesignPanel).
+     * \param   content     The navigation window to host.
      **/
-    void showDesignTab(NavigationDock::eNaviWindow navi, NavigationWindow* content);
+    void showDesignPanel(NavigationDock::eNaviWindow navi, NavigationWindow* content);
 
     /**
-     * \brief   Removes the FSM design widget tab, detaching (not deleting) its content so it
-     *          can be re-hosted in the Design page or shown again later.
+     * \brief   Drops the design widget from the panel, detaching its content instead of
+     *          deleting it, so the Design page can take it back.
      **/
-    void hideDesignTab(NavigationDock::eNaviWindow navi);
+    void hideDesignPanel(NavigationDock::eNaviWindow navi);
 
     /**
-     * \brief   True when the given FSM design widget tab is currently present in the dock.
+     * \brief   True when the given design widget is hosted in the panel.
      **/
-    bool isDesignTabShown(NavigationDock::eNaviWindow navi) const;
+    bool isDesignPanelShown(NavigationDock::eNaviWindow navi) const;
 
     /**
-     * \brief   Shows or hides an existing navigation tab (Workspace / Live Logs / Offline
-     *          Logs) without removing it, backing the View menu's Navigation submenu.
+     * \brief   Shows or hides a navigator without dropping it, backing the View menu.
      **/
-    void setNaviTabVisible(NavigationDock::eNaviWindow navi, bool visible);
+    void setPanelVisible(NavigationDock::eNaviWindow navi, bool visible);
 
     /**
-     * \brief   True when the given navigation tab exists and is currently visible.
+     * \brief   True when the navigator is hosted in the panel and drawn in the rail.
      **/
-    bool isNaviTabVisible(NavigationDock::eNaviWindow navi) const;
+    bool isPanelVisible(NavigationDock::eNaviWindow navi) const;
+
+    /**
+     * \brief   Marks the Live Logs rail entry while a log source is connected.
+     **/
+    void setLiveLogsConnected(bool connected);
+
+    /**
+     * \brief   Turns the rail captions on or off and remembers the choice.
+     **/
+    void setRailLabels(bool labels);
+
+    /**
+     * \brief   True when the rail is set to draw captions under the icons.
+     **/
+    bool railLabels(void) const;
+
+signals:
+
+    /**
+     * \brief   The navigator filling the panel changed.
+     **/
+    void signalPanelChanged(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   The user asked to close the whole navigation panel.
+     **/
+    void signalCollapseRequested(void);
+
+    /**
+     * \brief   The user dropped a design widget from the rail context menu.
+     **/
+    void signalDesignPanelHidden(NavigationDock::eNaviWindow navi);
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+    virtual void resizeEvent(QResizeEvent* event) override;
+    virtual void moveEvent(QMoveEvent* event) override;
+    virtual void showEvent(QShowEvent* event) override;
+    virtual QSize sizeHint(void) const override;
+    virtual QSize minimumSizeHint(void) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    /**
-     * \brief   Returns the instance of NavigationDock window.
-     **/
-    inline NavigationDock& self();
 
     /**
-     * \brief   Initializes the size of tab widgets.
+     * \brief   Puts a navigator in the rail and in the page stack.
      **/
-    void initSize();
+    void registerPanel(NavigationDock::eNaviWindow navi, NavigationWindow* content);
 
     /**
-     * \brief   Returns the tab index whose text matches the given navigation window, or -1.
+     * \brief   Makes the given navigator fill the panel and tells the owner about it.
      **/
-    int indexOfNavi(NavigationDock::eNaviWindow navi) const;
+    void setCurrentPanel(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   Picks the navigator to show when the current one leaves or is hidden.
+     **/
+    void selectFallbackPanel(void);
+
+    /**
+     * \brief   Initializes the size of the panel.
+     **/
+    void initSize(void);
+
+    /**
+     * \brief   Puts the rail on the panel edge that faces the window frame.
+     **/
+    void updateRailSide(void);
 
 private slots:
 
     /**
      * \brief   Slot is triggered when options dialog is opened.
      **/
-    void onOptionsOpening();
+    void onOptionsOpening(void);
 
     /**
      * \brief   Slot is triggered when apply button in options dialog is pressed.
      **/
-    void onOptionsApplied();
+    void onOptionsApplied(void);
 
     /**
      * \brief   Slot is triggered when options dialog is closed.
@@ -212,49 +259,34 @@ private slots:
 //////////////////////////////////////////////////////////////////////////
 private:
     MdiMainWindow*          mMainWindow;    //!< Main window
-    QTabWidget              mTabs;          //!< The tab widget of the navigation.
+    QHBoxLayout*            mLayout;        //!< Places the rail and the page stack side by side.
+    NaviTabRail*            mRail;          //!< The icon strip that picks the navigator.
+    QStackedWidget*         mStack;         //!< The pages of the hosted navigators.
+    QLabel*                 mEmptyHint;     //!< The page shown while every navigator is hidden.
     NaviLiveLogsScopes      mLiveScopes;    //!< The log explorer widget.
     NaviOfflineLogsScopes   mOfflineScopes; //!< The offline scopes explorer.
     NaviFileSystem          mFileSystem;    //!< The file system widget.
+    QHash<int, NavigationWindow*> mPanels;  //!< The hosted navigators by navigator type.
+    bool                    mRailOrdered;   //!< False until the rail side is applied the first time.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationDock class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTabWidget& NavigationDock::getTabWidget()
-{
-    return mTabs;
-}
-
-inline NaviFileSystem& NavigationDock::getFileSystem()
+inline NaviFileSystem& NavigationDock::getFileSystem(void)
 {
     return mFileSystem;
 }
 
-inline NaviLiveLogsScopes& NavigationDock::getLiveScopes()
+inline NaviLiveLogsScopes& NavigationDock::getLiveScopes(void)
 {
     return mLiveScopes;
 }
 
-inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes()
+inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes(void)
 {
     return mOfflineScopes;
-}
-
-inline int NavigationDock::addTab(NavigationWindow& widget, const QString& tabName)
-{
-    return mTabs.addTab(&widget, tabName);
-}
-
-inline int NavigationDock::addTab(NavigationWindow& widget, NavigationDock::eNaviWindow navi)
-{
-    return (navi != NavigationDock::eNaviWindow::NaviUnknown ? addTab(widget, NavigationDock::getTabName(navi)) : -1);
-}
-
-inline NavigationDock& NavigationDock::self()
-{
-    return (*this);
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP

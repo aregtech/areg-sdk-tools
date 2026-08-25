@@ -204,10 +204,10 @@ public:
     int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
 
     /**
-     * \brief   Shows the specified navigation tab.
-     * \param   naviTab     The navigation tab to show.
+     * \brief   Opens the navigation panel if it was closed and brings the given navigator up.
+     * \param   navi    The navigator to show.
      **/
-    void showNaviTab(NavigationDock::eNaviWindow naviTab);
+    void showNaviPanel(NavigationDock::eNaviWindow navi);
 
     /**
      * \brief   Opens the options dialog on the workspace page.
@@ -478,6 +478,11 @@ private slots:
     void onFsmToolbarStyle(QAction* action);
 
     /**
+     * \brief   Keeps the navigation dock title on the navigator that fills the panel.
+     **/
+    void onNaviPanelChanged(NavigationDock::eNaviWindow navi);
+
+    /**
      * \brief   Rebuilds the Design menu from the active StateMachine window's Design page
      *          actions; shows a disabled placeholder when none is active/built (the Design
      *          page is never built eagerly).
@@ -673,6 +678,11 @@ private:
     MdiMainWindow::eDesignPlace& placementRef(MdiMainWindow::eDesignWidget widget);
 
     /**
+     * \brief   Returns the design widget that the given navigator hosts.
+     **/
+    static MdiMainWindow::eDesignWidget designWidgetOf(NavigationDock::eNaviWindow navi);
+
+    /**
      * \brief   Creates the MDI area for managing sub-windows.
      **/
     void _createMdiArea();
@@ -827,6 +837,7 @@ private:
     QAction*        mActNavWorkspace;   //!< Shows/hides the Workspace Explorer tab.
     QAction*        mActNavLiveLogs;    //!< Shows/hides the Live Logs tab.
     QAction*        mActNavOfflineLogs; //!< Shows/hides the Offline Logs tab.
+    QAction*        mActNavLabels;      //!< Shows/hides the captions under the rail icons.
     QAction*        mActNavToolbar;     //!< Places the drawing toolbar in the Navigation Window.
     QAction*        mActNavProperties;  //!< Places the Properties panel in the Navigation Window.
     QAction*        mActNavOutline;     //!< Places the Outline panel in the Navigation Window.

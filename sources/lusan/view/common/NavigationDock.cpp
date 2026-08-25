@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NavigationDock.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,276 +22,426 @@
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/NaviFsmToolbar.hpp"
 
-#include <QVBoxLayout>
+#include <QCoreApplication>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMoveEvent>
+#include <QResizeEvent>
+#include <QSettings>
+#include <QShowEvent>
 #include <algorithm>
 
-
-QString  NavigationDock::TabNameFileSystem      {tr("Workspace")};
-QString  NavigationDock::TabLiveLogsExplorer    {tr("Live Logs")};
-QString  NavigationDock::TabOfflineLogsExplorer {tr("Offline Logs")};
-QString  NavigationDock::TabFsmToolbar          {tr("Design Toolbar")};
-QString  NavigationDock::TabDesignProperties    {tr("SM Properties")};
-QString  NavigationDock::TabDesignOutline       {tr("SM Outline")};
-
-const QString& NavigationDock::getTabName(NavigationDock::eNaviWindow navi)
+namespace
 {
-    static QString _empty("");
+    //!< The stored choice of the captions under the rail icons.
+    const QString   KEY_RAIL_LABELS { QStringLiteral("navigation/railLabels") };
+}
+
+QString NavigationDock::panelName(NavigationDock::eNaviWindow navi)
+{
     switch (navi)
     {
-        case NavigationDock::eNaviWindow::NaviWorkspace:
-            return NavigationDock::TabNameFileSystem;
-        case NavigationDock::eNaviWindow::NaviLiveLogs:
-            return NavigationDock::TabLiveLogsExplorer;
-        case NavigationDock::eNaviWindow::NaviOfflineLogs:
-            return NavigationDock::TabOfflineLogsExplorer;
-        case NavigationDock::eNaviWindow::NaviDesignToolbar:
-            return NavigationDock::TabFsmToolbar;
-        case NavigationDock::eNaviWindow::NaviDesignProperties:
-            return NavigationDock::TabDesignProperties;
-        case NavigationDock::eNaviWindow::NaviDesignOutline:
-            return NavigationDock::TabDesignOutline;
-        default:
-            return _empty;
+    case NavigationDock::eNaviWindow::NaviWorkspace:
+        return QCoreApplication::translate("NavigationDock", "Workspace");
+    case NavigationDock::eNaviWindow::NaviLiveLogs:
+        return QCoreApplication::translate("NavigationDock", "Live Logs");
+    case NavigationDock::eNaviWindow::NaviOfflineLogs:
+        return QCoreApplication::translate("NavigationDock", "Offline Logs");
+    case NavigationDock::eNaviWindow::NaviDesignToolbar:
+        return QCoreApplication::translate("NavigationDock", "Toolbar");
+    case NavigationDock::eNaviWindow::NaviDesignProperties:
+        return QCoreApplication::translate("NavigationDock", "Properties");
+    case NavigationDock::eNaviWindow::NaviDesignOutline:
+        return QCoreApplication::translate("NavigationDock", "Outline");
+    default:
+        return QString();
     }
 }
 
-NavigationDock::eNaviWindow NavigationDock::getNaviWindow(const QString& tabName)
+QString NavigationDock::panelHint(NavigationDock::eNaviWindow navi)
 {
-    if (tabName == NavigationDock::TabLiveLogsExplorer)
-        return NavigationDock::eNaviWindow::NaviLiveLogs;
-    else if (tabName == NavigationDock::TabOfflineLogsExplorer)
-        return NavigationDock::eNaviWindow::NaviOfflineLogs;
-    else if (tabName == NavigationDock::TabNameFileSystem)
-        return NavigationDock::eNaviWindow::NaviWorkspace;
-    else if (tabName == NavigationDock::TabFsmToolbar)
-        return NavigationDock::eNaviWindow::NaviDesignToolbar;
-    else if (tabName == NavigationDock::TabDesignProperties)
-        return NavigationDock::eNaviWindow::NaviDesignProperties;
-    else if (tabName == NavigationDock::TabDesignOutline)
-        return NavigationDock::eNaviWindow::NaviDesignOutline;
-    else
-        return NavigationDock::eNaviWindow::NaviUnknown;
+    switch (navi)
+    {
+    case NavigationDock::eNaviWindow::NaviWorkspace:
+        return QCoreApplication::translate("NavigationDock", "Workspace file explorer");
+    case NavigationDock::eNaviWindow::NaviLiveLogs:
+        return QCoreApplication::translate("NavigationDock", "Live logs scope explorer");
+    case NavigationDock::eNaviWindow::NaviOfflineLogs:
+        return QCoreApplication::translate("NavigationDock", "Offline logs scope explorer");
+    case NavigationDock::eNaviWindow::NaviDesignToolbar:
+        return QCoreApplication::translate("NavigationDock", "State machine drawing tools");
+    case NavigationDock::eNaviWindow::NaviDesignProperties:
+        return QCoreApplication::translate("NavigationDock", "Properties of the selected design element");
+    case NavigationDock::eNaviWindow::NaviDesignOutline:
+        return QCoreApplication::translate("NavigationDock", "Outline of the state machine design");
+    default:
+        return QString();
+    }
 }
 
+QString NavigationDock::panelIcon(NavigationDock::eNaviWindow navi)
+{
+    switch (navi)
+    {
+    case NavigationDock::eNaviWindow::NaviWorkspace:
+        return QStringLiteral(":/icons/nav-workspace");
+    case NavigationDock::eNaviWindow::NaviLiveLogs:
+        return QStringLiteral(":/icons/nav-live-logs");
+    case NavigationDock::eNaviWindow::NaviOfflineLogs:
+        return QStringLiteral(":/icons/nav-offline-logs");
+    case NavigationDock::eNaviWindow::NaviDesignToolbar:
+        return QStringLiteral(":/icons/nav-design-toolbar");
+    case NavigationDock::eNaviWindow::NaviDesignProperties:
+        return QStringLiteral(":/icons/nav-sm-properties");
+    case NavigationDock::eNaviWindow::NaviDesignOutline:
+        return QStringLiteral(":/icons/nav-sm-outline");
+    default:
+        return QString();
+    }
+}
+
+QKeySequence NavigationDock::panelShortcut(NavigationDock::eNaviWindow navi)
+{
+    switch (navi)
+    {
+    case NavigationDock::eNaviWindow::NaviWorkspace:
+        return QKeySequence(Qt::Modifier::ALT | Qt::Key::Key_1);
+    case NavigationDock::eNaviWindow::NaviLiveLogs:
+        return QKeySequence(Qt::Modifier::ALT | Qt::Key::Key_2);
+    case NavigationDock::eNaviWindow::NaviOfflineLogs:
+        return QKeySequence(Qt::Modifier::ALT | Qt::Key::Key_3);
+    case NavigationDock::eNaviWindow::NaviDesignToolbar:
+        return QKeySequence(Qt::Modifier::ALT | Qt::Key::Key_4);
+    case NavigationDock::eNaviWindow::NaviDesignProperties:
+        return QKeySequence(Qt::Modifier::ALT | Qt::Key::Key_5);
+    case NavigationDock::eNaviWindow::NaviDesignOutline:
+        return QKeySequence(Qt::Modifier::ALT | Qt::Key::Key_6);
+    default:
+        return QKeySequence();
+    }
+}
+
+bool NavigationDock::isDesignPanel(NavigationDock::eNaviWindow navi)
+{
+    return (navi == NavigationDock::eNaviWindow::NaviDesignToolbar)
+        || (navi == NavigationDock::eNaviWindow::NaviDesignProperties)
+        || (navi == NavigationDock::eNaviWindow::NaviDesignOutline);
+}
 
 NavigationDock::NavigationDock(MdiMainWindow* parent)
     : QWidget       (parent)
 
     , mMainWindow   (parent)
-    , mTabs         (this)
+    , mLayout       (new QHBoxLayout(this))
+    , mRail         (new NaviTabRail(this))
+    , mStack        (new QStackedWidget(this))
+    , mEmptyHint    (new QLabel(this))
     , mLiveScopes   (parent, this)
     , mOfflineScopes(parent, this)
     , mFileSystem   (parent, this)
+    , mPanels       ( )
+    , mRailOrdered  (false)
 {
-    // The FSM drawing toolbar is no longer a navigation tab; it is a global ADS dock owned by
-    // the main window (issue #516), reachable near the Design page or dragged to tab in here.
-    mTabs.addTab(&mFileSystem   , NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig)  , NavigationDock::TabNameFileSystem);
-    mTabs.addTab(&mLiveScopes   , NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig)   , NavigationDock::TabLiveLogsExplorer);
-    mTabs.addTab(&mOfflineScopes, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), NavigationDock::TabOfflineLogsExplorer);
+    mEmptyHint->setAlignment(Qt::AlignmentFlag::AlignCenter);
+    mEmptyHint->setWordWrap(true);
+    mEmptyHint->setMargin(12);
+    mEmptyHint->setEnabled(false);
+    mEmptyHint->setText(tr("No navigator is shown.\n\nRight click the icon strip, or open View > Navigation, to bring one back."));
 
-    // Tooltips shown on every tab when hovered with the mouse.
-    mTabs.setTabToolTip(0, tr("Workspace file explorer"));
-    mTabs.setTabToolTip(1, tr("Live logs scope explorer"));
-    mTabs.setTabToolTip(2, tr("Offline logs scope explorer"));
+    mStack->addWidget(mEmptyHint);
 
-    mTabs.setTabPosition(QTabWidget::South);
-    mTabs.setUsesScrollButtons(true);
-    mTabs.setElideMode(Qt::ElideRight);
-    mTabs.setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Expanding);
+    mLayout->setContentsMargins(0, 0, 0, 0);
+    mLayout->setSpacing(0);
+    mLayout->addWidget(mRail);
+    mLayout->addWidget(mStack, 1);
 
-    // The tab widget is this content widget's whole body; the hosting ADS dock provides the
-    // title bar and frame (issue #516).
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(0);
-    layout->addWidget(&mTabs);
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    mRail->setLabelsPreferred(settings.value(KEY_RAIL_LABELS, false).toBool());
+
+    registerPanel(NavigationDock::eNaviWindow::NaviWorkspace  , &mFileSystem);
+    registerPanel(NavigationDock::eNaviWindow::NaviLiveLogs   , &mLiveScopes);
+    registerPanel(NavigationDock::eNaviWindow::NaviOfflineLogs, &mOfflineScopes);
+
+    connect(mRail, &NaviTabRail::signalItemActivated, this, [this](int id) {
+        setCurrentPanel(static_cast<NavigationDock::eNaviWindow>(id));
+    });
+
+    // Clicking the navigator that is already up moves the keyboard focus into its body.
+    connect(mRail, &NaviTabRail::signalCurrentItemClicked, this, [this]() {
+        NavigationWindow* panel = getPanel(currentPanel());
+        if (panel != nullptr)
+        {
+            panel->setFocus(Qt::FocusReason::MouseFocusReason);
+        }
+    });
+
+    connect(mRail, &NaviTabRail::signalHidePanelRequested, this, &NavigationDock::signalCollapseRequested);
+
+    connect(mRail, &NaviTabRail::signalItemVisibilityToggled, this, [this](int id, bool visible) {
+        const NavigationDock::eNaviWindow navi{ static_cast<NavigationDock::eNaviWindow>(id) };
+        if (NavigationDock::isDesignPanel(navi))
+        {
+            // A design widget belongs to the Design page; the main window decides where it goes.
+            if (visible == false)
+            {
+                emit signalDesignPanelHidden(navi);
+            }
+        }
+        else
+        {
+            setPanelVisible(navi, visible);
+        }
+    });
+
+    connect(mRail, &NaviTabRail::signalLabelsToggled, this, &NavigationDock::setRailLabels);
 
     initSize();
+    showPanel(NavigationDock::eNaviWindow::NaviWorkspace);
 
     connect(mMainWindow, &MdiMainWindow::signalOptionsOpening   , this, &NavigationDock::onOptionsOpening);
     connect(mMainWindow, &MdiMainWindow::signalOptionsApplied   , this, &NavigationDock::onOptionsApplied);
     connect(mMainWindow, &MdiMainWindow::signalOptionsClosed    , this, &NavigationDock::onOptionsClosed);
 }
 
-NavigationWindow* NavigationDock::getTab(const QString& tabName) const
+void NavigationDock::registerPanel(NavigationDock::eNaviWindow navi, NavigationWindow* content)
 {
-    QWidget * result {nullptr};
-    int count { mTabs.count()};
-    for (int i = 0; i < count; ++i)
+    if ((content == nullptr) || (navi == NavigationDock::eNaviWindow::NaviUnknown))
+        return;
+
+    mPanels.insert(static_cast<int>(navi), content);
+    if (mStack->indexOf(content) < 0)
     {
-        if (mTabs.tabText(i) == tabName)
-        {
-            result = mTabs.widget(i);
-            break;
-        }
-    }
-    
-    return static_cast<NavigationWindow *>(result);
-}
-
-NavigationWindow* NavigationDock::getTab(NavigationDock::eNaviWindow navi) const
-{
-    return getTab(NavigationDock::getTabName(navi));
-}
-
-
-bool NavigationDock::tabExists(const QString& tabName) const
-{
-    int count { mTabs.count()};
-    for (int i = 0; i < count; ++i)
-    {
-        if (mTabs.tabText(i) == tabName)
-        {
-            return true;
-        }
-    }
-    
-    return false;
-}
-
-bool NavigationDock::tabExists(NavigationDock::eNaviWindow navi) const
-{
-    return tabExists(NavigationDock::getTabName(navi));
-}
-
-bool NavigationDock::showTab(const QString& tabName)
-{
-    int count{ mTabs.count() };
-    for (int i = 0; i < count; ++i)
-    {
-        if (mTabs.tabText(i) == tabName)
-        {
-            if (mTabs.isTabVisible(i) == false)
-                mTabs.setTabVisible(i, true);
-            if (mTabs.currentIndex() != i)
-                mTabs.setCurrentIndex(i);
-            
-            return true;
-        }
+        mStack->addWidget(content);
     }
 
-    return false;
+    mRail->addItem(static_cast<int>(navi)
+                 , NavigationDock::panelIcon(navi)
+                 , NavigationDock::panelName(navi)
+                 , NavigationDock::panelHint(navi)
+                 , NavigationDock::panelShortcut(navi).toString(QKeySequence::SequenceFormat::NativeText));
 }
 
-bool NavigationDock::showTab(NavigationDock::eNaviWindow navi)
+NavigationWindow* NavigationDock::getPanel(NavigationDock::eNaviWindow navi) const
 {
-    return showTab(NavigationDock::getTabName(navi));
+    return mPanels.value(static_cast<int>(navi), nullptr);
 }
 
-int NavigationDock::indexOfNavi(NavigationDock::eNaviWindow navi) const
+bool NavigationDock::hasPanel(NavigationDock::eNaviWindow navi) const
 {
-    const QString& name = NavigationDock::getTabName(navi);
-    const int count = mTabs.count();
-    for (int i = 0; i < count; ++i)
+    return mPanels.contains(static_cast<int>(navi));
+}
+
+bool NavigationDock::showPanel(NavigationDock::eNaviWindow navi)
+{
+    NavigationWindow* content = getPanel(navi);
+    if (content == nullptr)
+        return false;
+
+    // An explicit request wins over a navigator the user had hidden earlier.
+    mRail->setItemVisible(static_cast<int>(navi), true);
+    if (mRail->currentItem() == static_cast<int>(navi))
     {
-        if (mTabs.tabText(i) == name)
-        {
-            return i;
-        }
+        setCurrentPanel(navi);
+    }
+    else
+    {
+        mRail->setCurrentItem(static_cast<int>(navi));
     }
 
-    return -1;
+    return true;
 }
 
-void NavigationDock::showDesignTab(NavigationDock::eNaviWindow navi, NavigationWindow* content)
+NavigationDock::eNaviWindow NavigationDock::currentPanel(void) const
 {
+    const int id = mRail->currentItem();
+    return (id > 0 ? static_cast<NavigationDock::eNaviWindow>(id) : NavigationDock::eNaviWindow::NaviUnknown);
+}
+
+void NavigationDock::setCurrentPanel(NavigationDock::eNaviWindow navi)
+{
+    NavigationWindow* content = getPanel(navi);
+    mStack->setCurrentWidget(content != nullptr ? static_cast<QWidget*>(content) : static_cast<QWidget*>(mEmptyHint));
+    emit signalPanelChanged(content != nullptr ? navi : NavigationDock::eNaviWindow::NaviUnknown);
+}
+
+void NavigationDock::selectFallbackPanel(void)
+{
+    const int next = mRail->firstVisibleItem();
+    if (next > 0)
+    {
+        mRail->setCurrentItem(next);
+    }
+    else
+    {
+        setCurrentPanel(NavigationDock::eNaviWindow::NaviUnknown);
+    }
+}
+
+void NavigationDock::showDesignPanel(NavigationDock::eNaviWindow navi, NavigationWindow* content)
+{
+    if ((content == nullptr) || (NavigationDock::isDesignPanel(navi) == false))
+        return;
+
+    NavigationWindow* hosted = getPanel(navi);
+    if (hosted == content)
+    {
+        mRail->setItemVisible(static_cast<int>(navi), true);
+        return;
+    }
+
+    if (hosted != nullptr)
+    {
+        hideDesignPanel(navi);
+    }
+
+    registerPanel(navi, content);
+    mRail->applyPanelWidth(width());
+}
+
+void NavigationDock::hideDesignPanel(NavigationDock::eNaviWindow navi)
+{
+    NavigationWindow* content = getPanel(navi);
     if (content == nullptr)
         return;
 
-    int index = indexOfNavi(navi);
-    if (index < 0)
+    const bool wasCurrent = (currentPanel() == navi);
+    mPanels.remove(static_cast<int>(navi));
+    mRail->removeItem(static_cast<int>(navi));
+    mStack->removeWidget(content);
+
+    // The main window owns the widget: it may go back to the Design page or return here later.
+    content->setParent(mMainWindow);
+    content->hide();
+
+    if (wasCurrent)
     {
-        // First placement: pick an icon per widget, but keep the current tab unchanged so
-        // startup / document re-syncs do not steal focus from the workspace tab.
-        QIcon icon;
-        switch (navi)
-        {
-        case NavigationDock::eNaviWindow::NaviDesignToolbar:
-            icon = NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeBig);
-            break;
-        default:
-            icon = NELusanCommon::iconStateMachine(NELusanCommon::SizeBig);
-            break;
-        }
-        index = mTabs.addTab(content, icon, NavigationDock::getTabName(navi));
-        mTabs.setTabVisible(index, true);
-    }
-    else
-    {
-        mTabs.setTabVisible(index, true);
+        selectFallbackPanel();
     }
 
-    // Do not force the content visible. The tab widget's stacked layout shows only the current
-    // page, and an unconditional show() painted the Design content over the current tab.
-    if (mTabs.currentIndex() == index)
-    {
-        content->show();
-    }
-    else
-    {
-        content->hide();
-    }
+    mRail->applyPanelWidth(width());
 }
 
-void NavigationDock::hideDesignTab(NavigationDock::eNaviWindow navi)
+bool NavigationDock::isDesignPanelShown(NavigationDock::eNaviWindow navi) const
 {
-    const int index = indexOfNavi(navi);
-    if (index < 0)
+    return hasPanel(navi);
+}
+
+void NavigationDock::setPanelVisible(NavigationDock::eNaviWindow navi, bool visible)
+{
+    if (hasPanel(navi) == false)
         return;
 
-    QWidget* content = mTabs.widget(index);
-    mTabs.removeTab(index);
-    if (content != nullptr)
+    const bool wasCurrent = (currentPanel() == navi);
+    mRail->setItemVisible(static_cast<int>(navi), visible);
+    if (visible)
     {
-        // The content is owned by the main window (it may be re-hosted in the Design page or
-        // shown again later), so detach it from the tab widget without deleting it.
-        content->setParent(mMainWindow);
-        content->hide();
+        if (currentPanel() == NavigationDock::eNaviWindow::NaviUnknown)
+        {
+            mRail->setCurrentItem(static_cast<int>(navi));
+        }
+    }
+    else if (wasCurrent)
+    {
+        selectFallbackPanel();
     }
 }
 
-bool NavigationDock::isDesignTabShown(NavigationDock::eNaviWindow navi) const
+bool NavigationDock::isPanelVisible(NavigationDock::eNaviWindow navi) const
 {
-    return (indexOfNavi(navi) >= 0);
+    return hasPanel(navi) && mRail->isItemVisible(static_cast<int>(navi));
 }
 
-void NavigationDock::setNaviTabVisible(NavigationDock::eNaviWindow navi, bool visible)
+void NavigationDock::setLiveLogsConnected(bool connected)
 {
-    const int index = indexOfNavi(navi);
-    if (index >= 0)
-    {
-        mTabs.setTabVisible(index, visible);
-    }
+    mRail->setItemBadge(static_cast<int>(NavigationDock::eNaviWindow::NaviLiveLogs)
+                      , connected ? NaviTabRail::eBadge::Active : NaviTabRail::eBadge::None);
 }
 
-bool NavigationDock::isNaviTabVisible(NavigationDock::eNaviWindow navi) const
+void NavigationDock::setRailLabels(bool labels)
 {
-    const int index = indexOfNavi(navi);
-    return (index >= 0) && mTabs.isTabVisible(index);
+    QSettings store(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    store.setValue(KEY_RAIL_LABELS, labels);
+    mRail->setLabelsPreferred(labels);
+    mRail->applyPanelWidth(width());
 }
 
-void NavigationDock::initSize()
+bool NavigationDock::railLabels(void) const
+{
+    return mRail->labelsPreferred();
+}
+
+void NavigationDock::initSize(void)
 {
     // The user may shrink the dock to the absolute minimum width while the preferred width stays
-    // larger. The tab widget must accept the same floor, or its minimum would hold the dock open.
+    // larger. The page stack must accept the same floor, or its minimum would hold the dock open.
     const int absMinWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH_ABS);
     const int defWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH);
     const int minHeight = static_cast<int>(NELusanCommon::MIN_NAVI_HEIGHT);
     setMinimumWidth(absMinWidth);
     setMinimumHeight(minHeight);
-    mTabs.setMinimumWidth(absMinWidth);
-    resize(QSize { defWidth, std::max(minHeight, height()) });
+    mStack->setMinimumWidth(0);
+    mStack->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Expanding);
+    resize(QSize{ defWidth, std::max(minHeight, height()) });
     setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 }
 
-QSize NavigationDock::sizeHint() const
+void NavigationDock::updateRailSide(void)
+{
+    QWidget* top = window();
+    if (top == nullptr)
+        return;
+
+    const QPoint center = mapTo(top, rect().center());
+    const NaviTabRail::eSide side = ((center.x() * 2) <= top->width())
+                                  ? NaviTabRail::eSide::West
+                                  : NaviTabRail::eSide::East;
+    if (mRailOrdered && (side == mRail->side()))
+        return;
+
+    mRailOrdered = true;
+    mRail->setSide(side);
+    mLayout->removeWidget(mRail);
+    mLayout->removeWidget(mStack);
+    if (side == NaviTabRail::eSide::West)
+    {
+        mLayout->addWidget(mRail);
+        mLayout->addWidget(mStack, 1);
+    }
+    else
+    {
+        mLayout->addWidget(mStack, 1);
+        mLayout->addWidget(mRail);
+    }
+}
+
+void NavigationDock::resizeEvent(QResizeEvent* event)
+{
+    mRail->applyPanelWidth(width());
+    updateRailSide();
+    QWidget::resizeEvent(event);
+}
+
+void NavigationDock::moveEvent(QMoveEvent* event)
+{
+    updateRailSide();
+    QWidget::moveEvent(event);
+}
+
+void NavigationDock::showEvent(QShowEvent* event)
+{
+    mRail->applyPanelWidth(width());
+    updateRailSide();
+    QWidget::showEvent(event);
+}
+
+QSize NavigationDock::sizeHint(void) const
 {
     QSize result{ QWidget::sizeHint() };
     result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
     return result;
 }
 
-QSize NavigationDock::minimumSizeHint() const
+QSize NavigationDock::minimumSizeHint(void) const
 {
     QSize result{ QWidget::minimumSizeHint() };
     result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH_ABS));
@@ -299,14 +449,14 @@ QSize NavigationDock::minimumSizeHint() const
     return result;
 }
 
-void NavigationDock::onOptionsOpening()
+void NavigationDock::onOptionsOpening(void)
 {
     static_cast<NavigationWindow &>(mFileSystem).optionOpenning();
     static_cast<NavigationWindow &>(mLiveScopes).optionOpenning();
     static_cast<NavigationWindow &>(mOfflineScopes).optionOpenning();
 }
 
-void NavigationDock::onOptionsApplied()
+void NavigationDock::onOptionsApplied(void)
 {
     static_cast<NavigationWindow &>(mFileSystem).optionApplied();
     static_cast<NavigationWindow &>(mLiveScopes).optionApplied();

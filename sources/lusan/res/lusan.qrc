@@ -61,6 +61,12 @@
         <file alias="sm method action">icons/sm-method-action.svg</file>
         <file alias="sm method condition">icons/sm-method-condition.svg</file>
         <file alias="view-fsm-design">icons/view-fsm-design.svg</file>
+        <file alias="nav-workspace">icons/nav-workspace.svg</file>
+        <file alias="nav-live-logs">icons/nav-live-logs.svg</file>
+        <file alias="nav-offline-logs">icons/nav-offline-logs.svg</file>
+        <file alias="nav-design-toolbar">icons/nav-design-toolbar.svg</file>
+        <file alias="nav-sm-properties">icons/nav-sm-properties.svg</file>
+        <file alias="nav-sm-outline">icons/nav-sm-outline.svg</file>
     </qresource>
     <qresource prefix="/icons">
         <file alias="app-logo-16.png">logo/app-logo-16.png</file>
