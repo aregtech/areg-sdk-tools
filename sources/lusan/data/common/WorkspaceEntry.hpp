@@ -39,6 +39,17 @@ public:
     static const WorkspaceEntry InvalidWorkspace;
 
 ////////////////////////////////////////////////////////////////////////
+// Static methods
+////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the name a workspace takes when none was given: the name of its root
+     *          directory.
+     * \param   root    The root directory of the workspace.
+     **/
+    static QString nameFromRoot(const QString& root);
+
+////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 ////////////////////////////////////////////////////////////////////////
 public:
@@ -50,10 +61,11 @@ public:
     /**
      * \brief   Parameterized constructor.
      * \param   root        The root directory of the workspace.
+     * \param   name        The short name shown in the workspace lists.
      * \param   description The description of the workspace.
      * \param   id          The ID of the workspace.
      **/
-    WorkspaceEntry(const QString& root, const QString& description, uint32_t id = 0);
+    WorkspaceEntry(const QString& root, const QString& name, const QString& description, uint32_t id = 0);
 
     /**
      * \brief   Constructor that initializes the workspace model from an XML stream.
@@ -141,6 +153,18 @@ public:
      * \return  The root directory.
      **/
     inline const QString& getWorkspaceRoot() const;
+
+    /**
+     * \brief   Sets the short name of the workspace.
+     * \param   name        The name shown in the workspace lists.
+     **/
+    inline void setWorkspaceName(const QString& name);
+
+    /**
+     * \brief   Returns the short name of the workspace. An entry read without a name takes the
+     *          name of its root directory, so a valid entry never returns an empty string.
+     **/
+    inline const QString& getWorkspaceName() const;
 
     /**
      * \brief   Sets the description of the workspace.
@@ -272,6 +296,7 @@ private:
     uint32_t    mId;                //!< The ID of the workspace.
     uint64_t    mLastAccessed;      //!< The last accessed timestamp of the workspace.
     QString     mWorkspaceRoot;     //!< The root directory of the workspace.
+    QString     mName;              //!< The short name of the workspace.
     QString     mDescription;       //!< The description of the workspace.
     QString     mSources;           //!< The sources directory of the workspace.
     QString     mIncludes;          //!< The includes directory of the workspace.
@@ -291,6 +316,16 @@ inline void WorkspaceEntry::setWorkspaceRoot(const QString& root)
 inline const QString& WorkspaceEntry::getWorkspaceRoot() const
 {
     return mWorkspaceRoot;
+}
+
+inline void WorkspaceEntry::setWorkspaceName(const QString& name)
+{
+    mName = name;
+}
+
+inline const QString& WorkspaceEntry::getWorkspaceName() const
+{
+    return mName;
 }
 
 inline void WorkspaceEntry::setWorkspaceDescription(const QString& description)

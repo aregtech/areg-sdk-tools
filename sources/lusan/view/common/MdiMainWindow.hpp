@@ -23,6 +23,7 @@
 #include <QAction>
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QVariantAnimation>
 #include <QSize>
 
 #include "lusan/view/common/MdiArea.hpp"
@@ -204,10 +205,22 @@ public:
     int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
 
     /**
-     * \brief   Shows the specified navigation tab.
-     * \param   naviTab     The navigation tab to show.
+     * \brief   Opens the navigation panel if it was closed and brings the given navigator up.
+     * \param   navi    The navigator to show.
      **/
-    void showNaviTab(NavigationDock::eNaviWindow naviTab);
+    void showNaviPanel(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   Opens the options dialog on the workspace page.
+     * \return  The exit code of the dialog.
+     **/
+    int showOptionPageWorkspace();
+
+    /**
+     * \brief   The File menu action that creates a new workspace. Trigger it to run the same
+     *          command from another control.
+     **/
+    inline QAction& actionNewWorkspace();
 
     /**
      * \brief   Moves one State Machine design widget (toolbar / Properties / Outline) to the
@@ -488,6 +501,16 @@ private slots:
     void onShowMenuRecent();
 
     /**
+     * \brief   Fills the File menu's Workspaces submenu with the known workspaces.
+     **/
+    void onShowMenuWorkspaces();
+
+    /**
+     * \brief   Switches to the workspace named by the triggered submenu entry.
+     **/
+    void onSwitchWorkspace();
+
+    /**
      * \brief   Updates the window menu.
      **/
     void onShowMenuWindow();
@@ -628,6 +651,18 @@ private:
     void showDock(ads::CDockWidget* dock);
 
     /**
+     * \brief   Runs the navigation dock area between its rail width and its full width, and
+     *          takes the area title bar out of the way while only the rail is shown.
+     **/
+    void onNaviCollapsed(bool collapsed);
+
+    /**
+     * rief   Gives the navigation dock area the requested width by moving the splitter, and
+     *          hands what it gives up to the pane beside it.
+     **/
+    void applyNaviWidth(int width);
+
+    /**
      * \brief   Creates the three Navigation Window host widgets (drawing toolbar, Properties,
      *          Outline stand-ins) owned by the main window and shown only while their widget
      *          is placed in the Navigation Window (issue #516).
@@ -649,6 +684,11 @@ private:
      * \brief   Returns a modifiable reference to the placement member of the given widget.
      **/
     MdiMainWindow::eDesignPlace& placementRef(MdiMainWindow::eDesignWidget widget);
+
+    /**
+     * \brief   Returns the design widget that the given navigator hosts.
+     **/
+    static MdiMainWindow::eDesignWidget designWidgetOf(NavigationDock::eNaviWindow navi);
 
     /**
      * \brief   Creates the MDI area for managing sub-windows.
@@ -752,6 +792,7 @@ private:
     QMenu*          mViewMenu;      //!< The view menu.
     QMenu*          mNavigationMenu;//!< The View menu's Navigation submenu (dock/tab visibility).
     QMenu*          mViewDesignMenu;//!< The View menu's Design submenu (in-page toolbar/panels).
+    QMenu*          mWorkspacesMenu;//!< The File menu's Workspaces submenu.
     QMenu*          mThemeMenu;     //!< The theme selection submenu of the view menu.
     QMenu*          mDesignMenu;    //!< The design top level menu.
     QMenu*          mLoggingMenu;   //!< The logging menu.
@@ -804,6 +845,10 @@ private:
     QAction*        mActNavWorkspace;   //!< Shows/hides the Workspace Explorer tab.
     QAction*        mActNavLiveLogs;    //!< Shows/hides the Live Logs tab.
     QAction*        mActNavOfflineLogs; //!< Shows/hides the Offline Logs tab.
+    QAction*        mActNavLabels;      //!< Shows/hides the captions under the rail icons.
+    QAction*        mActNavCollapse;    //!< Collapses the navigation panel to its rail.
+    QVariantAnimation* mNaviWidthAnimation; //!< Runs the navigation dock area width on collapse.
+    int             mNaviExpandedWidth; //!< Width the navigation dock area returns to.
     QAction*        mActNavToolbar;     //!< Places the drawing toolbar in the Navigation Window.
     QAction*        mActNavProperties;  //!< Places the Properties panel in the Navigation Window.
     QAction*        mActNavOutline;     //!< Places the Outline panel in the Navigation Window.
@@ -869,6 +914,11 @@ inline LiveLogViewer* MdiMainWindow::getLiveLogViewer() const
 inline MdiChild* MdiMainWindow::getActiveWindow() const
 {
     return activeMdiChild();
+}
+
+inline QAction& MdiMainWindow::actionNewWorkspace()
+{
+    return mActNewWorkspace;
 }
 
 #endif // LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP

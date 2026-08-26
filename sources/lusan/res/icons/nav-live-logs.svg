@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan navigation rail icon: live logs, a running trace inside a viewport -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="2.2" y="4.6" width="19.6" height="14.8" rx="2.2"/>
+<path d="M5.2 12.4h2.6l1.9-3.6 2.6 7.2 1.8-3.6h4.7"/>
+</g>
+</svg>

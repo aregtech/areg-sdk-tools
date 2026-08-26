@@ -156,6 +156,18 @@ public:
     static void newWorkspace();
 
     /**
+     * \brief   Ends the current session and starts it again on the given workspace. The open
+     *          documents are offered for saving, the logging sources are released, and the
+     *          main window is created again on the new workspace.
+     * \param   workspaceRoot   The root directory of the workspace to switch to.
+     * \return  True if the session state matches the request when the call returns. False if
+     *          the workspace is unknown, its root is gone, or a document refused to close.
+     * \note    On success the main window is scheduled for destruction. The caller must not
+     *          touch any window object after the call.
+     **/
+    static bool switchWorkspace(const QString& workspaceRoot);
+
+    /**
      * \brief   Applies configured application theme from options.
      **/
     static void applyConfiguredTheme();
@@ -210,8 +222,9 @@ private:
     static LusanApplication *   theApp;         //!< The singleton instance of the application.
     MdiMainWindow*              mMainWindow;    //!< Main window;
     OptionsManager              mOptions;       //!< The options manager.
-    bool                        mIsRestarting;  //!< Flag to indicate if the application is restarting.      
+    bool                        mIsRestarting;  //!< Flag to indicate if the application is restarting.
     bool                        mDefaultEnabled;//!< Flag to indicate if the default workspace is enabled.
+    QString                     mSwitchRoot;    //!< The root of the workspace to activate on restart. Empty if none is requested.
 };
 
 #endif // LUSAN_APP_LUSANAPPLICATION_HPP

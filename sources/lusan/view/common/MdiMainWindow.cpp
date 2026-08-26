@@ -42,6 +42,7 @@
 
 #include "areg/base/SocketDefs.hpp"
 
+#include <DockAreaTitleBar.h>
 #include <DockAreaWidget.h>
 #include <DockManager.h>
 #include <DockWidget.h>
@@ -64,6 +65,7 @@
 #include <QSignalBlocker>
 #include <QStatusBar>
 #include <QSplitter>
+
 #include <QTimer>
 
 #include <algorithm>
@@ -147,6 +149,7 @@ MdiMainWindow::MdiMainWindow()
     , mViewMenu     (nullptr)
     , mNavigationMenu(nullptr)
     , mViewDesignMenu(nullptr)
+    , mWorkspacesMenu(nullptr)
     , mThemeMenu    (nullptr)
     , mDesignMenu   (nullptr)
     , mLoggingMenu  (nullptr)
@@ -189,6 +192,10 @@ MdiMainWindow::MdiMainWindow()
     , mActNavWorkspace(nullptr)
     , mActNavLiveLogs(nullptr)
     , mActNavOfflineLogs(nullptr)
+    , mActNavLabels(nullptr)
+    , mActNavCollapse(nullptr)
+    , mNaviWidthAnimation(nullptr)
+    , mNaviExpandedWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH))
     , mActNavToolbar(nullptr)
     , mActNavProperties(nullptr)
     , mActNavOutline(nullptr)
@@ -290,6 +297,7 @@ bool MdiMainWindow::loadFile(const QString& fileName)
 
 void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
+    mNaviDock.setLiveLogsConnected(isConnected);
     if (mLogViewer != nullptr)
     {
         mLogViewer->logServiceConnected(isConnected, address, port, dbPath);
@@ -298,7 +306,7 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
             // Copy logs to offline log viewer
             OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
             mNaviDock.getLiveScopes().setLoggingModel(nullptr);
-            mNaviDock.showTab(NavigationDock::eNaviWindow::NaviOfflineLogs);
+            mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviOfflineLogs);
             offlineLog->show();
 
             // Properly close and delete the live log window and viewer
@@ -318,7 +326,7 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         }
         else if (mLogViewer != nullptr)
         {
-            mNaviDock.showTab(NavigationDock::eNaviWindow::NaviLiveLogs);
+            mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviLiveLogs);
             mLogViewer->show();
         }
     }
@@ -414,10 +422,36 @@ int MdiMainWindow::showOptionPageLogging(const QString& address, const QString& 
     return result;
 }
 
-void MdiMainWindow::showNaviTab(NavigationDock::eNaviWindow naviTab)
+void MdiMainWindow::showNaviPanel(NavigationDock::eNaviWindow navi)
 {
     showDock(mNaviDockWidget);
-    mNaviDock.showTab(naviTab);
+    if (NavigationDock::isDesignPanel(navi) && (mNaviDock.hasPanel(navi) == false))
+    {
+        // The design widget sits on the Design page at the moment, so move it here first.
+        setDesignWidgetPlacement(MdiMainWindow::designWidgetOf(navi), eDesignPlace::InNavigation);
+    }
+
+    if (mNaviDock.showPanel(navi))
+    {
+        NavigationWindow* panel = mNaviDock.getPanel(navi);
+        if (panel != nullptr)
+        {
+            panel->setFocus(Qt::FocusReason::ShortcutFocusReason);
+        }
+    }
+}
+
+MdiMainWindow::eDesignWidget MdiMainWindow::designWidgetOf(NavigationDock::eNaviWindow navi)
+{
+    switch (navi)
+    {
+    case NavigationDock::eNaviWindow::NaviDesignToolbar:
+        return eDesignWidget::Toolbar;
+    case NavigationDock::eNaviWindow::NaviDesignOutline:
+        return eDesignWidget::Outline;
+    default:
+        return eDesignWidget::Properties;
+    }
 }
 
 QString MdiMainWindow::openLogFile()
@@ -436,6 +470,10 @@ void MdiMainWindow::closeEvent(QCloseEvent* event)
     }
     else
     {
+        // The session may start again on another workspace, so the logging sources are released
+        // here instead of being left to the process exit.
+        mNaviDock.getLiveScopes().disconnectLogging();
+        mNaviDock.getOfflineScopes().closeDatabase();
         writeSettings();
         event->accept();
     }
@@ -631,9 +669,11 @@ void MdiMainWindow::onShowMenuNavigation()
     };
 
     set(mActNavWindow, (mNaviDockWidget != nullptr) && (mNaviDockWidget->isClosed() == false));
-    set(mActNavWorkspace, mNaviDock.isNaviTabVisible(NavigationDock::NaviWorkspace));
-    set(mActNavLiveLogs, mNaviDock.isNaviTabVisible(NavigationDock::NaviLiveLogs));
-    set(mActNavOfflineLogs, mNaviDock.isNaviTabVisible(NavigationDock::NaviOfflineLogs));
+    set(mActNavWorkspace, mNaviDock.isPanelVisible(NavigationDock::NaviWorkspace));
+    set(mActNavLiveLogs, mNaviDock.isPanelVisible(NavigationDock::NaviLiveLogs));
+    set(mActNavOfflineLogs, mNaviDock.isPanelVisible(NavigationDock::NaviOfflineLogs));
+    set(mActNavLabels, mNaviDock.railLabels());
+    set(mActNavCollapse, mNaviDock.isContentCollapsed());
     updatePlacementActions();
 }
 
@@ -672,15 +712,15 @@ void MdiMainWindow::setDesignWidgetPlacement(MdiMainWindow::eDesignWidget widget
         switch (widget)
         {
         case eDesignWidget::Toolbar:
-            mNaviDock.showTab(NavigationDock::NaviDesignToolbar);
+            mNaviDock.showPanel(NavigationDock::NaviDesignToolbar);
             break;
 
         case eDesignWidget::Properties:
-            mNaviDock.showTab(NavigationDock::NaviDesignProperties);
+            mNaviDock.showPanel(NavigationDock::NaviDesignProperties);
             break;
 
         case eDesignWidget::Outline:
-            mNaviDock.showTab(NavigationDock::NaviDesignOutline);
+            mNaviDock.showPanel(NavigationDock::NaviDesignOutline);
             break;
         }
     }
@@ -879,7 +919,7 @@ void MdiMainWindow::syncDesignWidgets()
     switch (mPlaceToolbar)
     {
     case eDesignPlace::InDesign:
-        mNaviDock.hideDesignTab(NavigationDock::NaviDesignToolbar);
+        mNaviDock.hideDesignPanel(NavigationDock::NaviDesignToolbar);
         if (design != nullptr) { design->setToolbarVisible(true); }
         break;
 
@@ -896,11 +936,11 @@ void MdiMainWindow::syncDesignWidgets()
         }
         mNaviToolbar->bindDesign(design);
         mNaviToolbar->setToolsActive(designCurrent);
-        mNaviDock.showDesignTab(NavigationDock::NaviDesignToolbar, mNaviToolbar);
+        mNaviDock.showDesignPanel(NavigationDock::NaviDesignToolbar, mNaviToolbar);
         break;
 
     case eDesignPlace::Hidden:
-        mNaviDock.hideDesignTab(NavigationDock::NaviDesignToolbar);
+        mNaviDock.hideDesignPanel(NavigationDock::NaviDesignToolbar);
         if (design != nullptr) { design->setToolbarVisible(false); }
         break;
     }
@@ -909,18 +949,18 @@ void MdiMainWindow::syncDesignWidgets()
     switch (mPlaceProperties)
     {
     case eDesignPlace::InDesign:
-        mNaviDock.hideDesignTab(NavigationDock::NaviDesignProperties);
+        mNaviDock.hideDesignPanel(NavigationDock::NaviDesignProperties);
         if (design != nullptr) { design->setPropertiesVisible(true); }
         break;
 
     case eDesignPlace::InNavigation:
         if (design != nullptr) { design->setPropertiesVisible(false); }
         mNaviProperties->bindDesign(designCurrent ? design : nullptr);
-        mNaviDock.showDesignTab(NavigationDock::NaviDesignProperties, mNaviProperties);
+        mNaviDock.showDesignPanel(NavigationDock::NaviDesignProperties, mNaviProperties);
         break;
 
     case eDesignPlace::Hidden:
-        mNaviDock.hideDesignTab(NavigationDock::NaviDesignProperties);
+        mNaviDock.hideDesignPanel(NavigationDock::NaviDesignProperties);
         if (design != nullptr) { design->setPropertiesVisible(false); }
         break;
     }
@@ -929,18 +969,18 @@ void MdiMainWindow::syncDesignWidgets()
     switch (mPlaceOutline)
     {
     case eDesignPlace::InDesign:
-        mNaviDock.hideDesignTab(NavigationDock::NaviDesignOutline);
+        mNaviDock.hideDesignPanel(NavigationDock::NaviDesignOutline);
         if (design != nullptr) { design->setOutlineVisible(true); }
         break;
 
     case eDesignPlace::InNavigation:
         if (design != nullptr) { design->setOutlineVisible(false); }
         mNaviOutline->bindDesign(designCurrent ? design : nullptr);
-        mNaviDock.showDesignTab(NavigationDock::NaviDesignOutline, mNaviOutline);
+        mNaviDock.showDesignPanel(NavigationDock::NaviDesignOutline, mNaviOutline);
         break;
 
     case eDesignPlace::Hidden:
-        mNaviDock.hideDesignTab(NavigationDock::NaviDesignOutline);
+        mNaviDock.hideDesignPanel(NavigationDock::NaviDesignOutline);
         if (design != nullptr) { design->setOutlineVisible(false); }
         break;
     }
@@ -1009,6 +1049,53 @@ void MdiMainWindow::onShowMenuDesign()
 
     // The page owns the menu order so it cannot drift from the drawing toolbar.
     design->populateDesignMenu(*mDesignMenu);
+}
+
+void MdiMainWindow::onShowMenuWorkspaces()
+{
+    mWorkspacesMenu->clear();
+
+    const QString active{ LusanApplication::getActiveWorkspace().getWorkspaceRoot() };
+    for (const WorkspaceEntry& entry : LusanApplication::getOptions().getWorkspaceList())
+    {
+        const QString root{ entry.getWorkspaceRoot() };
+        QAction* action = mWorkspacesMenu->addAction(entry.getWorkspaceName() + "  --  " + root);
+        action->setData(root);
+        action->setToolTip(root);
+        action->setCheckable(true);
+        action->setChecked(root == active);
+        connect(action, &QAction::triggered, this, &MdiMainWindow::onSwitchWorkspace);
+    }
+
+    mWorkspacesMenu->addSeparator();
+    QAction* manage = mWorkspacesMenu->addAction(tr("&Manage Workspaces..."));
+    connect(manage, &QAction::triggered, this, [this]() { showOptionPageWorkspace(); });
+}
+
+void MdiMainWindow::onSwitchWorkspace()
+{
+    QAction* action = qobject_cast<QAction*>(sender());
+    if (action == nullptr)
+        return;
+
+    const QString root{ action->data().toString() };
+    if (LusanApplication::switchWorkspace(root) == false)
+    {
+        QMessageBox::information( this
+                                , tr("Switch Workspace") + " - Lusan"
+                                , tr("The workspace was not switched. Either its directory is gone, or a document is still open."));
+    }
+}
+
+int MdiMainWindow::showOptionPageWorkspace()
+{
+    ProjectSettings settings(this);
+    emit signalOptionsOpening();
+    settings.activatePage(ProjectSettings::eOptionPage::PageWorkspace);
+    int result = settings.exec();
+    emit signalOptionsClosed(result == static_cast<int>(QDialog::Accepted));
+
+    return result;
 }
 
 void MdiMainWindow::onToolsOptions()
@@ -1459,7 +1546,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     mdiSub->setWindowIcon(NELusanCommon::iconLiveLogWindow(NELusanCommon::SizeSmall));
     child->setCurrentFile(filePath);
     mMdiArea.showMaximized();
-    mNaviDock.showTab(NavigationDock::eNaviWindow::NaviLiveLogs);
+    mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviLiveLogs);
     return child;
 }
 
@@ -1471,9 +1558,9 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     mdiSub->setWindowIcon(NELusanCommon::iconOfflineLogWindow(NELusanCommon::SizeSmall));
     mdiSub->setWindowFilePath(filePath);    
     mMdiArea.showMaximized();
-    mNaviDock.showTab(NavigationDock::NaviOfflineLogs);
+    mNaviDock.showPanel(NavigationDock::NaviOfflineLogs);
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
-    static_cast<NaviOfflineLogsScopes *>(mNaviDock.getTab(NavigationDock::TabOfflineLogsExplorer))->setLoggingModel(logModel);
+    mNaviDock.getOfflineScopes().setLoggingModel(logModel);
     if (filePath.isEmpty() == false)
     {
         child->openDatabase(filePath);
@@ -1541,7 +1628,7 @@ void MdiMainWindow::_createActions()
     initAction(mActFileNewLog, NELusanCommon::iconNewLiveLogs(NELusanCommon::SizeBig), tr("New &Live Logs"));
     mActFileNewLog.setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_L));
     mActFileNewLog.setStatusTip(tr("Create a new live logs"));
-    connect(&mActFileNewLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviLiveLogs); signalNewLiveLog();});
+    connect(&mActFileNewLog, &QAction::triggered, this, [this]() {mNaviDock.showPanel(NavigationDock::NaviLiveLogs); signalNewLiveLog();});
     
     initAction(mActFileOpen, NELusanCommon::iconOpenFile(NELusanCommon::SizeBig), tr("&Open..."));
     mActFileOpen.setShortcuts(QKeySequence::Open);
@@ -1552,7 +1639,7 @@ void MdiMainWindow::_createActions()
     // Ctrl+F is reserved for Edit > Find (document search); offline logs move to Ctrl+Shift+O.
     mActFileOfflineLog.setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     mActFileOfflineLog.setStatusTip(tr("Open offline logs"));
-    connect(&mActFileOfflineLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviOfflineLogs); signalOpenOfflineLog();});
+    connect(&mActFileOfflineLog, &QAction::triggered, this, [this]() {mNaviDock.showPanel(NavigationDock::NaviOfflineLogs); signalOpenOfflineLog();});
     
     initAction(mActFileSave, NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("&Save"));
     mActFileSave.setShortcuts(QKeySequence::Save);
@@ -1611,7 +1698,7 @@ void MdiMainWindow::_createActions()
     mActEditFind.setEnabled(false);
     connect(&mActEditFind, &QAction::triggered, this, &MdiMainWindow::onEditFind);
 
-    initAction(mActEditWhereUsed, NELusanCommon::iconSearch(NELusanCommon::SizeBig), tr("Find &Usages"));
+    initAction(mActEditWhereUsed, NELusanCommon::iconSearchUsages(NELusanCommon::SizeBig), tr("Find &Usages"));
     mActEditWhereUsed.setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F12));
     mActEditWhereUsed.setStatusTip(tr("List everywhere the selected entry is referenced"));
     mActEditWhereUsed.setEnabled(false);
@@ -1630,25 +1717,25 @@ void MdiMainWindow::_createActions()
     });
 
     initAction(mActViewWokspace, NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig), tr("&Workspace Explorer"));
+    mActViewWokspace.setShortcut(NavigationDock::panelShortcut(NavigationDock::NaviWorkspace));
     mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
     connect(&mActViewWokspace, &QAction::triggered, this, [this]() {
-        showDock(mNaviDockWidget);
-        mNaviDock.showTab(NavigationDock::TabNameFileSystem);
+        showNaviPanel(NavigationDock::NaviWorkspace);
     });
 
     initAction(mActViewLogs, NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig), tr("Live &Logs Navigator"));
+    mActViewLogs.setShortcut(NavigationDock::panelShortcut(NavigationDock::NaviLiveLogs));
     mActViewLogs.setStatusTip(tr("View Live Logs Navigator Window"));
     connect(&mActViewLogs, &QAction::triggered, this, [this] () {
-        showDock(mNaviDockWidget);
-        mNaviDock.showTab(NavigationDock::TabLiveLogsExplorer);
+        showNaviPanel(NavigationDock::NaviLiveLogs);
         if (mLiveLogWnd != nullptr) mLiveLogWnd->activateWindow();
     });
 
     initAction(mActOffViewLogs, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), tr("Offline &Logs Navigator"));
+    mActOffViewLogs.setShortcut(NavigationDock::panelShortcut(NavigationDock::NaviOfflineLogs));
     mActOffViewLogs.setStatusTip(tr("View Offline Logs Navigator Window"));
     connect(&mActOffViewLogs, &QAction::triggered, this, [this] () {
-        showDock(mNaviDockWidget);
-        mNaviDock.showTab(NavigationDock::TabOfflineLogsExplorer);
+        showNaviPanel(NavigationDock::NaviOfflineLogs);
     });
 
     initAction(mActViewOutput, NELusanCommon::iconViewOutputWindow(NELusanCommon::SizeBig), tr("&Output Window"));
@@ -1686,6 +1773,9 @@ void MdiMainWindow::_createMenus()
 {
     mFileMenu = menuBar()->addMenu(tr("&File"));
     mFileMenu->addAction(&mActNewWorkspace);
+    mWorkspacesMenu = mFileMenu->addMenu(tr("S&witch Workspace"));
+    connect(mWorkspacesMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuWorkspaces);
+    mFileMenu->addSeparator();
     mFileMenu->addAction(&mActFileNewSI);
     mFileMenu->addAction(&mActFileNewFSM);
     mFileMenu->addAction(&mActFileNewDT);
@@ -1740,39 +1830,66 @@ void MdiMainWindow::_createMenus()
     mActNavWorkspace = mNavigationMenu->addAction(tr("Wor&kspace Explorer"));
     mActNavWorkspace->setCheckable(true);
     connect(mActNavWorkspace, &QAction::toggled, this, [this](bool on) {
-        mNaviDock.setNaviTabVisible(NavigationDock::NaviWorkspace, on);
+        mNaviDock.setPanelVisible(NavigationDock::NaviWorkspace, on);
     });
 
     mActNavLiveLogs = mNavigationMenu->addAction(tr("&Live Logs"));
     mActNavLiveLogs->setCheckable(true);
     connect(mActNavLiveLogs, &QAction::toggled, this, [this](bool on) {
-        mNaviDock.setNaviTabVisible(NavigationDock::NaviLiveLogs, on);
+        mNaviDock.setPanelVisible(NavigationDock::NaviLiveLogs, on);
     });
 
     mActNavOfflineLogs = mNavigationMenu->addAction(tr("&Offline Logs"));
     mActNavOfflineLogs->setCheckable(true);
     connect(mActNavOfflineLogs, &QAction::toggled, this, [this](bool on) {
-        mNaviDock.setNaviTabVisible(NavigationDock::NaviOfflineLogs, on);
+        mNaviDock.setPanelVisible(NavigationDock::NaviOfflineLogs, on);
     });
 
     mNavigationMenu->addSeparator();
 
     mActNavToolbar = mNavigationMenu->addAction(tr("&Design Toolbar"));
     mActNavToolbar->setCheckable(true);
+    mActNavToolbar->setShortcut(NavigationDock::panelShortcut(NavigationDock::NaviDesignToolbar));
     connect(mActNavToolbar, &QAction::toggled, this, [this](bool on) {
         setDesignWidgetPlacement(eDesignWidget::Toolbar, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
     });
 
     mActNavProperties = mNavigationMenu->addAction(tr("State Machine &Properties"));
     mActNavProperties->setCheckable(true);
+    mActNavProperties->setShortcut(NavigationDock::panelShortcut(NavigationDock::NaviDesignProperties));
     connect(mActNavProperties, &QAction::toggled, this, [this](bool on) {
         setDesignWidgetPlacement(eDesignWidget::Properties, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
     });
 
     mActNavOutline = mNavigationMenu->addAction(tr("State Machine &Outline"));
     mActNavOutline->setCheckable(true);
+    mActNavOutline->setShortcut(NavigationDock::panelShortcut(NavigationDock::NaviDesignOutline));
     connect(mActNavOutline, &QAction::toggled, this, [this](bool on) {
         setDesignWidgetPlacement(eDesignWidget::Outline, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
+    });
+
+    mNavigationMenu->addSeparator();
+
+    mActNavCollapse = mNavigationMenu->addAction(tr("&Collapse to Rail"));
+    mActNavCollapse->setCheckable(true);
+    mActNavCollapse->setShortcut(QKeySequence(QStringLiteral("Ctrl+B")));
+    connect(mActNavCollapse, &QAction::toggled, this, [this](bool on) {
+        // The shortcut also serves a closed panel: it brings it back rather than collapsing it.
+        if ((mNaviDockWidget != nullptr) && mNaviDockWidget->isClosed())
+        {
+            showDock(mNaviDockWidget);
+            mNaviDock.setContentCollapsed(false);
+        }
+        else
+        {
+            mNaviDock.setContentCollapsed(on);
+        }
+    });
+
+    mActNavLabels = mNavigationMenu->addAction(tr("Show Rail La&bels"));
+    mActNavLabels->setCheckable(true);
+    connect(mActNavLabels, &QAction::toggled, this, [this](bool on) {
+        mNaviDock.setRailLabels(on);
     });
 
     // View > Design: the same three widgets when docked inside the active Design page. Each entry
@@ -1867,7 +1984,13 @@ void MdiMainWindow::_createMenus()
 
 void MdiMainWindow::_createToolBars()
 {
+    // One extent for the three toolbars, the same the navigation rail draws at, instead of
+    // whatever the active style would pick.
+    const QSize iconSize{ NELusanCommon::SizeToolbar };
+
     mFileToolBar = addToolBar(tr("File"));
+    mFileToolBar->setObjectName(QStringLiteral("lusanMainToolBar"));
+    mFileToolBar->setIconSize(iconSize);
     mFileToolBar->addAction(&mActFileNewSI);
     mFileToolBar->addAction(&mActFileNewFSM);
     mFileToolBar->addAction(&mActFileNewDT);
@@ -1878,6 +2001,8 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar->addSeparator();
 
     mEditToolBar = addToolBar(tr("Edit"));
+    mEditToolBar->setObjectName(QStringLiteral("lusanMainToolBar"));
+    mEditToolBar->setIconSize(iconSize);
     mEditToolBar->addAction(&mActEditUndo);
     mEditToolBar->addAction(&mActEditRedo);
     mEditToolBar->addSeparator();
@@ -1887,6 +2012,8 @@ void MdiMainWindow::_createToolBars()
     mEditToolBar->addSeparator();
     
     mViewToolBar = addToolBar(tr("View"));
+    mViewToolBar->setObjectName(QStringLiteral("lusanMainToolBar"));
+    mViewToolBar->setIconSize(iconSize);
     mViewToolBar->addAction(&mActViewNavigator);
     mViewToolBar->addAction(&mActViewOutput);
 }
@@ -1930,6 +2057,20 @@ void MdiMainWindow::_createDockWindows()
     mNaviDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
     mDockManager->addDockWidget(ads::LeftDockWidgetArea, mNaviDockWidget);
 
+    connect(&mNaviDock, &NavigationDock::signalContentCollapsed, this, &MdiMainWindow::onNaviCollapsed);
+    connect(&mNaviDock, &NavigationDock::signalCollapseRequested, this, [this]() {
+        if (mNaviDockWidget != nullptr)
+        {
+            mNaviDockWidget->toggleView(false);
+        }
+    });
+
+    connect(&mNaviDock, &NavigationDock::signalDesignPanelHidden, this, [this](NavigationDock::eNaviWindow navi) {
+        setDesignWidgetPlacement(MdiMainWindow::designWidgetOf(navi), eDesignPlace::Hidden);
+    });
+
+    mNaviDockWidget->setTabToolTip(tr("Navigation panel"));
+
     mOutputDockWidget = new ads::CDockWidget(mDockManager, tr("Output"));
     mOutputDockWidget->setObjectName(QStringLiteral("OutputDock"));
     mOutputDockWidget->setWidget(&mOutputDock, ads::CDockWidget::ForceNoScrollArea);
@@ -1972,6 +2113,85 @@ void MdiMainWindow::_createMdiArea()
     });
 
     connect(&mDocWatcher, &QFileSystemWatcher::fileChanged, this, &MdiMainWindow::onDocumentFileChanged);
+}
+
+void MdiMainWindow::onNaviCollapsed(bool collapsed)
+{
+    ads::CDockAreaWidget* area = (mNaviDockWidget != nullptr) ? mNaviDockWidget->dockAreaWidget() : nullptr;
+    if (area == nullptr)
+        return;
+
+    // The splitter sizes the dock area, so the width has to be driven there, not on the content.
+    // The area title bar cannot render its name and buttons at rail width, so it steps aside.
+    if (area->titleBar() != nullptr)
+    {
+        area->titleBar()->setVisible(collapsed == false);
+    }
+
+    if (collapsed)
+    {
+        mNaviExpandedWidth = qMax(area->width(), static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
+    }
+
+    const int target = collapsed ? mNaviDock.railWidth() : mNaviExpandedWidth;
+
+    // A maximum-width clamp alone only reaches the splitter when something else already forces
+    // it to lay out again, so the splitter sizes are moved directly instead. The clamp is kept,
+    // but it lands after the run, otherwise the panel would jump to its end width at once.
+    area->setMaximumWidth(QWIDGETSIZE_MAX);
+
+    // The dock area carries its own floor, and the splitter obeys that floor rather than the
+    // size it is handed. Without this the panel stops short of the rail and leaves a dead strip.
+    area->setMinimumWidth(collapsed ? target : 0);
+    mNaviDockWidget->setMinimumWidth(collapsed ? target : 0);
+
+    if (mNaviWidthAnimation == nullptr)
+    {
+        mNaviWidthAnimation = new QVariantAnimation(this);
+        mNaviWidthAnimation->setDuration(120);
+        mNaviWidthAnimation->setEasingCurve(QEasingCurve::Type::InOutQuad);
+        connect(mNaviWidthAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+            applyNaviWidth(value.toInt());
+        });
+        connect(mNaviWidthAnimation, &QVariantAnimation::finished, this, [this]() {
+            ads::CDockAreaWidget* done = mNaviDockWidget->dockAreaWidget();
+            if (done == nullptr)
+                return;
+
+            const bool folded = mNaviDock.isContentCollapsed();
+            applyNaviWidth(folded ? mNaviDock.railWidth() : mNaviExpandedWidth);
+            done->setMaximumWidth(folded ? mNaviDock.railWidth() : QWIDGETSIZE_MAX);
+            // The editor kept up with the run frame by frame; this settles the last one.
+            mMdiArea.viewport()->update();
+        });
+    }
+
+    mNaviWidthAnimation->stop();
+    mNaviWidthAnimation->setStartValue(area->width());
+    mNaviWidthAnimation->setEndValue(target);
+    mNaviWidthAnimation->start();
+}
+
+void MdiMainWindow::applyNaviWidth(int width)
+{
+    ads::CDockAreaWidget* area = (mNaviDockWidget != nullptr) ? mNaviDockWidget->dockAreaWidget() : nullptr;
+    if (area == nullptr)
+        return;
+
+    QSplitter* splitter = qobject_cast<QSplitter*>(area->parentWidget());
+    const int index = (splitter != nullptr) ? splitter->indexOf(area) : -1;
+    QList<int> sizes = (splitter != nullptr) ? splitter->sizes() : QList<int>();
+    if ((index < 0) || (sizes.size() < 2))
+    {
+        area->setMaximumWidth(width);
+        return;
+    }
+
+    // What the panel gives up goes to the pane next to it, so the editor grows by the same amount.
+    const int neighbour = (index == 0) ? 1 : (index - 1);
+    sizes[neighbour] += (sizes.at(index) - width);
+    sizes[index] = width;
+    splitter->setSizes(sizes);
 }
 
 void MdiMainWindow::showDock(ads::CDockWidget* dock)

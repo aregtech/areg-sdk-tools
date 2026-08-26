@@ -110,6 +110,7 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent* event) override;
     virtual void mouseReleaseEvent(QMouseEvent* event) override;
     virtual void contextMenuEvent(QContextMenuEvent* event) override;
+    virtual void resizeEvent(QResizeEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

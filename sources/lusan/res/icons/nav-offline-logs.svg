@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan navigation rail icon: offline logs, a stored log archive -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 2.9c4.3 0 7.8 1.4 7.8 3.1s-3.5 3.1-7.8 3.1S4.2 7.7 4.2 6 7.7 2.9 12 2.9z"/>
+<path d="M19.8 6v12c0 1.7-3.5 3.1-7.8 3.1S4.2 19.7 4.2 18V6"/>
+<path d="M19.8 12c0 1.7-3.5 3.1-7.8 3.1S4.2 13.7 4.2 12"/>
+</g>
+</svg>

@@ -70,21 +70,41 @@ OptionsManager::OptionsManager()
 {
 }
 
-WorkspaceEntry OptionsManager::addWorkspace(const QString& root, const QString& description)
+WorkspaceEntry OptionsManager::addWorkspace(const QString& root, const QString& name, const QString& description)
 {
     if (existsWorkspace(root))
     {
-        return activateWorkspace(root, description);
+        WorkspaceEntry result{ activateWorkspace(root, description) };
+        if (name.isEmpty() == false)
+        {
+            result.setWorkspaceName(name);
+            updateWorkspace(result);
+        }
+
+        return result;
     }
     else
     {
-        WorkspaceEntry result(root, description, ++mCurId);
+        WorkspaceEntry result(root, name, description, ++mCurId);
         mWorkspaces.push_back(result);
         mActiveKey = result.getKey();
         _sort();
 
         return result;
     }
+}
+
+bool OptionsManager::existsWorkspaceName(const QString& name, uint32_t exceptId /*= 0*/) const
+{
+    for (const auto& entry : mWorkspaces)
+    {
+        if ((entry.getId() != exceptId) && (entry.getWorkspaceName().compare(name, Qt::CaseInsensitive) == 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void OptionsManager::addWorkspace(const WorkspaceEntry & workspace)

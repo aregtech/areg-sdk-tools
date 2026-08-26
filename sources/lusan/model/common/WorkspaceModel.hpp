@@ -58,7 +58,7 @@ public:
      * \param   describe    The description of the workspace.
      * \return  The added workspace entry.
      **/
-    WorkspaceEntry addWorkspaceEntry(const QString& root, const QString& describe);
+    WorkspaceEntry addWorkspaceEntry(const QString& root, const QString& name, const QString& describe);
     
     /**
      * \brief   Finds a workspace entry by root directory.

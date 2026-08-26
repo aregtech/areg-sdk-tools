@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: output window, a panel docked at the bottom -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="2.9" y="4.2" width="18.2" height="15.6" rx="2.1"/>
+<path d="M2.9 13.8h18.2"/>
+<path d="M6 15.6l1.5 1.4L6 18.4"/>
+<path d="M10.3 18.4h6.5"/>
+</g>
+</svg>

@@ -18,8 +18,15 @@
  ************************************************************************/
 
 #include "lusan/data/common/WorkspaceEntry.hpp"
+#include <QDir>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
+QString WorkspaceEntry::nameFromRoot(const QString& root)
+{
+    const QString name{ QDir(root).dirName() };
+    return (name.isEmpty() ? root : name);
+}
 
 const WorkspaceEntry WorkspaceEntry::InvalidWorkspace{};
 
@@ -27,6 +34,7 @@ WorkspaceEntry::WorkspaceEntry()
     : mId(0)
     , mLastAccessed(0)
     , mWorkspaceRoot("")
+    , mName         ("")
     , mDescription  ("")
     , mSources      ("")
     , mIncludes     ("")
@@ -35,10 +43,11 @@ WorkspaceEntry::WorkspaceEntry()
 {
 }
 
-WorkspaceEntry::WorkspaceEntry(const QString& root, const QString& description, uint32_t id /*= 0*/)
+WorkspaceEntry::WorkspaceEntry(const QString& root, const QString& name, const QString& description, uint32_t id /*= 0*/)
     : mId(id == 0 ? NELusanCommon::getId() : id)
     , mLastAccessed (NELusanCommon::getTimestamp())
     , mWorkspaceRoot(NELusanCommon::fixPath(root))
+    , mName         (name.isEmpty() ? WorkspaceEntry::nameFromRoot(root) : name)
     , mDescription  (description)
     , mSources      ("")
     , mIncludes     ("")
@@ -51,6 +60,7 @@ WorkspaceEntry::WorkspaceEntry(QXmlStreamReader& xml)
     : mId(0)
     , mLastAccessed (0)
     , mWorkspaceRoot()
+    , mName         ()
     , mDescription  ()
     , mSources      ("")
     , mIncludes     ("")
@@ -64,6 +74,7 @@ WorkspaceEntry::WorkspaceEntry(const WorkspaceEntry& src)
     : mId(src.mId)
     , mLastAccessed (src.mLastAccessed)
     , mWorkspaceRoot(src.mWorkspaceRoot)
+    , mName         (src.mName)
     , mDescription  (src.mDescription)
     , mSources      (src.mSources)
     , mIncludes     (src.mIncludes)
@@ -76,6 +87,7 @@ WorkspaceEntry::WorkspaceEntry(WorkspaceEntry&& src) noexcept
     : mId(src.mId)
     , mLastAccessed (src.mLastAccessed)
     , mWorkspaceRoot(std::move(src.mWorkspaceRoot))
+    , mName         (std::move(src.mName))
     , mDescription  (std::move(src.mDescription))
     , mSources      (std::move(src.mSources))
     , mIncludes     (std::move(src.mIncludes))
@@ -91,6 +103,7 @@ WorkspaceEntry& WorkspaceEntry::operator = (const WorkspaceEntry& src)
         mId = src.mId;
         mLastAccessed   = src.mLastAccessed;
         mWorkspaceRoot  = src.mWorkspaceRoot;
+        mName           = src.mName;
         mDescription    = src.mDescription;
         mSources        = src.mSources;
         mIncludes       = src.mIncludes;
@@ -108,6 +121,7 @@ WorkspaceEntry& WorkspaceEntry::operator = (WorkspaceEntry&& src) noexcept
         mId = src.mId;
         mLastAccessed   = src.mLastAccessed;
         mWorkspaceRoot  = std::move(src.mWorkspaceRoot);
+        mName           = std::move(src.mName);
         mDescription    = std::move(src.mDescription);
         mSources        = std::move(src.mSources);
         mIncludes       = std::move(src.mIncludes);
@@ -160,6 +174,10 @@ bool WorkspaceEntry::readFromXml(QXmlStreamReader& xml)
             {
                 mWorkspaceRoot = NELusanCommon::fixPath(xml.readElementText());
             }
+            else if (xmlName == NELusanCommon::xmlElementName)
+            {
+                mName = xml.readElementText();
+            }
             else if (xmlName == NELusanCommon::xmlElementDescription)
             {
                 mDescription = xml.readElementText();
@@ -173,6 +191,12 @@ bool WorkspaceEntry::readFromXml(QXmlStreamReader& xml)
         xml.readNext();
         tokenType = xml.tokenType();
         xmlName = xml.name();
+    }
+
+    // Options files written before workspaces had a name carry none.
+    if (mName.isEmpty())
+    {
+        mName = WorkspaceEntry::nameFromRoot(mWorkspaceRoot);
     }
 
     return (mId != 0);
@@ -252,6 +276,7 @@ bool WorkspaceEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeAttribute(NELusanCommon::xmlAttributeLastAccessed, QString::number(mLastAccessed));
 
         xml.writeTextElement(NELusanCommon::xmlElementWorspaceRoot, mWorkspaceRoot);
+        xml.writeTextElement(NELusanCommon::xmlElementName, mName);
         xml.writeTextElement(NELusanCommon::xmlElementDescription, mDescription);
         xml.writeStartElement(NELusanCommon::xmlElementSettings);
             xml.writeStartElement(NELusanCommon::xmlElementDirectories);

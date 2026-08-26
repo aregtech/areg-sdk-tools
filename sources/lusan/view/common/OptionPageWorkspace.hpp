@@ -1,4 +1,4 @@
-#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
 #define LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -26,14 +26,15 @@
 #include <optional>
 #include <memory>
 
-namespace Ui {
-class OptionPageWorkspace;
-}
 class WorkspaceEntry;
-class QDialog;
+class QCheckBox;
 class QComboBox;
-class QLineEdit;
+class QDialog;
 class QLabel;
+class QLineEdit;
+class QListWidget;
+class QPlainTextEdit;
+class QPushButton;
 
 /**
  * \brief   This class is managing the workspace settings.
@@ -53,6 +54,7 @@ private:
     struct WorkspaceChangeData
     {
         bool                    hasDeleted{ false };    //!< Flag, indicating that the workspace is deleted.
+        std::optional<QString>  newName{};              //!< Short name of the workspace
         std::optional<QString>  newDescription{};       //!< Description of the workspace
     };
 
@@ -106,6 +108,11 @@ private slots:
      * \brief   Triggered when workspace description has been changed.
      **/
     void onWorkspaceDescChanged();
+
+    /**
+     * \brief   Triggered when the name of the selected workspace is edited.
+     **/
+    void onWorkspaceNameChanged();
 
     /**
      * \brief   Triggered when default workspace check-box is checked or unchecked.
@@ -167,6 +174,18 @@ private:
     void setupThemeControls();
     int selectedTheme() const;
     
+    /**
+     * \brief   Creates the controls of the page.
+     **/
+    void setupWidgets();
+
+    /**
+     * \brief   Reports on the hint line whether the entered name can be used, and blocks an
+     *          empty or already used name from being stored.
+     * \return  True if the name of the selected workspace can be applied.
+     **/
+    bool validateName();
+
     //!< Returns root path edit object
     inline QLineEdit* ctrlRoot() const;
 
@@ -186,8 +205,18 @@ private:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::OptionPageWorkspace>    mUi;                    //!< The user interface object.
     MapModifiedWorkspaces                       mModifiedWorkspaces;    //!< The map of modified workspaces.
+    QListWidget*                                mList;                  //!< The list of the known workspaces.
+    QLineEdit*                                  mName;                  //!< The short name of the selected workspace.
+    QLineEdit*                                  mRootDir;               //!< The root directory of the selected workspace.
+    QLineEdit*                                  mSourceDir;             //!< The sources directory of the selected workspace.
+    QLineEdit*                                  mIncludeDir;            //!< The includes directory of the selected workspace.
+    QLineEdit*                                  mDeliveryDir;           //!< The delivery directory of the selected workspace.
+    QLineEdit*                                  mLogDir;                //!< The logs directory of the selected workspace.
+    QCheckBox*                                  mDefault;               //!< The flag to open the selected workspace at start.
+    QPlainTextEdit*                             mDescription;           //!< The description of the selected workspace.
+    QPushButton*                                mDelete;                //!< The button to forget the selected workspace.
+    QLabel*                                     mHint;                  //!< The line reporting a name that cannot be used.
     QString                                     mSources;               //!< The sources directory of active workspace.
     QString                                     mIncludes;              //!< The includes directory of active workspace.
     QString                                     mDelivery;              //!< The delivery directory of active workspace.

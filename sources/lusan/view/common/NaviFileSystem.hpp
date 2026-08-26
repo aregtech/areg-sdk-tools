@@ -19,7 +19,7 @@
  *
  ************************************************************************/
 
-#include "lusan/view/common/NavigationWindow.hpp"
+#include "lusan/view/common/NaviToolbarWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
 #include "lusan/model/common/FileSystemEntry.hpp"
@@ -36,15 +36,12 @@ class FileSystemFilter;
 class GeneralFileSystemModel;
 class MdiMainWindow;
 class TableCell;
+class QComboBox;
 class QFileInfo;
 class QItemSelection;
 class QTreeView;
 class QToolButton;
 class WorkspaceEntry;
-
-namespace Ui {
-    class NaviFileSystem;
-}
 
 //////////////////////////////////////////////////////////////////////////
 // NaviFileSystem class declaration
@@ -53,9 +50,11 @@ namespace Ui {
  * \brief   The NaviFileSystem class is a view of the workspace related file system.
  *          The class is used to display the file system in the workspace.
  **/
-class NaviFileSystem    : public    NavigationWindow
+class NaviFileSystem    : public    NaviToolbarWindow
                         , protected IETableHelper
 {
+    Q_OBJECT
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -185,55 +184,32 @@ private slots:
 //////////////////////////////////////////////////////////////////////////
 private:
 
-    /**
-     * \brief   Returns the file system tree view control.
-     **/
-    QTreeView* ctrlTable() const;
+    //!< Returns the refresh tool button control.
+    inline QToolButton* ctrlToolRefresh() const;
 
-    /**
-     * \brief   Returns the refresh tool button control.
-     **/
-    QToolButton* ctrlToolRefresh() const;
+    //!< Returns the show all tool button control.
+    inline QToolButton* ctrlToolShowAll() const;
 
-    /**
-     * \brief   Returns the show all tool button control.
-     **/
-    QToolButton* ctrlToolShowAll() const;
+    //!< Returns the navigate from root (machine) tool button control.
+    inline QToolButton* ctrlToolNaviRoot() const;
 
-    /**
-     * \brief   Returns the navigate from root (machine) tool button control.
-     **/
-    QToolButton* ctrlToolNaviRoot() const;
+    //!< Returns the collapse all tool button control.
+    inline QToolButton* ctrlToolCollapse() const;
 
-    /**
-     * \brief   Returns the collapse all tool button control.
-     **/
-    QToolButton* ctrlToolCollapse() const;
+    //!< Returns the new folder tool button control.
+    inline QToolButton* ctrlToolNewFolder() const;
 
-    /**
-     * \brief   Returns the new folder tool button control.
-     **/
-    QToolButton* ctrlToolNewFolder() const;
+    //!< Returns the new file tool button control.
+    inline QToolButton* ctrlToolNewFile() const;
 
-    /**
-     * \brief   Returns the new file tool button control.
-     **/
-    QToolButton* ctrlToolNewFile() const;
+    //!< Returns the open tool button control.
+    inline QToolButton* ctrlToolOpen() const;
 
-    /**
-     * \brief   Returns the open tool button control.
-     **/
-    QToolButton* ctrlToolOpen() const;
+    //!< Returns the edit tool button control.
+    inline QToolButton* ctrlToolEdit() const;
 
-    /**
-     * \brief   Returns the edit tool button control.
-     **/
-    QToolButton* ctrlToolEdit() const;
-
-    /**
-     * \brief   Returns the delete tool button control.
-     **/
-    QToolButton* ctrlToolDelete() const;
+    //!< Returns the delete tool button control.
+    inline QToolButton* ctrlToolDelete() const;
 
     /**
      * \brief   Enables or disables the toolbar buttons that act on one item, according to what
@@ -247,6 +223,26 @@ private:
      * \brief   Updates the data of the file system.
      **/
     void updateData();
+
+    /**
+     * \brief   Creates the tool buttons of the workspace explorer.
+     **/
+    void setupToolbar();
+
+    /**
+     * \brief   Creates the workspace selector shown above the tool buttons.
+     **/
+    void setupWorkspaceSelector();
+
+    /**
+     * \brief   Fills the workspace selector with the known workspaces and marks the active one.
+     **/
+    void populateWorkspaces();
+
+    /**
+     * \brief   Moves the workspace selector back to the active workspace without switching.
+     **/
+    void restoreWorkspaceSelection();
 
     /**
      * \brief   Initializes the widgets.
@@ -288,6 +284,12 @@ private slots:
      **/
     void onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace, bool isActiveWorkspace);
 
+    /**
+     * \brief   Triggered when the user picks an entry of the workspace selector.
+     * \param   index   The index of the picked entry.
+     **/
+    void onWorkspaceSelected(int index);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
@@ -295,9 +297,67 @@ private:
     FileSystemModel*        mNaviModel;     //!< The model of the file system.
     GeneralFileSystemModel* mGenModel;      //!< The general model of the file system.
     FileSystemFilter*       mFileFilter;    //!< The file filter object.
-    Ui::NaviFileSystem*     ui;             //!< The user interface object.
-    WorkspaceElem          mRootPaths;     //!< The list of root paths.
+    WorkspaceElem           mRootPaths;     //!< The list of root paths.
     TableCell*              mTableCell;     //!< The table cell object.
+    QComboBox*              mWorkspaces;    //!< The selector of the active workspace.
+    QToolButton*            mToolRefresh;   //!< The tool button to reload the file system tree.
+    QToolButton*            mToolShowAll;   //!< The tool button to show every file or only the known ones.
+    QToolButton*            mToolCollapse;  //!< The tool button to collapse all folders.
+    QToolButton*            mToolNaviRoot;  //!< The tool button to switch to the file system of the machine.
+    QToolButton*            mToolOpen;      //!< The tool button to open the selected file.
+    QToolButton*            mToolNewFolder; //!< The tool button to create a new folder.
+    QToolButton*            mToolNewFile;   //!< The tool button to create a new file.
+    QToolButton*            mToolEdit;      //!< The tool button to rename the selected entry.
+    QToolButton*            mToolDelete;    //!< The tool button to delete the selected entry.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// NaviFileSystem class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline QToolButton* NaviFileSystem::ctrlToolRefresh() const
+{
+    return mToolRefresh;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolShowAll() const
+{
+    return mToolShowAll;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolNaviRoot() const
+{
+    return mToolNaviRoot;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolCollapse() const
+{
+    return mToolCollapse;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolNewFolder() const
+{
+    return mToolNewFolder;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolNewFile() const
+{
+    return mToolNewFile;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolOpen() const
+{
+    return mToolOpen;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolEdit() const
+{
+    return mToolEdit;
+}
+
+inline QToolButton* NaviFileSystem::ctrlToolDelete() const
+{
+    return mToolDelete;
+}
 
 #endif  // LUSAN_VIEW_COMMON_NAVIFILESYSTEM_HPP

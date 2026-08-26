@@ -23,69 +23,89 @@
  * Includes
  ************************************************************************/
 
-#include "lusan/view/common/NavigationWindow.hpp"
+#include "lusan/view/common/NaviToolbarWindow.hpp"
 #include "areg/logging/areg_log.h"
 
-#include <QWidget>
+#include <QList>
 #include <QString>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class LoggingScopesModelBase;
-class MdiMainWindow;
 class LoggingModelBase;
+class MdiMainWindow;
 class ScopeNodeBase;
+class QAction;
 class QItemSelectionModel;
 class QModelIndex;
+class QPoint;
 class QToolButton;
-class QTreeView;
 
-class NaviLogScopeBase : public NavigationWindow
+//////////////////////////////////////////////////////////////////////////
+// NaviLogScopeBase class declaration
+//////////////////////////////////////////////////////////////////////////
+/**
+ * \brief   The base class of the live and offline log scope explorers. It builds the tool
+ *          button row shared by both explorers, keeps the scope tree in sync with the scope
+ *          model, and shows the context menu of the scope tree.
+ **/
+class NaviLogScopeBase : public NaviToolbarWindow
 {
+    Q_OBJECT
+
+//////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    //!< The entries of the scope tree context menu.
+    enum eScopeMenu
+    {
+          MenuPrioNotset    = 0 //!< Reset priorities
+        , MenuPrioAllset        //!< Set all priorities
+        , MenuPrioDebug         //!< Set debug priority
+        , MenuPrioInfo          //!< Set info priority
+        , MenuPrioWarn          //!< Set warning priority
+        , MenuPrioError         //!< Set error priority
+        , MenuPrioFatal         //!< Set fatal priority
+        , MenuPrioScope         //!< Set scope priority
+        , MenuExpandSelected    //!< Expand selected node
+        , MenuCollapseSelected  //!< Collapse selected node
+        , MenuExpandAll         //!< Expand all nodes
+        , MenuCollapseAll       //!< Collapse all nodes
+        , MenuSavePrioTarget    //!< Save priority settings of the selected target
+        , MenuSavePrioAll       //!< Save priority settings of all targets
+
+        , MenuCount             //!< The number of entries in the menu
+    };
+
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
-    virtual ~NaviLogScopeBase() = default;
+    virtual ~NaviLogScopeBase(void) = default;
 
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
 public:
-
-    //!< Sets the scope navigation tree view.
-    inline void setNaviTree(QTreeView* treeView);
-
-    //!< Sets the tool-button to hide / show error priority logs.
-    inline void setPrioError(QToolButton* toolButton);
-
-    //!< Sets the tool-button to hide / show warning priority logs.
-    inline void setPrioWarning(QToolButton* toolButton);
-
-    //!< Sets the tool-button to hide / show info priority logs.
-    inline void setPrioInfo(QToolButton* toolButton);
-
-    //!< Sets the tool-button to hide / show debug priority logs.
-    inline void setPrioDebug(QToolButton* toolButton);
-
-    //!< Sets the tool-button to hide / show scopes priority logs.
-    inline void setPrioScopes(QToolButton* toolButton);
 
     /**
      * \brief   Returns true if root entries are collapsed.
      **/
-    bool areRootsCollapsed() const;
-
-    //!< Sets up the model for the log scopes navigation.
-    void setupModel(LoggingScopesModelBase* model);
-
-    //!< Sets up the controls for the log scopes navigation.
-    void setupControls(QTreeView* treeView, QToolButton* prioError, QToolButton* prioWarning, QToolButton* prioInfo, QToolButton* prioDebug, QToolButton* prioScopes);
+    bool areRootsCollapsed(void) const;
 
     /**
-     * \brief   Forces a uniform, compact icon size on every tool button of this view. The
-     *          full-bleed themed toolbar icons (connect / settings / save / find) otherwise
-     *          render taller than the fixed toolbar row and are clipped at the top and bottom
-     *          (the padded priority SVGs stayed within the row, which is why only some icons
-     *          looked cut). 12 logical px is the largest edge that fits the row with margin at
-     *          the tested display scales. Must be called after the UI is set up.
-     * \param   iconExtent  The square icon edge in logical pixels.
+     * \brief   Sets the scope model and binds it to the scope tree.
+     * \param   model   The scope model to show in the tree.
      **/
-    void capToolButtonIconSizes(int iconExtent = 12);
+    void setupModel(LoggingScopesModelBase* model);
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Enables or disables lot priority tool buttons based on selection index.
@@ -128,7 +148,7 @@ public:
     /**
      * \brief   Collapses the root entries.
      **/
-    virtual void collapseRoots();
+    virtual void collapseRoots(void);
 
     /**
      * \brief   Sets the pointer of associated live logs model.
@@ -141,11 +161,108 @@ public:
      * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
      *          If no live logs are available, returns nullptr.
      **/
-    virtual LoggingModelBase* getLoggingModel() const;
+    virtual LoggingModelBase* getLoggingModel(void) const;
 
-    // Call to collapse and expand nodes.
-    virtual void onCollapseClicked(bool checked, QToolButton* button);
+    /**
+     * \brief   Collapses the root entries or expands the complete tree.
+     * \param   checked     If true, only the root entry stays expanded.
+     **/
+    virtual void onCollapseClicked(bool checked);
 
+//////////////////////////////////////////////////////////////////////////
+// Operations for the derived classes
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Creates the tool button row and the scope tree of the explorer. Call it from
+     *          the constructor of the derived class, before the scope model is set.
+     * \note    It calls addSpecificTools() and addMoveTools(), so the derived object must be
+     *          constructed before the call.
+     **/
+    void setupScopeToolbar(void);
+
+    /**
+     * \brief   Connects the tool buttons and the scope tree. Call it after setupModel().
+     **/
+    void setupScopeControls(void);
+
+    /**
+     * \brief   Adds the tool buttons of the derived explorer placed between the collapse and
+     *          the find buttons.
+     **/
+    virtual void addSpecificTools(void);
+
+    /**
+     * \brief   Adds the tool buttons of the derived explorer placed at the end of the row.
+     **/
+    virtual void addMoveTools(void);
+
+    /**
+     * \brief   Returns true if the context menu offers the entries to save the priorities on
+     *          the logging targets.
+     **/
+    virtual bool hasSavePrioMenu(void) const;
+
+    /**
+     * \brief   Returns true if the priorities can be saved on the logging targets right now.
+     **/
+    virtual bool canSavePrio(void) const;
+
+    /**
+     * \brief   Returns true if the context menu offers the entry to select all priorities.
+     **/
+    virtual bool hasSelectAllPrioMenu(void) const;
+
+    /**
+     * \brief   Shows the context menu of the scope tree and runs the chosen entry.
+     * \param   pos     The cursor position in the coordinates of the tree viewport.
+     **/
+    void showScopeContextMenu(const QPoint& pos);
+
+    /**
+     * \brief   Expands the given node and its direct children.
+     * \param   node            The index of the node to expand.
+     * \param   markExpanded    If true, the model keeps the expanded state of the nodes.
+     **/
+    void expandNodeAndChildren(const QModelIndex& node, bool markExpanded);
+
+    /**
+     * \brief   Expands the given node if it is collapsed.
+     * \param   node            The index of the node to expand.
+     * \param   markExpanded    If true, the model keeps the expanded state of the node.
+     **/
+    void expandNode(const QModelIndex& node, bool markExpanded);
+
+//////////////////////////////////////////////////////////////////////////
+// Tool button controls
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    //!< Returns the control object to expand or collapse entries of scopes.
+    inline QToolButton* ctrlCollapse(void) const;
+
+    //!< Returns the control object to find a string.
+    inline QToolButton* ctrlFind(void) const;
+
+    //!< Returns the control object to set error level of the logs.
+    inline QToolButton* ctrlLogError(void) const;
+
+    //!< Returns the control object to set warning level of the logs.
+    inline QToolButton* ctrlLogWarning(void) const;
+
+    //!< Returns the control object to set information level of the logs.
+    inline QToolButton* ctrlLogInfo(void) const;
+
+    //!< Returns the control object to set debug level of the logs.
+    inline QToolButton* ctrlLogDebug(void) const;
+
+    //!< Returns the control object to enable log scopes of the logs.
+    inline QToolButton* ctrlLogScopes(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
 protected:
 
     /**
@@ -160,58 +277,71 @@ protected:
      * \brief   Slot, triggered when a navigation node is expanded or collapsed.
      * \param   index       The index of the navigation node that was expanded or collapsed.
      * \param   expanded    The flag indicating whether the node is expanded or collapsed.
-     * \param   toolButton  The tool button associated with the navigation node, if any.
      **/
-    virtual void onNodeExpanded(const QModelIndex& index, bool expanded, QToolButton* toolButton);
+    virtual void onNodeExpanded(const QModelIndex& index, bool expanded);
 
     //!< Slot, triggered when the selection in the log scopes navigation is changed.
     virtual void onRowChanged(const QModelIndex& current, const QModelIndex& previous);
 
 private:
     //!< Validates the object by checking with assertions.
-    inline void validateControls();
+    inline void validateControls(void) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 protected:
     LoggingScopesModelBase* mScopesModel;   //!< The model of the log scopes
     QItemSelectionModel*    mSelModel;      //!< Selection model
 
 private:
-    QTreeView*              mNaviTree;      //!< The navigation tree view for log scopes
+    QToolButton*            mToolCollapse;  //!< The tool button to collapse or expand the scope tree
+    QToolButton*            mToolFind;      //!< The tool button to find a log message
     QToolButton*            mPrioError;     //!< The tool button for error log priority
     QToolButton*            mPrioWarning;   //!< The tool button for warning log priority
     QToolButton*            mPrioInfo;      //!< The tool button for info log priority
     QToolButton*            mPrioDebug;     //!< The tool button for debug log priority
     QToolButton*            mPrioScopes;    //!< The tool button for scopes log priority
+    QList<QAction*>         mMenuActions;   //!< The entries of the scope tree context menu
 };
 
-inline void NaviLogScopeBase::setNaviTree(QTreeView* treeView)
+//////////////////////////////////////////////////////////////////////////
+// NaviLogScopeBase class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline QToolButton* NaviLogScopeBase::ctrlCollapse(void) const
 {
-    mNaviTree = treeView;
+    return mToolCollapse;
 }
 
-inline void NaviLogScopeBase::setPrioError(QToolButton* toolButton)
+inline QToolButton* NaviLogScopeBase::ctrlFind(void) const
 {
-    mPrioError = toolButton;
+    return mToolFind;
 }
 
-inline void NaviLogScopeBase::setPrioWarning(QToolButton* toolButton)
+inline QToolButton* NaviLogScopeBase::ctrlLogError(void) const
 {
-    mPrioWarning = toolButton;
+    return mPrioError;
 }
 
-inline void NaviLogScopeBase::setPrioInfo(QToolButton* toolButton)
+inline QToolButton* NaviLogScopeBase::ctrlLogWarning(void) const
 {
-    mPrioInfo = toolButton;
+    return mPrioWarning;
 }
 
-inline void NaviLogScopeBase::setPrioDebug(QToolButton* toolButton)
+inline QToolButton* NaviLogScopeBase::ctrlLogInfo(void) const
 {
-    mPrioDebug = toolButton;
+    return mPrioInfo;
 }
 
-inline void NaviLogScopeBase::setPrioScopes(QToolButton* toolButton)
+inline QToolButton* NaviLogScopeBase::ctrlLogDebug(void) const
 {
-    mPrioScopes = toolButton;
+    return mPrioDebug;
+}
+
+inline QToolButton* NaviLogScopeBase::ctrlLogScopes(void) const
+{
+    return mPrioScopes;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVILOGSCOPEBASE_HPP

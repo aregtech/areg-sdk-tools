@@ -43,10 +43,6 @@ class QTreeView;
 class QVBoxLayout;
 class QFileDialog;
 
-namespace Ui {
-    class NaviOfflineLogsScopes;
-}
-
 //////////////////////////////////////////////////////////////////////////
 // NaviOfflineLogsScopes class declaration
 //////////////////////////////////////////////////////////////////////////
@@ -57,25 +53,6 @@ namespace Ui {
 class NaviOfflineLogsScopes : public NaviLogScopeBase
 {
     Q_OBJECT
-
-    //!< The priority indexes for the context menu entries.
-    enum eLogActions
-    {
-          PrioNotset    = 0 //!< Reset priorities
-        , PrioAllset        //!< Set all priorities
-        , PrioDebug         //!< Set debug priority
-        , PrioInfo          //!< Set info priority
-        , PrioWarn          //!< Set warning priority
-        , PrioError         //!< Set error priority
-        , PrioFatal         //!< Set fatal priority
-        , PrioScope         //!< Set scope priority
-        , ExpandSelected    //!< Expands selected node
-        , CollapseSelected  //!< Collapse selected node
-        , ExpandAll         //!< Expand all nodes
-        , CollapseAll       //!< Collapse all nodes
-
-        , PrioCount         //!< The number of entries in the menu
-    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -150,51 +127,39 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
-private:
-
-    //!< Returns the control object to expand or collapse entries of scopes.
-    QToolButton* ctrlCollapse() const;
-
-    //!< Returns the control object to open database files.
-    QToolButton* ctrlOpenDatabase() const;
-
-    //!< Returns the control object to close the current database.
-    QToolButton* ctrlCloseDatabase() const;
-
-    //!< Returns the control object to refresh the current database.
-    QToolButton* ctrlRefreshDatabase() const;
-
-    //!< Returns the control object to find a string.
-    QToolButton* ctrlFind() const;
-
-    //!< Returns the control object to set error level of the logs
-    QToolButton* ctrlLogError() const;
-
-    //!< Returns the control object to set warning level of the logs
-    QToolButton* ctrlLogWarning() const;
-
-    //!< Returns the control object to set information level of the logs
-    QToolButton* ctrlLogInfo() const;
-
-    //!< Returns the control object to set debug level of the logs
-    QToolButton* ctrlLogDebug() const;
-
-    //!< Returns the control object to enable log scopes of the logs
-    QToolButton* ctrlLogScopes() const;
-
-    //!< Returns the control object to move to the top of log window.
-    QToolButton* ctrlMoveTop() const;
-
-    //!< Returns the control object to move to the bottom of log window.
-    QToolButton* ctrlMoveBottom() const;
-
-    //!< Returns the control object of the log messages
-    QTreeView* ctrlTable() const;
+protected:
 
     /**
-     * \brief   Initializes the widgets.
+     * \brief   Adds the open, close and refresh database tool buttons.
      **/
-    void setupWidgets();
+    void addSpecificTools(void) override;
+
+    /**
+     * \brief   Adds the move to bottom and move to top tool buttons.
+     **/
+    void addMoveTools(void) override;
+
+    /**
+     * \brief   Returns true, the offline explorer offers to select all priorities at once.
+     **/
+    bool hasSelectAllPrioMenu(void) const override;
+
+private:
+
+    //!< Returns the control object to open database files.
+    inline QToolButton* ctrlOpenDatabase(void) const;
+
+    //!< Returns the control object to close the current database.
+    inline QToolButton* ctrlCloseDatabase(void) const;
+
+    //!< Returns the control object to refresh the current database.
+    inline QToolButton* ctrlRefreshDatabase(void) const;
+
+    //!< Returns the control object to move to the top of log window.
+    inline QToolButton* ctrlMoveTop(void) const;
+
+    //!< Returns the control object to move to the bottom of log window.
+    inline QToolButton* ctrlMoveBottom(void) const;
 
     /**
      * \brief   Initializes the signals.
@@ -216,9 +181,6 @@ private:
      *          selected nodes set in the logging model.
      **/
     void restoreView();
-
-    //!< Returns the accumulated selected priorities.
-    uint32_t getSelectedPrios() const;
 
 private slots:
     /**
@@ -248,18 +210,44 @@ private slots:
      **/
     void onScopesInserted(const QModelIndex & parent);
 
-    /**
-     * \brief   Slot triggered when the user makes right click on the scope navigation window.
-     * \param   pos     The mouse right click cursor position on scope navigation window.
-     **/
-    void onTreeViewContextMenuRequested(const QPoint& pos);
-
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::NaviOfflineLogsScopes*  ui;             //!< The user interface object.
-    QList<QAction*>             mMenuActions;   //!< The list of menu actions
+    QToolButton*    mToolDbOpen;    //!< The tool button to open a log database file.
+    QToolButton*    mToolDbClose;   //!< The tool button to close the opened log database file.
+    QToolButton*    mToolRefresh;   //!< The tool button to reload the opened log database file.
+    QToolButton*    mToolMoveBottom;//!< The tool button to move to the bottom of the log window.
+    QToolButton*    mToolMoveTop;   //!< The tool button to move to the top of the log window.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// NaviOfflineLogsScopes class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline QToolButton* NaviOfflineLogsScopes::ctrlOpenDatabase(void) const
+{
+    return mToolDbOpen;
+}
+
+inline QToolButton* NaviOfflineLogsScopes::ctrlCloseDatabase(void) const
+{
+    return mToolDbClose;
+}
+
+inline QToolButton* NaviOfflineLogsScopes::ctrlRefreshDatabase(void) const
+{
+    return mToolRefresh;
+}
+
+inline QToolButton* NaviOfflineLogsScopes::ctrlMoveTop(void) const
+{
+    return mToolMoveTop;
+}
+
+inline QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom(void) const
+{
+    return mToolMoveBottom;
+}
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP

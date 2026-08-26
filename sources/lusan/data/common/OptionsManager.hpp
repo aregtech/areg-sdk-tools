@@ -80,10 +80,20 @@ public:
     /**
      * \brief   Adds a new workspace entry.
      * \param   root        The root directory of the workspace.
+     * \param   name        The short name of the workspace. Empty takes the root directory name.
      * \param   description The description of the workspace.
      * \return  The added workspace entry.
      **/
-    WorkspaceEntry addWorkspace(const QString& root, const QString& description);
+    WorkspaceEntry addWorkspace(const QString& root, const QString& name, const QString& description);
+
+    /**
+     * \brief   Checks whether a workspace with the given name already exists.
+     * \param   name        The name to check. The comparison ignores the letter case.
+     * \param   exceptId    The identifier of a workspace to skip, so an entry does not clash
+     *                      with itself while it is edited. Zero checks every entry.
+     * \return  True if another workspace already carries the name.
+     **/
+    bool existsWorkspaceName(const QString& name, uint32_t exceptId = 0) const;
     
     /**
      * \brief   Adds an existing workspace entry.

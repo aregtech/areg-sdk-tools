@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: the entry is not valid, a warning triangle -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#e0a217" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+</g>
+<path d="M10.6 4.5L2.9 17.9a1.6 1.6 0 0 0 1.4 2.4h15.4a1.6 1.6 0 0 0 1.4-2.4L13.4 4.5a1.6 1.6 0 0 0-2.8 0z" fill="#e0a217" stroke="none"/>
+<path d="M12 9.6v4.6" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round"/>
+<circle cx="12" cy="17.2" r="1.15" fill="#ffffff"/>
+</svg>
