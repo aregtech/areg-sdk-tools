@@ -189,6 +189,17 @@ protected:
     virtual void onSearchClicked(bool newSearch);
 
     /**
+     * \brief   Copies the message text of the selected rows to the clipboard, one row per line.
+     **/
+    void onCopyMessage();
+
+    /**
+     * \brief   Copies the selected rows to the clipboard in the layout that the target writes
+     *          into its own log file, one row per line.
+     **/
+    void onCopyRow();
+
+    /**
      * \brief   Slot, triggered when mouse button is clicked on the log table.
      * \param   index   The index of the cell that was clicked.
      **/
@@ -258,6 +269,20 @@ private:
      * \brief   Populates menu and sets the action handlers.
      **/
     void _populateColumnsMenu(QMenu* menu, int curRow);
+
+    /**
+     * \brief   Returns the rows currently selected in the log table, in view order.
+     *          Falls back to the current row when there is no selection.
+     **/
+    QList<int> _selectedRows() const;
+
+    /**
+     * \brief   Builds the clipboard text of the given rows.
+     * \param   rows        The rows to format.
+     * \param   fullLayout  If true, uses the target's own log file layout; otherwise
+     *                      returns the message text alone.
+     **/
+    QString _rowsToText(const QList<int>& rows, bool fullLayout) const;
 
     /**
      * \brief   Updates the current logical index of the "Message" column.

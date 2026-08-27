@@ -236,6 +236,16 @@ void NaviLogScopeBase::enableButtons(const QModelIndex& selection)
         mPrioInfo->setEnabled(false);
         mPrioDebug->setEnabled(false);
         mPrioScopes->setEnabled(false);
+
+        // A coloured icon says "this filter is on". With nothing selected that is not
+        // true, so the buttons drop their checked state and their colour together.
+        mPrioError->setChecked(false);
+        mPrioWarning->setChecked(false);
+        mPrioInfo->setChecked(false);
+        mPrioDebug->setChecked(false);
+        mPrioScopes->setChecked(false);
+
+        updateColors(false, false, false, false, false);
     }
 }
 

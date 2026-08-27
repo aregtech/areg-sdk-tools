@@ -661,6 +661,12 @@ protected:
     /**
      * \brief   Helper to get background color data for a log message and column.
      **/
+    /**
+     * brief   Returns the tooltip of the given cell. The message column reports the
+     *          full text, and how much of it was cut when the entry did not hold it all.
+     **/
+    QString getTooltipData(const areg::LogEntry* logMessage, eColumn column) const;
+
     QBrush getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**

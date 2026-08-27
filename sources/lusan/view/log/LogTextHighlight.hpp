@@ -51,6 +51,13 @@ public:
 protected:
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
+private:
+
+    /**
+     * brief   Draws the priority rail on the leading edge of the row.
+     **/
+    void _paintPriorityRail(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

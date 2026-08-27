@@ -19,6 +19,10 @@
 
 #include "lusan/view/log/LogTextHighlight.hpp"
 
+#include "lusan/common/NELogPalette.hpp"
+
+#include "areg/logging/LoggingDefs.hpp"
+
 #include <QPainter>
 #include <QTextLayout>
 #include <QTextLine>
@@ -32,6 +36,8 @@ LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QO
 
 void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+    _paintPriorityRail(painter, option, index);
+
     const int foundColumn = static_cast<int>(mFoundPos.colFound);
     if ((static_cast<int>(mFoundPos.rowFound) != index.row()) ||
         ((foundColumn >= 0) && (foundColumn != index.column())) ||
@@ -75,5 +81,33 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QPointF textPos(option.rect.left() + 2, yOffset + 1);
 
     layout.draw(painter, textPos);
+    painter->restore();
+}
+
+void LogTextHighlight::_paintPriorityRail(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    // The rail rides on the leading column, so it survives every column being hidden
+    // except the message, and it stays visible when the row is selected.
+    if (index.column() != 0)
+        return;
+
+    const QVariant entryData{ index.data(Qt::UserRole) };
+    const areg::LogEntry* entry{ entryData.value<const areg::LogEntry*>() };
+    if (entry == nullptr)
+        return;
+
+    const QColor rail{ NELogPalette::railColor(NELogPalette::roleOf(*entry)) };
+    if (rail.alpha() == 0)
+        return;
+
+    // Error is drawn heavier than Warning, so the two are told apart with the colour removed.
+    const bool heavy{ (entry->logMessagePrio == areg::LogPriority::PrioError) ||
+                      (entry->logMessagePrio == areg::LogPriority::PrioFatal) };
+    const int width { heavy ? 4 : 3 };
+    const int inset { 2 };
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->fillRect(QRect(option.rect.left() + inset, option.rect.top() + 1, width, option.rect.height() - 2), rail);
     painter->restore();
 }

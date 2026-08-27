@@ -17,6 +17,8 @@
  *
  ************************************************************************/
 #include "lusan/model/log/LogViewerFilter.hpp"
+
+#include "areg/logging/LoggingDefs.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include <QModelIndex>
 
@@ -302,16 +304,19 @@ inline bool LogViewerFilter::matchMessage(const areg::LogEntry* msg, const NELus
     if (filterText == nullptr)
         return false;
 
+    // logMessageLen is the length before the message was cut and can exceed the buffer,
+    // so the stored length is what may be read.
+    const QString message{ QString::fromUtf8(msg->logMessage, static_cast<int>(areg::log_message_size(*msg))) };
+
     // Check if the cell data contains the filter text (case-insensitive)
     if (filterText->isWildCard || filterText->isWholeWord)
     {
-        // return wildcardMatch(QString::fromUtf8(msg->logMessage, msg->logMessageLen), filterText.text, filterText.isCaseSensitive, filterText.isWholeWord);
         Q_ASSERT(mRePattern.isEmpty() == false);
-        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(mReExpression);
+        return message.contains(mReExpression);
     }
     else
     {
-        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(filterText->text, filterText->isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
+        return message.contains(filterText->text, filterText->isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
     }
 }
 

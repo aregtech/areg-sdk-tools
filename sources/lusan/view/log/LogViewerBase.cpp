@@ -27,6 +27,12 @@
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/log/LogTextHighlight.hpp"
 
+#include "areg/base/DateTime.hpp"
+#include "areg/logging/LoggingDefs.hpp"
+
+#include <QClipboard>
+#include <QFontDatabase>
+#include <QGuiApplication>
 #include <QVBoxLayout>
 #include <QKeyEvent>
 #include <QMdiSubWindow>
@@ -35,6 +41,8 @@
 #include <QPoint>
 #include <QShortcut>
 #include <QTableView>
+
+#include <algorithm>
 
 
 const QString& LogViewerBase::fileExtension()
@@ -141,6 +149,8 @@ void LogViewerBase::setupWidgets()
     mFilter = new LogViewerFilter(mLogModel);
     mHeader = new LogTableHeader(mLogTable, mLogModel);
     QShortcut* shortcutSearch = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this);
+    QShortcut* shortcutCopyMsg = new QShortcut(QKeySequence::Copy, this);
+    QShortcut* shortcutCopyRow = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C), this);
     mSearch.setLogModel(mFilter);
 
     mLogTable->setHorizontalHeader(mHeader);
@@ -151,7 +161,7 @@ void LogViewerBase::setupWidgets()
 
     mLogTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     mLogTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mLogTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    mLogTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
     mLogTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     mLogTable->setShowGrid(false);
     mLogTable->setCurrentIndex(QModelIndex());
@@ -160,6 +170,13 @@ void LogViewerBase::setupWidgets()
     mLogTable->setAutoScroll(true);
     mLogTable->setVerticalScrollMode(QTableView::ScrollPerItem);
     mLogTable->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    // Log payloads are machine text: hex values, identifiers, aligned key=value pairs.
+    // A fixed-width face puts the same character position in the same column on every
+    // row, so a value that changed between two lines is visible without reading them.
+    QFont fixed{ QFontDatabase::systemFont(QFontDatabase::FixedFont) };
+    fixed.setPointSizeF(font().pointSizeF());
+    mLogTable->setFont(fixed);
 
     // Set the layout
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -220,6 +237,8 @@ void LogViewerBase::setupWidgets()
             , [this](const QModelIndex &current, const QModelIndex &previous){onCurrentRowChanged(current, previous);});
     connect(shortcutSearch, &QShortcut::activated                       , this
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
+    connect(shortcutCopyMsg, &QShortcut::activated                      , this, &LogViewerBase::onCopyMessage);
+    connect(shortcutCopyRow, &QShortcut::activated                      , this, &LogViewerBase::onCopyRow);
 }
 
 void LogViewerBase::onWindowClosing(bool isActive)
@@ -471,10 +490,120 @@ void LogViewerBase::onHeaderContextMenu(const QPoint& pos)
 void LogViewerBase::onTableContextMenu(const QPoint& pos)
 {
     QMenu menu(this);
-    QMenu* columnsMenu = menu.addMenu(tr("Columns"));
     QModelIndex idx{ ctrlTable()->currentIndex() };
+
+    QAction* copyMsg = menu.addAction(tr("Copy message"));
+    copyMsg->setShortcut(QKeySequence::Copy);
+    copyMsg->setEnabled(idx.isValid());
+    connect(copyMsg, &QAction::triggered, this, &LogViewerBase::onCopyMessage);
+
+    QAction* copyRow = menu.addAction(tr("Copy row"));
+    copyRow->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C));
+    copyRow->setEnabled(idx.isValid());
+    connect(copyRow, &QAction::triggered, this, &LogViewerBase::onCopyRow);
+
+    menu.addSeparator();
+    QMenu* columnsMenu = menu.addMenu(tr("Columns"));
     _populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
     menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
+}
+
+QList<int> LogViewerBase::_selectedRows(void) const
+{
+    QList<int> result;
+    QTableView* table{ const_cast<LogViewerBase*>(this)->ctrlTable() };
+    if (table == nullptr)
+        return result;
+
+    const QItemSelectionModel* selection{ table->selectionModel() };
+    if (selection != nullptr)
+    {
+        const QModelIndexList indexes{ selection->selectedRows() };
+        for (const QModelIndex& index : indexes)
+        {
+            result.append(index.row());
+        }
+    }
+
+    if (result.isEmpty())
+    {
+        const QModelIndex current{ table->currentIndex() };
+        if (current.isValid())
+        {
+            result.append(current.row());
+        }
+    }
+
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
+QString LogViewerBase::_rowsToText(const QList<int>& rows, bool fullLayout) const
+{
+    if ((mLogModel == nullptr) || rows.isEmpty())
+        return QString();
+
+    QStringList lines;
+    lines.reserve(rows.size());
+
+    for (int row : rows)
+    {
+        const areg::LogEntry* entry{ mLogModel->getLogData(row) };
+        if (entry == nullptr)
+            continue;
+
+        const QString message{ QString::fromUtf8(entry->logMessage) };
+        if (fullLayout == false)
+        {
+            lines.append(message);
+            continue;
+        }
+
+        // The layout the target writes into its own log file, see areg.init:
+        //   message  %d: [ %a.%x.%t.%p >>> ] %m
+        //   enter    %d: [ %a.%x.%t.%z: Enter -->]
+        //   exit     %d: [ %a.%x.%t.%z: Exit <-- ]
+        const QString stamp{ QString::fromStdString(areg::DateTime(entry->logTimestamp).format_time().data()) };
+        const QString head { QString("%1: [ %2.%3.%4.")
+                                .arg(stamp)
+                                .arg(static_cast<quint64>(entry->logCookie))
+                                .arg(QString::fromUtf8(entry->logModule))
+                                .arg(static_cast<quint64>(entry->logThreadId)) };
+
+        if (entry->logMsgType == areg::LogMessageType::ScopeEnter)
+        {
+            lines.append(head + message + ": Enter -->]");
+        }
+        else if (entry->logMsgType == areg::LogMessageType::ScopeExit)
+        {
+            lines.append(head + message + ": Exit <-- ]");
+        }
+        else
+        {
+            const QString prio{ QString::fromStdString(areg::priority_to_string(entry->logMessagePrio).data()) };
+            lines.append(head + prio + " >>> ] " + message);
+        }
+    }
+
+    return lines.join(QChar('\n'));
+}
+
+void LogViewerBase::onCopyMessage(void)
+{
+    const QString text{ _rowsToText(_selectedRows(), false) };
+    if (text.isEmpty() == false)
+    {
+        QGuiApplication::clipboard()->setText(text);
+    }
+}
+
+void LogViewerBase::onCopyRow(void)
+{
+    const QString text{ _rowsToText(_selectedRows(), true) };
+    if (text.isEmpty() == false)
+    {
+        QGuiApplication::clipboard()->setText(text);
+    }
 }
 
 void LogViewerBase::onMouseButtonClicked(const QModelIndex& index)

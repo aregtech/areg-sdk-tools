@@ -24,6 +24,7 @@
 
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
+#include "lusan/common/NELogPalette.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "areg/base/DateTime.hpp"
@@ -217,6 +218,9 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         return (column == eColumn::LogColumnSourceId) && (mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index) ? _iconSelect : getDecorationData(logMessage, column);
     }
         
+    case Qt::ToolTipRole:
+        return getTooltipData(logMessage, column);
+
     case Qt::TextAlignmentRole:
         return getAlignmentData(column);
         
@@ -621,6 +625,16 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
     switch (column)
     {
     case eColumn::LogColumnPriority:
+        // A scope row names the event, not the category: the reader already knows it is
+        // a scope, what they need is which end of it.
+        if (logMessage->logMessagePrio == areg::LogPriority::PrioScope)
+        {
+            if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
+                return tr("Enter");
+            else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
+                return tr("Exit");
+        }
+
         return QString::fromStdString(areg::priority_to_string(logMessage->logMessagePrio).data());
 
     case eColumn::LogColumnTimestamp:
@@ -648,25 +662,52 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
         return QString::number(logMessage->logScopeId);
 
     case eColumn::LogColumnMessage:
-        return QString(logMessage->logMessage);
+        {
+            // logMessageLen is the length before the message was cut, so it can exceed
+            // what the entry holds. When it does, say how much is missing.
+            constexpr uint32_t maxLen{ areg::LOG_MSG_SIZE - 1u };
+            QString text{ QString::fromUtf8(logMessage->logMessage) };
+            if (logMessage->logMessageLen > maxLen)
+            {
+                text += QString("  [+%1 B]").arg(logMessage->logMessageLen - maxLen);
+            }
+
+            return text;
+        }
 
     default:
         return QString();
     }
 }
 
+QString LoggingModelBase::getTooltipData(const areg::LogEntry* logMessage, eColumn column) const
+{
+    Q_ASSERT(logMessage != nullptr);
+    if (column != eColumn::LogColumnMessage)
+        return QString();
+
+    const QString message{ QString::fromUtf8(logMessage->logMessage, static_cast<int>(areg::log_message_size(*logMessage))) };
+    if (areg::is_log_message_cut(*logMessage) == false)
+        return message;
+
+    // The row shows what arrived; the tooltip says what was sent.
+    return message + QString("\n\n") +
+           tr("Cut after %1 of %2 characters.").arg(areg::log_message_size(*logMessage)).arg(logMessage->logMessageLen);
+}
+
 QBrush LoggingModelBase::getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-    return QBrush(LogIconFactory::getLogBackgroundColor(*logMessage));
+    // The row stays neutral, so that only Fatal pulls the eye.
+    return QBrush(NELogPalette::rowBackground(NELogPalette::roleOf(*logMessage)));
 }
 
 QColor LoggingModelBase::getForegroundData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-    return LogIconFactory::getLogColor(*logMessage);
+    return NELogPalette::textColor(NELogPalette::roleOf(*logMessage));
 }
 
 QIcon LoggingModelBase::getDecorationData(const areg::LogEntry* logMessage, eColumn column) const
