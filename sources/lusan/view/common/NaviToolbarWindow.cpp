@@ -89,6 +89,15 @@ void NaviToolbarWindow::setNaviHeader(QWidget* header)
     }
 }
 
+void NaviToolbarWindow::addNaviBar(QWidget* bar)
+{
+    if (bar != nullptr)
+    {
+        bar->setParent(this);
+        mNaviLayout->insertWidget(mNaviLayout->indexOf(mNaviTree), bar);
+    }
+}
+
 void NaviToolbarWindow::setupTreeView(const QSize& iconSize)
 {
     mNaviTree->setAutoFillBackground(false);

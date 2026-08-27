@@ -26,6 +26,7 @@ ScopeNodeBase::ScopeNodeBase()
     , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( nullptr )
     , mPrioStates   ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
+    , mDefaultPrio  ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
     , mNodeName     ( )
     , mShown        ( true )
 {
@@ -36,6 +37,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, ScopeNodeBase* paren
     , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( parent )
     , mPrioStates   ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
+    , mDefaultPrio  ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
     , mNodeName     ( )
     , mShown        ( true )
 {
@@ -46,6 +48,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeN
     , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( parent )
     , mPrioStates   ( prio )
+    , mDefaultPrio  ( prio )
     , mNodeName     ( nodeName )
     , mShown        ( true )
 {
@@ -56,6 +59,7 @@ ScopeNodeBase::ScopeNodeBase(const ScopeNodeBase& src)
     , mNodeState    ( src.mNodeState )
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
+    , mDefaultPrio  ( src.mDefaultPrio )
     , mNodeName     ( src.mNodeName )
     , mShown        ( src.mShown )
 {
@@ -66,6 +70,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase&& src) noexcept
     , mNodeState    ( src.mNodeState )
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
+    , mDefaultPrio  ( src.mDefaultPrio )
     , mNodeName     ( std::move(src.mNodeName) )
     , mShown        ( src.mShown )
 {
@@ -78,6 +83,7 @@ ScopeNodeBase& ScopeNodeBase::operator = (const ScopeNodeBase& src)
     {
         mNodeState  = src.mNodeState;
         mPrioStates = src.mPrioStates;
+        mDefaultPrio= src.mDefaultPrio;
         mNodeName   = src.mNodeName;
         mShown      = src.mShown;
     }
@@ -92,6 +98,7 @@ ScopeNodeBase& ScopeNodeBase::operator = (ScopeNodeBase&& src) noexcept
     {
         mNodeState  = src.mNodeState;
         mPrioStates = src.mPrioStates;
+        mDefaultPrio= src.mDefaultPrio;
         mNodeName   = std::move(src.mNodeName);
         mShown      = src.mShown;
     }

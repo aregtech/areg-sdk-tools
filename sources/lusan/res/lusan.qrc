@@ -67,6 +67,7 @@
         <file alias="edit-paste">icons/ui-edit-paste.svg</file>
         <file alias="trash">icons/ui-trash.svg</file>
         <file alias="edit-find">icons/ui-edit-find.svg</file>
+        <file alias="filter">icons/ui-filter.svg</file>
         <file alias="edit-find-usages">icons/ui-edit-find-usages.svg</file>
         <file alias="goto-declaration">icons/ui-goto-declaration.svg</file>
         <file alias="view-navigation">icons/ui-view-navigation.svg</file>

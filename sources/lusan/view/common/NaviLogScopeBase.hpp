@@ -27,6 +27,7 @@
 #include "areg/logging/areg_log.h"
 
 #include <QList>
+#include <QPersistentModelIndex>
 #include <QString>
 
 /************************************************************************
@@ -36,8 +37,13 @@ class LoggingScopesModelBase;
 class LoggingModelBase;
 class LogPriorityBar;
 class MdiMainWindow;
+class ScopeNameDelegate;
 class ScopeNodeBase;
+class SearchLineEdit;
 class QAction;
+class QEvent;
+class QLabel;
+class QLineEdit;
 class QMenu;
 class QItemSelectionModel;
 class QModelIndex;
@@ -61,6 +67,9 @@ public:
     //!< The icon edge of a scope tree node. The charger is drawn to be read at this size.
     static constexpr int    ScopeIconExtent { 16 };
 
+    //!< How long a raise that goes back on its own stays in effect.
+    static constexpr int    TempRaiseMs     { 5 * 60 * 1000 };
+
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -78,6 +87,7 @@ protected:
         , MenuLevelInfo         //!< and information
         , MenuLevelDebug        //!< and debug
         , MenuScopeLines        //!< Switch the enter and exit lines
+        , MenuTempRaise         //!< Let the next raise go back on its own
         , MenuReachScope        //!< Apply a priority to the clicked scope
         , MenuReachBranch       //!< Apply a priority to the clicked node and everything under it
         , MenuReachProcess      //!< Apply a priority to every scope of the process
@@ -259,6 +269,54 @@ protected:
     void setupScopeControls(void);
 
     /**
+     * \brief   Builds the two rows that look for a scope: the filter box that narrows the
+     *          tree, and the find box that walks it. Called from setupScopeToolbar().
+     **/
+    void setupScopeSearch(void);
+
+    /**
+     * \brief   Builds the row that names what is standing, above the filter row. Called
+     *          from setupScopeToolbar().
+     **/
+    void setupSafeguards(void);
+
+    /**
+     * \brief   Leaves in the tree only the scopes whose name carries the filter text, with
+     *          the nodes above and below them. An empty text brings the whole tree back.
+     **/
+    void applyScopeFilter(void);
+
+    /**
+     * \brief   Opens or closes the find row and moves the focus into it or back to the tree.
+     * \param   show    True to open the row.
+     **/
+    void showScopeFind(bool show);
+
+    /**
+     * \brief   Selects the next scope whose name carries the find text, opening the nodes
+     *          above it and scrolling it into view. The tree is left whole.
+     * \param   step    1 walks forward, -1 walks back.
+     **/
+    void findScope(int step);
+
+    /**
+     * \brief   Tells the tree which text to mark inside the scope names. The find text wins
+     *          while the find row is open; otherwise the filter text is marked.
+     **/
+    void updateMatchMark(void);
+
+    /**
+     * \brief   Shows what is standing: how many scopes generate less than their default,
+     *          and how many raises go back on their own. Hides itself when neither holds.
+     **/
+    void refreshSafeguards(void);
+
+    /**
+     * \brief   Closes the find row when Escape is pressed inside its box.
+     **/
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+    /**
      * \brief   Gives the leading show and hide column its fixed width and takes the tree
      *          indentation out of it, so every box sits at the same place.
      **/
@@ -348,6 +406,12 @@ protected:
     //!< Returns the control object to show every scope again.
     inline QToolButton* ctrlShowAll(void) const;
 
+    //!< Returns the box that narrows the tree to the scopes whose name matches.
+    inline QLineEdit* ctrlScopeFilter(void) const;
+
+    //!< Returns the box that walks the tree from one matching scope to the next.
+    inline SearchLineEdit* ctrlScopeFind(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -386,6 +450,22 @@ private:
     //!< Validates the object by checking with assertions.
     inline void validateControls(void) const;
 
+    /**
+     * \brief   Hides the children of the given node that neither match nor hold a match.
+     * \param   parent      The node whose children are looked at.
+     * \param   needle      The text to look for.
+     * \param   inKept      True when a node above already matched, so everything below stays.
+     * \param   matches     Grows by the number of names that carry the text.
+     * \return  True if the node itself or anything under it stays in the tree.
+     **/
+    bool filterBranch(const QModelIndex& parent, const QString& needle, bool inKept, int& matches);
+
+    //!< Opens and closes the children of the given node the way the model remembers them.
+    void restoreExpanded(const QModelIndex& parent);
+
+    //!< Collects, from top to bottom, every scope whose name carries the given text.
+    void collectMatches(const QModelIndex& parent, const QString& needle, Qt::CaseSensitivity sensitivity, QList<QModelIndex>& matches) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -401,6 +481,22 @@ private:
     QToolButton*            mToolHide;      //!< The tool button that hides the selection
     QToolButton*            mToolShowAll;   //!< The tool button that shows every scope again
     eScopeReach             mScopeReach;    //!< What a priority chosen in the context menu applies to
+
+    QWidget*                mFilterBar;     //!< The row that carries the scope name filter box
+    QLineEdit*              mFilterEdit;    //!< The box that narrows the tree
+    QLabel*                 mFilterCount;   //!< How many scope names carry the filter text
+    QWidget*                mFindBar;       //!< The row that carries the find box, closed until it is asked for
+    SearchLineEdit*         mFindEdit;      //!< The box that walks from one matching scope to the next
+    QLabel*                 mFindCount;     //!< The position of the scope the find box stopped on
+    ScopeNameDelegate*     mHighlight;     //!< The delegate that marks the matched part of a scope name
+    QPersistentModelIndex   mFindAt;        //!< The scope the find box stopped on last
+
+    QWidget*                mGuardBar;      //!< The row that names what is standing, hidden when nothing is
+    QWidget*                mBelowRow;      //!< The line about the scopes that generate less than their default
+    QLabel*                 mBelowText;     //!< How many scopes generate less than their default
+    QWidget*                mRaiseRow;      //!< The line about the raises that go back on their own
+    QLabel*                 mRaiseText;     //!< How many raises go back on their own
+    bool                    mTempRaise;     //!< True while a raise is meant to go back on its own
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -435,6 +531,16 @@ inline QToolButton* NaviLogScopeBase::ctrlHide(void) const
 inline QToolButton* NaviLogScopeBase::ctrlShowAll(void) const
 {
     return mToolShowAll;
+}
+
+inline QLineEdit* NaviLogScopeBase::ctrlScopeFilter(void) const
+{
+    return mFilterEdit;
+}
+
+inline SearchLineEdit* NaviLogScopeBase::ctrlScopeFind(void) const
+{
+    return mFindEdit;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVILOGSCOPEBASE_HPP

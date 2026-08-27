@@ -152,7 +152,7 @@ void NaviLiveLogsScopes::setupWidgets()
     ctrlConnect()->setEnabled(true);
     ctrlSettings()->setEnabled(true);
     ctrlSaveSettings()->setEnabled(true);
-    ctrlFind()->setEnabled(false);
+    ctrlFind()->setEnabled(true);
     ctrlPriorityBar()->setEnabled(false);
     ctrlPriorityBar()->setIdle(true);
     ctrlShowOnly()->setEnabled(false);

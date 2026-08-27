@@ -648,6 +648,9 @@ namespace NELusanCommon
     //!< Loads search button icon and sets the specified size
     inline QIcon iconSearch(const QSize & size = QSize{ 32, 32 });
 
+    //!< Loads the funnel icon of the controls that narrow a list, and sets the specified size
+    inline QIcon iconFilter(const QSize & size = QSize{ 32, 32 });
+
     //!< Loads the find usages icon and sets the specified size
     inline QIcon iconSearchUsages(const QSize & size = QSize{ 32, 32 });
 
@@ -1050,6 +1053,11 @@ inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)
 inline QIcon NELusanCommon::iconSearch(const QSize & size)
 {
     return loadIcon(":/icons/edit-find", size);
+}
+
+inline QIcon NELusanCommon::iconFilter(const QSize & size)
+{
+    return loadIcon(":/icons/filter", size);
 }
 
 inline QIcon NELusanCommon::iconSearchUsages(const QSize & size)

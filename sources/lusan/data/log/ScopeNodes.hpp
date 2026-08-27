@@ -438,6 +438,28 @@ protected:
 class ScopeRoot : public ScopeNode
 {
 //////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   What a running target knows about the priorities set on it here.
+     **/
+    enum class eTargetState : uint8_t
+    {
+          TargetApplied = 0 //!< The target generates what the tree shows
+        , TargetPending     //!< Changed here and not in effect on the target
+        , TargetSent        //!< The change is on its way, no answer yet
+        , TargetSaved       //!< The target was asked to keep the priorities across a restart
+    };
+
+    //!< How long a sent request waits for an answer before it counts as not in effect.
+    static constexpr int    TargetWaitMs    { 10000 };
+
+    //!< How long the mark of a saved configuration takes to fade away.
+    static constexpr int    TargetFadeMs    { 2400 };
+
+//////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -550,6 +572,30 @@ public:
      **/
     void savePriorities(void);
 
+    //!< Returns what the target knows about the priorities set on this process.
+    inline ScopeRoot::eTargetState targetState(void) const;
+
+    //!< Returns how strongly the target mark is drawn, from 1.0 down to 0.0.
+    inline qreal targetFade(void) const;
+
+    /**
+     * \brief   Sets what the target knows about the priorities set on this process and
+     *          restarts the ageing of that state.
+     * \param   state   The state to hold.
+     **/
+    void setTargetState(ScopeRoot::eTargetState state);
+
+    /**
+     * \brief   Moves the target state on by the given time: an unanswered request falls back
+     *          to pending, and a saved mark fades away.
+     * \param   elapsedMs   The time passed since the previous call.
+     * \return  True if the state or the strength of the mark changed.
+     **/
+    bool ageTargetState(int elapsedMs);
+
+    //!< Returns true if the target state still changes on its own and needs to be aged.
+    inline bool isTargetAgeing(void) const;
+
     /**
      * \brief   Applies the remembered priorities to the scopes that are present again.
      *          A path that no longer exists is skipped.
@@ -571,6 +617,12 @@ private:
     bool        mConnected;
     //!< The priority of every scope that carried one, kept across a disconnect.
     QMap<QString, uint32_t>  mSavedPrio;
+    //!< What the target knows about the priorities set here.
+    ScopeRoot::eTargetState  mTargetState;
+    //!< The time the current target state has been held, in milliseconds.
+    int                      mTargetAge;
+    //!< How strongly the target mark is drawn, from 1.0 down to 0.0.
+    qreal                    mTargetFade;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -642,6 +694,21 @@ inline bool ScopeRoot::isConnected() const
 inline void ScopeRoot::setConnected(bool connected)
 {
     mConnected = connected;
+}
+
+inline ScopeRoot::eTargetState ScopeRoot::targetState(void) const
+{
+    return mTargetState;
+}
+
+inline qreal ScopeRoot::targetFade(void) const
+{
+    return mTargetFade;
+}
+
+inline bool ScopeRoot::isTargetAgeing(void) const
+{
+    return ((mTargetState == ScopeRoot::eTargetState::TargetSent) || (mTargetState == ScopeRoot::eTargetState::TargetSaved));
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODES_HPP

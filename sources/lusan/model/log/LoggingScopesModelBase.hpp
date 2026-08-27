@@ -27,6 +27,8 @@
 #include <QMap>
 #include <QSet>
 
+#include "lusan/data/log/ScopeNodes.hpp"
+
 #include "areg/component/ServiceDefs.hpp"
 #include "areg/logging/areg_log.h"
 
@@ -36,7 +38,7 @@
 class TableModelBase;
 class LoggingModelBase;
 class ScopeNodeBase;
-class ScopeRoot;
+class QTimer;
 
 /**
  * \brief   Base class for log scope models (live and offline).
@@ -58,6 +60,15 @@ public:
 
     //!< The number of columns the scope tree has.
     static constexpr int    ColumnCount { 2 };
+
+    //!< The role that carries the scope node behind an index.
+    static constexpr int    RoleNode        { Qt::ItemDataRole::UserRole };
+
+    //!< The role that carries what the target knows about the priorities of a process.
+    static constexpr int    RoleTargetState { Qt::ItemDataRole::UserRole + 1 };
+
+    //!< The role that carries how strongly the target mark is drawn, from 1.0 down to 0.0.
+    static constexpr int    RoleTargetFade  { Qt::ItemDataRole::UserRole + 2 };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -151,6 +162,12 @@ signals:
      * \brief   Signal emitted when the set of scopes the log window should draw has changed.
      **/
     void signalScopeVisibilityChanged();
+
+    /**
+     * \brief   Signal emitted when the number of scopes below their default, or the number
+     *          of raises that go back on their own, has changed.
+     **/
+    void signalSafeguardsChanged();
     
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase overrides
@@ -220,7 +237,47 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const = 0;
+    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) = 0;
+
+    /**
+     * \brief   Records what the target of the given node knows about its priorities and
+     *          repaints the row of that process. Does nothing on an archive.
+     * \param   node    Any index of the process. The state is kept on the process itself.
+     * \param   state   The state to record.
+     **/
+    void setTargetState(const QModelIndex& node, ScopeRoot::eTargetState state);
+
+    /**
+     * \brief   Counts the scopes that generate less than the target registered them with.
+     * \param   perProcess  On output, how many such scopes each process carries, by its name.
+     * \return  The number of scopes below their default.
+     **/
+    int countBelowDefault(QMap<QString, int>& perProcess) const;
+
+    /**
+     * \brief   Puts every scope that generates less than its default back to it and sends the
+     *          result to the targets.
+     * \return  The number of scopes that were put back.
+     **/
+    int restoreDefaults(void);
+
+    /**
+     * \brief   Puts the given scope back to the given priority after the given time, unless the
+     *          raise is kept before then. Does nothing on an archive.
+     * \param   node    The index the priority was raised on.
+     * \param   prio    The priority to go back to.
+     * \param   afterMs The time to wait, in milliseconds.
+     **/
+    void scheduleRevert(const QModelIndex& node, uint32_t prio, int afterMs);
+
+    /**
+     * \brief   Cancels every raise that would go back on its own.
+     * \return  The number of raises that were kept.
+     **/
+    int keepTempRaises(void);
+
+    //!< Returns how many raises go back on their own.
+    inline int tempRaiseCount(void) const;
     
     /**
      * \brief   Sets the logging model object used to retrieve logging scopes data.
@@ -410,6 +467,13 @@ protected:
      **/
     virtual int applyRememberedPriorities(ScopeRoot & root);
 
+    /**
+     * \brief   Sends the priorities of every scope of the given process to its target.
+     *          An archive has no target and does nothing.
+     * \return  True if the request was sent.
+     **/
+    virtual bool pushPriorities(ScopeRoot& root);
+
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
@@ -465,6 +529,18 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    //!< Moves the target state of every process on and repaints the rows that changed.
+    //!< Puts the scope of the given process at the given path back to the given priority.
+    void _revertTempRaise(ITEM_ID rootId, const QString& path);
+
+    //!< Returns the index of the given node, or an invalid index if it is not in the tree.
+    QModelIndex _indexOfNode(ScopeNodeBase* node) const;
+
+    void _ageTargetStates(void);
+
+    //!< Runs the target state clock while at least one process still needs it.
+    void _runTargetClock(void);
+
     //!< Tells the view that the show and hide box of everything below the given index has changed.
     void _notifyBranchChanged(const QModelIndex& parent);
 
@@ -482,11 +558,27 @@ private:
     void _setupSignals(bool doSetup);
 
 //////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    //!< A priority raise that goes back to what it replaced on its own.
+    struct sTempRaise
+    {
+        ITEM_ID     rootId; //!< The process the scope belongs to
+        QString     path;   //!< The path of the scope inside that process
+        uint32_t    prio;   //!< The priority to go back to
+        QTimer*     timer;  //!< Fires when the raise goes back
+    };
+
+//////////////////////////////////////////////////////////////////////////
 // Protected member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
     QModelIndex             mRootIndex;             //!< The root index of the model
     LoggingModelBase*       mLoggingModel;          //!< The logging model associated with this scopes model
+    QTimer*                 mTargetClock;           //!< Ages the target state of the processes while one of them changes on its own
+    QList<sTempRaise>       mTempRaises;            //!< The raises that go back to their previous priority on their own
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -504,6 +596,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase class inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline int LoggingScopesModelBase::tempRaiseCount(void) const
+{
+    return static_cast<int>(mTempRaises.size());
+}
 
 inline bool LoggingScopesModelBase::isValidIndex(const QModelIndex& index) const
 {

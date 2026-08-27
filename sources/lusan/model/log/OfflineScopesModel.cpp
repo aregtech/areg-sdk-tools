@@ -201,7 +201,7 @@ bool OfflineScopesModel::removLogPriority(const QModelIndex& index, uint32_t pri
     return true;
 }
 
-bool OfflineScopesModel::saveLogScopePriority(const QModelIndex& target) const
+bool OfflineScopesModel::saveLogScopePriority(const QModelIndex& target)
 {
     return false;
 }

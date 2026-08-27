@@ -107,7 +107,7 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
+    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) override;
 
     /**
      * \brief   Returns true. The model follows running targets, so a process that goes is marked.
@@ -133,6 +133,9 @@ protected:
      * \return  The number of scopes the priority was applied to.
      **/
     int applyRememberedPriorities(ScopeRoot & root) override;
+
+    //!< Sends the priorities of every scope of the given process to its target.
+    bool pushPriorities(ScopeRoot& root) override;
 
 private:
 

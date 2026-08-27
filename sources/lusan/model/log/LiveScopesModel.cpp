@@ -72,6 +72,7 @@ bool LiveScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
         
         areg::copy_string(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
         result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
+        setTargetState(index, result ? ScopeRoot::eTargetState::TargetSent : ScopeRoot::eTargetState::TargetPending);
     }
     else
     {
@@ -96,6 +97,7 @@ bool LiveScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
         root->refreshPrioritiesRecursive();
         
         result = _requestNodePriority(static_cast<const ScopeRoot &>(*root), *node);
+        setTargetState(index, result ? ScopeRoot::eTargetState::TargetSent : ScopeRoot::eTargetState::TargetPending);
     }
     else
     {
@@ -120,6 +122,7 @@ bool LiveScopesModel::removLogPriority(const QModelIndex& index, uint32_t prio)
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         result = _requestNodePriority(static_cast<const ScopeRoot &>(*root), *node);
+        setTargetState(index, result ? ScopeRoot::eTargetState::TargetSent : ScopeRoot::eTargetState::TargetPending);
     }
     else
     {
@@ -129,19 +132,29 @@ bool LiveScopesModel::removLogPriority(const QModelIndex& index, uint32_t prio)
     return result;
 }
 
-bool LiveScopesModel::saveLogScopePriority(const QModelIndex& target /*= QModelIndex()*/) const
+bool LiveScopesModel::saveLogScopePriority(const QModelIndex& target /*= QModelIndex()*/)
 {
-    if (target.isValid())
+    ScopeNodeBase* node = target.isValid() ? static_cast<ScopeNodeBase *>(target.internalPointer()) : nullptr;
+    if (node != nullptr)
     {
-        ScopeNodeBase* node = static_cast<ScopeNodeBase *>(target.internalPointer());
-        Q_ASSERT(node != nullptr);
         ScopeRoot* root = static_cast<ScopeRoot *>(node->getTreeRoot());
-        return LogObserver::requestSaveConfig(root->getRootId());
+        const bool result{ LogObserver::requestSaveConfig(root->getRootId()) };
+        setTargetState(target, result ? ScopeRoot::eTargetState::TargetSaved : ScopeRoot::eTargetState::TargetPending);
+        return result;
     }
-    else
+
+    const bool result{ LogObserver::requestSaveConfig(areg::TARGET_ALL) };
+    if (mLoggingModel != nullptr)
     {
-        return LogObserver::requestSaveConfig(areg::TARGET_ALL);
+        const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+        for (int pos = 0; pos < static_cast<int>(roots.size()); ++pos)
+        {
+            setTargetState(index(pos, LoggingScopesModelBase::ColumnName, mRootIndex)
+                          , result ? ScopeRoot::eTargetState::TargetSaved : ScopeRoot::eTargetState::TargetPending);
+        }
     }
+
+    return result;
 }
 
 bool LiveScopesModel::slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances)
@@ -170,6 +183,11 @@ int LiveScopesModel::applyRememberedPriorities(ScopeRoot & root)
     }
 
     return count;
+}
+
+bool LiveScopesModel::pushPriorities(ScopeRoot& root)
+{
+    return _requestNodePriority(root, root);
 }
 
 bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node)

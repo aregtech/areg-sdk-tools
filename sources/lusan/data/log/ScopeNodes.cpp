@@ -710,6 +710,9 @@ ScopeRoot::ScopeRoot()
     , mLocation ()
     , mConnected(true)
     , mSavedPrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
 {
 }
 
@@ -720,6 +723,9 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId)
     , mLocation ()
     , mConnected(true)
     , mSavedPrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
 {
 }
 
@@ -730,6 +736,9 @@ ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
     , mLocation (QString::fromStdString(instance.ciLocation))
     , mConnected(true)
     , mSavedPrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
 {
 }
 
@@ -740,6 +749,9 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString& rootName)
     , mLocation ()
     , mConnected(true)
     , mSavedPrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
 {
 }
 
@@ -750,6 +762,9 @@ ScopeRoot::ScopeRoot(const ScopeRoot& src)
     , mLocation ( src.mLocation )
     , mConnected( src.mConnected )
     , mSavedPrio( src.mSavedPrio )
+    , mTargetState( src.mTargetState )
+    , mTargetAge  ( src.mTargetAge )
+    , mTargetFade ( src.mTargetFade )
 {
 }
 
@@ -760,6 +775,9 @@ ScopeRoot::ScopeRoot(ScopeRoot&& src) noexcept
     , mLocation ( std::move(src.mLocation) )
     , mConnected( src.mConnected )
     , mSavedPrio( std::move(src.mSavedPrio) )
+    , mTargetState( src.mTargetState )
+    , mTargetAge  ( src.mTargetAge )
+    , mTargetFade ( src.mTargetFade )
 {
 }
 
@@ -771,6 +789,9 @@ ScopeRoot& ScopeRoot::operator = (const ScopeRoot& src)
     mLocation  = src.mLocation;
     mConnected = src.mConnected;
     mSavedPrio = src.mSavedPrio;
+    mTargetState = src.mTargetState;
+    mTargetAge = src.mTargetAge;
+    mTargetFade = src.mTargetFade;
     return (*this);
 }
 
@@ -782,6 +803,9 @@ ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
     mLocation  = std::move(src.mLocation);
     mConnected = src.mConnected;
     mSavedPrio = std::move(src.mSavedPrio);
+    mTargetState = src.mTargetState;
+    mTargetAge = src.mTargetAge;
+    mTargetFade = src.mTargetFade;
     return (*this);
 }
 
@@ -800,6 +824,38 @@ bool ScopeRoot::isSameInstance(const areg::ConnectedInstance & instance) const
 {
     return ( (mInstance == QString::fromStdString(instance.ciInstance))
           && (mLocation == QString::fromStdString(instance.ciLocation)) );
+}
+
+void ScopeRoot::setTargetState(ScopeRoot::eTargetState state)
+{
+    mTargetState = state;
+    mTargetAge = 0;
+    mTargetFade = (state == ScopeRoot::eTargetState::TargetApplied) ? 0.0 : 1.0;
+}
+
+bool ScopeRoot::ageTargetState(int elapsedMs)
+{
+    if (isTargetAgeing() == false)
+        return false;
+
+    mTargetAge += elapsedMs;
+
+    if (mTargetState == ScopeRoot::eTargetState::TargetSent)
+    {
+        if (mTargetAge < ScopeRoot::TargetWaitMs)
+            return false;
+
+        setTargetState(ScopeRoot::eTargetState::TargetPending);
+        return true;
+    }
+
+    mTargetFade = 1.0 - (static_cast<qreal>(mTargetAge) / static_cast<qreal>(ScopeRoot::TargetFadeMs));
+    if (mTargetFade <= 0.0)
+    {
+        setTargetState(ScopeRoot::eTargetState::TargetApplied);
+    }
+
+    return true;
 }
 
 void ScopeRoot::savePriorities(void)

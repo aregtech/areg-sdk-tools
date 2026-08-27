@@ -53,6 +53,17 @@ namespace NELogPalette
     };
 
     /**
+     * \brief   What a running target knows about the priorities set in the tree.
+     **/
+    enum class eLogStateRole : int
+    {
+          StatePending = 0  //!< Changed here and not in effect on the target
+        , StateSent         //!< The change is on its way, no answer yet
+        , StateSaved        //!< The target was asked to keep the priorities across a restart
+        , StateCount        //!< Number of roles
+    };
+
+    /**
      * \brief   The transparency the log controls paint with.
      **/
     enum class eLogOpacity : int
@@ -94,6 +105,13 @@ namespace NELogPalette
      *          rather than a letter shape.
      **/
     QColor railColor(eLogColorRole role);
+
+    /**
+     * \brief   Returns the colour of the mark that says what the target knows.
+     *          The three values are the amber, the blue and the teal of the rail table,
+     *          so the application carries one of each rather than two near neighbours.
+     **/
+    QColor stateColor(eLogStateRole role);
 
     /**
      * \brief   Returns the row background for the given role. Only Fatal has one;

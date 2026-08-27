@@ -127,6 +127,24 @@ QColor NELogPalette::railColor(NELogPalette::eLogColorRole role)
     return isDarkTheme() ? _railDark[roleIndex(role)] : _railLight[roleIndex(role)];
 }
 
+QColor NELogPalette::stateColor(NELogPalette::eLogStateRole role)
+{
+    switch (role)
+    {
+    case NELogPalette::eLogStateRole::StatePending:
+        return NELogPalette::railColor(NELogPalette::eLogColorRole::RoleWarning);
+
+    case NELogPalette::eLogStateRole::StateSent:
+        return NELogPalette::railColor(NELogPalette::eLogColorRole::RoleInformation);
+
+    case NELogPalette::eLogStateRole::StateSaved:
+        return NELogPalette::railColor(NELogPalette::eLogColorRole::RoleDebug);
+
+    default:
+        return QColor(Qt::transparent);
+    }
+}
+
 QColor NELogPalette::rowBackground(NELogPalette::eLogColorRole role)
 {
     if (role != NELogPalette::eLogColorRole::RoleFatal)

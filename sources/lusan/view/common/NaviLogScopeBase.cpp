@@ -24,20 +24,34 @@
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/LoggingScopesModelBase.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/ScopeNameDelegate.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/log/LogPriorityBar.hpp"
 
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
+#include <QEvent>
+#include <QHBoxLayout>
 #include <QItemSelectionModel>
 #include <QHeaderView>
+#include <QKeyEvent>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMap>
 #include <QMenu>
 #include <QPoint>
+#include <QShortcut>
+#include <QSignalBlocker>
 #include <QSize>
+#include <QSizePolicy>
+#include <QStringList>
 #include <QStyle>
+#include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
+#include <QVBoxLayout>
 #include <QWidgetAction>
 
 NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent)
@@ -52,6 +66,22 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
     , mToolHide         (nullptr)
     , mToolShowAll      (nullptr)
     , mScopeReach       (eScopeReach::ReachBranch)
+
+    , mFilterBar        (nullptr)
+    , mFilterEdit       (nullptr)
+    , mFilterCount      (nullptr)
+    , mFindBar          (nullptr)
+    , mFindEdit         (nullptr)
+    , mFindCount        (nullptr)
+    , mHighlight        (nullptr)
+    , mFindAt           ( )
+
+    , mGuardBar         (nullptr)
+    , mBelowRow         (nullptr)
+    , mBelowText        (nullptr)
+    , mRaiseRow         (nullptr)
+    , mRaiseText        (nullptr)
+    , mTempRaise        (false)
 {
 }
 
@@ -66,8 +96,9 @@ void NaviLogScopeBase::setupScopeToolbar(void)
     addSpecificTools();
 
     mToolFind = addToolButton( NELusanCommon::iconSearch(NELusanCommon::SizeBig)
-                             , tr("Find log message")
-                             , tr("Find log message"));
+                             , tr("Find a scope")
+                             , tr("Walk from one scope whose name carries the text to the next.")
+                             , true);
 
     addToolSeparator();
 
@@ -99,8 +130,215 @@ void NaviLogScopeBase::setupScopeToolbar(void)
     ctrlTable()->setRootIsDecorated(false);
     ctrlTable()->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
     setupShowColumn();
+    setupSafeguards();
+    setupScopeSearch();
 
     capToolButtonIconSizes();
+}
+
+void NaviLogScopeBase::setupSafeguards(void)
+{
+    mGuardBar = new QWidget(this);
+    QVBoxLayout* guards = new QVBoxLayout(mGuardBar);
+    guards->setContentsMargins(0, 0, 0, 0);
+    guards->setSpacing(2);
+
+    mBelowRow = new QWidget(mGuardBar);
+    QHBoxLayout* belowRow = new QHBoxLayout(mBelowRow);
+    belowRow->setContentsMargins(0, 0, 0, 0);
+    belowRow->setSpacing(4);
+
+    QLabel* belowIcon = new QLabel(mBelowRow);
+    belowIcon->setPixmap(NELusanCommon::iconWarning(NELusanCommon::SizeSmall).pixmap(NELusanCommon::SizeSmall));
+
+    mBelowText = new QLabel(mBelowRow);
+    mBelowText->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Preferred);
+
+    QToolButton* restore = new QToolButton(mBelowRow);
+    restore->setText(tr("Restore all"));
+    restore->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    restore->setAutoRaise(true);
+    restore->setToolTip(tr("Put every scope back to the priority its target started with."));
+    restore->setAccessibleName(restore->toolTip());
+
+    belowRow->addWidget(belowIcon, 0);
+    belowRow->addWidget(mBelowText, 1);
+    belowRow->addWidget(restore, 0);
+
+    mRaiseRow = new QWidget(mGuardBar);
+    QHBoxLayout* raiseRow = new QHBoxLayout(mRaiseRow);
+    raiseRow->setContentsMargins(0, 0, 0, 0);
+    raiseRow->setSpacing(4);
+
+    QLabel* raiseIcon = new QLabel(mRaiseRow);
+    raiseIcon->setPixmap(NELusanCommon::iconTimer(NELusanCommon::SizeSmall).pixmap(NELusanCommon::SizeSmall));
+
+    mRaiseText = new QLabel(mRaiseRow);
+    mRaiseText->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Preferred);
+
+    QToolButton* keep = new QToolButton(mRaiseRow);
+    keep->setText(tr("Keep"));
+    keep->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    keep->setAutoRaise(true);
+    keep->setToolTip(tr("Leave the raised priorities in place instead of letting them go back."));
+    keep->setAccessibleName(keep->toolTip());
+
+    raiseRow->addWidget(raiseIcon, 0);
+    raiseRow->addWidget(mRaiseText, 1);
+    raiseRow->addWidget(keep, 0);
+
+    guards->addWidget(mBelowRow);
+    guards->addWidget(mRaiseRow);
+    addNaviBar(mGuardBar);
+    mGuardBar->setVisible(false);
+
+    connect(restore, &QToolButton::clicked, this, [this]() {
+        if (mScopesModel != nullptr)
+        {
+            mScopesModel->restoreDefaults();
+            refreshSafeguards();
+        }
+    });
+
+    connect(keep, &QToolButton::clicked, this, [this]() {
+        if (mScopesModel != nullptr)
+        {
+            mScopesModel->keepTempRaises();
+            refreshSafeguards();
+        }
+    });
+}
+
+void NaviLogScopeBase::refreshSafeguards(void)
+{
+    if ((mGuardBar == nullptr) || (mScopesModel == nullptr))
+        return;
+
+    QMap<QString, int> perProcess;
+    const int below{ mScopesModel->countBelowDefault(perProcess) };
+    const int raised{ mScopesModel->tempRaiseCount() };
+
+    if (below != 0)
+    {
+        mBelowText->setText(tr("%1 scopes below default").arg(below));
+        QStringList where;
+        for (auto entry = perProcess.constBegin(); entry != perProcess.constEnd(); ++entry)
+        {
+            where.append(tr("%1: %2").arg(entry.key()).arg(entry.value()));
+        }
+
+        mBelowText->setToolTip(where.join(QStringLiteral("\n")));
+    }
+
+    if (raised != 0)
+    {
+        mRaiseText->setText(tr("%1 raised, going back").arg(raised));
+        mRaiseText->setToolTip(tr("These scopes go back to what they generated before, on their own."));
+    }
+
+    mBelowRow->setVisible(below != 0);
+    mRaiseRow->setVisible(raised != 0);
+    mGuardBar->setVisible((below != 0) || (raised != 0));
+}
+
+void NaviLogScopeBase::setupScopeSearch(void)
+{
+    QTreeView* tree = ctrlTable();
+    Q_ASSERT(tree != nullptr);
+
+    mHighlight = new ScopeNameDelegate(this);
+    tree->setItemDelegateForColumn(LoggingScopesModelBase::ColumnName, mHighlight);
+
+    mFilterBar = new QWidget(this);
+    mFilterBar->setObjectName(QStringLiteral("scopeFilterBar"));
+    QHBoxLayout* filterRow = new QHBoxLayout(mFilterBar);
+    filterRow->setContentsMargins(0, 0, 0, 0);
+    filterRow->setSpacing(4);
+
+    mFilterEdit = new QLineEdit(mFilterBar);
+    mFilterEdit->setObjectName(QStringLiteral("scopeFilterEdit"));
+    mFilterEdit->addAction(NELusanCommon::iconFilter(NELusanCommon::SizeSmall), QLineEdit::ActionPosition::LeadingPosition);
+    mFilterEdit->setClearButtonEnabled(true);
+    mFilterEdit->setPlaceholderText(tr("Filter scopes"));
+    mFilterEdit->setToolTip(tr("Leave in the tree only the scopes whose name carries this text."));
+    mFilterEdit->setStatusTip(mFilterEdit->toolTip());
+    mFilterEdit->setAccessibleName(tr("Scope name filter"));
+    // The dock is narrow. Without this the box holds its own width and pushes the count out.
+    mFilterEdit->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Fixed);
+
+    mFilterCount = new QLabel(mFilterBar);
+    mFilterCount->setObjectName(QStringLiteral("scopeFilterCount"));
+    mFilterCount->setEnabled(false);
+    mFilterCount->setVisible(false);
+
+    filterRow->addWidget(mFilterEdit, 1);
+    filterRow->addWidget(mFilterCount, 0);
+    addNaviBar(mFilterBar);
+
+    const QList<SearchLineEdit::eToolButton> findTools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
+                                                      , SearchLineEdit::eToolButton::ToolButtonMatchWord
+                                                      , SearchLineEdit::eToolButton::ToolButtonBackward
+                                                      , SearchLineEdit::eToolButton::ToolButtonSearch };
+
+    mFindBar = new QWidget(this);
+    mFindBar->setObjectName(QStringLiteral("scopeFindBar"));
+    QHBoxLayout* findRow = new QHBoxLayout(mFindBar);
+    findRow->setContentsMargins(0, 0, 0, 0);
+    findRow->setSpacing(4);
+
+    mFindEdit = new SearchLineEdit(findTools, QSize(18, 18), mFindBar);
+    mFindEdit->setObjectName(QStringLiteral("scopeFindEdit"));
+    mFindEdit->setPlaceholderText(tr("Find scope"));
+    mFindEdit->setToolTip(tr("Walk to the next scope whose name carries this text. The tree is left whole."));
+    mFindEdit->setStatusTip(mFindEdit->toolTip());
+    mFindEdit->setAccessibleName(tr("Find scope"));
+    mFindEdit->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Fixed);
+    mFindEdit->installEventFilter(this);
+
+    mFindCount = new QLabel(mFindBar);
+    mFindCount->setEnabled(false);
+
+    QToolButton* findClose = new QToolButton(mFindBar);
+    findClose->setIcon(NELusanCommon::iconClose(NELusanCommon::SizeSmall));
+    findClose->setAutoRaise(true);
+    findClose->setToolTip(tr("Close the find row"));
+    findClose->setAccessibleName(findClose->toolTip());
+
+    findRow->addWidget(mFindEdit, 1);
+    findRow->addWidget(mFindCount, 0);
+    findRow->addWidget(findClose, 0);
+    addNaviBar(mFindBar);
+    mFindBar->setVisible(false);
+
+    connect(mFilterEdit, &QLineEdit::textChanged, this, [this](const QString&) { applyScopeFilter(); });
+    connect(mToolFind  , &QToolButton::clicked  , this, [this](bool checked) { showScopeFind(checked); });
+    connect(findClose  , &QToolButton::clicked  , this, [this]() { showScopeFind(false); });
+    connect(mFindEdit  , &SearchLineEdit::signalSearchTextChanged, this, [this](const QString&) {
+        mFindAt = QPersistentModelIndex();
+        findScope(1);
+    });
+    connect(mFindEdit  , &SearchLineEdit::signalSearchText, this, [this](const QString&, bool, bool, bool, bool backward) {
+        findScope(backward ? -1 : 1);
+    });
+
+    QShortcut* openFind = new QShortcut(QKeySequence::StandardKey::Find, this);
+    openFind->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(openFind, &QShortcut::activated, this, [this]() { showScopeFind(true); });
+
+    QShortcut* focusFilter = new QShortcut(QKeySequence(tr("Ctrl+Shift+F")), this);
+    focusFilter->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(focusFilter, &QShortcut::activated, this, [this]() {
+        mFilterEdit->setFocus();
+        mFilterEdit->selectAll();
+    });
+
+    QShortcut* nextHit = new QShortcut(QKeySequence(Qt::Key::Key_F3), this);
+    nextHit->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(nextHit, &QShortcut::activated, this, [this]() { findScope(1); });
+
+    QShortcut* prevHit = new QShortcut(QKeySequence(Qt::Modifier::SHIFT | Qt::Key::Key_F3), this);
+    prevHit->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    connect(prevHit, &QShortcut::activated, this, [this]() { findScope(-1); });
 }
 
 void NaviLogScopeBase::setupShowColumn(void)
@@ -145,6 +383,206 @@ int NaviLogScopeBase::showColumnWidth(void) const
     const int indicator{ uiStyle->pixelMetric(QStyle::PixelMetric::PM_IndicatorWidth) };
     const int margin   { uiStyle->pixelMetric(QStyle::PixelMetric::PM_FocusFrameHMargin) };
     return (indicator + (margin * 2) + 2);
+}
+
+void NaviLogScopeBase::applyScopeFilter(void)
+{
+    QTreeView* tree = ctrlTable();
+    if ((tree == nullptr) || (mScopesModel == nullptr) || (mFilterEdit == nullptr) || (tree->model() != mScopesModel))
+        return;
+
+    const QString needle{ mFilterEdit->text().trimmed() };
+    const QSignalBlocker blocker(tree);
+
+    if (needle.isEmpty())
+    {
+        restoreExpanded(tree->rootIndex());
+        mFilterCount->setVisible(false);
+    }
+    else
+    {
+        int matches{ 0 };
+        filterBranch(tree->rootIndex(), needle, false, matches);
+        mFilterCount->setText(matches != 0 ? tr("%1 found").arg(matches) : tr("none"));
+        mFilterCount->setVisible(true);
+    }
+
+    updateMatchMark();
+}
+
+bool NaviLogScopeBase::filterBranch(const QModelIndex& parent, const QString& needle, bool inKept, int& matches)
+{
+    QTreeView* tree = ctrlTable();
+    const int rows{ mScopesModel->rowCount(parent) };
+    bool anyKept{ false };
+
+    for (int row = 0; row < rows; ++row)
+    {
+        const QModelIndex child{ mScopesModel->index(row, 0, parent) };
+        const QString name{ mScopesModel->index(row, LoggingScopesModelBase::ColumnName, parent).data(Qt::ItemDataRole::DisplayRole).toString() };
+        const bool self{ name.contains(needle, Qt::CaseSensitivity::CaseInsensitive) };
+        matches += self ? 1 : 0;
+
+        const bool below{ filterBranch(child, needle, inKept || self, matches) };
+        const bool kept{ inKept || self || below };
+        tree->setRowHidden(row, parent, kept == false);
+        if (kept && (mScopesModel->rowCount(child) != 0))
+        {
+            tree->setExpanded(child, true);
+        }
+
+        anyKept = anyKept || kept;
+    }
+
+    return anyKept;
+}
+
+void NaviLogScopeBase::restoreExpanded(const QModelIndex& parent)
+{
+    QTreeView* tree = ctrlTable();
+    const int rows{ mScopesModel->rowCount(parent) };
+
+    for (int row = 0; row < rows; ++row)
+    {
+        const QModelIndex child{ mScopesModel->index(row, 0, parent) };
+        const ScopeNodeBase* node{ static_cast<const ScopeNodeBase*>(child.internalPointer()) };
+        tree->setRowHidden(row, parent, false);
+        tree->setExpanded(child, (node != nullptr) && node->isNodeExpanded());
+        restoreExpanded(child);
+    }
+}
+
+void NaviLogScopeBase::collectMatches(const QModelIndex& parent, const QString& needle, Qt::CaseSensitivity sensitivity, QList<QModelIndex>& matches) const
+{
+    const int rows{ mScopesModel->rowCount(parent) };
+    for (int row = 0; row < rows; ++row)
+    {
+        const QModelIndex child{ mScopesModel->index(row, 0, parent) };
+        const QString name{ mScopesModel->index(row, LoggingScopesModelBase::ColumnName, parent).data(Qt::ItemDataRole::DisplayRole).toString() };
+        if (name.contains(needle, sensitivity))
+        {
+            matches.append(child);
+        }
+
+        collectMatches(child, needle, sensitivity, matches);
+    }
+}
+
+void NaviLogScopeBase::showScopeFind(bool show)
+{
+    if (mFindBar == nullptr)
+        return;
+
+    mFindBar->setVisible(show);
+    if (mToolFind != nullptr)
+    {
+        const QSignalBlocker blocker(mToolFind);
+        mToolFind->setChecked(show);
+    }
+
+    if (show)
+    {
+        mFindEdit->setFocus();
+        mFindEdit->selectAll();
+    }
+    else
+    {
+        mFindAt = QPersistentModelIndex();
+        mFindCount->clear();
+        if (ctrlTable() != nullptr)
+        {
+            ctrlTable()->setFocus();
+        }
+    }
+
+    updateMatchMark();
+}
+
+void NaviLogScopeBase::findScope(int step)
+{
+    QTreeView* tree = ctrlTable();
+    if ((tree == nullptr) || (mScopesModel == nullptr) || (mFindEdit == nullptr) || (mFindBar->isVisible() == false) || (tree->model() != mScopesModel))
+        return;
+
+    const QString needle{ mFindEdit->text() };
+    if (needle.isEmpty())
+    {
+        mFindCount->clear();
+        updateMatchMark();
+        return;
+    }
+
+    const Qt::CaseSensitivity sensitivity{ mFindEdit->isMatchCaseChecked() ? Qt::CaseSensitivity::CaseSensitive : Qt::CaseSensitivity::CaseInsensitive };
+    QList<QModelIndex> matches;
+    collectMatches(tree->rootIndex(), needle, sensitivity, matches);
+    if (matches.isEmpty())
+    {
+        mFindAt = QPersistentModelIndex();
+        mFindCount->setText(tr("none"));
+        updateMatchMark();
+        return;
+    }
+
+    const int count{ static_cast<int>(matches.size()) };
+    const int was{ mFindAt.isValid() ? static_cast<int>(matches.indexOf(QModelIndex(mFindAt))) : -1 };
+    const int at{ was < 0 ? (step > 0 ? 0 : count - 1) : ((was + step + count) % count) };
+    const QModelIndex hit{ matches.at(at) };
+
+    // A hit the filter box narrowed away is brought back, so the walk never stops on a row
+    // that cannot be seen.
+    const QSignalBlocker blocker(tree);
+    const QModelIndex modelRoot{ mScopesModel->getRootIndex() };
+    for (QModelIndex up = hit; up.isValid() && (up != modelRoot); up = up.parent())
+    {
+        const QModelIndex above{ up.parent() };
+        tree->setRowHidden(up.row(), (above == modelRoot) ? tree->rootIndex() : above, false);
+    }
+
+    // A node counts as open only once the node above it is, so the chain opens from the top.
+    QList<QModelIndex> above;
+    for (QModelIndex up = hit.parent(); up.isValid() && (up != modelRoot); up = up.parent())
+    {
+        above.prepend(up);
+    }
+
+    for (const QModelIndex& up : above)
+    {
+        expandNode(up, true);
+    }
+
+    mFindAt = hit;
+    tree->setCurrentIndex(hit);
+    tree->scrollTo(hit, QAbstractItemView::ScrollHint::EnsureVisible);
+    mFindCount->setText(tr("%1 of %2").arg(at + 1).arg(count));
+    updateMatchMark();
+}
+
+void NaviLogScopeBase::updateMatchMark(void)
+{
+    QTreeView* tree = ctrlTable();
+    if ((mHighlight == nullptr) || (tree == nullptr))
+        return;
+
+    const bool finding{ (mFindBar != nullptr) && mFindBar->isVisible() && (mFindEdit->text().isEmpty() == false) };
+    const QString needle{ finding ? mFindEdit->text() : (mFilterEdit != nullptr ? mFilterEdit->text().trimmed() : QString()) };
+    const Qt::CaseSensitivity sensitivity{ (finding && mFindEdit->isMatchCaseChecked()) ? Qt::CaseSensitivity::CaseSensitive
+                                                                                       : Qt::CaseSensitivity::CaseInsensitive };
+    if (mHighlight->setNeedle(needle, sensitivity))
+    {
+        tree->viewport()->update();
+    }
+}
+
+bool NaviLogScopeBase::eventFilter(QObject* watched, QEvent* event)
+{
+    if ((watched == mFindEdit) && (event->type() == QEvent::Type::KeyPress)
+        && (static_cast<QKeyEvent*>(event)->key() == Qt::Key::Key_Escape))
+    {
+        showScopeFind(false);
+        return true;
+    }
+
+    return NaviToolbarWindow::eventFilter(watched, event);
 }
 
 void NaviLogScopeBase::setupScopeControls(void)
@@ -204,6 +642,25 @@ void NaviLogScopeBase::setupModel(LoggingScopesModelBase* model)
     {
         tree->setSelectionModel(mSelModel);
         connect(mSelModel, &QItemSelectionModel::currentRowChanged, this, [this](const QModelIndex& current, const QModelIndex& previous) {onRowChanged(current, previous);});
+    }
+
+    if (mScopesModel != nullptr)
+    {
+        // Scopes that arrive later have no hidden state yet, so the filter runs again. The
+        // delayed call lets the explorer place and expand the new nodes first.
+        const auto refilter = [this](const QModelIndex&) {
+            if ((mFilterEdit != nullptr) && (mFilterEdit->text().trimmed().isEmpty() == false))
+            {
+                QTimer::singleShot(0, this, [this]() { applyScopeFilter(); });
+            }
+        };
+
+        connect(mScopesModel, &LoggingScopesModelBase::signalScopesInserted, this, refilter);
+        connect(mScopesModel, &LoggingScopesModelBase::signalRootUpdated   , this, refilter);
+
+        connect(mScopesModel, &LoggingScopesModelBase::signalSafeguardsChanged, this, [this]() { refreshSafeguards(); });
+        connect(mScopesModel, &LoggingScopesModelBase::signalScopesInserted   , this, [this](const QModelIndex&) { refreshSafeguards(); });
+        connect(mScopesModel, &LoggingScopesModelBase::signalScopesUpdated    , this, [this](const QModelIndex&) { refreshSafeguards(); });
     }
 }
 
@@ -564,10 +1021,19 @@ void NaviLogScopeBase::applyPriorityLevel(const QModelIndex& node, int level)
         prio |= static_cast<uint32_t>(areg::LogPriority::PrioScope);
     }
 
+    // The walk back is scheduled before the change, so it carries what the scope had.
+    const uint32_t was{ entry != nullptr ? entry->getPriority() : prio };
+    if (mTempRaise && (NaviLogScopeBase::levelOfPriority(prio) > NaviLogScopeBase::levelOfPriority(was)))
+    {
+        mScopesModel->scheduleRevert(target, was, NaviLogScopeBase::TempRaiseMs);
+    }
+
     if (mScopesModel->setLogPriority(target, prio) && (ctrlTable() != nullptr))
     {
         ctrlTable()->viewport()->update();
     }
+
+    refreshSafeguards();
 }
 
 void NaviLogScopeBase::copyScopePath(const QModelIndex& node) const
@@ -635,6 +1101,13 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
     lines->setData(static_cast<int>(eScopeMenu::MenuScopeLines));
     lines->setCheckable(true);
     lines->setChecked(hasLines);
+
+    QAction* temporary = menu.addAction(NELusanCommon::iconTimer(NELusanCommon::SizeBig), tr("&Go back after five minutes"));
+    temporary->setData(static_cast<int>(eScopeMenu::MenuTempRaise));
+    temporary->setCheckable(true);
+    temporary->setChecked(mTempRaise);
+    temporary->setEnabled(mScopesModel->isLiveSession());
+    temporary->setToolTip(tr("Raising a scope from here puts it back on its own after five minutes."));
 
     menu.addSeparator();
     menu.addSection(tr("Apply to"));
@@ -748,6 +1221,10 @@ bool NaviLogScopeBase::runScopeMenu(const QAction& action, const QModelIndex& no
         updatePriority(reachTarget(node), action.isChecked(), areg::LogPriority::PrioScope);
         break;
 
+    case eScopeMenu::MenuTempRaise:
+        mTempRaise = action.isChecked();
+        break;
+
     case eScopeMenu::MenuReachScope:
         mScopeReach = eScopeReach::ReachScope;
         break;
@@ -789,7 +1266,7 @@ bool NaviLogScopeBase::runScopeMenu(const QAction& action, const QModelIndex& no
         break;
 
     case eScopeMenu::MenuSavePrioAll:
-        mScopesModel->saveLogScopePriority(mScopesModel->getRootIndex());
+        mScopesModel->saveLogScopePriority(QModelIndex());
         break;
 
     case eScopeMenu::MenuCopyScopePath:

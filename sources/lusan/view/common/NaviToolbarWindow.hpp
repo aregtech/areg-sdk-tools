@@ -113,6 +113,13 @@ protected:
     void setNaviHeader(QWidget* header);
 
     /**
+     * \brief   Places a widget between the tool button row and the tree view, after every
+     *          bar added so far, and takes its ownership.
+     * \param   bar     The widget to show above the tree.
+     **/
+    void addNaviBar(QWidget* bar);
+
+    /**
      * \brief   Applies the tree view setup shared by the navigation windows.
      * \param   iconSize    The size of the icons drawn in the tree items.
      **/

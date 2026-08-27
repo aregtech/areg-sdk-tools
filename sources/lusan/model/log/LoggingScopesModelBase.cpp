@@ -27,10 +27,14 @@
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QTimer>
+
 LoggingScopesModelBase::LoggingScopesModelBase(QObject* parent)
     : QAbstractItemModel( parent )
     , mRootIndex        ( )
     , mLoggingModel     ( nullptr )
+    , mTargetClock      ( nullptr )
+    , mTempRaises       ( )
     
     , mSignalsSetup         ( false )
     , mConSvcConnected      ( )
@@ -48,6 +52,31 @@ LoggingScopesModelBase::~LoggingScopesModelBase()
     _setupSignals(false);
     clearModel(false);
     mLoggingModel = nullptr;
+}
+
+namespace
+{
+    //! The pace the target state is moved on with, in milliseconds.
+    constexpr int _targetTickMs { 120 };
+
+    //! Returns the sentence that says what the target knows about its priorities.
+    QVariant _targetStateText(ScopeRoot::eTargetState state)
+    {
+        switch (state)
+        {
+        case ScopeRoot::eTargetState::TargetPending:
+            return QObject::tr("Changed here, not in effect on the target.");
+
+        case ScopeRoot::eTargetState::TargetSent:
+            return QObject::tr("Sent to the target, waiting for its answer.");
+
+        case ScopeRoot::eTargetState::TargetSaved:
+            return QObject::tr("Saved on the target. It keeps these priorities across a restart.");
+
+        default:
+            return QVariant();
+        }
+    }
 }
 
 void LoggingScopesModelBase::nodeExpanded(const QModelIndex& idxNode)
@@ -280,10 +309,26 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
     {
         return QVariant::fromValue<ScopeNodeBase *>(entry);
     }
+
+    case Qt::ItemDataRole::ToolTipRole:
+    {
+        return entry->isRoot() ? _targetStateText(static_cast<const ScopeRoot *>(entry)->targetState()) : QVariant();
+    }
         
     default:
-        return QVariant();
+        break;
     }
+
+    if (entry->isRoot())
+    {
+        const ScopeRoot* root{ static_cast<const ScopeRoot *>(entry) };
+        if (role == LoggingScopesModelBase::RoleTargetState)
+            return QVariant(static_cast<int>(root->targetState()));
+        else if (role == LoggingScopesModelBase::RoleTargetFade)
+            return QVariant(root->targetFade());
+    }
+
+    return QVariant();
 }
 
 QVariant LoggingScopesModelBase::headerData(int section, Qt::Orientation orientation, int role) const
@@ -554,6 +599,276 @@ int LoggingScopesModelBase::applyRememberedPriorities(ScopeRoot & root)
     return root.restorePriorities();
 }
 
+int LoggingScopesModelBase::countBelowDefault(QMap<QString, int>& perProcess) const
+{
+    perProcess.clear();
+    if (mLoggingModel == nullptr)
+        return 0;
+
+    int total{ 0 };
+    const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    for (const ScopeRoot* root : roots)
+    {
+        if (root == nullptr)
+            continue;
+
+        std::vector<ScopeNodeBase*> leafs;
+        root->extractNodeLeafs(leafs);
+
+        int count{ 0 };
+        for (const ScopeNodeBase* leaf : leafs)
+        {
+            count += leaf->isBelowDefault() ? 1 : 0;
+        }
+
+        if (count != 0)
+        {
+            perProcess.insert(root->getDisplayName(), count);
+            total += count;
+        }
+    }
+
+    return total;
+}
+
+int LoggingScopesModelBase::restoreDefaults(void)
+{
+    if (mLoggingModel == nullptr)
+        return 0;
+
+    int total{ 0 };
+    LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    for (int pos = 0; pos < static_cast<int>(roots.size()); ++pos)
+    {
+        ScopeRoot* root = roots[pos];
+        if (root == nullptr)
+            continue;
+
+        std::vector<ScopeNodeBase*> leafs;
+        root->extractNodeLeafs(leafs);
+
+        int count{ 0 };
+        for (ScopeNodeBase* leaf : leafs)
+        {
+            if (leaf->isBelowDefault())
+            {
+                leaf->setPriority(leaf->defaultPriority());
+                ++count;
+            }
+        }
+
+        if (count == 0)
+            continue;
+
+        root->resetPrioritiesRecursive(true);
+        root->refreshPrioritiesRecursive();
+
+        const bool sent{ pushPriorities(*root) };
+        const QModelIndex idxRoot{ index(pos, 0, mRootIndex) };
+        setTargetState(idxRoot, sent ? ScopeRoot::eTargetState::TargetSent : ScopeRoot::eTargetState::TargetPending);
+        _notifyBranchChanged(idxRoot);
+        total += count;
+    }
+
+    if (total != 0)
+    {
+        emit signalSafeguardsChanged();
+    }
+
+    return total;
+}
+
+void LoggingScopesModelBase::scheduleRevert(const QModelIndex& node, uint32_t prio, int afterMs)
+{
+    const ScopeNodeBase* entry{ node.isValid() ? static_cast<const ScopeNodeBase*>(node.internalPointer()) : nullptr };
+    const ScopeNodeBase* treeRoot{ entry != nullptr ? entry->getTreeRoot() : nullptr };
+    if ((treeRoot == nullptr) || (isLiveSession() == false))
+        return;
+
+    // A process carries an empty path, which names the process itself.
+    const ITEM_ID rootId{ static_cast<const ScopeRoot *>(treeRoot)->getRootId() };
+    const QString path{ entry->makePath() };
+
+    // A second raise on the same scope replaces the first, so the walk back stays one step.
+    for (int pos = 0; pos < static_cast<int>(mTempRaises.size()); ++pos)
+    {
+        if ((mTempRaises[pos].rootId == rootId) && (mTempRaises[pos].path == path))
+        {
+            prio = mTempRaises[pos].prio;
+            mTempRaises[pos].timer->stop();
+            delete mTempRaises[pos].timer;
+            mTempRaises.removeAt(pos);
+            break;
+        }
+    }
+
+    QTimer* timer = new QTimer(this);
+    timer->setSingleShot(true);
+    timer->setInterval(afterMs);
+    connect(timer, &QTimer::timeout, this, [this, rootId, path]() { _revertTempRaise(rootId, path); });
+
+    mTempRaises.append(sTempRaise{ rootId, path, prio, timer });
+    timer->start();
+    emit signalSafeguardsChanged();
+}
+
+int LoggingScopesModelBase::keepTempRaises(void)
+{
+    const int count{ static_cast<int>(mTempRaises.size()) };
+    for (sTempRaise& raise : mTempRaises)
+    {
+        raise.timer->stop();
+        delete raise.timer;
+    }
+
+    mTempRaises.clear();
+    if (count != 0)
+    {
+        emit signalSafeguardsChanged();
+    }
+
+    return count;
+}
+
+void LoggingScopesModelBase::_revertTempRaise(ITEM_ID rootId, const QString& path)
+{
+    uint32_t prio{ static_cast<uint32_t>(areg::LogPriority::PrioNotset) };
+    bool found{ false };
+    for (int pos = 0; pos < static_cast<int>(mTempRaises.size()); ++pos)
+    {
+        if ((mTempRaises[pos].rootId == rootId) && (mTempRaises[pos].path == path))
+        {
+            prio = mTempRaises[pos].prio;
+            found = true;
+            mTempRaises[pos].timer->deleteLater();
+            mTempRaises.removeAt(pos);
+            break;
+        }
+    }
+
+    const int at{ found ? findRoot(rootId) : static_cast<int>(areg::INVALID_INDEX) };
+    if (at != static_cast<int>(areg::INVALID_INDEX))
+    {
+        ScopeRoot* root = mLoggingModel->getRootList()[at];
+        ScopeNodeBase* node{ path.isEmpty() ? static_cast<ScopeNodeBase *>(root) : root->findChildByPath(path) };
+        const QModelIndex idxNode{ _indexOfNode(node) };
+        if (idxNode.isValid())
+        {
+            // The walk back goes through the same call the raise did, so the target hears
+            // about it the same way.
+            setLogPriority(idxNode, prio);
+            _notifyBranchChanged(index(at, 0, mRootIndex));
+        }
+    }
+
+    emit signalSafeguardsChanged();
+}
+
+QModelIndex LoggingScopesModelBase::_indexOfNode(ScopeNodeBase* node) const
+{
+    if (node == nullptr)
+        return QModelIndex();
+
+    int pos{ static_cast<int>(areg::INVALID_INDEX) };
+    if (node->isRoot())
+    {
+        pos = findRoot(static_cast<ScopeRoot *>(node)->getRootId());
+    }
+    else
+    {
+        const ScopeNodeBase* parent{ node->getParent() };
+        pos = parent != nullptr ? parent->getChildPosition(node->getNodeName()) : static_cast<int>(areg::INVALID_INDEX);
+    }
+
+    return (pos != static_cast<int>(areg::INVALID_INDEX)) ? createIndex(pos, 0, node) : QModelIndex();
+}
+
+bool LoggingScopesModelBase::pushPriorities(ScopeRoot& root)
+{
+    Q_UNUSED(root);
+    return false;
+}
+
+void LoggingScopesModelBase::setTargetState(const QModelIndex& node, ScopeRoot::eTargetState state)
+{
+    ScopeNodeBase* entry{ node.isValid() ? static_cast<ScopeNodeBase*>(node.internalPointer()) : nullptr };
+    ScopeNodeBase* treeRoot{ entry != nullptr ? entry->getTreeRoot() : nullptr };
+    if ((treeRoot == nullptr) || (isLiveSession() == false) || (mLoggingModel == nullptr))
+        return;
+
+    ScopeRoot* root{ static_cast<ScopeRoot *>(treeRoot) };
+    const int pos{ findRoot(root->getRootId()) };
+    if (pos == static_cast<int>(areg::INVALID_INDEX))
+        return;
+
+    root->setTargetState(state);
+    const QModelIndex idxRoot{ index(pos, LoggingScopesModelBase::ColumnName, mRootIndex) };
+    emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleTargetState
+                                                 , LoggingScopesModelBase::RoleTargetFade
+                                                 , Qt::ItemDataRole::ToolTipRole });
+    _runTargetClock();
+}
+
+void LoggingScopesModelBase::_ageTargetStates(void)
+{
+    if (mLoggingModel == nullptr)
+        return;
+
+    LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    for (int pos = 0; pos < static_cast<int>(roots.size()); ++pos)
+    {
+        ScopeRoot* root = roots[pos];
+        if ((root != nullptr) && root->ageTargetState(_targetTickMs))
+        {
+            const QModelIndex idxRoot{ index(pos, LoggingScopesModelBase::ColumnName, mRootIndex) };
+            emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleTargetState
+                                                         , LoggingScopesModelBase::RoleTargetFade
+                                                         , Qt::ItemDataRole::ToolTipRole });
+        }
+    }
+
+    _runTargetClock();
+}
+
+void LoggingScopesModelBase::_runTargetClock(void)
+{
+    bool needed{ false };
+    if (mLoggingModel != nullptr)
+    {
+        const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+        for (const ScopeRoot* root : roots)
+        {
+            if ((root != nullptr) && root->isTargetAgeing())
+            {
+                needed = true;
+                break;
+            }
+        }
+    }
+
+    if (needed && (mTargetClock == nullptr))
+    {
+        mTargetClock = new QTimer(this);
+        mTargetClock->setInterval(_targetTickMs);
+        connect(mTargetClock, &QTimer::timeout, this, [this]() { _ageTargetStates(); });
+    }
+
+    if (mTargetClock == nullptr)
+        return;
+
+    if (needed)
+    {
+        if (mTargetClock->isActive() == false)
+        {
+            mTargetClock->start();
+        }
+    }
+    else
+    {
+        mTargetClock->stop();
+    }
+}
+
 void LoggingScopesModelBase::slotLogServiceConnected()
 {
     clearModel(false);
@@ -615,6 +930,10 @@ void LoggingScopesModelBase::slotInstancesUnavailable(const std::vector<ITEM_ID>
                 {
                     changed = true;
                     root->setConnected(false);
+                    if (root->targetState() == ScopeRoot::eTargetState::TargetSent)
+                    {
+                        root->setTargetState(ScopeRoot::eTargetState::TargetPending);
+                    }
                     const QModelIndex idxRoot{ index(i, 0, mRootIndex) };
                     emit dataChanged(idxRoot, idxRoot, QList<int>{ Qt::ItemDataRole::DecorationRole });
                     break;
@@ -680,6 +999,10 @@ void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector
 
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
+        if (root->targetState() == ScopeRoot::eTargetState::TargetSent)
+        {
+            root->setTargetState(ScopeRoot::eTargetState::TargetApplied);
+        }
 
         QModelIndex entry = index(pos, 0, mRootIndex);
         emit signalScopesUpdated(idxInstance);
