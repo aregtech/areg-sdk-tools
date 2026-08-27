@@ -108,7 +108,12 @@ public:
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
     bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
-    
+
+    /**
+     * \brief   Returns true. The model follows running targets, so a process that goes is marked.
+     **/
+    bool isLiveSession() const override;
+
 protected:
     
     /**

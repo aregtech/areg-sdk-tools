@@ -71,6 +71,15 @@ void NaviToolbarWindow::addToolSeparator(void)
     mToolLayout->addWidget(line);
 }
 
+void NaviToolbarWindow::addToolWidget(QWidget* widget)
+{
+    if (widget != nullptr)
+    {
+        widget->setParent(mToolbar);
+        mToolLayout->addWidget(widget);
+    }
+}
+
 void NaviToolbarWindow::setNaviHeader(QWidget* header)
 {
     if (header != nullptr)

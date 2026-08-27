@@ -42,6 +42,11 @@ void LiveScopesModel::setLoggingModel(LoggingModelBase* model)
     LoggingScopesModelBase::setLoggingModel(model);
 }
 
+bool LiveScopesModel::isLiveSession() const
+{
+    return true;
+}
+
 bool LiveScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
 {
     bool result{ false };

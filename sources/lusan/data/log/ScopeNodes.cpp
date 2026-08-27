@@ -24,6 +24,28 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "areg/component/ServiceDefs.hpp"
 
+#include <algorithm>
+
+namespace
+{
+    //! Folds one child roll-up into the roll-up of its parent. The first child sets it.
+    inline void _mergeRollup(ScopeNodeBase::sPrioRollup & into, const ScopeNodeBase::sPrioRollup & from, bool & empty)
+    {
+        if (empty)
+        {
+            into  = from;
+            empty = false;
+        }
+        else
+        {
+            into.levelLow  = std::min(into.levelLow , from.levelLow );
+            into.levelHigh = std::max(into.levelHigh, from.levelHigh);
+            into.linesSome = into.linesSome || from.linesSome;
+            into.linesAll  = into.linesAll  && from.linesAll;
+        }
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 // ScopeLeaf class implementation
 //////////////////////////////////////////////////////////////////////////
@@ -95,6 +117,8 @@ ScopeNode::ScopeNode(ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, parent)
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -102,6 +126,8 @@ ScopeNode::ScopeNode(const QString& nodeName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, nodeName, prio, parent)
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -109,6 +135,8 @@ ScopeNode::ScopeNode(const ScopeNodeBase& base)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, base.getNodeName(), base.getPriority(), base.getParent())
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -116,6 +144,8 @@ ScopeNode::ScopeNode(const ScopeNode& src)
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
     , mChildNodes   ( src.mChildNodes )
     , mChildLeafs   ( src.mChildLeafs )
+    , mShownState   ( src.mShownState )
+    , mPrioRollup   ( src.mPrioRollup )
 {
 }
 
@@ -123,6 +153,8 @@ ScopeNode::ScopeNode( ScopeNode && src ) noexcept
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
     , mChildNodes   ( std::move(src.mChildNodes) )
     , mChildLeafs   ( std::move(src.mChildLeafs) )
+    , mShownState   ( src.mShownState )
+    , mPrioRollup   ( src.mPrioRollup )
 {
 }
 
@@ -130,6 +162,8 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsig
     : ScopeNodeBase ( nodeType, name, prio, parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -137,6 +171,8 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, Scope
     : ScopeNodeBase ( nodeType, name, static_cast<uint32_t>(areg::LogPriority::PrioNotset), parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -144,6 +180,8 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent /*= null
     : ScopeNodeBase ( nodeType, parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -163,6 +201,77 @@ ScopeNode::~ScopeNode()
 
     mChildLeafs.clear();
     mChildNodes.clear();
+}
+
+void ScopeNode::setShownRecursive(bool shown)
+{
+    ScopeNodeBase::setShownRecursive(shown);
+    mShownState = shown ? Qt::CheckState::Checked : Qt::CheckState::Unchecked;
+    for (const auto & leaf : mChildLeafs)
+    {
+        leaf.second->setShownRecursive(shown);
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        node.second->setShownRecursive(shown);
+    }
+}
+
+Qt::CheckState ScopeNode::shownState() const
+{
+    return (childNodeCount() == 0) ? ScopeNodeBase::shownState() : mShownState;
+}
+
+void ScopeNode::refreshShownState()
+{
+    if (childNodeCount() == 0)
+    {
+        mShownState = ScopeNodeBase::shownState();
+        return;
+    }
+
+    int shown{ 0 };
+    int total{ 0 };
+    for (const auto & leaf : mChildLeafs)
+    {
+        ++total;
+        shown += (leaf.second->shownState() == Qt::CheckState::Checked) ? 1 : 0;
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        const Qt::CheckState state{ node.second->shownState() };
+        if (state == Qt::CheckState::PartiallyChecked)
+        {
+            mShownState = Qt::CheckState::PartiallyChecked;
+            return;
+        }
+
+        ++total;
+        shown += (state == Qt::CheckState::Checked) ? 1 : 0;
+    }
+
+    if (shown == 0)
+        mShownState = Qt::CheckState::Unchecked;
+    else
+        mShownState = (shown == total) ? Qt::CheckState::Checked : Qt::CheckState::PartiallyChecked;
+}
+
+int ScopeNode::collectHiddenScopes(QSet<uint32_t> & scopeIds) const
+{
+    int result{ 0 };
+    for (const auto & leaf : mChildLeafs)
+    {
+        result += leaf.second->collectHiddenScopes(scopeIds);
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        result += node.second->collectHiddenScopes(scopeIds);
+    }
+
+    return result;
 }
 
 void ScopeNode::removeChildren(void)
@@ -189,6 +298,8 @@ ScopeNode & ScopeNode::operator = ( const ScopeNode & src )
     {
         mChildNodes = src.mChildNodes;
         mChildLeafs = src.mChildLeafs;
+        mShownState = src.mShownState;
+        mPrioRollup = src.mPrioRollup;
     }
 
     return (*this);
@@ -201,6 +312,8 @@ ScopeNode & ScopeNode::operator = ( ScopeNode && src ) noexcept
     {
         mChildNodes = std::move(src.mChildNodes);
         mChildLeafs = std::move(src.mChildLeafs);
+        mShownState = src.mShownState;
+        mPrioRollup = src.mPrioRollup;
     }
 
     return (*this);
@@ -469,17 +582,41 @@ void ScopeNode::resetPrioritiesRecursive(bool skipLeafs /*= false*/)
 
 void ScopeNode::refreshPrioritiesRecursive()
 {
+    uint32_t states{ static_cast<uint32_t>(areg::LogPriority::PrioInvalid) };
+    ScopeNodeBase::sPrioRollup rollup{ };
+    bool empty{ true };
+
     for (const auto& node : mChildNodes)
     {
-        node.second->refreshPrioritiesRecursive();
+        ScopeNode* child = node.second;
+        Q_ASSERT(child != nullptr);
+        child->refreshPrioritiesRecursive();
+        states |= child->getPriority();
+        _mergeRollup(rollup, child->priorityRollup(), empty);
     }
 
     for (const auto& leaf : mChildLeafs)
     {
-        ScopeNodeBase* node = leaf.second;
-        Q_ASSERT(node != nullptr);
-        node->updateParentPrio(node->getPriority(), true);
+        ScopeNodeBase* child = leaf.second;
+        Q_ASSERT(child != nullptr);
+        states |= child->getPriority();
+        _mergeRollup(rollup, child->priorityRollup(), empty);
     }
+
+    if (empty == false)
+    {
+        mPrioStates = states;
+        mPrioRollup = rollup;
+    }
+    else
+    {
+        mPrioRollup = ScopeNodeBase::priorityRollup();
+    }
+}
+
+ScopeNodeBase::sPrioRollup ScopeNode::priorityRollup() const
+{
+    return (childNodeCount() == 0) ? ScopeNodeBase::priorityRollup() : mPrioRollup;
 }
 
 QList<ScopeNodeBase*> ScopeNode::getNodesWithPriority() const

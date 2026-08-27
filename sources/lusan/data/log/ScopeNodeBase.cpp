@@ -27,6 +27,7 @@ ScopeNodeBase::ScopeNodeBase()
     , mParent       ( nullptr )
     , mPrioStates   ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
     , mNodeName     ( )
+    , mShown        ( true )
 {
 }
 
@@ -36,6 +37,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, ScopeNodeBase* paren
     , mParent       ( parent )
     , mPrioStates   ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
     , mNodeName     ( )
+    , mShown        ( true )
 {
 }
 
@@ -45,6 +47,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeN
     , mParent       ( parent )
     , mPrioStates   ( prio )
     , mNodeName     ( nodeName )
+    , mShown        ( true )
 {
 }
 
@@ -54,6 +57,7 @@ ScopeNodeBase::ScopeNodeBase(const ScopeNodeBase& src)
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
     , mNodeName     ( src.mNodeName )
+    , mShown        ( src.mShown )
 {
 }
 
@@ -63,6 +67,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase&& src) noexcept
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
     , mNodeName     ( std::move(src.mNodeName) )
+    , mShown        ( src.mShown )
 {
 }
 
@@ -74,6 +79,7 @@ ScopeNodeBase& ScopeNodeBase::operator = (const ScopeNodeBase& src)
         mNodeState  = src.mNodeState;
         mPrioStates = src.mPrioStates;
         mNodeName   = src.mNodeName;
+        mShown      = src.mShown;
     }
 
     return (*this);
@@ -87,6 +93,7 @@ ScopeNodeBase& ScopeNodeBase::operator = (ScopeNodeBase&& src) noexcept
         mNodeState  = src.mNodeState;
         mPrioStates = src.mPrioStates;
         mNodeName   = std::move(src.mNodeName);
+        mShown      = src.mShown;
     }
 
     return (*this);
@@ -388,6 +395,29 @@ void ScopeNodeBase::refreshPrioritiesRecursive()
 {
 }
 
+uint8_t ScopeNodeBase::priorityLevel(uint32_t prio)
+{
+    const uint32_t bits{ prio & static_cast<uint32_t>(areg::LogPriority::PrioValidLogs) };
+
+    if ((bits & static_cast<uint32_t>(areg::LogPriority::PrioDebug)) != 0)
+        return 4u;
+    else if ((bits & static_cast<uint32_t>(areg::LogPriority::PrioInfo)) != 0)
+        return 3u;
+    else if ((bits & static_cast<uint32_t>(areg::LogPriority::PrioWarning)) != 0)
+        return 2u;
+    else if ((bits & (static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal))) != 0)
+        return 1u;
+    else
+        return 0u;
+}
+
+ScopeNodeBase::sPrioRollup ScopeNodeBase::priorityRollup() const
+{
+    const uint8_t level{ ScopeNodeBase::priorityLevel(mPrioStates) };
+    const bool lines{ hasScopeEntries() };
+    return ScopeNodeBase::sPrioRollup{ level, level, lines, lines };
+}
+
 QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority() const
 {
     QList<ScopeNodeBase*> result;
@@ -486,4 +516,24 @@ void ScopeNodeBase::setScopeId(uint32_t /*scopeId*/)
 uint32_t ScopeNodeBase::getScopeId() const
 {
     return areg::LOG_SCOPE_ID_NONE;
+}
+
+void ScopeNodeBase::setShownRecursive(bool shown)
+{
+    mShown = shown;
+}
+
+Qt::CheckState ScopeNodeBase::shownState() const
+{
+    return (mShown ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+}
+
+int ScopeNodeBase::collectHiddenScopes(QSet<uint32_t> & scopeIds) const
+{
+    const uint32_t scopeId{ getScopeId() };
+    if (mShown || (scopeId == areg::LOG_SCOPE_ID_NONE))
+        return 0;
+
+    scopeIds.insert(scopeId);
+    return 1;
 }

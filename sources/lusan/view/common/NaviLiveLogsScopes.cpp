@@ -29,6 +29,7 @@
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
+#include "lusan/view/log/LogPriorityBar.hpp"
 
 #include "areg/base/SocketDefs.hpp"
 
@@ -152,11 +153,11 @@ void NaviLiveLogsScopes::setupWidgets()
     ctrlSettings()->setEnabled(true);
     ctrlSaveSettings()->setEnabled(true);
     ctrlFind()->setEnabled(false);
-    ctrlLogError()->setEnabled(false);
-    ctrlLogWarning()->setEnabled(false);
-    ctrlLogInfo()->setEnabled(false);
-    ctrlLogDebug()->setEnabled(false);
-    ctrlLogScopes()->setEnabled(false);
+    ctrlPriorityBar()->setEnabled(false);
+    ctrlPriorityBar()->setIdle(true);
+    ctrlShowOnly()->setEnabled(false);
+    ctrlHide()->setEnabled(false);
+    ctrlShowAll()->setEnabled(false);
 }
 
 void NaviLiveLogsScopes::setupSignals()

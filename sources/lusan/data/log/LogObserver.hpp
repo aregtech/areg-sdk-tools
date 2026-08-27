@@ -36,6 +36,8 @@
 #include <QString>
 #include <QMap>
 
+#include <atomic>
+
 /************************************************************************
  * Dependencies.
  ************************************************************************/
@@ -606,9 +608,19 @@ private slots:
 private:
     inline LogObserver& self();
 
+    /**
+     * \brief   Passes the data of a log collector callback to the component thread.
+     *          It does nothing while the service is not running, so a callback arriving on a
+     *          socket thread during shutdown is dropped instead of reaching a dispatcher
+     *          that has already been torn down.
+     * \param   data    The data of the event to deliver.
+     **/
+    void postObserverEvent(LogObserverEventData && data);
+
 private:
     LogCollectorClient& mLogClient;     //!< Log observer client.
     areg::String        mConfigFile;    //!< The path to config file.
+    std::atomic_bool    mIsRunning;     //!< True between the startup and the shutdown of the service.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

@@ -24,6 +24,7 @@
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/model/log/OfflineScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/log/LogPriorityBar.hpp"
 
 #include <QIcon>
 #include <QMessageBox>
@@ -134,11 +135,8 @@ bool NaviOfflineLogsScopes::isDatabaseOpen() const
 
 void NaviOfflineLogsScopes::setLoggingModel(LoggingModelBase * model)
 {
-    ctrlLogDebug()->setChecked(model != nullptr);
-    ctrlLogError()->setChecked(model != nullptr);
-    ctrlLogInfo()->setChecked(model != nullptr);
-    ctrlLogScopes()->setChecked(model != nullptr);
-    ctrlLogWarning()->setChecked(model != nullptr);
+    ctrlPriorityBar()->setEnabled(model != nullptr);
+    ctrlPriorityBar()->setIdle(model == nullptr);
 
     NaviLogScopeBase::setLoggingModel(model);
     updateControls();

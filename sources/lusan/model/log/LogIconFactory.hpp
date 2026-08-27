@@ -129,6 +129,16 @@ public:
      * \param   scopePrio   The bits of combination of scope priorities.
      **/
     static sCharger chargerOf(uint32_t scopePrio);
+
+    /**
+     * \brief   Returns the charger of a node whose scopes below do not all produce the same.
+     *          Cells up to the lowest level are solid, the cells between the two levels are
+     *          hollow, and the rest stay ghosted.
+     * \param   levelLow    The lowest level any scope below produces, 0 up to ChargerCells.
+     * \param   levelHigh   The highest level any scope below produces, 0 up to ChargerCells.
+     * \param   lines       The state of the scope lines below.
+     **/
+    static sCharger chargerOfRange(uint8_t levelLow, uint8_t levelHigh, eScopeLines lines);
 };
 
 #endif  // LUSAN_MODEL_LOG_LogIconFactory_HPP

@@ -255,6 +255,34 @@ public:
     void removeChildren(void);
 
     /**
+     * \brief   Shows or hides the rows of this node and of every node and leaf below it.
+     **/
+    void setShownRecursive(bool shown) override;
+
+    /**
+     * \brief   Returns whether every scope below is shown, none is, or they disagree.
+     **/
+    Qt::CheckState shownState() const override;
+
+    /**
+     * \brief   Adds the identifiers of every hidden leaf below to the given set.
+     **/
+    int collectHiddenScopes(QSet<uint32_t> & scopeIds) const override;
+
+    /**
+     * \brief   Recomputes the show and hide state of this node from its direct children.
+     *          Call it on the parents of a node whose state has just changed, from the
+     *          nearest parent upwards.
+     **/
+    void refreshShownState();
+
+    /**
+     * \brief   Returns what the scopes below produce together, as last rebuilt by
+     *          refreshPrioritiesRecursive().
+     **/
+    sPrioRollup priorityRollup() const override;
+
+    /**
      * \brief   Returns the position of the child node in the list of child nodes.
      *          Returns NECommon::INVALID_INDEX if no child with specified name exists.
      * \param   childName   The name of the child node to find.
@@ -395,6 +423,10 @@ protected:
     NodeList    mChildNodes;
     //!< The list of child leafs.
     LeafList    mChildLeafs;
+    //!< Whether every scope below is shown, none is, or they disagree.
+    Qt::CheckState mShownState;
+    //!< What the scopes below produce together, rebuilt by refreshPrioritiesRecursive().
+    sPrioRollup mPrioRollup;
 };
 
 //////////////////////////////////////////////////////////////////////////

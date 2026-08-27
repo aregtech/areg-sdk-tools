@@ -101,6 +101,12 @@ protected:
     void addToolSeparator(void);
 
     /**
+     * \brief   Puts the given widget in the tool button row, after everything added so far.
+     * \param   widget  The widget to place. It is reparented to the row.
+     **/
+    void addToolWidget(QWidget* widget);
+
+    /**
      * \brief   Places a widget above the tool button row and takes its ownership.
      * \param   header  The widget to show on top of the navigation window.
      **/

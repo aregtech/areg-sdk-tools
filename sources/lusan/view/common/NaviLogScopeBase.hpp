@@ -34,9 +34,11 @@
  ************************************************************************/
 class LoggingScopesModelBase;
 class LoggingModelBase;
+class LogPriorityBar;
 class MdiMainWindow;
 class ScopeNodeBase;
 class QAction;
+class QMenu;
 class QItemSelectionModel;
 class QModelIndex;
 class QPoint;
@@ -52,6 +54,13 @@ class QToolButton;
  **/
 class NaviLogScopeBase : public NaviToolbarWindow
 {
+//////////////////////////////////////////////////////////////////////////
+// Constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< The icon edge of a scope tree node. The charger is drawn to be read at this size.
+    static constexpr int    ScopeIconExtent { 16 };
+
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -59,25 +68,40 @@ class NaviLogScopeBase : public NaviToolbarWindow
 //////////////////////////////////////////////////////////////////////////
 protected:
 
-    //!< The entries of the scope tree context menu.
+    //!< The entries of the scope tree context menu. The value travels in QAction::data().
     enum eScopeMenu
     {
-          MenuPrioNotset    = 0 //!< Reset priorities
-        , MenuPrioAllset        //!< Set all priorities
-        , MenuPrioDebug         //!< Set debug priority
-        , MenuPrioInfo          //!< Set info priority
-        , MenuPrioWarn          //!< Set warning priority
-        , MenuPrioError         //!< Set error priority
-        , MenuPrioFatal         //!< Set fatal priority
-        , MenuPrioScope         //!< Set scope priority
+          MenuNone          = 0 //!< No entry
+        , MenuLevelOff          //!< Generate nothing
+        , MenuLevelError        //!< Generate fatal and error
+        , MenuLevelWarning      //!< and warning
+        , MenuLevelInfo         //!< and information
+        , MenuLevelDebug        //!< and debug
+        , MenuScopeLines        //!< Switch the enter and exit lines
+        , MenuReachScope        //!< Apply a priority to the clicked scope
+        , MenuReachBranch       //!< Apply a priority to the clicked node and everything under it
+        , MenuReachProcess      //!< Apply a priority to every scope of the process
+        , MenuShowOnlyThis      //!< Draw the rows of this branch and of nothing else
+        , MenuHideThis          //!< Stop drawing the rows of this branch
+        , MenuShowAll           //!< Draw the rows of every scope again
         , MenuExpandSelected    //!< Expand selected node
         , MenuCollapseSelected  //!< Collapse selected node
         , MenuExpandAll         //!< Expand all nodes
         , MenuCollapseAll       //!< Collapse all nodes
         , MenuSavePrioTarget    //!< Save priority settings of the selected target
         , MenuSavePrioAll       //!< Save priority settings of all targets
+        , MenuCopyScopePath     //!< Copy the full path of the clicked node
+    };
 
-        , MenuCount             //!< The number of entries in the menu
+    /**
+     * \brief   What a priority chosen in the context menu applies to. The choice is kept
+     *          between menus, so the same reach holds until it is changed.
+     **/
+    enum eScopeReach
+    {
+          ReachScope    = 0 //!< The clicked scope alone. Only a leaf is a single scope
+        , ReachBranch       //!< The clicked node and everything under it
+        , ReachProcess      //!< Every scope of the process the clicked node belongs to
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -108,20 +132,10 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Enables or disables lot priority tool buttons based on selection index.
-     *          It also changes the colors of the buttons depending on the priority.
+     * \brief   Puts the priority ladder and the show and hide buttons in the state the given
+     *          selection calls for. With nothing selected the ladder shows no level at all.
      **/
     virtual void enableButtons(const QModelIndex& selection);
-
-    /**
-     * \brief   Updates the colors of the log priority tool buttons.
-     * \param   errSelected    If true, the error button is checked and the colored.
-     * \param   warnSelected   If true, the warning button is checked and the colored.
-     * \param   infoSelected   If true, the info button is checked and the colored.
-     * \param   dbgSelected    If true, the debug button is checked and the colored.
-     * \param   scopeSelected  If true, the scopes button is checked and the colored.
-     **/
-    virtual void updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected);
 
     /**
      * \brief   Updates the expanded of the log scopes model based on the current index.
@@ -137,6 +151,63 @@ public:
      * \return  Returns true if succeeded the request to update the priority. Otherwise, returns false.
      **/
     virtual bool updatePriority(const QModelIndex& node, bool addPrio, areg::LogPriority prio);
+
+    /**
+     * \brief   Returns the priority bits a ladder level stands for. The levels are cumulative:
+     *          warning means fatal, error and warning.
+     * \param   level   The level of the ladder.
+     * \return  The combination of priority bits, without the scope lines flag.
+     **/
+    static uint32_t priorityOfLevel(int level);
+
+    /**
+     * \brief   Returns the ladder level the given priority bits stand for.
+     * \param   prio    The combination of priority bits.
+     **/
+    static int levelOfPriority(uint32_t prio);
+
+    /**
+     * \brief   Returns the node a priority change applies to, following the kept reach.
+     * \param   node    The index the context menu was opened on.
+     * \return  The index to change, or an invalid index if there is none.
+     **/
+    QModelIndex reachTarget(const QModelIndex& node) const;
+
+    /**
+     * \brief   Sets the scope priority of the reach target to the given ladder level,
+     *          keeping the enter and exit lines as they are.
+     * \param   node    The index the context menu was opened on.
+     * \param   level   The level of the ladder to set.
+     **/
+    void applyPriorityLevel(const QModelIndex& node, int level);
+
+    /**
+     * \brief   Puts the full path of the given node on the clipboard.
+     **/
+    void copyScopePath(const QModelIndex& node) const;
+
+    /**
+     * \brief   Builds the scope context menu on the given node.
+     * \param   menu    The menu to fill.
+     * \param   node    The index the menu was opened on.
+     * \param   entry   The scope node the index points to.
+     **/
+    void buildScopeMenu(QMenu& menu, const QModelIndex& node, const ScopeNodeBase& entry);
+
+    /**
+     * \brief   Runs one of the show and hide entries on the given node.
+     * \param   node    The node to show or hide.
+     * \param   entry   One of the show and hide entries. Anything else is ignored.
+     **/
+    void applyScopeVisibility(const QModelIndex& node, eScopeMenu entry);
+
+    /**
+     * \brief   Runs the entry the user picked in the scope context menu.
+     * \param   action  The chosen entry, never nullptr.
+     * \param   node    The index the menu was opened on.
+     * \return  True if the entry was handled here.
+     **/
+    bool runScopeMenu(const QAction& action, const QModelIndex& node);
 
     /**
      * \brief   Expands the child nodes of the specified scope tree recursively.
@@ -186,6 +257,26 @@ protected:
      * \brief   Connects the tool buttons and the scope tree. Call it after setupModel().
      **/
     void setupScopeControls(void);
+
+    /**
+     * \brief   Gives the leading show and hide column its fixed width and takes the tree
+     *          indentation out of it, so every box sits at the same place.
+     **/
+    void setupShowColumn(void);
+
+    /**
+     * \brief   Gives the show and hide column its resize mode and width.
+     * \note    A header section exists only while a model is attached, and attaching a model
+     *          rebuilds the sections. Call it after every model change; it does nothing while
+     *          the tree has fewer columns than the show and hide column needs.
+     **/
+    void applyShowColumnLayout(void);
+
+    /**
+     * \brief   Returns the width of the show and hide column, measured from the active style
+     *          rather than fixed, so it stays tight at any scaling.
+     **/
+    int showColumnWidth(void) const;
 
     /**
      * \brief   Adds the tool buttons of the derived explorer placed between the collapse and
@@ -245,20 +336,17 @@ protected:
     //!< Returns the control object to find a string.
     inline QToolButton* ctrlFind(void) const;
 
-    //!< Returns the control object to set error level of the logs.
-    inline QToolButton* ctrlLogError(void) const;
+    //!< Returns the ladder that sets the priority of the selected scopes.
+    inline LogPriorityBar* ctrlPriorityBar(void) const;
 
-    //!< Returns the control object to set warning level of the logs.
-    inline QToolButton* ctrlLogWarning(void) const;
+    //!< Returns the control object to show the selected scope and hide every other one.
+    inline QToolButton* ctrlShowOnly(void) const;
 
-    //!< Returns the control object to set information level of the logs.
-    inline QToolButton* ctrlLogInfo(void) const;
+    //!< Returns the control object to hide the selected scope.
+    inline QToolButton* ctrlHide(void) const;
 
-    //!< Returns the control object to set debug level of the logs.
-    inline QToolButton* ctrlLogDebug(void) const;
-
-    //!< Returns the control object to enable log scopes of the logs.
-    inline QToolButton* ctrlLogScopes(void) const;
+    //!< Returns the control object to show every scope again.
+    inline QToolButton* ctrlShowAll(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -266,12 +354,23 @@ protected:
 protected:
 
     /**
-     * \brief   Slot, triggered when a log priority tool button is checked or unchecked.
-     * \param   checked     The flag, indicating whether the tool button is checked or unchecked.
-     * \param   toolButton  The reference to the tool button that was checked or unchecked.
-     * \param   prio        The log priority associated with the tool button.
+     * \brief   Slot, triggered when a level is chosen on the toolbar ladder. It applies the
+     *          level to the current selection, following the kept reach.
+     * \param   level   The chosen position of the ladder.
      **/
-    virtual void onLogPrioChecked(bool checked, QToolButton& toolButton, areg::LogPriority prio);
+    virtual void onPriorityLevelChosen(int level);
+
+    /**
+     * \brief   Slot, triggered when the enter and exit lines are switched on the toolbar ladder.
+     * \param   enabled     True if the lines are to be written.
+     **/
+    virtual void onScopeLinesToggled(bool enabled);
+
+    /**
+     * \brief   Slot, triggered when a show and hide tool button is clicked.
+     * \param   entry   The entry the button stands for.
+     **/
+    virtual void onScopeVisibilityClicked(eScopeMenu entry);
 
     /**
      * \brief   Slot, triggered when a navigation node is expanded or collapsed.
@@ -297,12 +396,11 @@ protected:
 private:
     QToolButton*            mToolCollapse;  //!< The tool button to collapse or expand the scope tree
     QToolButton*            mToolFind;      //!< The tool button to find a log message
-    QToolButton*            mPrioError;     //!< The tool button for error log priority
-    QToolButton*            mPrioWarning;   //!< The tool button for warning log priority
-    QToolButton*            mPrioInfo;      //!< The tool button for info log priority
-    QToolButton*            mPrioDebug;     //!< The tool button for debug log priority
-    QToolButton*            mPrioScopes;    //!< The tool button for scopes log priority
-    QList<QAction*>         mMenuActions;   //!< The entries of the scope tree context menu
+    LogPriorityBar*         mPrioBar;       //!< The ladder that sets the priority of the selected scopes
+    QToolButton*            mToolShowOnly;  //!< The tool button that shows the selection and hides the rest
+    QToolButton*            mToolHide;      //!< The tool button that hides the selection
+    QToolButton*            mToolShowAll;   //!< The tool button that shows every scope again
+    eScopeReach             mScopeReach;    //!< What a priority chosen in the context menu applies to
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -319,29 +417,24 @@ inline QToolButton* NaviLogScopeBase::ctrlFind(void) const
     return mToolFind;
 }
 
-inline QToolButton* NaviLogScopeBase::ctrlLogError(void) const
+inline LogPriorityBar* NaviLogScopeBase::ctrlPriorityBar(void) const
 {
-    return mPrioError;
+    return mPrioBar;
 }
 
-inline QToolButton* NaviLogScopeBase::ctrlLogWarning(void) const
+inline QToolButton* NaviLogScopeBase::ctrlShowOnly(void) const
 {
-    return mPrioWarning;
+    return mToolShowOnly;
 }
 
-inline QToolButton* NaviLogScopeBase::ctrlLogInfo(void) const
+inline QToolButton* NaviLogScopeBase::ctrlHide(void) const
 {
-    return mPrioInfo;
+    return mToolHide;
 }
 
-inline QToolButton* NaviLogScopeBase::ctrlLogDebug(void) const
+inline QToolButton* NaviLogScopeBase::ctrlShowAll(void) const
 {
-    return mPrioDebug;
-}
-
-inline QToolButton* NaviLogScopeBase::ctrlLogScopes(void) const
-{
-    return mPrioScopes;
+    return mToolShowAll;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVILOGSCOPEBASE_HPP

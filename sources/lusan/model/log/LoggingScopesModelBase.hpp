@@ -25,6 +25,7 @@
 #include <QAbstractItemModel>
 #include <QList>
 #include <QMap>
+#include <QSet>
 
 #include "areg/component/ServiceDefs.hpp"
 #include "areg/logging/areg_log.h"
@@ -46,6 +47,19 @@ class LoggingScopesModelBase : public QAbstractItemModel
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
+// Constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< The leading column, which carries the show and hide box of the scope.
+    static constexpr int    ColumnShow  { 0 };
+
+    //!< The column of the scope name and its charger. The tree lives in this column.
+    static constexpr int    ColumnName  { 1 };
+
+    //!< The number of columns the scope tree has.
+    static constexpr int    ColumnCount { 2 };
+
+//////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -62,9 +76,11 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Checks if the given index is valid.
+     * \brief   Checks if the given index belongs to this model and addresses an existing cell.
      * \param   index   The index to check.
      * \return  True if the index is valid, false otherwise.
+     * \note    It accepts every column of the model. A caller that serves one column has to
+     *          test the column itself.
      **/
     inline bool isValidIndex(const QModelIndex& index) const;
 
@@ -130,6 +146,11 @@ signals:
      * \param   parent  The index of the parent instance item that is updated.
      **/
     void signalScopesUpdated(const QModelIndex& parent);
+
+    /**
+     * \brief   Signal emitted when the set of scopes the log window should draw has changed.
+     **/
+    void signalScopeVisibilityChanged();
     
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase overrides
@@ -138,6 +159,30 @@ public:
 /************************************************************************
  * LoggingScopesModelBase overrides
  ************************************************************************/
+
+    /**
+     * \brief   Draws or stops drawing the rows of the given node and of everything under it.
+     * \param   index   The index of the node.
+     * \param   shown   True to draw the rows, false to leave them out.
+     **/
+    void setScopeShown(const QModelIndex& index, bool shown);
+
+    /**
+     * \brief   Draws the rows of the given node and of everything under it, and of nothing
+     *          else in any process.
+     * \param   index   The index of the node to keep.
+     **/
+    void showScopeAlone(const QModelIndex& index);
+
+    /**
+     * \brief   Draws the rows of every scope of every process again.
+     **/
+    void showAllScopes(void);
+
+    /**
+     * \brief   Returns true if at least one scope of any process is hidden.
+     **/
+    bool hasHiddenScopes(void) const;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -210,6 +255,12 @@ public:
      **/
     virtual void releaseModel();
 
+    /**
+     * \brief   Returns true if the model follows running targets. An archive returns false,
+     *          so a process that is no longer reachable is never marked gone in it.
+     **/
+    virtual bool isLiveSession() const;
+
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////
@@ -271,6 +322,16 @@ public:
      * \return  The flags of the item.
      **/
     Qt::ItemFlags flags(const QModelIndex& index) const override;
+
+    /**
+     * \brief   Takes the click on the show and hide box of the leading column.
+     *          A node that is only partly shown becomes fully shown; a fully shown node hides.
+     * \param   index   The index that was clicked.
+     * \param   value   Ignored: the new state follows from the current one.
+     * \param   role    Only the check state role is handled.
+     * \return  True if the state changed.
+     **/
+    bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::ItemDataRole::EditRole) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Internal overrides
@@ -313,6 +374,14 @@ protected:
      * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
      **/
     int findRoot(ITEM_ID rootId) const;
+
+    /**
+     * \brief   Collects the identifiers of every scope the log window should not draw.
+     * \param   scopeIds    The set to add the identifiers to.
+     * \return  The number of identifiers added.
+     **/
+    int collectHiddenScopes(QSet<uint32_t>& scopeIds) const;
+
 
     /**
      * \brief   Finds a root that stands for the same program in the same place and is
@@ -396,6 +465,13 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    //!< Tells the view that the show and hide box of everything below the given index has changed.
+    void _notifyBranchChanged(const QModelIndex& parent);
+
+    //!< Tells the view that the show and hide box of every parent of the given index has changed.
+    void _notifyParentsChanged(const QModelIndex& child);
+
+private:
     
     /**
      * \brief   Sets up the signals for the logging model.
@@ -431,7 +507,11 @@ private:
 
 inline bool LoggingScopesModelBase::isValidIndex(const QModelIndex& index) const
 {
-    return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
+    return ( index.isValid()
+          && (index.row() >= 0)
+          && (index.column() >= 0)
+          && (index.column() < LoggingScopesModelBase::ColumnCount)
+          && (index.model() == this) );
 }
 
 inline const QModelIndex& LoggingScopesModelBase::getRootIndex() const

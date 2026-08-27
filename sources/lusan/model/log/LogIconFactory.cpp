@@ -345,6 +345,26 @@ LogIconFactory::sCharger LogIconFactory::chargerOf(uint32_t scopePrio)
     return charger;
 }
 
+LogIconFactory::sCharger LogIconFactory::chargerOfRange(uint8_t levelLow, uint8_t levelHigh, LogIconFactory::eScopeLines lines)
+{
+    const uint8_t high{ qMin(levelHigh, static_cast<uint8_t>(LogIconFactory::ChargerCells)) };
+    const uint8_t low { qMin(levelLow , high) };
+
+    LogIconFactory::sCharger charger;
+    charger.level  = high;
+    charger.lines  = lines;
+    charger.frozen = false;
+    charger.mixed  = 0u;
+
+    // A cell the lowest level does not reach but the highest does is one the scopes disagree about.
+    for (uint8_t cell = low; cell < high; ++cell)
+    {
+        charger.mixed |= static_cast<uint8_t>(1u << cell);
+    }
+
+    return charger;
+}
+
 QIcon LogIconFactory::getIcon(uint32_t scopePrio, uint32_t pixels)
 {
     return LogIconFactory::chargerIcon(LogIconFactory::chargerOf(scopePrio), pixels);

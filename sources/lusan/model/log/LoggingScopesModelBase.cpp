@@ -168,7 +168,7 @@ void LoggingScopesModelBase::setLoggingModel(LoggingModelBase* model)
 
 QModelIndex LoggingScopesModelBase::index(int row, int column, const QModelIndex& parent) const
 {
-    if ((hasIndex(row, column, parent) == false) || (column != 0) || (mLoggingModel == nullptr))
+    if ((hasIndex(row, column, parent) == false) || (mLoggingModel == nullptr))
         return QModelIndex();
 
     const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
@@ -231,7 +231,7 @@ int LoggingScopesModelBase::rowCount(const QModelIndex& parent) const
 int LoggingScopesModelBase::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return 1;
+    return LoggingScopesModelBase::ColumnCount;
 }
 
 QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
@@ -244,26 +244,40 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
         return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(tr("Scopes")) : QVariant());
     }
     
+    ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
+    if (entry == nullptr)
+        return QVariant();
+
+    if (index.column() == LoggingScopesModelBase::ColumnShow)
+    {
+        return (role == Qt::ItemDataRole::CheckStateRole) ? QVariant(entry->shownState()) : QVariant();
+    }
+
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::ItemDataRole::DisplayRole:
     {
-        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
         return entry->getDisplayName();
     }
     
     case Qt::ItemDataRole::DecorationRole:
     {
-        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
+        const ScopeNodeBase::sPrioRollup rollup{ entry->priorityRollup() };
+        const LogIconFactory::eScopeLines lines{ rollup.linesAll  ? LogIconFactory::eScopeLines::LinesOn
+                                               : rollup.linesSome ? LogIconFactory::eScopeLines::LinesPartial
+                                                                  : LogIconFactory::eScopeLines::LinesOff };
+
+        LogIconFactory::sCharger charger{ LogIconFactory::chargerOfRange(rollup.levelLow, rollup.levelHigh, lines) };
         const ScopeNodeBase* treeRoot{ entry->getTreeRoot() };
-        LogIconFactory::sCharger charger{ LogIconFactory::chargerOf(entry->getPriority()) };
-        charger.frozen = (treeRoot != nullptr) && (static_cast<const ScopeRoot *>(treeRoot)->isConnected() == false);
+        charger.frozen = isLiveSession()
+                      && (treeRoot != nullptr)
+                      && (static_cast<const ScopeRoot *>(treeRoot)->isConnected() == false);
+
         return LogIconFactory::chargerIcon(charger);
     }
     
     case Qt::ItemDataRole::UserRole:
     {
-        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
         return QVariant::fromValue<ScopeNodeBase *>(entry);
     }
         
@@ -291,15 +305,165 @@ Qt::ItemFlags LoggingScopesModelBase::flags(const QModelIndex& index) const
     else
     {
         ScopeNodeBase* node = static_cast<ScopeNodeBase*>(index.internalPointer());
-        if ((node != nullptr) && (node->isLeaf()))
+        Qt::ItemFlags result{ Qt::ItemIsSelectable | Qt::ItemIsEnabled };
+        if ((node != nullptr) && node->isLeaf())
         {
-            return (Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren);
+            result |= Qt::ItemNeverHasChildren;
         }
-        else
+
+        if (index.column() == LoggingScopesModelBase::ColumnShow)
         {
-            return (Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+            result |= Qt::ItemIsUserCheckable;
+        }
+
+        return result;
+    }
+}
+
+bool LoggingScopesModelBase::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+    if ( (role != Qt::ItemDataRole::CheckStateRole)
+      || (index.column() != LoggingScopesModelBase::ColumnShow)
+      || (isValidIndex(index) == false) )
+    {
+        return false;
+    }
+
+    ScopeNodeBase* node = static_cast<ScopeNodeBase*>(index.internalPointer());
+    if (node == nullptr)
+        return false;
+
+    Q_UNUSED(value);
+
+    // A partially checked node shows everything below it. Only a fully shown node hides.
+    node->setShownRecursive(node->shownState() != Qt::CheckState::Checked);
+
+    const QModelIndex last{ this->index(index.row(), LoggingScopesModelBase::ColumnCount - 1, index.parent()) };
+    emit dataChanged(index, last);
+    _notifyBranchChanged(index);
+    _notifyParentsChanged(index);
+    emit signalScopeVisibilityChanged();
+    return true;
+}
+
+void LoggingScopesModelBase::setScopeShown(const QModelIndex& index, bool shown)
+{
+    if (isValidIndex(index) == false)
+        return;
+
+    ScopeNodeBase* node = static_cast<ScopeNodeBase*>(index.internalPointer());
+    if (node == nullptr)
+        return;
+
+    node->setShownRecursive(shown);
+    const QModelIndex first{ this->index(index.row(), LoggingScopesModelBase::ColumnShow, index.parent()) };
+    const QModelIndex last { this->index(index.row(), LoggingScopesModelBase::ColumnCount - 1, index.parent()) };
+    emit dataChanged(first, last);
+    _notifyBranchChanged(first);
+    _notifyParentsChanged(first);
+    emit signalScopeVisibilityChanged();
+}
+
+void LoggingScopesModelBase::showScopeAlone(const QModelIndex& index)
+{
+    if (isValidIndex(index) == false)
+        return;
+
+    const int roots{ rowCount(mRootIndex) };
+    for (int row = 0; row < roots; ++row)
+    {
+        const QModelIndex idxRoot{ this->index(row, LoggingScopesModelBase::ColumnShow, mRootIndex) };
+        ScopeNodeBase* root = static_cast<ScopeNodeBase*>(idxRoot.internalPointer());
+        if (root != nullptr)
+        {
+            root->setShownRecursive(false);
         }
     }
+
+    ScopeNodeBase* node = static_cast<ScopeNodeBase*>(index.internalPointer());
+    if (node != nullptr)
+    {
+        node->setShownRecursive(true);
+    }
+
+    _notifyBranchChanged(mRootIndex);
+    _notifyParentsChanged(this->index(index.row(), LoggingScopesModelBase::ColumnShow, index.parent()));
+    emit dataChanged(this->index(0, LoggingScopesModelBase::ColumnShow, mRootIndex), this->index(roots - 1, LoggingScopesModelBase::ColumnCount - 1, mRootIndex));
+    emit signalScopeVisibilityChanged();
+}
+
+void LoggingScopesModelBase::showAllScopes(void)
+{
+    const int roots{ rowCount(mRootIndex) };
+    if (roots == 0)
+        return;
+
+    for (int row = 0; row < roots; ++row)
+    {
+        ScopeNodeBase* root = static_cast<ScopeNodeBase*>(this->index(row, LoggingScopesModelBase::ColumnShow, mRootIndex).internalPointer());
+        if (root != nullptr)
+        {
+            root->setShownRecursive(true);
+        }
+    }
+
+    _notifyBranchChanged(mRootIndex);
+    emit dataChanged(this->index(0, LoggingScopesModelBase::ColumnShow, mRootIndex), this->index(roots - 1, LoggingScopesModelBase::ColumnCount - 1, mRootIndex));
+    emit signalScopeVisibilityChanged();
+}
+
+bool LoggingScopesModelBase::hasHiddenScopes(void) const
+{
+    QSet<uint32_t> hidden;
+    return (const_cast<LoggingScopesModelBase*>(this)->collectHiddenScopes(hidden) != 0);
+}
+
+void LoggingScopesModelBase::_notifyBranchChanged(const QModelIndex& parent)
+{
+    const int count{ rowCount(parent) };
+    if (count == 0)
+        return;
+
+    emit dataChanged(index(0, LoggingScopesModelBase::ColumnShow, parent), index(count - 1, LoggingScopesModelBase::ColumnShow, parent));
+    for (int row = 0; row < count; ++row)
+    {
+        _notifyBranchChanged(index(row, LoggingScopesModelBase::ColumnShow, parent));
+    }
+}
+
+void LoggingScopesModelBase::_notifyParentsChanged(const QModelIndex& child)
+{
+    QModelIndex node{ child.parent() };
+    while (node.isValid() && (node != mRootIndex))
+    {
+        ScopeNodeBase* entry = static_cast<ScopeNodeBase*>(node.internalPointer());
+        if (entry == nullptr)
+            break;
+
+        // The state of a parent is kept, not computed on every paint, so it is recomputed here.
+        if (entry->isLeaf() == false)
+        {
+            static_cast<ScopeNode*>(entry)->refreshShownState();
+        }
+
+        emit dataChanged(node, node);
+        node = node.parent();
+    }
+}
+
+int LoggingScopesModelBase::collectHiddenScopes(QSet<uint32_t>& scopeIds) const
+{
+    int result{ 0 };
+    if (mLoggingModel != nullptr)
+    {
+        for (const ScopeRoot* root : mLoggingModel->getRootList())
+        {
+            Q_ASSERT(root != nullptr);
+            result += root->collectHiddenScopes(scopeIds);
+        }
+    }
+
+    return result;
 }
 
 void LoggingScopesModelBase::buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId)
@@ -597,6 +761,11 @@ void LoggingScopesModelBase::releaseModel()
     {
         mLoggingModel->releaseModel();
     }
+}
+
+bool LoggingScopesModelBase::isLiveSession() const
+{
+    return false;
 }
 
 void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)

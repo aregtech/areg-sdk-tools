@@ -36,6 +36,20 @@ namespace
     constexpr int   RailHeight  {  3 };  //!< The mark that says a cell is chosen.
     constexpr qreal Radius      { 5.0 }; //!< The corner of the shell.
 
+    //! The share of the width each cell takes, as running totals over the six cells.
+    constexpr int   _cellStops[7]{ 0, OffWidth
+                                 , OffWidth + CellWidth
+                                 , OffWidth + (CellWidth * 2)
+                                 , OffWidth + (CellWidth * 3)
+                                 , OffWidth + (CellWidth * 4)
+                                 , OffWidth + (CellWidth * 4) + ScopeWidth };
+
+    //! The sum of the cell shares.
+    constexpr int   CellStopMax { _cellStops[6] };
+
+    //! The narrowest the six cells may be squeezed to before the letters stop reading.
+    constexpr int   MinCellSpan { (CellStopMax * 2) / 3 };
+
     //! The letters of the four severity cells, in ladder order.
     const char* const _letters[4]{ "E", "W", "I", "D" };
 
@@ -61,6 +75,7 @@ LogPriorityBar::LogPriorityBar(QWidget* parent /*= nullptr*/)
     , mLevel    (LogPriorityBar::eLogLevel::LevelOff)
     , mScopes   (false)
     , mMixed    (false)
+    , mIdle     (false)
     , mHovered  (-1)
 {
     setMouseTracking(true);
@@ -75,7 +90,7 @@ QSize LogPriorityBar::sizeHint(void) const
 
 QSize LogPriorityBar::minimumSizeHint(void) const
 {
-    return sizeHint();
+    return QSize(MinCellSpan + NotchWidth + 2, BarHeight);
 }
 
 void LogPriorityBar::setLevel(LogPriorityBar::eLogLevel newLevel)
@@ -105,21 +120,28 @@ void LogPriorityBar::setMixed(bool mixed)
     }
 }
 
+void LogPriorityBar::setIdle(bool idle)
+{
+    if (mIdle != idle)
+    {
+        mIdle = idle;
+        update();
+    }
+}
+
 QRect LogPriorityBar::_cellRect(int cell) const
 {
     if ((cell < 0) || (cell >= LogPriorityBar::CellCount))
         return QRect();
 
-    int left{ 1 };
-    if (cell == 0)
-        return QRect(left, 1, OffWidth, height() - 2);
+    // The cells keep their proportions at any width, so the bar fits a narrow dock
+    // without the letters leaving their cells.
+    const int span { qMax(width() - NotchWidth - 2, MinCellSpan) };
+    const int notch{ cell == LogPriorityBar::ScopeCell ? NotchWidth : 0 };
+    const int left { 1 + notch + ((_cellStops[cell]     * span) / CellStopMax) };
+    const int right{ 1 + notch + ((_cellStops[cell + 1] * span) / CellStopMax) };
 
-    left += OffWidth;
-    if (cell <= 4)
-        return QRect(left + ((cell - 1) * CellWidth), 1, CellWidth, height() - 2);
-
-    left += (CellWidth * 4) + NotchWidth;
-    return QRect(left, 1, ScopeWidth, height() - 2);
+    return QRect(left, 1, right - left, height() - 2);
 }
 
 int LogPriorityBar::_cellAt(const QPoint& pos) const
@@ -137,17 +159,19 @@ void LogPriorityBar::_activateCell(int cell)
 {
     if (cell == LogPriorityBar::ScopeCell)
     {
-        mScopes = !mScopes;
+        mScopes = mIdle ? true : (mScopes == false);
+        mIdle   = false;
         update();
         emit signalScopeToggled(mScopes);
     }
     else if ((cell >= 0) && (cell <= 4))
     {
         const eLogLevel chosen{ static_cast<eLogLevel>(cell) };
-        if (chosen != mLevel)
+        if ((chosen != mLevel) || mMixed || mIdle)
         {
             mLevel = chosen;
             mMixed = false;
+            mIdle  = false;
             update();
             emit signalLevelChanged(mLevel);
         }
@@ -174,7 +198,8 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
     painter.setClipPath(shape);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
-    const int levelValue{ static_cast<int>(mLevel) };
+    const int  levelValue{ mIdle ? -1 : static_cast<int>(mLevel) };
+    const bool scopes    { (mIdle == false) && mScopes };
 
     // The leading cell. It is selected, never lit: silence is not a priority, so it
     // takes a colourless rail and no fill.
@@ -226,13 +251,13 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
 
         const QColor hue{ NELogPalette::railColor(NELogPalette::eLogColorRole::RoleScope) };
         const QColor ink{ NELogPalette::textColor(NELogPalette::eLogColorRole::RoleScope) };
-        if (mScopes)
+        if (scopes)
         {
             painter.fillRect(cell.adjusted(1, 0, 0, 0), tintOf(hue));
             painter.fillRect(QRect(cell.left() + 1, cell.bottom() - RailHeight + 1, cell.width() - 1, RailHeight), hue);
         }
 
-        painter.setPen(mScopes ? ink : muted);
+        painter.setPen(scopes ? ink : muted);
         QFont letter{ font() };
         letter.setBold(true);
         painter.setFont(letter);
@@ -294,7 +319,7 @@ void LogPriorityBar::leaveEvent(QEvent* event)
 
 void LogPriorityBar::keyPressEvent(QKeyEvent* event)
 {
-    const int levelValue{ static_cast<int>(mLevel) };
+    const int levelValue{ mIdle ? -1 : static_cast<int>(mLevel) };
 
     // The arrows walk the ladder and stop at Debug. They never reach the scope flag,
     // because that would put two different axes on one key.

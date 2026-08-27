@@ -97,6 +97,17 @@ public:
     void setMixed(bool mixed);
 
     /**
+     * \brief   Returns true if the bar shows no level at all.
+     **/
+    inline bool isIdle(void) const;
+
+    /**
+     * \brief   Draws the bar with no level and no scope flag, for the case where there is
+     *          nothing to read a level from. Choosing a cell clears it.
+     **/
+    void setIdle(bool idle);
+
+    /**
      * \brief   Returns the size the bar needs. The height is fixed at the toolbar row.
      **/
     virtual QSize sizeHint(void) const override;
@@ -156,6 +167,7 @@ private:
     eLogLevel   mLevel;         //!< The level the bar shows.
     bool        mScopes;        //!< The state of the scope flag.
     bool        mMixed;         //!< The selected scopes do not agree on one level.
+    bool        mIdle;          //!< There is nothing to read a level from.
     int         mHovered;       //!< The cell under the cursor, or -1.
 };
 
@@ -171,6 +183,11 @@ inline LogPriorityBar::eLogLevel LogPriorityBar::level(void) const
 inline bool LogPriorityBar::isScopeEnabled(void) const
 {
     return mScopes;
+}
+
+inline bool LogPriorityBar::isIdle(void) const
+{
+    return mIdle;
 }
 
 #endif  // LUSAN_VIEW_LOG_LOGPRIORITYBAR_HPP
