@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: scope left, an arrow running out of the scope bracket -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M15 12H3.2"/>
+<path d="M7.2 8.2L3.2 12L7.2 15.8"/>
+<path d="M17.6 4.4H21V19.6H17.6"/>
+</g>
+</svg>

@@ -35,6 +35,12 @@
         <file alias="log-prio-warning">icons/log-prio-warning.svg</file>
         <file alias="log-prio-scope-enter">icons/log-prio-scope-enter.svg</file>
         <file alias="log-prio-scope-exit">icons/log-prio-scope-exit.svg</file>
+        <file alias="log-scope-enter">icons/log-scope-enter.svg</file>
+        <file alias="log-scope-exit">icons/log-scope-exit.svg</file>
+        <file alias="scope-solo">icons/ui-scope-solo.svg</file>
+        <file alias="scope-mute">icons/ui-scope-mute.svg</file>
+        <file alias="scope-restore-all">icons/ui-scope-restore-all.svg</file>
+        <file alias="scope-lines">icons/ui-scope-lines.svg</file>
         <file alias="sm-event">icons/sm-event.svg</file>
         <file alias="sm-timer">icons/sm-timer.svg</file>
         <file alias="sm method trigger">icons/sm-method-trigger.svg</file>

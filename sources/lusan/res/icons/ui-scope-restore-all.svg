@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: bring every hidden row back, a stack pulled out to the left -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M9.4 8.6L5 12L9.4 15.4"/>
+<path d="M11.4 6.5H19"/>
+<path d="M11.4 12H19"/>
+<path d="M11.4 17.5H19"/>
+</g>
+</svg>

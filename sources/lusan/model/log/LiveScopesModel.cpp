@@ -156,6 +156,17 @@ bool LiveScopesModel::slotInstancesAvailable(const std::vector<areg::ConnectedIn
     }
 }
 
+int LiveScopesModel::applyRememberedPriorities(ScopeRoot & root)
+{
+    const int count{ LoggingScopesModelBase::applyRememberedPriorities(root) };
+    if (count != 0)
+    {
+        _requestNodePriority(root, root);
+    }
+
+    return count;
+}
+
 bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node)
 {
     bool result{false};

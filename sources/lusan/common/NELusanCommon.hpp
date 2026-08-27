@@ -735,6 +735,18 @@ namespace NELusanCommon
     //<! Loads prio scope exit log icon and sets the specified size
     inline QIcon iconScopeExit(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads the icon that shows only the selected scopes
+    inline QIcon iconScopeSolo(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that hides the selected scopes
+    inline QIcon iconScopeMute(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that brings every hidden scope back
+    inline QIcon iconScopeRestoreAll(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon of the scope enter and exit lines
+    inline QIcon iconScopeLines(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
     
@@ -867,12 +879,32 @@ inline QIcon NELusanCommon::iconLogFatal(const QSize & size)
 
 inline QIcon NELusanCommon::iconScopeEnter(const QSize & size)
 {
-    return loadIcon(":/icons/log-prio-scope-enter", size);
+    return loadIcon(":/icons/log-scope-enter", size);
 }
 
 inline QIcon NELusanCommon::iconScopeExit(const QSize & size)
 {
-    return loadIcon(":/icons/log-prio-scope-exit", size);
+    return loadIcon(":/icons/log-scope-exit", size);
+}
+
+inline QIcon NELusanCommon::iconScopeSolo(const QSize & size)
+{
+    return loadIcon(":/icons/scope-solo", size);
+}
+
+inline QIcon NELusanCommon::iconScopeMute(const QSize & size)
+{
+    return loadIcon(":/icons/scope-mute", size);
+}
+
+inline QIcon NELusanCommon::iconScopeRestoreAll(const QSize & size)
+{
+    return loadIcon(":/icons/scope-restore-all", size);
+}
+
+inline QIcon NELusanCommon::iconScopeLines(const QSize & size)
+{
+    return loadIcon(":/icons/scope-lines", size);
 }
 
 inline QIcon NELusanCommon::iconServiceInterfaceTab(const QSize & size)

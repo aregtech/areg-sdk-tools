@@ -25,6 +25,8 @@
 #include "areg/base/SortedLinkedList.hpp"
 #include "areg/component/ServiceDefs.hpp"
 
+#include <QMap>
+
 #include <map>
 
 /************************************************************************
@@ -245,6 +247,12 @@ public:
      * \param   childName   The name of the child node to find.
      **/
     ScopeNodeBase* findChild(const QString& childName) const override;
+
+    /**
+     * \brief   Deletes every child node and leaf, leaving the node empty.
+     * \note    The caller owns the row bookkeeping of any model showing these children.
+     **/
+    void removeChildren(void);
 
     /**
      * \brief   Returns the position of the child node in the list of child nodes.
@@ -488,12 +496,49 @@ public:
      **/
     inline void setRootName(const QString& newRoot);
 
+    /**
+     * \brief   Returns true while the process this root stands for is reachable.
+     **/
+    inline bool isConnected(void) const;
+
+    /**
+     * \brief   Marks the process reachable or gone. A gone root stays in the tree.
+     **/
+    inline void setConnected(bool connected);
+
+    /**
+     * \brief   Returns true if the given connection is the same program in the same place.
+     *          The cookie is deliberately not compared: it is handed out per connection,
+     *          so a restarted process arrives with a different one.
+     **/
+    bool isSameInstance(const areg::ConnectedInstance & instance) const;
+
+    /**
+     * \brief   Remembers the priority of every scope below that carries one, by path.
+     **/
+    void savePriorities(void);
+
+    /**
+     * \brief   Applies the remembered priorities to the scopes that are present again.
+     *          A path that no longer exists is skipped.
+     * \return  Returns the number of scopes the priority was applied to.
+     **/
+    int restorePriorities(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Protected members
 //////////////////////////////////////////////////////////////////////////
 private:
     //!< The ID of the root.
     ITEM_ID     mRootId;
+    //!< The name of the program, as the connection reported it.
+    QString     mInstance;
+    //!< The file location of the program, as the connection reported it.
+    QString     mLocation;
+    //!< False when the process is gone and the root is kept only for its logs.
+    bool        mConnected;
+    //!< The priority of every scope that carried one, kept across a disconnect.
+    QMap<QString, uint32_t>  mSavedPrio;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -555,6 +600,16 @@ inline const QString& ScopeRoot::getRootName() const
 inline void ScopeRoot::setRootName(const QString& newRoot)
 {
     mNodeName = newRoot;
+}
+
+inline bool ScopeRoot::isConnected() const
+{
+    return mConnected;
+}
+
+inline void ScopeRoot::setConnected(bool connected)
+{
+    mConnected = connected;
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODES_HPP

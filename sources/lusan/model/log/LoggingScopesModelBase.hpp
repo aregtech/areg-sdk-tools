@@ -314,6 +314,33 @@ protected:
      **/
     int findRoot(ITEM_ID rootId) const;
 
+    /**
+     * \brief   Finds a root that stands for the same program in the same place and is
+     *          currently marked gone. The cookie is not compared, because a restarted
+     *          process is handed a new one.
+     * \param   instance    The connection that has just arrived.
+     * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
+     **/
+    int findGoneRoot(const areg::ConnectedInstance & instance) const;
+
+    /**
+     * \brief   Puts a gone root back in service under its new cookie. The scopes it held
+     *          are dropped, because the target reports them again; the priorities that were
+     *          set on them are remembered and reapplied once they arrive.
+     * \param   pos         The position of the root in the list.
+     * \param   instance    The connection that has just arrived.
+     * \note    Emits no row change of its own. Call it inside a model reset.
+     **/
+    void reviveRoot(int pos, const areg::ConnectedInstance & instance);
+
+    /**
+     * \brief   Applies the priorities a revived root remembered, after its scopes arrived.
+     *          The live model additionally sends them to the target.
+     * \param   root        The root whose scopes have just been rebuilt.
+     * \return  The number of scopes the priority was applied to.
+     **/
+    virtual int applyRememberedPriorities(ScopeRoot & root);
+
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////

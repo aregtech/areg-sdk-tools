@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -164,6 +164,23 @@ ScopeNode::~ScopeNode()
     mChildLeafs.clear();
     mChildNodes.clear();
 }
+
+void ScopeNode::removeChildren(void)
+{
+    for (const auto & leaf : mChildLeafs)
+    {
+        delete leaf.second;
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        delete node.second;
+    }
+
+    mChildLeafs.clear();
+    mChildNodes.clear();
+}
+
 
 ScopeNode & ScopeNode::operator = ( const ScopeNode & src )
 {
@@ -552,50 +569,82 @@ uint32_t ScopeNode::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
 ScopeRoot::ScopeRoot()
     : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (areg::COOKIE_LOCAL)
+    , mInstance ()
+    , mLocation ()
+    , mConnected(true)
+    , mSavedPrio()
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId)
     : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (rootId)
+    , mInstance ()
+    , mLocation ()
+    , mConnected(true)
+    , mSavedPrio()
 {
 }
 
 ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
     : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (instance.ciCookie)
+    , mInstance (QString::fromStdString(instance.ciInstance))
+    , mLocation (QString::fromStdString(instance.ciLocation))
+    , mConnected(true)
+    , mSavedPrio()
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString& rootName)
     : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (rootId)
+    , mInstance (rootName)
+    , mLocation ()
+    , mConnected(true)
+    , mSavedPrio()
 {
 }
 
 ScopeRoot::ScopeRoot(const ScopeRoot& src)
     : ScopeNode ( static_cast<const ScopeNode &>(src) )
     , mRootId   ( src.mRootId )
+    , mInstance ( src.mInstance )
+    , mLocation ( src.mLocation )
+    , mConnected( src.mConnected )
+    , mSavedPrio( src.mSavedPrio )
 {
 }
 
 ScopeRoot::ScopeRoot(ScopeRoot&& src) noexcept
     : ScopeNode ( std::move(static_cast<ScopeNode &&>(src)) )
     , mRootId   ( src.mRootId )
+    , mInstance ( std::move(src.mInstance) )
+    , mLocation ( std::move(src.mLocation) )
+    , mConnected( src.mConnected )
+    , mSavedPrio( std::move(src.mSavedPrio) )
 {
 }
 
 ScopeRoot& ScopeRoot::operator = (const ScopeRoot& src)
 {
     ScopeNode::operator = (static_cast<const ScopeNode&>(src));
-    mRootId = src.mRootId;
+    mRootId    = src.mRootId;
+    mInstance  = src.mInstance;
+    mLocation  = src.mLocation;
+    mConnected = src.mConnected;
+    mSavedPrio = src.mSavedPrio;
     return (*this);
 }
 
 ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
 {
     ScopeNode::operator = (std::move(static_cast<ScopeNode&&>(src)));
-    mRootId = src.mRootId;
+    mRootId    = src.mRootId;
+    mInstance  = std::move(src.mInstance);
+    mLocation  = std::move(src.mLocation);
+    mConnected = src.mConnected;
+    mSavedPrio = std::move(src.mSavedPrio);
     return (*this);
 }
 
@@ -607,5 +656,45 @@ QString ScopeRoot::getPathString() const
 QString ScopeRoot::getDisplayName() const
 {
     QString result {getNodeName() + " (" + QString::number(mRootId) + ")"};
+    return result;
+}
+
+bool ScopeRoot::isSameInstance(const areg::ConnectedInstance & instance) const
+{
+    return ( (mInstance == QString::fromStdString(instance.ciInstance))
+          && (mLocation == QString::fromStdString(instance.ciLocation)) );
+}
+
+void ScopeRoot::savePriorities(void)
+{
+    mSavedPrio.clear();
+    QList<ScopeNodeBase *> nodes;
+    extractChildNodesWithPriority(nodes);
+    for (const ScopeNodeBase * node : nodes)
+    {
+        Q_ASSERT(node != nullptr);
+        mSavedPrio.insert(node->makePath(), node->getPriority());
+    }
+}
+
+int ScopeRoot::restorePriorities(void)
+{
+    int result{ 0 };
+    for (auto it = mSavedPrio.constBegin(); it != mSavedPrio.constEnd(); ++it)
+    {
+        ScopeNodeBase * node = findChildByPath(it.key());
+        if (node != nullptr)
+        {
+            node->setPriority(it.value());
+            ++result;
+        }
+    }
+
+    if (result != 0)
+    {
+        resetPrioritiesRecursive(true);
+        refreshPrioritiesRecursive();
+    }
+
     return result;
 }

@@ -120,7 +120,15 @@ protected:
      * \return  Returns true if the instance was added to the root element.
      **/
     bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances) override;
-    
+
+    /**
+     * \brief   Applies the priorities a revived root remembered and sends them to the target,
+     *          so a process that comes back generates what it generated before it went.
+     * \param   root    The root whose scopes have just been rebuilt.
+     * \return  The number of scopes the priority was applied to.
+     **/
+    int applyRememberedPriorities(ScopeRoot & root) override;
+
 private:
 
     /**

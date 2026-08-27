@@ -255,7 +255,10 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
     case Qt::ItemDataRole::DecorationRole:
     {
         ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
-        return LogIconFactory::getIcon(entry->getPriority());
+        const ScopeNodeBase* treeRoot{ entry->getTreeRoot() };
+        LogIconFactory::sCharger charger{ LogIconFactory::chargerOf(entry->getPriority()) };
+        charger.frozen = (treeRoot != nullptr) && (static_cast<const ScopeRoot *>(treeRoot)->isConnected() == false);
+        return LogIconFactory::chargerIcon(charger);
     }
     
     case Qt::ItemDataRole::UserRole:
@@ -355,6 +358,38 @@ int LoggingScopesModelBase::findRoot(ITEM_ID rootId) const
     return static_cast<int>(areg::INVALID_INDEX);
 }
 
+int LoggingScopesModelBase::findGoneRoot(const areg::ConnectedInstance & instance) const
+{
+    if (mLoggingModel != nullptr)
+    {
+        const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+        for (int i = 0; i < static_cast<int>(roots.size()); ++i)
+        {
+            if ((roots[i]->isConnected() == false) && roots[i]->isSameInstance(instance))
+                return i;
+        }
+    }
+
+    return static_cast<int>(areg::INVALID_INDEX);
+}
+
+void LoggingScopesModelBase::reviveRoot(int pos, const areg::ConnectedInstance & instance)
+{
+    Q_ASSERT(mLoggingModel != nullptr);
+    ScopeRoot* root = mLoggingModel->getRootList()[pos];
+    Q_ASSERT(root != nullptr);
+
+    root->savePriorities();
+    root->removeChildren();
+    root->setRootId(instance.ciCookie);
+    root->setConnected(true);
+}
+
+int LoggingScopesModelBase::applyRememberedPriorities(ScopeRoot & root)
+{
+    return root.restorePriorities();
+}
+
 void LoggingScopesModelBase::slotLogServiceConnected()
 {
     clearModel(false);
@@ -371,7 +406,16 @@ bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<areg::Conn
     beginResetModel();
     for (const auto & instance : instances)
     {
-        if ((instance.ciSource != areg::MessageSource::SourceObserver) && (existsRoot(instance.ciCookie) == false))
+        if ((instance.ciSource == areg::MessageSource::SourceObserver) || existsRoot(instance.ciCookie))
+            continue;
+
+        const int gone{ findGoneRoot(instance) };
+        if (gone != static_cast<int>(areg::INVALID_INDEX))
+        {
+            result = true;
+            reviveRoot(gone, instance);
+        }
+        else
         {
             result = true;
             ScopeRoot* root = new ScopeRoot(instance);
@@ -379,7 +423,7 @@ bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<areg::Conn
                 delete root;
         }
     }
-    
+
     endResetModel();
     
     if (result)
@@ -392,7 +436,7 @@ bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<areg::Conn
 
 void LoggingScopesModelBase::slotInstancesUnavailable(const std::vector<ITEM_ID>& instIds)
 {
-    bool removed{false};
+    bool changed{false};
 
     if (mLoggingModel != nullptr)
     {
@@ -405,17 +449,17 @@ void LoggingScopesModelBase::slotInstancesUnavailable(const std::vector<ITEM_ID>
                 Q_ASSERT(root != nullptr);
                 if (root->getRootId() == rootId)
                 {
-                    removed = true;
-                    beginRemoveRows(mRootIndex, i, i);
-                    roots.erase(roots.begin() + i);
-                    endRemoveRows();
+                    changed = true;
+                    root->setConnected(false);
+                    const QModelIndex idxRoot{ index(i, 0, mRootIndex) };
+                    emit dataChanged(idxRoot, idxRoot, QList<int>{ Qt::ItemDataRole::DecorationRole });
                     break;
                 }
             }
         }
     }
-    
-    if (removed)
+
+    if (changed)
     {
         emit signalRootUpdated(mRootIndex);
     }
@@ -444,6 +488,7 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
 
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
+        applyRememberedPriorities(*root);
 
         endInsertRows();
         // endResetModel();
