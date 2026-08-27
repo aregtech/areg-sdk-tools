@@ -79,10 +79,23 @@ namespace
     const QColor _bandLight{ 0xF6, 0xE0, 0xE4 };
     const QColor _bandDark { 0x40, 0x30, 0x38 };
 
+    constexpr int _opacityCount{ static_cast<int>(NELogPalette::eLogOpacity::OpacityCount) };
+
+    //! Tint, hover, ghost track. The ghost differs most between the themes: at one
+    //! value it recedes much further on white than it does on a dark base.
+    const qreal _opacityLight[_opacityCount]{ 0.15, 0.12, 0.28 };
+    const qreal _opacityDark [_opacityCount]{ 0.20, 0.12, 0.20 };
+
     inline int roleIndex(NELogPalette::eLogColorRole role)
     {
         const int index{ static_cast<int>(role) };
         return ((index >= 0) && (index < _roleCount)) ? index : static_cast<int>(NELogPalette::eLogColorRole::RoleNotset);
+    }
+
+    inline int opacityIndex(NELogPalette::eLogOpacity use)
+    {
+        const int index{ static_cast<int>(use) };
+        return ((index >= 0) && (index < _opacityCount)) ? index : static_cast<int>(NELogPalette::eLogOpacity::OpacityTint);
     }
 }
 
@@ -90,6 +103,18 @@ bool NELogPalette::isDarkTheme(void)
 {
     const QPalette palette{ QApplication::palette() };
     return palette.color(QPalette::Base).lightness() < 128;
+}
+
+qreal NELogPalette::opacity(NELogPalette::eLogOpacity use)
+{
+    return isDarkTheme() ? _opacityDark[opacityIndex(use)] : _opacityLight[opacityIndex(use)];
+}
+
+QColor NELogPalette::withOpacity(const QColor & color, NELogPalette::eLogOpacity use)
+{
+    QColor result{ color };
+    result.setAlphaF(NELogPalette::opacity(use));
+    return result;
 }
 
 QColor NELogPalette::textColor(NELogPalette::eLogColorRole role)

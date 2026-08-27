@@ -53,11 +53,34 @@ namespace NELogPalette
     };
 
     /**
+     * \brief   The transparency the log controls paint with.
+     **/
+    enum class eLogOpacity : int
+    {
+          OpacityTint = 0   //!< Fill of a chosen cell of the priority ladder
+        , OpacityHover      //!< Wash over the cell under the pointer
+        , OpacityGhost      //!< Track behind the cells that are not chosen
+        , OpacityCount      //!< Number of values
+    };
+
+    /**
      * \brief   Returns true if the log windows should draw with their dark values.
      *          Decided from the palette in use, so it follows every theme without
      *          naming any of them.
      **/
     bool isDarkTheme(void);
+
+    /**
+     * \brief   Returns the alpha of the given use for the active theme.
+     *          The values differ per theme: the same alpha recedes further on white
+     *          than it does on a dark base.
+     **/
+    qreal opacity(eLogOpacity use);
+
+    /**
+     * \brief   Returns the given colour carrying the alpha of the given use.
+     **/
+    QColor withOpacity(const QColor & color, eLogOpacity use);
 
     /**
      * \brief   Returns the colour of the message text for the given role.

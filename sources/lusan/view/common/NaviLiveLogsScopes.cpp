@@ -88,8 +88,8 @@ void NaviLiveLogsScopes::addSpecificTools(void)
                                  , tr("Change log collector service connection settings"));
 
     mToolSave = addToolButton( NELusanCommon::iconSaveAsDocument(NELusanCommon::SizeBig)
-                             , tr("Save log settings")
-                             , tr("Save log settings"));
+                             , tr("Save log priorities on every connected target")
+                             , tr("Writes the current log priorities into the configuration file of every connected target."));
 }
 
 void NaviLiveLogsScopes::addMoveTools(void)
@@ -259,7 +259,11 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
     LogObserver* log = LogObserver::getComponent();
     ctrlConnect()->setChecked(isConnected);
     ctrlConnect()->setIcon(isConnected ? NELusanCommon::iconLiveLogConnected(NELusanCommon::SizeBig) : NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig));
-    ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
+    // Connected, the button disconnects. The tooltip names the action as well as the
+    // address, so the hover text never describes a different button.
+    ctrlConnect()->setToolTip(isConnected
+                                ? tr("Disconnect from %1:%2").arg(address).arg(port)
+                                : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
 }

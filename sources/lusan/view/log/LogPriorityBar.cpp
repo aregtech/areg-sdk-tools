@@ -52,9 +52,7 @@ namespace
     //! which a white letter on saturated amber does not.
     QColor tintOf(const QColor& hue)
     {
-        QColor result{ hue };
-        result.setAlphaF(NELogPalette::isDarkTheme() ? 0.20f : 0.15f);
-        return result;
+        return NELogPalette::withOpacity(hue, NELogPalette::eLogOpacity::OpacityTint);
     }
 }
 
@@ -244,8 +242,7 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
     // The cell under the cursor, drawn last so it sits over the fills.
     if ((mHovered >= 0) && isEnabled())
     {
-        QColor hover{ pal.color(QPalette::Highlight) };
-        hover.setAlphaF(0.12f);
+        const QColor hover{ NELogPalette::withOpacity(pal.color(QPalette::Highlight), NELogPalette::eLogOpacity::OpacityHover) };
         painter.fillRect(_cellRect(mHovered), hover);
     }
 

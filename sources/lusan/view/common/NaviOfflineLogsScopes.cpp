@@ -69,8 +69,8 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
                                 , tr("Close log file"));
 
     mToolRefresh = addToolButton( NELusanCommon::iconRefresh(NELusanCommon::SizeBig)
-                                , tr("Refresh Navigator")
-                                , tr("Refresh Navigator and reset filters"));
+                                , tr("Refresh and reset filters")
+                                , tr("Reloads the scopes and clears every filter."));
 }
 
 void NaviOfflineLogsScopes::addMoveTools(void)
