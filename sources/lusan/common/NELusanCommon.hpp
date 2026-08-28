@@ -77,10 +77,10 @@ namespace NELusanCommon
     /**
      * \brief   The default (preferred) width of the navigation window.
      **/
-    constexpr const uint32_t  MIN_NAVI_WIDTH    { 280 };
+    constexpr const uint32_t  MIN_NAVI_WIDTH    { 340 };
 
     /**
-     * \brief   The absolute minimum width the navigation window can be shrunk to (issue #516).
+     * \brief   The absolute minimum width the navigation window can be shrunk to.
      **/
     constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
 
@@ -642,6 +642,9 @@ namespace NELusanCommon
     //<! Loads node expanded icon and sets the specified size
     inline QIcon iconNodeExpanded(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads the icon of the toolbar entries that do not fit the row
+    inline QIcon iconToolbarMore(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads open workspace icon and sets the specified size
     inline QIcon iconWorkspaceOpen(const QSize & size = QSize{ 32, 32 });
 
@@ -1043,6 +1046,11 @@ inline QIcon NELusanCommon::iconNodeCollapsed(const QSize & size)
 inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
 {
     return loadIcon(":/icons/tree-collapse", size);
+}
+
+inline QIcon NELusanCommon::iconToolbarMore(const QSize & size)
+{
+    return loadIcon(":/icons/toolbar-more", size);
 }
 
 inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)

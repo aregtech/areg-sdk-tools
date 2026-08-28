@@ -54,6 +54,7 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mToolSettings     (nullptr)
     , mToolSave         (nullptr)
     , mToolMoveBottom   (nullptr)
+    , mToolMoveTop      (nullptr)
     , mAddress          ()
     , mPort             (areg::InvalidPort)
     , mInitLogFile      ( )
@@ -102,10 +103,17 @@ void NaviLiveLogsScopes::addSpecificTools(void)
 void NaviLiveLogsScopes::addMoveTools(void)
 {
     mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
-                                   , tr("Move at bottom of logs")
-                                   , tr("Move at bottom of logs"));
-    mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
+                                   , tr("Move to bottom")
+                                   , tr("Show the newest log and keep following the new ones."));
+    mToolMoveBottom->setWhatsThis(tr("Moves the log view to the last row. The view keeps scrolling with the arriving logs, so the newest log stays in sight."));
+
+    mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
+                                , tr("Move to top")
+                                , tr("Show the first log of the session."));
+    mToolMoveTop->setWhatsThis(tr("Moves the log view to the first row, where the logging started."));
+
     setToolRank(mToolMoveBottom, 8);
+    setToolRank(mToolMoveTop   , 9);
 }
 
 bool NaviLiveLogsScopes::hasSavePrioMenu(void) const

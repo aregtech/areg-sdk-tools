@@ -200,6 +200,9 @@ private:
     //!< Returns the control object to move to the bottom of log window.
     inline QToolButton* ctrlMoveBottom(void) const;
 
+    //!< Returns the control object to move to the top of log window.
+    inline QToolButton* ctrlMoveTop(void) const;
+
     /**
      * \brief   Initializes the widgets.
      **/
@@ -334,6 +337,7 @@ private:
     QToolButton*            mToolSettings;  //!< The tool button to open the logging options.
     QToolButton*            mToolSave;      //!< The tool button to save the log settings.
     QToolButton*            mToolMoveBottom;//!< The tool button to move to the bottom of the log window.
+    QToolButton*            mToolMoveTop;   //!< The tool button to move to the top of the log window.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
@@ -365,6 +369,11 @@ inline QToolButton* NaviLiveLogsScopes::ctrlSaveSettings(void) const
 inline QToolButton* NaviLiveLogsScopes::ctrlMoveBottom(void) const
 {
     return mToolMoveBottom;
+}
+
+inline QToolButton* NaviLiveLogsScopes::ctrlMoveTop(void) const
+{
+    return mToolMoveTop;
 }
 inline bool NaviLiveLogsScopes::isConfigured() const
 {

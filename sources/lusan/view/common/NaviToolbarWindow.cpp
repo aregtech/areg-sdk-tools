@@ -52,14 +52,18 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     mNaviLayout->setContentsMargins(0, 0, 0, 0);
-    mNaviLayout->setSpacing(7);
+    mNaviLayout->setSpacing(4);
     mNaviLayout->addWidget(mToolbar, 0, Qt::AlignmentFlag::AlignLeft);
     mNaviLayout->addWidget(mNaviTree);
 
-    mToolbar->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+    mToolbar->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Fixed);
+
+    // The row is as tall as its buttons and no taller: two pixels of air above and below.
+    mToolLayout->setContentsMargins(2, 2, 2, 2);
+    mToolLayout->setSpacing(2);
 
     const QSize chevron(NAVI_TOOL_ICON, NAVI_TOOL_ICON);
-    mToolOverflow->setIcon(NELusanCommon::chevronIcon(true, mToolOverflow->palette().color(QPalette::ColorRole::ButtonText), chevron));
+    mToolOverflow->setIcon(NELusanCommon::iconToolbarMore(chevron));
     mToolOverflow->setIconSize(chevron);
     mToolOverflow->setAutoRaise(true);
     mToolOverflow->setToolTip(tr("More tools"));

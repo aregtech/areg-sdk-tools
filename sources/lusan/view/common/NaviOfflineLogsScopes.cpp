@@ -82,14 +82,14 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
 void NaviOfflineLogsScopes::addMoveTools(void)
 {
     mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
-                                   , tr("Move at bottom of logs")
-                                   , tr("Move at bottom of logs"));
-    mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
+                                   , tr("Move to bottom")
+                                   , tr("Show the last log of the archive."));
+    mToolMoveBottom->setWhatsThis(tr("Moves the log view to the last row of the archive."));
 
     mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
-                                , tr("Move at top of logs")
-                                , tr("Move at top of logs"));
-    mToolMoveTop->setWhatsThis(tr("Click to move to top of the logs"));
+                                , tr("Move to top")
+                                , tr("Show the first log of the archive."));
+    mToolMoveTop->setWhatsThis(tr("Moves the log view to the first row, where the logging started."));
 
     setToolRank(mToolMoveBottom, 8);
     setToolRank(mToolMoveTop   , 9);
