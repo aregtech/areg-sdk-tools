@@ -318,6 +318,23 @@ public:
      **/
     virtual bool isLiveSession() const;
 
+    /**
+     * \brief   Returns true if the node belongs to a live session process that has stopped.
+     *          An archive always returns false.
+     * \param   node    The node to check.
+     **/
+    bool isGoneTarget(const ScopeNodeBase* node) const;
+
+private:
+    /**
+     * \brief   Passes the scopes under the node to the logging model as refused or allowed.
+     * \param   node    The node whose leafs changed their shown state.
+     * \param   refuse  True when the node was just hidden.
+     **/
+    void _refuseScopesOf(ScopeNodeBase* node, bool refuse);
+
+protected:
+
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////

@@ -30,6 +30,10 @@ LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
     , mReExpression         ( )
 {
     setSourceModel(model);
+    if (model != nullptr)
+    {
+        connect(model, &LoggingModelBase::signalRefusedScopesChanged, this, [this]() { invalidateRowsFilter(); });
+    }
 }
 
 LogViewerFilter::~LogViewerFilter()
@@ -163,6 +167,11 @@ bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
         return true;
 
     const areg::LogEntry* msg = model->getLogData(index.row());
+    // The scope tree refuses rows from the moment it was unchecked, so this is asked first:
+    // it is a lookup, while the column filters walk their lists.
+    if (model->isEntryRefused(msg))
+        return false;
+
     // Check if row matches all active filters
     return  (matchesComboFilters(model, msg) != NELusanCommon::eMatchType::NoMatch) &&
             (matchesTextFilters(model, msg)  != NELusanCommon::eMatchType::NoMatch);

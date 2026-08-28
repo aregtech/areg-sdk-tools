@@ -91,6 +91,12 @@ void NaviLiveLogsScopes::addSpecificTools(void)
     mToolSave = addToolButton( NELusanCommon::iconSaveAsDocument(NELusanCommon::SizeBig)
                              , tr("Save log priorities on every connected target")
                              , tr("Writes the current log priorities into the configuration file of every connected target."));
+
+    // Connect reports the state of the panel, so it stays whatever the width is. The other two
+    // are rare and give up their place before anything else.
+    setToolRank(mToolConnect , NaviToolbarWindow::ToolRankFixed);
+    setToolRank(mToolSettings, 4);
+    setToolRank(mToolSave    , 6);
 }
 
 void NaviLiveLogsScopes::addMoveTools(void)
@@ -98,8 +104,8 @@ void NaviLiveLogsScopes::addMoveTools(void)
     mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
                                    , tr("Move at bottom of logs")
                                    , tr("Move at bottom of logs"));
-    mToolMoveBottom->setArrowType(Qt::ArrowType::DownArrow);
     mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
+    setToolRank(mToolMoveBottom, 8);
 }
 
 bool NaviLiveLogsScopes::hasSavePrioMenu(void) const

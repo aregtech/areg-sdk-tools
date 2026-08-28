@@ -35,7 +35,9 @@
 #include "aregextend/db/LogSqliteDatabase.hpp"
 #include "aregextend/db/SqliteStatement.hpp"
 
+#include <QHash>
 #include <QList>
+#include <QSet>
 #include <QString>
 #include <QVariant>
 
@@ -95,6 +97,20 @@ public:
     //!< Number of entries the reading thread pulls from the database in one step.
     //!< Used when the caller did not ask for an explicit step size.
     static constexpr int32_t    READ_CHUNK_SIZE { 1000 };
+
+    /**
+     * \brief   One stretch of time during which a scope is kept out of the view. A span with
+     *          no end is still open, and a span that starts at zero covers the whole session.
+     **/
+    struct sRefusedSpan
+    {
+        TIME64  from    { 0 };  //!< The moment the scope stopped being shown.
+        TIME64  to      { 0 };  //!< The moment it started being shown again, 0 while still refused.
+    };
+
+    using   ListSpans       = QList<LoggingModelBase::sRefusedSpan>;
+    using   MapScopeSpans   = QHash<uint32_t, LoggingModelBase::ListSpans>;
+    using   MapRefused      = QHash<ITEM_ID, LoggingModelBase::MapScopeSpans>;
 
     using   ListColumns     = QList<LoggingModelBase::eColumn>;
     using   ListLogs        = std::vector<areg::SharedBuffer>;
@@ -337,7 +353,42 @@ public:
 /************************************************************************
  * Signals
  ************************************************************************/
+public:
+
+    /**
+     * \brief   Keeps the given scopes of one target out of the view, or lets them back in.
+     *          A refusal acts from the given moment on, so the rows already collected stay.
+     *          Pass zero to cover the whole session, which is what an archive does.
+     * \param   target      The ID of the target the scopes belong to.
+     * \param   scopeIds    The scopes to refuse or to let back in.
+     * \param   refuse      True to keep them out, false to let them back in.
+     * \param   since       The moment the change acts from, or zero for the whole session.
+     **/
+    void setScopesRefused(ITEM_ID target, const QSet<uint32_t>& scopeIds, bool refuse, TIME64 since);
+
+    /**
+     * \brief   Returns true if the entry falls in a stretch of time its scope is refused.
+     * \param   entry   The log entry to check. A null entry is never refused.
+     **/
+    bool isEntryRefused(const areg::LogEntry* entry) const;
+
+    /**
+     * \brief   Returns true if any scope is currently kept out of the view.
+     **/
+    bool hasRefusedScopes(void) const;
+
+    /**
+     * \brief   Lets every refused scope back in.
+     **/
+    void clearRefusedScopes(void);
+
 signals:
+
+    /**
+     * \brief   Signal emitted when the set of refused scopes changed, so that the views
+     *          filtering on it can run their predicate again.
+     **/
+    void signalRefusedScopesChanged(void);
 
     /**
      * \brief   Signal emitted when connected to the logging service.
@@ -735,6 +786,7 @@ protected:
     areg::Thread            mReadThread;    //!< The thread to run the model operations.
     areg::Mutex             mQuitThread;    //!< The event to notify when data is ready.
     ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.
+    MapRefused              mRefused;       //!< The stretches of time each scope is kept out of the view.
 };
 
 //////////////////////////////////////////////////////////////////////////

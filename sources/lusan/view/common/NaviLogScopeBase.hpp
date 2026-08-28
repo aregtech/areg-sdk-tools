@@ -497,6 +497,7 @@ private:
     QWidget*                mRaiseRow;      //!< The line about the raises that go back on their own
     QLabel*                 mRaiseText;     //!< How many raises go back on their own
     bool                    mTempRaise;     //!< True while a raise is meant to go back on its own
+    QString                 mPrioTip;       //!< The tool tip of the priority bar while the target is reachable
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -27,6 +27,8 @@
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include "areg/base/DateTime.hpp"
+
 #include <QTimer>
 
 LoggingScopesModelBase::LoggingScopesModelBase(QObject* parent)
@@ -279,7 +281,12 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
 
     if (index.column() == LoggingScopesModelBase::ColumnShow)
     {
-        return (role == Qt::ItemDataRole::CheckStateRole) ? QVariant(entry->shownState()) : QVariant();
+        if (role == Qt::ItemDataRole::CheckStateRole)
+            return QVariant(entry->shownState());
+        else if ((role == Qt::ItemDataRole::ToolTipRole) && isGoneTarget(entry))
+            return QVariant(tr("The process has stopped, so this has nothing left to act on.\nUse the column filters of the log table to narrow the rows it already produced."));
+
+        return QVariant();
     }
 
     switch (static_cast<Qt::ItemDataRole>(role))
@@ -356,13 +363,53 @@ Qt::ItemFlags LoggingScopesModelBase::flags(const QModelIndex& index) const
             result |= Qt::ItemNeverHasChildren;
         }
 
-        if (index.column() == LoggingScopesModelBase::ColumnShow)
+        if ((index.column() == LoggingScopesModelBase::ColumnShow) && (isGoneTarget(node) == false))
         {
             result |= Qt::ItemIsUserCheckable;
         }
 
         return result;
     }
+}
+
+void LoggingScopesModelBase::_refuseScopesOf(ScopeNodeBase* node, bool refuse)
+{
+    if ((node == nullptr) || (mLoggingModel == nullptr))
+        return;
+
+    ScopeNodeBase* treeRoot{ node->getTreeRoot() };
+    if (treeRoot == nullptr)
+        return;
+
+    std::vector<ScopeNodeBase*> leafs;
+    if (node->isLeaf())
+        leafs.push_back(node);
+    else
+        node->extractNodeLeafs(leafs);
+
+    QSet<uint32_t> scopeIds;
+    for (const ScopeNodeBase* leaf : leafs)
+    {
+        const uint32_t scopeId{ static_cast<const ScopeLeaf *>(leaf)->getScopeId() };
+        if (scopeId != areg::LOG_SCOPE_ID_NONE)
+        {
+            scopeIds.insert(scopeId);
+        }
+    }
+
+    // A live session refuses from this moment on. An archive has no moment left to wait for,
+    // so the refusal covers the whole file.
+    const TIME64 since{ isLiveSession() ? static_cast<TIME64>(areg::DateTime::now()) : 0 };
+    mLoggingModel->setScopesRefused(static_cast<ScopeRoot *>(treeRoot)->getRootId(), scopeIds, refuse, since);
+}
+
+bool LoggingScopesModelBase::isGoneTarget(const ScopeNodeBase* node) const
+{
+    if ((node == nullptr) || (isLiveSession() == false))
+        return false;
+
+    const ScopeNodeBase* treeRoot{ node->getTreeRoot() };
+    return (treeRoot != nullptr) && (static_cast<const ScopeRoot *>(treeRoot)->isConnected() == false);
 }
 
 bool LoggingScopesModelBase::setData(const QModelIndex& index, const QVariant& value, int role)
@@ -381,7 +428,9 @@ bool LoggingScopesModelBase::setData(const QModelIndex& index, const QVariant& v
     Q_UNUSED(value);
 
     // A partially checked node shows everything below it. Only a fully shown node hides.
-    node->setShownRecursive(node->shownState() != Qt::CheckState::Checked);
+    const bool hide{ node->shownState() == Qt::CheckState::Checked };
+    node->setShownRecursive(hide == false);
+    _refuseScopesOf(node, hide);
 
     const QModelIndex last{ this->index(index.row(), LoggingScopesModelBase::ColumnCount - 1, index.parent()) };
     emit dataChanged(index, last);
@@ -401,6 +450,7 @@ void LoggingScopesModelBase::setScopeShown(const QModelIndex& index, bool shown)
         return;
 
     node->setShownRecursive(shown);
+    _refuseScopesOf(node, shown == false);
     const QModelIndex first{ this->index(index.row(), LoggingScopesModelBase::ColumnShow, index.parent()) };
     const QModelIndex last { this->index(index.row(), LoggingScopesModelBase::ColumnCount - 1, index.parent()) };
     emit dataChanged(first, last);
@@ -422,6 +472,7 @@ void LoggingScopesModelBase::showScopeAlone(const QModelIndex& index)
         if (root != nullptr)
         {
             root->setShownRecursive(false);
+            _refuseScopesOf(root, true);
         }
     }
 
@@ -429,6 +480,7 @@ void LoggingScopesModelBase::showScopeAlone(const QModelIndex& index)
     if (node != nullptr)
     {
         node->setShownRecursive(true);
+        _refuseScopesOf(node, false);
     }
 
     _notifyBranchChanged(mRootIndex);
@@ -450,6 +502,11 @@ void LoggingScopesModelBase::showAllScopes(void)
         {
             root->setShownRecursive(true);
         }
+    }
+
+    if (mLoggingModel != nullptr)
+    {
+        mLoggingModel->clearRefusedScopes();
     }
 
     _notifyBranchChanged(mRootIndex);

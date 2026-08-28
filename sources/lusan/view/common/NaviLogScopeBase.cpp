@@ -82,6 +82,7 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
     , mRaiseRow         (nullptr)
     , mRaiseText        (nullptr)
     , mTempRaise        (false)
+    , mPrioTip          ( )
 {
 }
 
@@ -104,7 +105,8 @@ void NaviLogScopeBase::setupScopeToolbar(void)
 
     mPrioBar = new LogPriorityBar(this);
     mPrioBar->setToolTip(tr("Set how much the selected scopes generate. The last cell switches the enter and exit lines."));
-    mPrioBar->setStatusTip(mPrioBar->toolTip());
+    mPrioTip = mPrioBar->toolTip();
+    mPrioBar->setStatusTip(mPrioTip);
     mPrioBar->setAccessibleName(tr("Scope priority"));
     mPrioBar->setIdle(true);
     mPrioBar->setEnabled(false);
@@ -125,6 +127,14 @@ void NaviLogScopeBase::setupScopeToolbar(void)
     addToolSeparator();
 
     addMoveTools();
+
+    // A narrow dock gives the row up from the least used entry. The priority ladder never
+    // moves: without it the panel is a tree with a connect button.
+    setToolRank(mToolCollapse, 10);
+    setToolRank(mToolShowAll , 20);
+    setToolRank(mToolHide    , 30);
+    setToolRank(mToolShowOnly, 40);
+    setToolRank(mToolFind    , 50);
 
     setupTreeView(QSize(NaviLogScopeBase::ScopeIconExtent, NaviLogScopeBase::ScopeIconExtent));
     ctrlTable()->setRootIsDecorated(false);
@@ -701,7 +711,10 @@ void NaviLogScopeBase::enableButtons(const QModelIndex& selection)
     validateControls();
     ScopeNodeBase* node = selection.isValid() ? mScopesModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase*>() : nullptr;
 
-    mPrioBar->setEnabled(node != nullptr);
+    // A stopped process receives nothing, so the controls that send to it are turned off.
+    const bool gone{ mScopesModel->isGoneTarget(node) };
+    mPrioBar->setEnabled((node != nullptr) && (gone == false));
+    mPrioBar->setToolTip(gone ? tr("The process has stopped, so its scopes cannot be changed.") : mPrioTip);
     if (node != nullptr)
     {
         const ScopeNodeBase::sPrioRollup rollup{ node->priorityRollup() };

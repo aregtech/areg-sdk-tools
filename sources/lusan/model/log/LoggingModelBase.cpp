@@ -297,6 +297,8 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
     std::string path(areg::File::normalize_path(dbPath.toStdString().c_str()));
     if (mDatabase.database_path() != path)
     {
+        // Another database is another session, and a refused span names a target of the old one.
+        clearRefusedScopes();
         mDatabase.connect(path, readOnly);
     }
 }
@@ -596,6 +598,85 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     mTotalLogCount = count;
     mLogs.reserve(count);
     mReadThread.start(areg::DO_NOT_WAIT);
+}
+
+void LoggingModelBase::setScopesRefused(ITEM_ID target, const QSet<uint32_t>& scopeIds, bool refuse, TIME64 since)
+{
+    if (scopeIds.isEmpty())
+        return;
+
+    bool changed{ false };
+    MapScopeSpans& scopes = mRefused[target];
+    for (uint32_t scopeId : scopeIds)
+    {
+        ListSpans& spans = scopes[scopeId];
+        const bool open{ spans.isEmpty() == false && spans.last().to == 0 };
+        if (refuse && (open == false))
+        {
+            spans.append(sRefusedSpan{ since, 0 });
+            changed = true;
+        }
+        else if ((refuse == false) && open)
+        {
+            // A span that covers the whole session leaves nothing behind when it is lifted.
+            if (spans.last().from == 0)
+                spans.removeLast();
+            else
+                spans.last().to = since;
+
+            changed = true;
+        }
+    }
+
+    if (changed)
+    {
+        emit signalRefusedScopesChanged();
+    }
+}
+
+bool LoggingModelBase::isEntryRefused(const areg::LogEntry* entry) const
+{
+    if ((entry == nullptr) || mRefused.isEmpty())
+        return false;
+
+    const auto target = mRefused.constFind(entry->logCookie);
+    if (target == mRefused.constEnd())
+        return false;
+
+    const auto scope = target.value().constFind(entry->logScopeId);
+    if (scope == target.value().constEnd())
+        return false;
+
+    for (const sRefusedSpan& span : scope.value())
+    {
+        if ((entry->logTimestamp >= span.from) && ((span.to == 0) || (entry->logTimestamp < span.to)))
+            return true;
+    }
+
+    return false;
+}
+
+bool LoggingModelBase::hasRefusedScopes(void) const
+{
+    for (auto target = mRefused.constBegin(); target != mRefused.constEnd(); ++target)
+    {
+        for (auto scope = target.value().constBegin(); scope != target.value().constEnd(); ++scope)
+        {
+            if (scope.value().isEmpty() == false)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+void LoggingModelBase::clearRefusedScopes(void)
+{
+    if (mRefused.isEmpty())
+        return;
+
+    mRefused.clear();
+    emit signalRefusedScopesChanged();
 }
 
 uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId, int32_t limit, uint32_t offset)

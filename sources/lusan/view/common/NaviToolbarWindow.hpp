@@ -25,6 +25,7 @@
 
 #include "lusan/view/common/NavigationWindow.hpp"
 
+#include <QList>
 #include <QSize>
 #include <QString>
 
@@ -34,6 +35,7 @@
 class MdiMainWindow;
 class QHBoxLayout;
 class QIcon;
+class QResizeEvent;
 class QToolButton;
 class QTreeView;
 class QVBoxLayout;
@@ -107,6 +109,15 @@ protected:
     void addToolWidget(QWidget* widget);
 
     /**
+     * \brief   Sets how firmly an entry of the tool button row keeps its place when the row
+     *          is too narrow. Entries with the lowest rank move into the overflow first, and
+     *          `ToolRankFixed` never moves.
+     * \param   widget  An entry already added to the row.
+     * \param   rank    The rank to give it.
+     **/
+    void setToolRank(QWidget* widget, int rank);
+
+    /**
      * \brief   Places a widget above the tool button row and takes its ownership.
      * \param   header  The widget to show on top of the navigation window.
      **/
@@ -126,31 +137,77 @@ protected:
     void setupTreeView(const QSize& iconSize);
 
     /**
-     * \brief   Sets one square icon size on every tool button of this window.
-     *          Themed icons come in different aspects and are clipped by the fixed row height
-     *          unless they share one edge. Call it after the tool buttons are created.
+     * \brief   Sets one square icon size on every tool button of this window, including the
+     *          buttons a derived class created on its own.
      * \param   iconExtent  The square icon edge in logical pixels.
      **/
-    void capToolButtonIconSizes(int iconExtent = NAVI_TOOL_ICON_SMALL);
+    void capToolButtonIconSizes(int iconExtent = NAVI_TOOL_ICON);
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+    virtual void resizeEvent(QResizeEvent* event) override;
+
+    virtual bool eventFilter(QObject* watched, QEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Constants
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< The icon edge a navigation panel tool button carries.
-    static constexpr int NAVI_TOOL_ICON         { 18 };
+    //!< The icon edge every navigation panel tool button carries.
+    static constexpr int NAVI_TOOL_ICON         { 16 };
 
-    //!< The icon edge of the panels that pack their tool buttons tighter.
-    static constexpr int NAVI_TOOL_ICON_SMALL   { 16 };
+    //!< An entry with this rank stays in the row at every width.
+    static constexpr int ToolRankFixed          { 1000 };
+
+    //!< The rank an entry gets unless the panel sets another one.
+    static constexpr int ToolRankNormal         { 100 };
+
+//////////////////////////////////////////////////////////////////////////
+// Internal types and methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    //!< One entry of the tool button row.
+    struct sToolItem
+    {
+        QWidget*    widget  { nullptr };     //!< The button, separator or custom widget.
+        int         rank    { 0 };           //!< The order in which it gives up its place.
+        bool        divider { false };       //!< True for a separator.
+    };
+
+    /**
+     * \brief   Distributes the entries between the row and the overflow for the current width.
+     **/
+    void updateToolOverflow(void);
+
+    /**
+     * \brief   Shows the overflow entries as a second row under the chevron.
+     **/
+    void showToolOverflow(void);
+
+    /**
+     * \brief   Returns the entries back to the row and closes the second row.
+     **/
+    void closeToolOverflow(void);
+
+    /**
+     * \brief   Hides a separator that has no visible entry after it.
+     **/
+    void _hideDanglingSeparators(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QVBoxLayout*    mNaviLayout;    //!< The layout that stacks the tool button row and the tree view.
-    QWidget*        mToolbar;       //!< The widget that holds the row of tool buttons.
-    QHBoxLayout*    mToolLayout;    //!< The layout of the tool button row.
-    QTreeView*      mNaviTree;      //!< The tree view of the navigation window.
+    QVBoxLayout*        mNaviLayout;    //!< The layout that stacks the tool button row and the tree view.
+    QWidget*            mToolbar;       //!< The widget that holds the row of tool buttons.
+    QHBoxLayout*        mToolLayout;    //!< The layout of the tool button row.
+    QTreeView*          mNaviTree;      //!< The tree view of the navigation window.
+    QToolButton*        mToolOverflow;  //!< The chevron that opens the entries the row cannot fit.
+    QWidget*            mOverflowRow;   //!< The second row shown by the chevron.
+    QHBoxLayout*        mOverflowLayout;//!< The layout of the second row.
+    QList<sToolItem>    mToolItems;     //!< Every entry of the row, in the order it was added.
 };
 
 //////////////////////////////////////////////////////////////////////////

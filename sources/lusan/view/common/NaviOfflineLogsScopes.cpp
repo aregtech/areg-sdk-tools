@@ -72,6 +72,11 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
     mToolRefresh = addToolButton( NELusanCommon::iconRefresh(NELusanCommon::SizeBig)
                                 , tr("Refresh and reset filters")
                                 , tr("Reloads the scopes and clears every filter."));
+
+    // The file commands are used once when the archive is opened, so they give up the row early.
+    setToolRank(mToolDbOpen , 4);
+    setToolRank(mToolDbClose, 5);
+    setToolRank(mToolRefresh, 6);
 }
 
 void NaviOfflineLogsScopes::addMoveTools(void)
@@ -79,14 +84,15 @@ void NaviOfflineLogsScopes::addMoveTools(void)
     mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
                                    , tr("Move at bottom of logs")
                                    , tr("Move at bottom of logs"));
-    mToolMoveBottom->setArrowType(Qt::ArrowType::DownArrow);
     mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
 
     mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
                                 , tr("Move at top of logs")
                                 , tr("Move at top of logs"));
-    mToolMoveTop->setArrowType(Qt::ArrowType::UpArrow);
     mToolMoveTop->setWhatsThis(tr("Click to move to top of the logs"));
+
+    setToolRank(mToolMoveBottom, 8);
+    setToolRank(mToolMoveTop   , 9);
 }
 
 bool NaviOfflineLogsScopes::hasSelectAllPrioMenu(void) const
