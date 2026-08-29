@@ -31,6 +31,7 @@
 class LoggingModelBase;
 class LogEmptyState;
 class LogHitMap;
+class NaviLogScopeBase;
 class LogSessionBar;
 class LogTableHeader;
 class LogViewerFilter;
@@ -404,6 +405,12 @@ private:
      * \param   forward True to walk down the table, false to walk up.
      **/
     void _stepToProblem(bool forward);
+
+    /**
+     * \brief   Returns the scope panel that belongs to this window, live or offline.
+     *          Null when the main window is not known.
+     **/
+    NaviLogScopeBase* _scopePanel(void) const;
 
     /**
      * \brief   Writes the columns of the table and the open database into the workspace.

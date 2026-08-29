@@ -132,6 +132,32 @@ public:
     bool areRootsCollapsed(void) const;
 
     /**
+     * \brief   Returns the tree entry of the given scope of the given target.
+     * \param   target  The ID of the target the scope belongs to.
+     * \param   scopeId The ID of the scope.
+     * \return  The index of the scope, invalid when the tree does not carry it.
+     **/
+    QModelIndex findScopeIndex(ITEM_ID target, uint32_t scopeId) const;
+
+    /**
+     * \brief   Fills the given menu with the scope entries of the given tree row, and makes
+     *          that row the current one so a following action acts on it.
+     * \param   menu    The menu to fill.
+     * \param   node    The tree entry the menu belongs to.
+     * \return  True if the menu was filled.
+     * \note    Pair it with `applyScopeMenu`, which runs what the reader chose.
+     **/
+    bool populateScopeMenu(QMenu& menu, const QModelIndex& node);
+
+    /**
+     * \brief   Runs the entry the reader chose in a menu filled by `populateScopeMenu`.
+     * \param   action  The chosen entry.
+     * \param   node    The tree entry the menu was filled for.
+     * \return  True if the entry belonged to the scope menu and was run.
+     **/
+    bool applyScopeMenu(const QAction& action, const QModelIndex& node);
+
+    /**
      * \brief   Sets the scope model and binds it to the scope tree.
      * \param   model   The scope model to show in the tree.
      **/
@@ -282,6 +308,12 @@ protected:
      *          tree, and the find box that walks it. Called from setupScopeToolbar().
      **/
     void setupScopeSearch(void);
+
+    /**
+     * \brief   Builds the scope actions that carry a keyboard shortcut. They act on the row
+     *          the cursor is on, so the menu and the key do the same thing.
+     **/
+    void setupScopeActions(void);
 
     /**
      * \brief   Builds the row that names what is standing, above the filter row. Called
@@ -497,6 +529,11 @@ private:
     QLabel*                 mRaiseText;     //!< How many raises go back on their own
     bool                    mTempRaise;     //!< True while a raise is meant to go back on its own
     QString                 mPrioTip;       //!< The tool tip of the priority bar while the target is reachable
+
+    QAction*                mActShowOnly;   //!< Show only the scope under the cursor, hide the rest
+    QAction*                mActHide;       //!< Hide the scope under the cursor
+    QAction*                mActShowAll;    //!< Show every scope again
+    QAction*                mActCopyPath;   //!< Copy the path of the scope under the cursor
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -21,6 +21,7 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/log/ScopeNodeBase.hpp"
+#include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/LoggingScopesModelBase.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -29,6 +30,7 @@
 #include "lusan/view/log/LogPriorityBar.hpp"
 
 #include <QAction>
+#include <functional>
 #include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
@@ -57,21 +59,19 @@
 
 namespace
 {
-    //! Adds a group label to a menu. `QMenu::addSection` draws it as a bare separator on the
-    //! Windows style, which loses the words, so the label is an entry of its own.
-    void addMenuSection(QMenu& menu, const QString& text)
+    //! Names the level a submenu title reports.
+    QString levelName(int level)
     {
-        if (menu.isEmpty() == false)
+        switch (static_cast<LogPriorityBar::eLogLevel>(level))
         {
-            menu.addSeparator();
+        case LogPriorityBar::eLogLevel::LevelError:         return QObject::tr("Error");
+        case LogPriorityBar::eLogLevel::LevelWarning:       return QObject::tr("Warning");
+        case LogPriorityBar::eLogLevel::LevelInformation:   return QObject::tr("Information");
+        case LogPriorityBar::eLogLevel::LevelDebug:         return QObject::tr("Debug");
+        default:                                            return QObject::tr("off");
         }
-
-        QAction* label{ menu.addAction(text) };
-        label->setEnabled(false);
-        QFont caption{ label->font() };
-        caption.setBold(true);
-        label->setFont(caption);
     }
+
 }
 
 NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent)
@@ -99,6 +99,11 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
     , mRaiseText        (nullptr)
     , mTempRaise        (false)
     , mPrioTip          ( )
+
+    , mActShowOnly      (nullptr)
+    , mActHide          (nullptr)
+    , mActShowAll       (nullptr)
+    , mActCopyPath      (nullptr)
 {
 }
 
@@ -150,6 +155,7 @@ void NaviLogScopeBase::setupScopeToolbar(void)
     setupShowColumn();
     setupSafeguards();
     setupScopeSearch();
+    setupScopeActions();
 
     capToolButtonIconSizes();
 }
@@ -1043,6 +1049,11 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
 
     menu.addSeparator();
 
+    // The levels, the scope lines and the temporary raise are all one subject, so they sit in
+    // one submenu whose title already says where the scope stands.
+    const QString shownLevel{ isMixed ? tr("mixed") : levelName(level) };
+    QMenu* prioMenu = menu.addMenu(tr("&Priority: %1").arg(shownLevel));
+
     QActionGroup* levels = new QActionGroup(&menu);
     levels->setExclusive(true);
     const struct { eScopeMenu id; LogPriorityBar::eLogLevel level; const char* text; } _levels[]
@@ -1056,27 +1067,32 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
 
     for (const auto& item : _levels)
     {
-        QAction* action = menu.addAction(tr(item.text));
+        QAction* action = prioMenu->addAction(tr(item.text));
         action->setData(static_cast<int>(item.id));
         action->setCheckable(true);
         action->setChecked((isMixed == false) && (level == static_cast<int>(item.level)));
         levels->addAction(action);
     }
 
-    QAction* lines = menu.addAction(NELusanCommon::iconScopeLines(NELusanCommon::SizeBig), tr("&Scope lines"));
+    prioMenu->addSeparator();
+
+    QAction* lines = prioMenu->addAction(NELusanCommon::iconScopeLines(NELusanCommon::SizeBig), tr("&Scope lines"));
     lines->setData(static_cast<int>(eScopeMenu::MenuScopeLines));
     lines->setCheckable(true);
     lines->setChecked(hasLines);
 
-    QAction* temporary = menu.addAction(NELusanCommon::iconTimer(NELusanCommon::SizeBig), tr("&Go back after five minutes"));
+    QAction* temporary = prioMenu->addAction(NELusanCommon::iconTimer(NELusanCommon::SizeBig), tr("&Go back after five minutes"));
     temporary->setData(static_cast<int>(eScopeMenu::MenuTempRaise));
     temporary->setCheckable(true);
     temporary->setChecked(mTempRaise);
     temporary->setEnabled(mScopesModel->isLiveSession());
     temporary->setToolTip(tr("Raising a scope from here puts it back on its own after five minutes."));
 
-    menu.addSeparator();
-    addMenuSection(menu, tr("Apply to"));
+    // What a priority change reaches is a setting
+    const QString shownReach{ mScopeReach == eScopeReach::ReachScope   ? tr("this scope")
+                            : mScopeReach == eScopeReach::ReachProcess ? tr("this whole process")
+                                                                       : tr("this node and below") };
+    QMenu* reachMenu = menu.addMenu(tr("&Apply to: %1").arg(shownReach));
 
     QActionGroup* reach = new QActionGroup(&menu);
     reach->setExclusive(true);
@@ -1089,7 +1105,7 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
 
     for (const auto& item : _reaches)
     {
-        QAction* action = menu.addAction(tr(item.text));
+        QAction* action = reachMenu->addAction(tr(item.text));
         action->setData(static_cast<int>(item.id));
         action->setCheckable(true);
         action->setChecked(mScopeReach == item.value);
@@ -1097,62 +1113,61 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
         if ((item.value == eScopeReach::ReachScope) && (entry.isLeaf() == false))
         {
             // A node is a path segment, not a scope, and the target is addressed by a wildcard
-            // path, so a node cannot be changed without its children.
+            // path, a node cannot be changed without its children.
             action->setEnabled(false);
             action->setToolTip(tr("Only a scope can be changed on its own."));
         }
     }
 
     menu.addSeparator();
-    addMenuSection(menu, tr("Show and hide"));
 
-    QAction* solo = menu.addAction(NELusanCommon::iconScopeSolo(NELusanCommon::SizeBig), tr("Show &only this"));
-    solo->setData(static_cast<int>(eScopeMenu::MenuShowOnlyThis));
-
-    QAction* mute = menu.addAction(NELusanCommon::iconScopeMute(NELusanCommon::SizeBig), tr("&Hide this"));
-    mute->setData(static_cast<int>(eScopeMenu::MenuHideThis));
-    mute->setEnabled(entry.shownState() != Qt::CheckState::Unchecked);
-
-    QAction* showAll = menu.addAction(NELusanCommon::iconScopeRestoreAll(NELusanCommon::SizeBig), tr("Show &all"));
-    showAll->setData(static_cast<int>(eScopeMenu::MenuShowAll));
-    showAll->setEnabled(mScopesModel->hasHiddenScopes());
+    mActHide->setEnabled(entry.shownState() != Qt::CheckState::Unchecked);
+    mActShowAll->setEnabled(mScopesModel->hasHiddenScopes());
+    menu.addAction(mActShowOnly);
+    menu.addAction(mActHide);
+    menu.addAction(mActShowAll);
 
     menu.addSeparator();
 
     const bool isExpanded{ ctrlTable()->isExpanded(node) };
     const bool hasChildren{ entry.hasChildren() };
 
-    QAction* expand = menu.addAction(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig), tr("Expand selected"));
+    QMenu* treeMenu = menu.addMenu(tr("&Expand and collapse"));
+
+    QAction* expand = treeMenu->addAction(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig), tr("Expand selected"));
     expand->setData(static_cast<int>(eScopeMenu::MenuExpandSelected));
     expand->setEnabled((isExpanded == false) && hasChildren);
 
-    QAction* collapse = menu.addAction(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig), tr("Collapse selected"));
+    QAction* collapse = treeMenu->addAction(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig), tr("Collapse selected"));
     collapse->setData(static_cast<int>(eScopeMenu::MenuCollapseSelected));
     collapse->setEnabled(isExpanded && hasChildren);
 
-    menu.addAction(tr("Expand all"))->setData(static_cast<int>(eScopeMenu::MenuExpandAll));
+    treeMenu->addSeparator();
 
-    QAction* collapseAll = menu.addAction(tr("Collapse all"));
+    treeMenu->addAction(tr("Expand all"))->setData(static_cast<int>(eScopeMenu::MenuExpandAll));
+
+    QAction* collapseAll = treeMenu->addAction(tr("Collapse all"));
     collapseAll->setData(static_cast<int>(eScopeMenu::MenuCollapseAll));
     collapseAll->setEnabled(areRootsCollapsed() == false);
 
     if (hasSavePrioMenu())
     {
-        menu.addSeparator();
-        addMenuSection(menu, tr("Target"));
+        // Writing to the target is the one group here that leaves Lusan, so it keeps its own
+        // submenu rather than sitting among the view actions.
+        QMenu* targetMenu = menu.addMenu(NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("&Target"));
 
         const bool canSave{ canSavePrio() };
-        QAction* saveOne = menu.addAction(NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("Save priorities on &target"));
+        QAction* saveOne = targetMenu->addAction(NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("Save priorities on this &target"));
         saveOne->setData(static_cast<int>(eScopeMenu::MenuSavePrioTarget));
         saveOne->setEnabled(canSave);
 
-        QAction* saveAll = menu.addAction(tr("Save priorities on all targets"));
+        QAction* saveAll = targetMenu->addAction(tr("Save priorities on &all targets"));
         saveAll->setData(static_cast<int>(eScopeMenu::MenuSavePrioAll));
         saveAll->setEnabled(canSave);
     }
 
     menu.addSeparator();
-    menu.addAction(tr("&Copy scope path"))->setData(static_cast<int>(eScopeMenu::MenuCopyScopePath));
+    menu.addAction(mActCopyPath);
 }
 
 bool NaviLogScopeBase::runScopeMenu(const QAction& action, const QModelIndex& node)
@@ -1246,12 +1261,116 @@ bool NaviLogScopeBase::runScopeMenu(const QAction& action, const QModelIndex& no
     return true;
 }
 
+void NaviLogScopeBase::setupScopeActions(void)
+{
+    QTreeView* tree = ctrlTable();
+    Q_ASSERT(tree != nullptr);
+
+    // The keys answer only while the focus is in this panel, so they never argue with the same
+    // key in a log window.
+    const auto addAction = [this, tree](const QIcon& icon, const QString& text, const QKeySequence& key) -> QAction*
+        {
+            QAction* action = new QAction(icon, text, this);
+            action->setShortcut(key);
+            action->setShortcutContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+            tree->addAction(action);
+            return action;
+        };
+
+    mActShowOnly = addAction( NELusanCommon::iconScopeSolo(NELusanCommon::SizeBig)
+                            , tr("Show &only this"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
+    mActHide     = addAction( NELusanCommon::iconScopeMute(NELusanCommon::SizeBig)
+                            , tr("&Hide this")     , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_H));
+    mActShowAll  = addAction( NELusanCommon::iconScopeRestoreAll(NELusanCommon::SizeBig)
+                            , tr("Show &all")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    mActCopyPath = addAction( QIcon()
+                            , tr("&Copy scope path"), QKeySequence(Qt::CTRL | Qt::Key_C));
+
+    connect(mActShowOnly, &QAction::triggered, this, [this]() { applyScopeVisibility(ctrlTable()->currentIndex(), eScopeMenu::MenuShowOnlyThis); });
+    connect(mActHide    , &QAction::triggered, this, [this]() { applyScopeVisibility(ctrlTable()->currentIndex(), eScopeMenu::MenuHideThis); });
+    connect(mActShowAll , &QAction::triggered, this, [this]() { applyScopeVisibility(ctrlTable()->currentIndex(), eScopeMenu::MenuShowAll); });
+    connect(mActCopyPath, &QAction::triggered, this, [this]() { copyScopePath(ctrlTable()->currentIndex()); });
+}
+
+QModelIndex NaviLogScopeBase::findScopeIndex(ITEM_ID target, uint32_t scopeId) const
+{
+    if ((mScopesModel == nullptr) || (scopeId == areg::LOG_SCOPE_ID_NONE))
+        return QModelIndex();
+
+    // The walk goes through the model, so it sees the tree exactly as the panel draws it.
+    const std::function<QModelIndex(const QModelIndex&)> walk = [&](const QModelIndex& parent) -> QModelIndex
+        {
+            const int count{ mScopesModel->rowCount(parent) };
+            for (int row = 0; row < count; ++row)
+            {
+                const QModelIndex child{ mScopesModel->index(row, 0, parent) };
+                const ScopeNodeBase* node{ mScopesModel->data(child, Qt::UserRole).value<ScopeNodeBase*>() };
+                if (node == nullptr)
+                    continue;
+
+                if (node->isLeaf() && (node->getScopeId() == scopeId))
+                    return child;
+
+                const QModelIndex found{ walk(child) };
+                if (found.isValid())
+                    return found;
+            }
+
+            return QModelIndex();
+        };
+
+    const QModelIndex root{ mScopesModel->getRootIndex() };
+    const int roots{ mScopesModel->rowCount(root) };
+    for (int row = 0; row < roots; ++row)
+    {
+        const QModelIndex branch{ mScopesModel->index(row, 0, root) };
+        const ScopeNodeBase* node{ mScopesModel->data(branch, Qt::UserRole).value<ScopeNodeBase*>() };
+        const ScopeRoot* instance{ static_cast<const ScopeRoot*>(node) };
+        if ((node == nullptr) || (node->isRoot() == false) || (instance->getRootId() != target))
+            continue;
+
+        return walk(branch);
+    }
+
+    return QModelIndex();
+}
+
+bool NaviLogScopeBase::populateScopeMenu(QMenu& menu, const QModelIndex& node)
+{
+    if ((mScopesModel == nullptr) || (node.isValid() == false))
+        return false;
+
+    ScopeNodeBase* entry{ mScopesModel->data(node, Qt::UserRole).value<ScopeNodeBase*>() };
+    if ((entry == nullptr) || (entry->hasPrioValid() == false))
+        return false;
+
+    ctrlTable()->setCurrentIndex(node);
+    buildScopeMenu(menu, node, *entry);
+    return true;
+}
+
+bool NaviLogScopeBase::applyScopeMenu(const QAction& action, const QModelIndex& node)
+{
+    if ((node.isValid() == false) || (action.data().isValid() == false))
+        return false;
+
+    if (runScopeMenu(action, node))
+    {
+        enableButtons(node);
+        mScopesModel->nodeSelected(node);
+    }
+
+    return true;
+}
+
 void NaviLogScopeBase::showScopeContextMenu(const QPoint& pos)
 {
     QTreeView* tree = ctrlTable();
     QModelIndex index = tree->indexAt(pos);
     if (index.isValid() == false)
         return;
+
+    tree->setCurrentIndex(index);
 
     Q_ASSERT(mScopesModel != nullptr);
 

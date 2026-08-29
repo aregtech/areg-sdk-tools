@@ -26,6 +26,7 @@
 #include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/view/log/LogHeaderItem.hpp"
 #include "lusan/view/log/LogHitMap.hpp"
+#include "lusan/view/common/NaviLogScopeBase.hpp"
 #include "lusan/view/log/LogSessionBar.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/view/log/ScopeOutputViewer.hpp"
@@ -875,6 +876,16 @@ void LogViewerBase::_forgetLayout(void) const
     options.writeOptions();
 }
 
+NaviLogScopeBase* LogViewerBase::_scopePanel(void) const
+{
+    if (mMainWindow == nullptr)
+        return nullptr;
+
+    return getMdiWindowType() == MdiChild::eMdiWindow::MdiLogViewer
+         ? static_cast<NaviLogScopeBase*>(&mMainWindow->getNaviLiveScopes())
+         : static_cast<NaviLogScopeBase*>(&mMainWindow->getNaviOfflineScopes());
+}
+
 void LogViewerBase::_stepToProblem(bool forward)
 {
     if ((mFilter == nullptr) || (mLogModel == nullptr))
@@ -1134,10 +1145,41 @@ void LogViewerBase::onTableContextMenu(const QPoint& pos)
     QMenu* isolateMenu = menu.addMenu(tr("Isolate"));
     _populateIsolateMenu(isolateMenu, idx.isValid() ? idx.row() : -1);
 
+    // The same scope menu the navigation panel carries, on the scope of the clicked row. The
+    // panel owns it, so the two surfaces can never drift apart.
+    NaviLogScopeBase* panel{ _scopePanel() };
+    QModelIndex scopeNode;
+    QString scopeName;
+    if ((panel != nullptr) && idx.isValid())
+    {
+        const areg::LogEntry* entry{ mLogModel->getLogData(mFilter->mapToSource(idx).row()) };
+        if (entry != nullptr)
+        {
+            scopeNode = panel->findScopeIndex(entry->logCookie, entry->logScopeId);
+            scopeName = mLogModel->getScopeName(entry->logCookie, entry->logScopeId);
+        }
+    }
+
+    if (scopeNode.isValid())
+    {
+        menu.addSeparator();
+        QMenu* scopeMenu = menu.addMenu(scopeName.isEmpty() ? tr("Scope") : tr("Scope: %1").arg(scopeName));
+        if (panel->populateScopeMenu(*scopeMenu, scopeNode) == false)
+        {
+            menu.removeAction(scopeMenu->menuAction());
+            scopeNode = QModelIndex();
+        }
+    }
+
     menu.addSeparator();
     QMenu* columnsMenu = menu.addMenu(tr("Columns"));
     _populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
-    menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
+
+    const QAction* chosen{ menu.exec(ctrlTable()->viewport()->mapToGlobal(pos)) };
+    if ((chosen != nullptr) && scopeNode.isValid() && (panel != nullptr))
+    {
+        panel->applyScopeMenu(*chosen, scopeNode);
+    }
 }
 
 void LogViewerBase::_populateIsolateMenu(QMenu* menu, int row)
