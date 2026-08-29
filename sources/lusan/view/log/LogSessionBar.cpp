@@ -52,10 +52,6 @@ namespace
     //! The air a row keeps above and below its tallest control.
     constexpr int   _barAir     { 1 };
 
-    //! The gap the search field keeps between the text and its tool buttons, so a phrase
-    //! that fills the field never touches the first mark.
-    constexpr int   _searchGap  { 8 };
-
     //! The mark of the live state is drawn on this box and scaled down by the button.
     constexpr int   _dotBox     { 32 };
 }
@@ -171,12 +167,11 @@ void LogSessionBar::_buildMainRow(void)
     mSearch->initialize(tools);
     mSearch->setPlaceholderText(tr("search a phrase in logs"));
     mSearch->setToolTip(tr("Moves to the next row that carries the phrase. It removes no row."));
-    // initialize() gives the field a right text margin the width of the button strip, so the
-    // room left to type in is the width of the control minus that margin.
-    const int strip{ mSearch->textMargins().right() + _searchGap };
-    mSearch->setTextMargins(1, 1, strip, 1);
-    mSearch->setMinimumWidth(strip + LogSessionBar::SEARCH_TEXT_MIN);
-    mSearch->setMaximumWidth(strip + LogSessionBar::SEARCH_TEXT_MAX);
+    // The field spends part of its width on the marks it draws inside itself; the rest is the
+    // room to type in, and that is the number worth naming.
+    const int chrome{ mSearch->chromeWidth() };
+    mSearch->setMinimumWidth(chrome + LogSessionBar::SEARCH_TEXT_MIN);
+    mSearch->setMaximumWidth(chrome + LogSessionBar::SEARCH_TEXT_MAX);
     mSearch->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Fixed);
 
     // The field carries the stretch and the slack does not, so spare width grows the field up

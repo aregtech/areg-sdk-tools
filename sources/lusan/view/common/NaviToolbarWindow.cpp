@@ -126,7 +126,7 @@ int NaviToolbarWindow::toolRowHeight(void)
 
 int NaviToolbarWindow::naviInputHeight(const QWidget& owner)
 {
-    return QFontMetrics(owner.font()).height() + NAVI_INPUT_AIR;
+    return NELusanCommon::inputRowHeight(owner);
 }
 
 QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& toolTip, const QString& statusTip, bool checkable /*= false*/)

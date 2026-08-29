@@ -410,7 +410,7 @@ protected:
     inline QToolButton* ctrlShowAll(void) const;
 
     //!< Returns the box that narrows the tree to the scopes whose name matches.
-    inline QLineEdit* ctrlScopeFilter(void) const;
+    inline SearchLineEdit* ctrlScopeFilter(void) const;
 
     //!< Returns the box that walks the tree from one matching scope to the next.
     inline SearchLineEdit* ctrlScopeFind(void) const;
@@ -486,8 +486,7 @@ private:
     eScopeReach             mScopeReach;    //!< What a priority chosen in the context menu applies to
 
     QWidget*                mFilterBar;     //!< The row that carries the scope name filter box
-    QLineEdit*              mFilterEdit;    //!< The box that narrows the tree
-    QLabel*                 mFilterCount;   //!< How many scope names carry the filter text
+    SearchLineEdit*         mFilterEdit;    //!< The box that narrows the tree
     QWidget*                mFindBar;       //!< The row that carries the find box, closed until it is asked for
     SearchLineEdit*         mFindEdit;      //!< The box that walks from one matching scope to the next
     ScopeNameDelegate*     mHighlight;     //!< The delegate that marks the matched part of a scope name
@@ -534,7 +533,7 @@ inline QToolButton* NaviLogScopeBase::ctrlShowAll(void) const
     return mToolShowAll;
 }
 
-inline QLineEdit* NaviLogScopeBase::ctrlScopeFilter(void) const
+inline SearchLineEdit* NaviLogScopeBase::ctrlScopeFilter(void) const
 {
     return mFilterEdit;
 }

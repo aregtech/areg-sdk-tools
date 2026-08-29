@@ -21,6 +21,7 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QAction>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QKeyEvent>
@@ -34,11 +35,16 @@ SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButt
     initialize(addButtons);
 }
 
+SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, const QIcon& mark, QWidget* parent /*= nullptr*/)
+    : SearchLineEdit(parent)
+{
+    initialize(addButtons, mark);
+}
+
 SearchLineEdit::SearchLineEdit(QWidget* parent /*= nullptr*/)
     : QLineEdit     (parent)
 
     , mIsInitialized(false)
-    , mMark         (nullptr)
     , mTrailing     (nullptr)
     , mCounter      (nullptr)
     , mBtnClear     (nullptr)
@@ -47,21 +53,32 @@ SearchLineEdit::SearchLineEdit(QWidget* parent /*= nullptr*/)
     , mBtnWildCard  (nullptr)
     , mBtnBackward  (nullptr)
     , mTrailWidth   (-1)
+    , mLeadWidth    (0)
+    , mBoxExtent    (0)
+    , mIconExtent   (0)
 {
 }
 
-void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton>& addButtons)
+void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton>& addButtons, const QIcon& mark /*= QIcon()*/)
 {
     if (mIsInitialized)
         return;
 
     mIsInitialized = true;
 
-    mMark = new QLabel(this);
-    mMark->setObjectName(QStringLiteral("searchMark"));
-    mMark->setPixmap(NELusanCommon::iconSearch(NELusanCommon::SizeBig).pixmap(SearchLineEdit::SEARCH_ICON, SearchLineEdit::SEARCH_ICON));
-    mMark->setAttribute(Qt::WidgetAttribute::WA_TransparentForMouseEvents, true);
-    mMark->setEnabled(false);
+    // Every input row of the application takes one height, so two boxes on the same panel are
+    // never a pixel apart. The toggles are then cut to fit the field, not the other way round.
+    const int rowHeight{ NELusanCommon::inputRowHeight(*this) };
+    setFixedHeight(rowHeight);
+    mBoxExtent  = qMax(SearchLineEdit::SEARCH_BUTTON_MIN, rowHeight - 2);
+    mIconExtent = qMax(SearchLineEdit::SEARCH_BUTTON_MIN - SearchLineEdit::SEARCH_ICON_INSET
+                      , mBoxExtent - SearchLineEdit::SEARCH_ICON_INSET);
+
+    // The mark goes in as a leading action, which is what the scope filter box already uses.
+    // Qt then reserves the same room for it in both, so the text starts on the same column.
+    const QIcon lead{ mark.isNull() ? NELusanCommon::iconSearch(NELusanCommon::SizeBig) : mark };
+    addAction(lead, QLineEdit::ActionPosition::LeadingPosition);
+    mLeadWidth = mIconExtent + (SearchLineEdit::SEARCH_AIR * 2);
 
     mTrailing = new QWidget(this);
     QHBoxLayout* trail = new QHBoxLayout(mTrailing);
@@ -128,10 +145,6 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton>& addBut
     mBtnClear->setVisible(false);
     connect(mBtnClear, &QToolButton::clicked, this, [this]() { clear(); setFocus(); });
 
-    // The field is at least as tall as its natural height and never shorter than the marks it
-    // holds. Clamping it to the button height alone cuts the descenders off the typed text.
-    setMinimumHeight(qMax(QLineEdit::sizeHint().height(), SearchLineEdit::SEARCH_BUTTON + (SearchLineEdit::SEARCH_AIR / 2) * 2));
-
     connect(this, &QLineEdit::textChanged, this, [this](const QString& newText) {
             mBtnClear->setVisible(newText.isEmpty() == false);
             _placeMarks();
@@ -141,7 +154,6 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton>& addBut
 
     _placeMarks();
     mTrailing->show();
-    mMark->show();
 }
 
 QToolButton* SearchLineEdit::_addOption(const QIcon& icon, const QString& toolTip, const QString& name)
@@ -149,8 +161,8 @@ QToolButton* SearchLineEdit::_addOption(const QIcon& icon, const QString& toolTi
     QToolButton* button = new QToolButton(mTrailing);
     button->setObjectName(name);
     button->setIcon(icon);
-    button->setIconSize(QSize(SearchLineEdit::SEARCH_ICON, SearchLineEdit::SEARCH_ICON));
-    button->setFixedSize(SearchLineEdit::SEARCH_BUTTON, SearchLineEdit::SEARCH_BUTTON);
+    button->setIconSize(QSize(mIconExtent, mIconExtent));
+    button->setFixedSize(mBoxExtent, mBoxExtent);
     button->setCheckable(true);
     button->setChecked(false);
     button->setAutoRaise(true);
@@ -183,20 +195,16 @@ void SearchLineEdit::_placeMarks(void)
     if (mTrailing == nullptr)
         return;
 
-    const int box{ height() };
-    const QSize markHint{ mMark->sizeHint() };
-    mMark->setGeometry(SearchLineEdit::SEARCH_AIR, (box - markHint.height()) / 2, markHint.width(), markHint.height());
-
     const int trailWidth{ mTrailing->sizeHint().width() };
-    mTrailing->setGeometry(width() - trailWidth - SearchLineEdit::SEARCH_AIR, 0, trailWidth, box);
+    mTrailing->setGeometry(width() - trailWidth - SearchLineEdit::SEARCH_AIR, 0, trailWidth, height());
 
     // Setting the margins lays the field out again, so it is done only when the trailing group
     // actually changed width -- a counter appearing, or the clear button coming and going.
+    // The left is left alone: the leading action owns it, exactly as it does in a plain box.
     if (trailWidth != mTrailWidth)
     {
         mTrailWidth = trailWidth;
-        const int left{ SearchLineEdit::SEARCH_AIR + markHint.width() + SearchLineEdit::SEARCH_AIR };
-        setTextMargins(left, 1, trailWidth + (SearchLineEdit::SEARCH_AIR * 2), 1);
+        setTextMargins(0, 0, trailWidth + (SearchLineEdit::SEARCH_AIR * 2), 0);
     }
 }
 

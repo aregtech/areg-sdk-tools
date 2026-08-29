@@ -452,6 +452,17 @@ namespace NELusanCommon
      **/
     QIcon mergeIcons(const QIcon& icon1, double scale1, const QIcon& icon2, double scale2, const QSize& size);
 
+    //! The air an input row keeps around one line of text.
+    constexpr int   InputAir    { 3 };
+
+    /**
+     * \brief   Returns the height of a one line input control: a filter box, a find box, a
+     *          search field or a selector. Every such control in the application takes it, so
+     *          two boxes on the same panel are never a pixel apart.
+     * \param   owner   The control the height is for. Its font sets the value.
+     **/
+    int inputRowHeight(const QWidget& owner);
+
     //! Empty icon
     const QIcon     EmptyIcon{};
 

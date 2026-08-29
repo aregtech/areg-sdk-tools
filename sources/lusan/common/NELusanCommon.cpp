@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QEvent>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QGuiApplication>
 #include <QHash>
 #include <QImage>
@@ -168,6 +169,11 @@ uint32_t NELusanCommon::getId()
 uint64_t NELusanCommon::getTimestamp()
 {
     return static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
+}
+
+int NELusanCommon::inputRowHeight(const QWidget& owner)
+{
+    return QFontMetrics(owner.font()).height() + NELusanCommon::InputAir;
 }
 
 const QString& NELusanCommon::getStyleToolbutton()

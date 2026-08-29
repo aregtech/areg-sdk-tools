@@ -69,7 +69,6 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
 
     , mFilterBar        (nullptr)
     , mFilterEdit       (nullptr)
-    , mFilterCount      (nullptr)
     , mFindBar          (nullptr)
     , mFindEdit         (nullptr)
     , mHighlight        (nullptr)
@@ -207,27 +206,18 @@ void NaviLogScopeBase::setupScopeSearch(void)
     filterRow->setContentsMargins(0, 0, 0, 0);
     filterRow->setSpacing(4);
 
-    mFilterEdit = new QLineEdit(mFilterBar);
+    mFilterEdit = new SearchLineEdit(QList<SearchLineEdit::eToolButton>()
+                                    , NELusanCommon::iconFilter(NELusanCommon::SizeBig)
+                                    , mFilterBar);
     mFilterEdit->setObjectName(QStringLiteral("scopeFilterEdit"));
-    mFilterEdit->addAction(NELusanCommon::iconFilter(NELusanCommon::SizeSmall), QLineEdit::ActionPosition::LeadingPosition);
-    mFilterEdit->setClearButtonEnabled(true);
     mFilterEdit->setPlaceholderText(tr("Filter scopes"));
     mFilterEdit->setToolTip(tr("Leave in the tree only the scopes whose name carries this text."));
     mFilterEdit->setStatusTip(mFilterEdit->toolTip());
     mFilterEdit->setAccessibleName(tr("Scope name filter"));
-    // The dock is narrow. Without this the box holds its own width and pushes the count out.
+    // The dock is narrow. Without this the box holds its own width and pushes the row apart.
     mFilterEdit->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Fixed);
-    // The same height the workspace selector takes, so the tree starts on the same line
-    // whichever navigation panel the user is on.
-    mFilterEdit->setFixedHeight(NaviToolbarWindow::naviInputHeight(*mFilterEdit));
-
-    mFilterCount = new QLabel(mFilterBar);
-    mFilterCount->setObjectName(QStringLiteral("scopeFilterCount"));
-    mFilterCount->setEnabled(false);
-    mFilterCount->setVisible(false);
 
     filterRow->addWidget(mFilterEdit, 1);
-    filterRow->addWidget(mFilterCount, 0);
     addNaviBar(mFilterBar);
 
     const QList<SearchLineEdit::eToolButton> findTools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
@@ -240,7 +230,7 @@ void NaviLogScopeBase::setupScopeSearch(void)
     findRow->setContentsMargins(0, 0, 0, 0);
     findRow->setSpacing(4);
 
-    mFindEdit = new SearchLineEdit(findTools, mFindBar);
+    mFindEdit = new SearchLineEdit(findTools, NELusanCommon::iconSearch(NELusanCommon::SizeBig), mFindBar);
     mFindEdit->setObjectName(QStringLiteral("scopeFindEdit"));
     mFindEdit->setPlaceholderText(tr("Find scope"));
     mFindEdit->setToolTip(tr("Walk to the next scope whose name carries this text. The tree is left whole."));
@@ -347,14 +337,13 @@ void NaviLogScopeBase::applyScopeFilter(void)
     if (needle.isEmpty())
     {
         restoreExpanded(tree->rootIndex());
-        mFilterCount->setVisible(false);
+        mFilterEdit->setCounter(QString());
     }
     else
     {
         int matches{ 0 };
         filterBranch(tree->rootIndex(), needle, false, matches);
-        mFilterCount->setText(matches != 0 ? tr("%1 found").arg(matches) : tr("none"));
-        mFilterCount->setVisible(true);
+        mFilterEdit->setCounter(matches != 0 ? tr("%1 found").arg(matches) : tr("none"));
     }
 
     updateMatchMark();

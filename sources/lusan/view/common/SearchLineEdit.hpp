@@ -74,14 +74,14 @@ public:
         , ToolButtonBackward    = 16    //!< Walk the matches backwards.
     };
 
-    //!< The square every option toggle is drawn in.
-    static constexpr int    SEARCH_BUTTON   { 20 };
-
-    //!< The icon edge inside a toggle.
-    static constexpr int    SEARCH_ICON     { 14 };
-
-    //!< The air the field keeps around what it draws inside itself.
+    //!< The air the field keeps between the typed text and the marks at its right end.
     static constexpr int    SEARCH_AIR      { 4 };
+
+    //!< The smallest square an option toggle may be drawn in.
+    static constexpr int    SEARCH_BUTTON_MIN { 14 };
+
+    //!< How much smaller the icon is than the toggle that holds it.
+    static constexpr int    SEARCH_ICON_INSET { 6 };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors
@@ -93,6 +93,14 @@ public:
      * \param   parent      The parent widget.
      **/
     explicit SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, QWidget* parent = nullptr);
+
+    /**
+     * \brief   Creates the field with the given option toggles and leading mark.
+     * \param   addButtons  The toggles to draw, in the order given.
+     * \param   mark        The mark drawn at the left end, which names what the field does.
+     * \param   parent      The parent widget.
+     **/
+    explicit SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, const QIcon& mark, QWidget* parent = nullptr);
 
     /**
      * \brief   Creates the field without toggles. Call initialize() to add them.
@@ -109,7 +117,13 @@ public:
      *          when the field is already initialized.
      * \param   addButtons  The toggles to draw, in the order given.
      **/
-    void initialize(const QList<SearchLineEdit::eToolButton>& addButtons);
+    void initialize(const QList<SearchLineEdit::eToolButton>& addButtons, const QIcon& mark = QIcon());
+
+    /**
+     * \brief   Returns the width the field spends on its own marks, at both ends. A caller
+     *          that sizes the field adds the room it wants for the text to it.
+     **/
+    inline int chromeWidth() const;
 
     /**
      * \brief   Shows the given text between the typed phrase and the toggles, where a surface
@@ -223,7 +237,6 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     bool            mIsInitialized; //!< True once the marks are built.
-    QLabel*         mMark;          //!< The leading mark that says the field searches.
     QWidget*        mTrailing;      //!< The group drawn at the right end of the field.
     QLabel*         mCounter;       //!< What the surface reports about its matches.
     QToolButton*    mBtnClear;      //!< Empties the field. Hidden while the field is empty.
@@ -232,6 +245,9 @@ private:
     QToolButton*    mBtnWildCard;   //!< The pattern toggle.
     QToolButton*    mBtnBackward;   //!< The backwards toggle.
     int             mTrailWidth;    //!< The width the trailing group had when the margins were set.
+    int             mLeadWidth;     //!< The width the leading mark takes.
+    int             mBoxExtent;     //!< The square an option toggle is drawn in, cut to the field.
+    int             mIconExtent;    //!< The icon edge inside a toggle.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -243,6 +259,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // SearchLineEdit class inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline int SearchLineEdit::chromeWidth() const
+{
+    return mLeadWidth + textMargins().right();
+}
 
 inline QToolButton* SearchLineEdit::buttonMatchCase() const
 {
