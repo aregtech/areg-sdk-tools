@@ -3,6 +3,7 @@
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/log/LiveLogViewer.cpp
     ${LUSAN}/view/log/LogEmptyState.cpp
+    ${LUSAN}/view/log/LogFilterChips.cpp
     ${LUSAN}/view/log/LogFilterWidgets.cpp
     ${LUSAN}/view/log/LogHeaderItem.cpp
     ${LUSAN}/view/log/LogPriorityBar.cpp
@@ -17,6 +18,7 @@ list(APPEND LUSAN_SRC
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/log/LiveLogViewer.hpp
     ${LUSAN}/view/log/LogEmptyState.hpp
+    ${LUSAN}/view/log/LogFilterChips.hpp
     ${LUSAN}/view/log/LogFilterWidgets.hpp
     ${LUSAN}/view/log/LogHeaderItem.hpp
     ${LUSAN}/view/log/LogPriorityBar.hpp

@@ -77,6 +77,12 @@ public:
     void setFilterData(const QString & data);
 
     /**
+     * \brief   Sets the phrase and the match options of a text filter control.
+     * \param   filter  The phrase and the options to match it with.
+     **/
+    void setFilterData(const NELusanCommon::FilterString & filter);
+
+    /**
      * \brief   Sets the list of strings in the combo-box filter control
      **/
     void setFilterData(const std::vector<QString> & data, const NELusanCommon::AnyList& list);

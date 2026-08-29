@@ -185,6 +185,13 @@ public:
      **/
     LogSearchModel::sFoundPos nextSearch(uint32_t lastFound);
 
+    /**
+     * \brief   Returns every row of the searched model that carries the phrase of the last
+     *          search, in ascending order. It walks the model once, so a caller asks for it
+     *          when a search starts, not on every step to the next hit.
+     **/
+    QList<uint32_t> collectMatches(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -214,7 +221,7 @@ private:
      *          It handles case sensitivity, whole word matching, and wildcard characters.
      * \return  Returns the configured QRegularExpression object for searching.
      **/
-    QRegularExpression createRegex();
+    QRegularExpression createRegex() const;
 
     /**
      * \brief   Checks if the text matches the search phrase as a simple string.

@@ -45,6 +45,7 @@ LoggingScopesModelBase::LoggingScopesModelBase(QObject* parent)
     , mConInstUnavailable   ( )
     , mConScopesAvailable   ( )
     , mConScopesUnavailable ( )
+    , mConShowAllScopes     ( )
 {
     mRootIndex = createIndex(0, 0, nullptr);
 }
@@ -1008,6 +1009,9 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
         mConScopesUnavailable = connect(mLoggingModel, &LoggingModelBase::signalScopesUpdated       , this, [this](ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes) {
             this->slotScopesUpdated(instId, scopes);
         });
+        mConShowAllScopes = connect(mLoggingModel, &LoggingModelBase::signalShowAllScopesRequested  , this, [this]() {
+            this->showAllScopes();
+        });
     }
     else if (mSignalsSetup)
     {
@@ -1017,7 +1021,8 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
         disconnect(mConInstUnavailable);
         disconnect(mConScopesAvailable);
         disconnect(mConScopesUnavailable);
-        
+        disconnect(mConShowAllScopes);
+
         mSignalsSetup = false;
     }
 }

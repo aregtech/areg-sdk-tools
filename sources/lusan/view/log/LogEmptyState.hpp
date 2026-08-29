@@ -86,9 +86,8 @@ public:
      * \param   reason  The reason the table is empty.
      * \param   held    The rows the filters keep out. Used by ReasonFiltered only.
      * \param   scopes  True if the scope tree is hiding scopes. ReasonFiltered only.
-     * \param   columns True if a column filter is set. ReasonFiltered only; it also decides
-     *                  whether the action button is offered, because the button drops the
-     *                  column filters and nothing else.
+     * \param   columns True if a column filter is set. ReasonFiltered only. The action button
+     *                  is offered when a column filter or a hidden scope is what holds the rows.
      **/
     void setReason(LogEmptyState::eEmptyReason reason, int held, bool scopes, bool columns);
 

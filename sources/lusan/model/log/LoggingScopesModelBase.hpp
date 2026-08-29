@@ -587,6 +587,7 @@ private:
     QMetaObject::Connection mConInstUnavailable;    // The connection to instances unavailable signal
     QMetaObject::Connection mConScopesAvailable;    // The connection to scopes available signal
     QMetaObject::Connection mConScopesUnavailable;  // The connection to scopes unavailable signal
+    QMetaObject::Connection mConShowAllScopes;      // The connection to the request to show every scope again
 };
 
 //////////////////////////////////////////////////////////////////////////

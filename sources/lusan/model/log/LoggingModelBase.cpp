@@ -232,6 +232,21 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     }
 }
 
+QString LoggingModelBase::getScopeName(ITEM_ID target, uint32_t scopeId) const
+{
+    const auto entry{ mScopes.find(target) };
+    if (entry == mScopes.end())
+        return QString();
+
+    for (const areg::ScopeEntry& scope : entry->second)
+    {
+        if (scope.scopeId == scopeId)
+            return QString(scope.scopeName.as_string());
+    }
+
+    return QString();
+}
+
 QString LoggingModelBase::getHeaderName(int colIndex) const
 {
     if ((colIndex >= 0) && (colIndex < mActiveColumns.size()))
@@ -677,6 +692,11 @@ void LoggingModelBase::clearRefusedScopes(void)
 
     mRefused.clear();
     emit signalRefusedScopesChanged();
+}
+
+void LoggingModelBase::requestShowAllScopes(void)
+{
+    emit signalShowAllScopesRequested();
 }
 
 uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId, int32_t limit, uint32_t offset)

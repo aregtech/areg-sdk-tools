@@ -79,6 +79,27 @@ namespace
     const QColor _bandLight{ 0xF6, 0xE0, 0xE4 };
     const QColor _bandDark { 0x40, 0x30, 0x38 };
 
+    constexpr int _markCount{ static_cast<int>(NELogPalette::eLogMarkRole::MarkCount) };
+
+    //! Search hit, revealed row and its gutter mark, light theme. One amber hue at three
+    //! strengths, so a revealed row reads as a consequence of the search that found it.
+    const QColor _markLight[_markCount]
+    {
+          QColor(0xFF, 0xD5, 0x4F)      // Hit background
+        , QColor(0x2A, 0x21, 0x00)      // Hit text
+        , QColor(0xFF, 0xF6, 0xDC)      // Revealed row
+        , QColor(0xE0, 0x9B, 0x00)      // Revealed gutter mark
+    };
+
+    //! The same three, dark theme.
+    const QColor _markDark[_markCount]
+    {
+          QColor(0x8A, 0x63, 0x00)      // Hit background
+        , QColor(0xFF, 0xF3, 0xC4)      // Hit text
+        , QColor(0x3A, 0x31, 0x16)      // Revealed row
+        , QColor(0xFF, 0xC2, 0x4D)      // Revealed gutter mark
+    };
+
     constexpr int _opacityCount{ static_cast<int>(NELogPalette::eLogOpacity::OpacityCount) };
 
     //! Tint, hover, ghost track. The ghost differs most between the themes: at one
@@ -90,6 +111,12 @@ namespace
     {
         const int index{ static_cast<int>(role) };
         return ((index >= 0) && (index < _roleCount)) ? index : static_cast<int>(NELogPalette::eLogColorRole::RoleNotset);
+    }
+
+    inline int markIndex(NELogPalette::eLogMarkRole role)
+    {
+        const int index{ static_cast<int>(role) };
+        return ((index >= 0) && (index < _markCount)) ? index : 0;
     }
 
     inline int opacityIndex(NELogPalette::eLogOpacity use)
@@ -125,6 +152,11 @@ QColor NELogPalette::textColor(NELogPalette::eLogColorRole role)
 QColor NELogPalette::railColor(NELogPalette::eLogColorRole role)
 {
     return isDarkTheme() ? _railDark[roleIndex(role)] : _railLight[roleIndex(role)];
+}
+
+QColor NELogPalette::markColor(NELogPalette::eLogMarkRole role)
+{
+    return isDarkTheme() ? _markDark[markIndex(role)] : _markLight[markIndex(role)];
 }
 
 QColor NELogPalette::stateColor(NELogPalette::eLogStateRole role)

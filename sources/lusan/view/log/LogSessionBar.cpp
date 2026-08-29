@@ -23,9 +23,11 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/NaviToolbarWindow.hpp"
 #include "lusan/view/common/SearchLineEdit.hpp"
+#include "lusan/view/log/LogFilterChips.hpp"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QCursor>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QFileInfo>
@@ -71,11 +73,16 @@ LogSessionBar::LogSessionBar(LogSessionBar::eSessionMode mode, QWidget* parent /
     , mClose        (nullptr)
     , mSpan         (nullptr)
     , mSearch       (nullptr)
+    , mFilterMatches(nullptr)
+    , mSearchScope  (nullptr)
     , mCounters     (nullptr)
     , mMoveTop      (nullptr)
     , mMoveBottom   (nullptr)
+    , mChips        (nullptr)
     , mNoticeRow    (nullptr)
-    , mNoticeText   (nullptr)
+    , mNoticeLine   { }
+    , mNoticeText   { }
+    , mNoticeLink   { }
     , mButtons      ( )
     , mShrinkable   ( )
     , mAddress      ( )
@@ -97,6 +104,10 @@ LogSessionBar::LogSessionBar(LogSessionBar::eSessionMode mode, QWidget* parent /
     rows->addWidget(mainRow);
 
     _buildMainRow();
+
+    mChips = new LogFilterChips(this);
+    rows->addWidget(mChips);
+
     _buildNoticeRow();
     rows->addWidget(mNoticeRow);
 
@@ -177,6 +188,31 @@ void LogSessionBar::_buildMainRow(void)
     // The field carries the stretch and the slack does not, so spare width grows the field up
     // to its maximum and only what is left over goes to the gap before the counters.
     mMainLayout->addWidget(mSearch, 1);
+
+    // The bridge from searching to filtering. Searching moves the cursor and keeps every row;
+    // pressing this keeps only the rows that carry the phrase, and says so with a chip.
+    mFilterMatches = _addButton(NELusanCommon::iconFilter(NELusanCommon::SizeBig)
+                               , tr("Keep only the rows that carry this phrase"));
+    mFilterMatches->setEnabled(false);
+    mFilterMatches->setWhatsThis(tr("Turns the typed phrase into a filter on the message column. The filter appears as a chip and one click drops it again."));
+
+    // Which rows the search walks. The label names the state it is in, and the pressed look
+    // marks the one that is not the default, so a glance answers both.
+    mSearchScope = new QToolButton(owner);
+    mSearchScope->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    mSearchScope->setAutoRaise(true);
+    mSearchScope->setCheckable(true);
+    mSearchScope->setText(tr("Visible"));
+    mSearchScope->setToolTip(tr("The search walks the rows the table shows. Press to walk every row this window holds."));
+    mSearchScope->setWhatsThis(tr("In All logs a hit that a filter hides is drawn in place and marked, with a line naming what hid it."));
+    mMainLayout->addWidget(mSearchScope);
+    connect(mSearchScope, &QToolButton::toggled, this, [this](bool checked) {
+            mSearchScope->setText(checked ? tr("All logs") : tr("Visible"));
+            mSearchScope->setToolTip(checked
+                ? tr("The search walks every row this window holds. A hit a filter hides is drawn in place and marked.")
+                : tr("The search walks the rows the table shows. Press to walk every row this window holds."));
+        });
+
     mMainLayout->addStretch(0);
 
     mCounters = new QLabel(owner);
@@ -212,28 +248,66 @@ void LogSessionBar::_buildNoticeRow(void)
 {
     mNoticeRow = new QWidget(this);
     mNoticeRow->setObjectName(QStringLiteral("logSessionNotice"));
-    QHBoxLayout* layout = new QHBoxLayout(mNoticeRow);
+    QVBoxLayout* lines = new QVBoxLayout(mNoticeRow);
+    lines->setContentsMargins(0, 0, 0, 0);
+    lines->setSpacing(0);
+
+    for (int i = 0; i < static_cast<int>(LogSessionBar::eNotice::NoticeCount); ++i)
+    {
+        lines->addWidget(_buildNoticeLine(static_cast<LogSessionBar::eNotice>(i)));
+    }
+
+    mNoticeRow->setVisible(false);
+}
+
+QWidget* LogSessionBar::_buildNoticeLine(LogSessionBar::eNotice which)
+{
+    const int slot{ static_cast<int>(which) };
+
+    QWidget* line = new QWidget(mNoticeRow);
+    QHBoxLayout* layout = new QHBoxLayout(line);
     layout->setContentsMargins(_barMargin, 1, _barMargin, 1);
     layout->setSpacing(6);
 
-    QLabel* mark = new QLabel(mNoticeRow);
+    QLabel* mark = new QLabel(line);
     mark->setPixmap(NELusanCommon::iconWarning(NELusanCommon::SizeBig).pixmap(NaviToolbarWindow::NAVI_TOOL_ICON, NaviToolbarWindow::NAVI_TOOL_ICON));
     layout->addWidget(mark);
 
-    mNoticeText = new QLabel(mNoticeRow);
-    mNoticeText->setWordWrap(false);
-    mNoticeText->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
-    layout->addWidget(mNoticeText, 1);
+    mNoticeText[slot] = new QLabel(line);
+    mNoticeText[slot]->setWordWrap(false);
+    mNoticeText[slot]->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
+    layout->addWidget(mNoticeText[slot], 1);
 
-    QToolButton* dismiss = new QToolButton(mNoticeRow);
+    mNoticeLink[slot] = new QToolButton(line);
+    mNoticeLink[slot]->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    mNoticeLink[slot]->setAutoRaise(true);
+    mNoticeLink[slot]->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
+    mNoticeLink[slot]->setVisible(false);
+    layout->addWidget(mNoticeLink[slot]);
+    connect(mNoticeLink[slot], &QToolButton::clicked, this, [this, which]() { emit signalNoticeAction(which); });
+
+    QToolButton* dismiss = new QToolButton(line);
     dismiss->setIcon(NELusanCommon::iconClose(NELusanCommon::SizeBig));
     dismiss->setIconSize(QSize(NaviToolbarWindow::NAVI_TOOL_ICON, NaviToolbarWindow::NAVI_TOOL_ICON));
     dismiss->setAutoRaise(true);
-    dismiss->setToolTip(tr("Hide this notice for the rest of the session"));
+    dismiss->setToolTip(tr("Hide this notice"));
     layout->addWidget(dismiss);
-    connect(dismiss, &QToolButton::clicked, this, [this]() { hideNotice(); });
+    connect(dismiss, &QToolButton::clicked, this, [this, which]() { hideNotice(which); });
 
-    mNoticeRow->setVisible(false);
+    line->setVisible(false);
+    mNoticeLine[slot] = line;
+    return line;
+}
+
+void LogSessionBar::_updateNoticeRow(void)
+{
+    bool any{ false };
+    for (int i = 0; i < static_cast<int>(LogSessionBar::eNotice::NoticeCount); ++i)
+    {
+        any = any || mNoticeLine[i]->isVisibleTo(mNoticeRow);
+    }
+
+    mNoticeRow->setVisible(any);
 }
 
 QToolButton* LogSessionBar::_addButton(const QIcon& icon, const QString& toolTip)
@@ -435,16 +509,33 @@ void LogSessionBar::_drawCounters(void)
                                            : tr("%1 rows are kept out by the filters that are on").arg(locale.toString(mTotal - mShown)));
 }
 
-void LogSessionBar::showNotice(const QString& text)
+void LogSessionBar::showNotice(LogSessionBar::eNotice which, const QString& text, const QString& actionText /*= QString()*/)
 {
-    mNoticeText->setText(text);
-    mNoticeText->setToolTip(text);
-    mNoticeRow->setVisible(true);
+    const int slot{ static_cast<int>(which) };
+    if ((slot < 0) || (slot >= static_cast<int>(LogSessionBar::eNotice::NoticeCount)))
+        return;
+
+    mNoticeText[slot]->setText(text);
+    mNoticeText[slot]->setToolTip(text);
+    mNoticeLink[slot]->setText(actionText);
+    mNoticeLink[slot]->setVisible(actionText.isEmpty() == false);
+    mNoticeLine[slot]->setVisible(true);
+    _updateNoticeRow();
 }
 
-void LogSessionBar::hideNotice(void)
+void LogSessionBar::hideNotice(LogSessionBar::eNotice which)
 {
-    mNoticeRow->setVisible(false);
+    const int slot{ static_cast<int>(which) };
+    if ((slot < 0) || (slot >= static_cast<int>(LogSessionBar::eNotice::NoticeCount)))
+        return;
+
+    mNoticeLine[slot]->setVisible(false);
+    _updateNoticeRow();
+}
+
+bool LogSessionBar::isSearchingAllLogs(void) const
+{
+    return mSearchScope->isChecked();
 }
 
 bool LogSessionBar::isFollowing(void) const

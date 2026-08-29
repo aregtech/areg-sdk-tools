@@ -69,6 +69,13 @@ public:
 public:
 
     /**
+     * \brief   Sets the phrase and the match options of the widget. A widget that carries no
+     *          match options keeps the phrase alone.
+     * \param   filter  The phrase and the options to match it with.
+     **/
+    virtual void setDataFilter(const NELusanCommon::FilterString& filter);
+
+    /**
      * \brief   Clears filter data.
      **/
     virtual void clearFilter();
@@ -185,6 +192,12 @@ public:
      * \brief   Returns list of selected (checked) entries.
      **/
     QList<NELusanCommon::FilterData> getSelectedData() const override;
+
+    /**
+     * \brief   Sets the phrase and, when the widget carries them, the match options.
+     * \param   filter  The phrase and the options to match it with.
+     **/
+    void setDataFilter(const NELusanCommon::FilterString& filter) override;
 
     /**
      * \brief   Clears filter data.

@@ -184,6 +184,14 @@ public:
     QString getHeaderName(int colIndex) const;
 
     /**
+     * \brief   Returns the name of the given scope of the given target.
+     * \param   target  The ID of the target the scope belongs to.
+     * \param   scopeId The ID of the scope.
+     * \return  The scope name, or an empty string when the target never announced it.
+     **/
+    QString getScopeName(ITEM_ID target, uint32_t scopeId) const;
+
+    /**
      * \brief   Finds the index of the specified column.
      * \param   col The column to find.
      * \return  The index of the column, or -1 if not found.
@@ -382,6 +390,13 @@ public:
      **/
     void clearRefusedScopes(void);
 
+    /**
+     * \brief   Asks the panel that owns the scope tree to show every scope again. A log window
+     *          cannot reach the tree, and the tree is the only place that can put its
+     *          checkboxes back, so the request travels through the model both surfaces share.
+     **/
+    void requestShowAllScopes(void);
+
 signals:
 
     /**
@@ -389,6 +404,12 @@ signals:
      *          filtering on it can run their predicate again.
      **/
     void signalRefusedScopesChanged(void);
+
+    /**
+     * \brief   Signal emitted when a log window asks for every scope to be shown again.
+     *          The panel that owns the scope tree answers it.
+     **/
+    void signalShowAllScopesRequested(void);
 
     /**
      * \brief   Signal emitted when connected to the logging service.

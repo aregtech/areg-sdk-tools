@@ -58,6 +58,12 @@ private:
      **/
     void _paintPriorityRail(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
+    /**
+     * brief   Draws the background and the gutter mark of a row the filters hide and the
+     *         search brought back.
+     **/
+    void _paintRevealed(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

@@ -47,6 +47,16 @@ class LogPriorityBar : public QWidget
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
+     * \brief   What the bar acts on. It changes how the bar is drawn and what its leading
+     *          cell means, never how the ladder works.
+     **/
+    enum class eBarRole : int
+    {
+          RoleTarget = 0    //!< Sets what the target produces. The leading cell silences it.
+        , RoleView          //!< Narrows what this window draws. The leading cell keeps every row.
+    };
+
+    /**
      * \brief   The verbosity of a scope, as one position on a ladder.
      **/
     enum class eLogLevel : int
@@ -70,6 +80,14 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Sets what the bar acts on. Call it before the bar is first shown.
+     **/
+    void setRole(eBarRole role);
+
+    //!< Returns what the bar acts on.
+    inline eBarRole role(void) const;
+
     /**
      * \brief   Returns the highest level the bar is showing.
      **/
@@ -198,6 +216,7 @@ private:
      **/
     void _activateCell(int cell);
 
+    eBarRole    mRole;          //!< What the bar acts on.
     eLogLevel   mLevelLow;      //!< The lowest level the selected scopes produce.
     eLogLevel   mLevelHigh;     //!< The highest level the selected scopes produce.
     bool        mScopesSome;    //!< At least one selected scope writes scope lines.

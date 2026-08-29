@@ -50,6 +50,11 @@ void LogFilterBase::setWidget(QWidget* widget)
     layout->addWidget(mWidget);
 }
 
+void LogFilterBase::setDataFilter(const NELusanCommon::FilterString& filter)
+{
+    setDataString(filter.text);
+}
+
 void LogFilterBase::clearFilter()
 {
     if (mWidget != nullptr)
@@ -197,6 +202,28 @@ void LogTextFilterBase::setDataItems(const QStringList& items, const NELusanComm
 QList<NELusanCommon::FilterData> LogTextFilterBase::getSelectedData() const
 {
     return mData;
+}
+
+void LogTextFilterBase::setDataFilter(const NELusanCommon::FilterString& filter)
+{
+    SearchLineEdit* widget{ qobject_cast<SearchLineEdit *>(mWidget) };
+    if (widget != nullptr)
+    {
+        // The options are set first, so the text change carries the final ones with it.
+        const QSignalBlocker blocker(widget);
+        if (widget->buttonMatchCase() != nullptr)
+            widget->buttonMatchCase()->setChecked(filter.isCaseSensitive);
+        if (widget->buttonMatchWord() != nullptr)
+            widget->buttonMatchWord()->setChecked(filter.isWholeWord);
+        if (widget->buttonWildCard() != nullptr)
+            widget->buttonWildCard()->setChecked(filter.isWildCard);
+    }
+
+    // Setting the same text emits nothing, so the changed options are pushed by hand.
+    if (editWidget()->text() == filter.text)
+        _doSignalFilterChanged(filter.text, filter.isCaseSensitive, filter.isWholeWord, filter.isWildCard);
+    else
+        setDataString(filter.text);
 }
 
 void LogTextFilterBase::clearFilter()
@@ -439,7 +466,7 @@ QList<NELusanCommon::FilterData> LogMessageEditFilter::getSelectedData() const
     QList<NELusanCommon::FilterData> checked;
     SearchLineEdit* widget = static_cast<SearchLineEdit *>(editWidget());
     QString text = widget->text();
-    if (text.isEmpty())
+    if (text.isEmpty() == false)
     {
         NELusanCommon::FilterString f{ text, widget->isMatchCaseChecked(), widget->isMatchWordChecked(), widget->isWildCardChecked()};
         checked.push_back(NELusanCommon::FilterData{ text, f, true });

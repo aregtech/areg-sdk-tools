@@ -20,6 +20,7 @@
 #include "lusan/view/log/LogTextHighlight.hpp"
 
 #include "lusan/common/NELogPalette.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 
 #include "areg/logging/LoggingDefs.hpp"
 
@@ -36,6 +37,7 @@ LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QO
 
 void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+    _paintRevealed(painter, option, index);
     _paintPriorityRail(painter, option, index);
 
     const int foundColumn = static_cast<int>(mFoundPos.colFound);
@@ -59,8 +61,8 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QTextLayout::FormatRange highlightRange;
     highlightRange.start = start;
     highlightRange.length = end - start;
-    highlightRange.format.setBackground(Qt::yellow);
-    highlightRange.format.setForeground(Qt::red);
+    highlightRange.format.setBackground(NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkSearchHit));
+    highlightRange.format.setForeground(NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkSearchHitText));
 
     formats.append(highlightRange);
     layout.setFormats(formats);
@@ -81,6 +83,27 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QPointF textPos(option.rect.left() + 2, yOffset + 1);
 
     layout.draw(painter, textPos);
+    painter->restore();
+}
+
+void LogTextHighlight::_paintRevealed(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    if (index.data(LogViewerFilter::RevealedRole).toBool() == false)
+        return;
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->fillRect(option.rect, NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkRevealedRow));
+
+    // The gutter mark rides on the leading column, beside the priority rail, so the row is
+    // told apart even where the message is scrolled out of sight.
+    if (index.column() == 0)
+    {
+        const int edge{ 2 };
+        painter->fillRect(QRect(option.rect.left(), option.rect.top(), edge, option.rect.height())
+                         , NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkRevealedEdge));
+    }
+
     painter->restore();
 }
 

@@ -32,6 +32,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class LogFilterChips;
 class SearchLineEdit;
 
 class QHBoxLayout;
@@ -80,6 +81,16 @@ public:
         , StateStopped          //!< Recording ended and the database closed.
     };
 
+    /**
+     * \brief   The lines the notice row can carry. Each one appears and goes on its own.
+     **/
+    enum class eNotice : int
+    {
+          NoticeClockSkew = 0   //!< Two sources disagree about the wall clock.
+        , NoticeRevealed        //!< A row a filter hides is drawn because the search found it.
+        , NoticeCount           //!< Number of lines.
+    };
+
     //!< The narrowest the text area of the search field may become. The tool buttons sit
     //!< inside the field and are paid for by its right text margin, so the width of the
     //!< control is this plus that margin, never this alone.
@@ -108,6 +119,21 @@ public:
 
     //!< Returns the search field of the bar.
     inline SearchLineEdit* ctrlSearch(void) const;
+
+    //!< Returns the button that turns the typed phrase into a filter on the message column.
+    inline QToolButton* ctrlFilterMatches(void) const;
+
+    /**
+     * \brief   Returns the control that says which rows the search walks. While it is
+     *          checked the search walks every row the window holds, filtered out or not.
+     **/
+    inline QToolButton* ctrlSearchScope(void) const;
+
+    //!< Returns true if the search walks every row the window holds.
+    bool isSearchingAllLogs(void) const;
+
+    //!< Returns the row that names the filters the window has on.
+    inline LogFilterChips* ctrlChips(void) const;
 
     //!< Returns the button that moves the table to its first row.
     inline QToolButton* ctrlMoveTop(void) const;
@@ -188,16 +214,19 @@ public:
     void setCounters(int shown, int total);
 
     /**
-     * \brief   Shows the notice row with the given line. The row does not exist while
-     *          it has nothing to say, so the table starts one line higher.
-     * \param   text    The line to show.
+     * \brief   Shows one line of the notice row. The row does not exist while every line
+     *          is silent, so the table starts one line higher.
+     * \param   which       The line to fill.
+     * \param   text        The words to show.
+     * \param   actionText  The label of the link beside the words, empty for no link.
      **/
-    void showNotice(const QString& text);
+    void showNotice(LogSessionBar::eNotice which, const QString& text, const QString& actionText = QString());
 
     /**
-     * \brief   Hides the notice row.
+     * \brief   Hides one line of the notice row.
+     * \param   which   The line to silence.
      **/
-    void hideNotice(void);
+    void hideNotice(LogSessionBar::eNotice which);
 
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -208,6 +237,12 @@ signals:
      * \brief   Emitted when the identity menu asks to leave the log collector.
      **/
     void signalDisconnectRequested(void);
+
+    /**
+     * \brief   Emitted when the link of a notice line is pressed.
+     * \param   which   The line the link belongs to.
+     **/
+    void signalNoticeAction(LogSessionBar::eNotice which);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -222,8 +257,14 @@ private:
     //!< Builds the row that is always present.
     void _buildMainRow(void);
 
-    //!< Builds the row that carries a warning, hidden until it has one.
+    //!< Builds the row that carries the notice lines, hidden until one has words.
     void _buildNoticeRow(void);
+
+    //!< Builds one line of the notice row.
+    QWidget* _buildNoticeLine(LogSessionBar::eNotice which);
+
+    //!< Shows the notice row while at least one of its lines has words.
+    void _updateNoticeRow(void);
 
     //!< Fills the identity menu from the state the controls are in.
     void _fillIdentityMenu(void);
@@ -276,11 +317,16 @@ private:
     QToolButton*        mClose;         //!< Close the archive. Offline mode.
     QLabel*             mSpan;          //!< The time the archive covers. Offline mode.
     SearchLineEdit*     mSearch;        //!< The search field.
+    QToolButton*        mFilterMatches; //!< Turns the typed phrase into a filter on the message column.
+    QToolButton*        mSearchScope;   //!< Says whether the search walks the shown rows or every row.
     QLabel*             mCounters;      //!< How many rows are shown out of how many there are.
     QToolButton*        mMoveTop;       //!< Move the table to its first row.
     QToolButton*        mMoveBottom;    //!< Move the table to its last row, and keep it there while checked.
-    QWidget*            mNoticeRow;     //!< The row that carries a warning.
-    QLabel*             mNoticeText;    //!< The line the notice row shows.
+    LogFilterChips*     mChips;         //!< The row that names the filters the window has on.
+    QWidget*            mNoticeRow;     //!< The row that carries the notice lines.
+    QWidget*            mNoticeLine[static_cast<int>(LogSessionBar::eNotice::NoticeCount)];  //!< One line per notice.
+    QLabel*             mNoticeText[static_cast<int>(LogSessionBar::eNotice::NoticeCount)];  //!< The words of each line.
+    QToolButton*        mNoticeLink[static_cast<int>(LogSessionBar::eNotice::NoticeCount)];  //!< The link of each line.
     QList<QToolButton*> mButtons;       //!< Every tool button of the main row, to size their icons at once.
     QList<QWidget*>     mShrinkable;    //!< The main row entries that give way, in the order they go.
     QString             mAddress;       //!< The log collector address shown in the identity control.
@@ -306,6 +352,21 @@ private:
 inline SearchLineEdit* LogSessionBar::ctrlSearch(void) const
 {
     return mSearch;
+}
+
+inline QToolButton* LogSessionBar::ctrlFilterMatches(void) const
+{
+    return mFilterMatches;
+}
+
+inline QToolButton* LogSessionBar::ctrlSearchScope(void) const
+{
+    return mSearchScope;
+}
+
+inline LogFilterChips* LogSessionBar::ctrlChips(void) const
+{
+    return mChips;
 }
 
 inline QToolButton* LogSessionBar::ctrlMoveTop(void) const

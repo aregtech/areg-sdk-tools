@@ -127,8 +127,8 @@ void LogEmptyState::setReason(LogEmptyState::eEmptyReason reason, int held, bool
         headline = tr("%1 rows, and the filters keep out every one").arg(QLocale::system().toString(held));
         if (columns && scopes)
         {
-            details = tr("Drop the column filters here, or bring the hidden scopes back with\n"
-                         "Show all scopes in the navigation panel.");
+            details = tr("Column filters are on and the navigation tree is hiding scopes.\n"
+                         "Dropping them all brings every row back.");
         }
         else if (columns)
         {
@@ -137,7 +137,7 @@ void LogEmptyState::setReason(LogEmptyState::eEmptyReason reason, int held, bool
         else
         {
             details = tr("Every row comes from a scope the navigation tree is hiding.\n"
-                         "Show all scopes there brings them back.");
+                         "Dropping the filters shows those scopes again.");
         }
 
         break;
@@ -146,7 +146,7 @@ void LogEmptyState::setReason(LogEmptyState::eEmptyReason reason, int held, bool
     mMark->setPixmap(mark.pixmap(_markExtent, _markExtent));
     mHeadline->setText(headline);
     mDetails->setText(details);
-    mAction->setVisible((reason == eEmptyReason::ReasonFiltered) && columns);
+    mAction->setVisible((reason == eEmptyReason::ReasonFiltered) && (columns || scopes));
     setVisible(true);
     raise();
 }

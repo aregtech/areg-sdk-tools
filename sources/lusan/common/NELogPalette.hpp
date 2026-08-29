@@ -64,6 +64,18 @@ namespace NELogPalette
     };
 
     /**
+     * \brief   The marks the log table draws over a row that a search touched.
+     **/
+    enum class eLogMarkRole : int
+    {
+          MarkSearchHit = 0 //!< Behind the matched text inside a cell.
+        , MarkSearchHitText //!< The matched text itself.
+        , MarkRevealedRow   //!< Behind a row a filter hides and the search brought back.
+        , MarkRevealedEdge  //!< The mark drawn in the gutter of such a row.
+        , MarkCount         //!< Number of roles
+    };
+
+    /**
      * \brief   The transparency the log controls paint with.
      **/
     enum class eLogOpacity : int
@@ -118,6 +130,12 @@ namespace NELogPalette
      *          every other role returns a transparent colour so the row stays neutral.
      **/
     QColor rowBackground(eLogColorRole role);
+
+    /**
+     * \brief   Returns the colour of the given search mark. The hit and the revealed row
+     *          share one hue, so a revealed row reads as a consequence of the search.
+     **/
+    QColor markColor(eLogMarkRole role);
 
     /**
      * \brief   Maps a log entry to the role its colours come from.

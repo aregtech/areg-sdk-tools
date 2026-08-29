@@ -21,6 +21,7 @@
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/model/log/LogClockSkew.hpp"
 #include "lusan/view/log/LogEmptyState.hpp"
+#include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
 #include "areg/base/areg_global.h"
 
@@ -265,6 +266,20 @@ protected:
     void resetFilters();
 
     /**
+     * \brief   Drops every filter that keeps a row out of this window: the column filters and
+     *          the scopes the navigation tree refuses.
+     **/
+    void clearEveryFilter();
+
+    /**
+     * \brief   Sets the message column filter from the given phrase and match options, so
+     *          the table keeps only the rows that carry it.
+     * \param   phrase  The phrase and the options to match it with. An empty phrase drops
+     *                  the filter.
+     **/
+    void filterToPhrase(const NELusanCommon::FilterString& phrase);
+
+    /**
      * \brief   Moves the table to its last row without turning the follow toggle off.
      *          Every scroll the application makes itself goes through this method; a scroll
      *          the user makes is what switches following off.
@@ -347,6 +362,44 @@ private:
     void _updateEmptyState();
 
     /**
+     * \brief   Draws one chip for every filter the window has on.
+     **/
+    void _updateChips();
+
+    /**
+     * \brief   Switches off the filter the given chip stands for.
+     * \param   chip    The chip the reader dropped.
+     **/
+    void _dropChip(const LogFilterChips::sChip& chip);
+
+    /**
+     * \brief   Brings the hit the search just found into the table: reveals it when a filter
+     *          hides it, moves to it and draws what the counter and the notice say about it.
+     * \param   allLogs True when the search walks every row the window holds.
+     **/
+    void _showSearchHit(bool allLogs);
+
+    /**
+     * \brief   Draws the counter inside the search field, and the line that names the filters
+     *          a revealed row came back from.
+     * \param   allLogs True when the search walks every row the window holds.
+     **/
+    void _drawSearchState(bool allLogs);
+
+    /**
+     * \brief   Returns the filters that are on, named in one line.
+     **/
+    QString _filterSummary() const;
+
+    /**
+     * \brief   Appends the entries that narrow the table to one process, thread, scope or
+     *          scope call, taken from the given row.
+     * \param   menu    The menu to fill.
+     * \param   row     The row of the table the menu was opened on, or -1.
+     **/
+    void _populateIsolateMenu(QMenu* menu, int row);
+
+    /**
      * \brief   Returns the given number of microseconds as a phrase, in the largest unit
      *          that keeps the value readable.
      **/
@@ -383,9 +436,13 @@ protected:
     LogTableHeader*             mHeader;    //!< Log table header object, used for managing the header of the log table.
     LogSearchModel              mSearch;    //!< The search model, used for searching logs in the log viewer.
     LogSearchModel::sFoundPos   mFoundPos;  //!< The found position of the search in the log viewer.
+    uint32_t                    mFoundRow;  //!< The hit in the rows of the model the search walks.
+    QList<uint32_t>             mHits;      //!< Every row the current phrase matches, ascending.
+    int                         mHiddenHits;//!< How many of those rows the filters keep out.
     LogTextHighlight*           mHighlight; //!< The text highlight object, used for highlighting the search results in the log viewer.
     int                         mHighlightColumn; //!< The current logical column index where highlight delegate is installed.
     LogSessionBar*              mSessionBar;//!< The bar above the table, carrying the state, the counters and the controls of the window.
+    QString                     mIsolationText; //!< What the chip of the isolated row says.
     QTimer*                     mCountTimer;//!< Collects the row changes so the counters are drawn once instead of once per row.
     LogEmptyState*              mEmptyState;//!< What the table says when it has no row to draw.
     LogClockSkew                mSkew;      //!< Watches the sources for a clock that disagrees with the collector.

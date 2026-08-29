@@ -21,6 +21,8 @@
 #include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LogEmptyState.hpp"
+#include "lusan/view/log/LogFilterChips.hpp"
+#include "lusan/view/log/LogHeaderItem.hpp"
 #include "lusan/view/log/LogSessionBar.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/view/log/ScopeOutputViewer.hpp"
@@ -67,9 +69,13 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mHeader   (nullptr)
     , mSearch   (nullptr)
     , mFoundPos ()
+    , mFoundRow (LogSearchModel::InvalidPos)
+    , mHits     ( )
+    , mHiddenHits(0)
     , mHighlight(nullptr)
     , mHighlightColumn(-1)
     , mSessionBar(nullptr)
+    , mIsolationText( )
     , mCountTimer(nullptr)
     , mEmptyState(nullptr)
     , mSkew     ( )
@@ -160,7 +166,7 @@ void LogViewerBase::setupWidgets()
     mLogSearch  = mSessionBar->ctrlSearch();
     mEmptyState = new LogEmptyState(mLogTable->viewport());
     mLogTable->viewport()->installEventFilter(this);
-    connect(mEmptyState, &LogEmptyState::signalClearFilters, this, [this]() { resetFilters(); });
+    connect(mEmptyState, &LogEmptyState::signalClearFilters, this, [this]() { clearEveryFilter(); });
 
     QVBoxLayout* stack = new QVBoxLayout(mMdiWindow);
     stack->setContentsMargins(0, 0, 0, 0);
@@ -245,18 +251,24 @@ void LogViewerBase::setupWidgets()
             , [this](int column, const QList<NELusanCommon::FilterData>& items){
                 _resetSearchResult();
                 mFilter->setComboFilter(column, items);
+                _updateChips();
             });
     connect(mHeader     , &LogTableHeader::signalTextFilterChanged, this
             , [this](int column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
                 _resetSearchResult();
                 mFilter->setTextFilter(column, text, isCaseSensitive, isWholeWord, isWildCard);
+                _updateChips();
             });
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , this, [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
     
     connect(mLogTable   , &QTableView::clicked                          , this, [this](const QModelIndex &index){onMouseButtonClicked(index);});
     connect(mLogTable   , &QTableView::doubleClicked                    , this, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
     
-    connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , this, [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
+    connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , this, [this](const QString& text) {
+                mLogSearch->setStyleSheet("");
+                mSearch.resetSearch();
+                mSessionBar->ctrlFilterMatches()->setEnabled(text.isEmpty() == false);
+            });
     connect(mLogSearch  , &SearchLineEdit::signalSearchText             , this
             , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {
                 onSearchClicked(mSearch.canSearchNext() == false);
@@ -268,6 +280,42 @@ void LogViewerBase::setupWidgets()
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
     connect(shortcutCopyMsg, &QShortcut::activated                      , this, &LogViewerBase::onCopyMessage);
     connect(shortcutCopyRow, &QShortcut::activated                      , this, &LogViewerBase::onCopyRow);
+
+    connect(mSessionBar->ctrlFilterMatches(), &QToolButton::clicked, this, [this]() {
+                filterToPhrase(NELusanCommon::FilterString{ mLogSearch->text()
+                                                          , mLogSearch->isMatchCaseChecked()
+                                                          , mLogSearch->isMatchWordChecked()
+                                                          , mLogSearch->isWildCardChecked() });
+            });
+
+    connect(mSessionBar->ctrlSearchScope(), &QToolButton::toggled, this, [this](bool) {
+                // A row number means a different row in each scope, so the walk starts again.
+                _resetSearchResult();
+            });
+
+    connect(mSessionBar, &LogSessionBar::signalNoticeAction, this, [this](LogSessionBar::eNotice which) {
+                if (which == LogSessionBar::eNotice::NoticeRevealed)
+                {
+                    clearEveryFilter();
+                    mFilter->clearRevealedRows();
+                    mSessionBar->hideNotice(LogSessionBar::eNotice::NoticeRevealed);
+                }
+            });
+
+    LogFilterChips* chips{ mSessionBar->ctrlChips() };
+    connect(chips, &LogFilterChips::signalChipDropped , this, &LogViewerBase::_dropChip);
+    connect(chips, &LogFilterChips::signalClearAll    , this, &LogViewerBase::clearEveryFilter);
+    connect(chips, &LogFilterChips::signalSearchInstead, this, [this](const LogFilterChips::sChip& chip) {
+                _dropChip(chip);
+                mLogSearch->setText(chip.phrase.text);
+                mLogSearch->setFocus();
+                onSearchClicked(true);
+            });
+
+    connect(mLogModel, &LoggingModelBase::signalRefusedScopesChanged, this, [this]() {
+                _updateChips();
+                _updateCounters();
+            });
 
     connect(mSessionBar->ctrlMoveTop()   , &QToolButton::clicked, this, [this]() {
                 mSessionBar->setFollowing(false);
@@ -307,9 +355,10 @@ void LogViewerBase::setupWidgets()
     connect(mLogModel, &QAbstractItemModel::modelReset   , this, [this]() {
                 mSkew.reset();
                 mSkewShown = false;
-                mSessionBar->hideNotice();
+                mSessionBar->hideNotice(LogSessionBar::eNotice::NoticeClockSkew);
             });
 
+    _updateChips();
     _updateCounters();
 }
 
@@ -346,6 +395,118 @@ void LogViewerBase::_updateCounters()
     _updateEmptyState();
 }
 
+void LogViewerBase::_updateChips()
+{
+    if ((mSessionBar == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr) || (mHeader == nullptr))
+        return;
+
+    LogFilterChips::ListChips chips;
+    const LogViewerFilter::ListActiveFilters filters{ mFilter->activeFilters() };
+    for (const LogViewerFilter::sActiveFilter& entry : filters)
+    {
+        const int index{ mHeader->getColumnIndex(static_cast<LoggingModelBase::eColumn>(entry.column)) };
+        const QString name{ index >= 0 ? mLogModel->getHeaderName(index) : QString() };
+
+        LogFilterChips::sChip chip;
+        chip.kind   = LogFilterChips::eChipKind::ChipColumn;
+        chip.column = entry.column;
+        chip.label  = QString("%1: %2").arg(name, entry.text);
+        chip.hint   = entry.isText ? tr("Only the rows whose %1 carries \"%2\" are shown").arg(name, entry.text)
+                                   : tr("Only the rows whose %1 is one of: %2").arg(name, entry.text);
+        chip.phrase = entry.isText ? entry.phrase : NELusanCommon::FilterString{ };
+        chips.append(chip);
+    }
+
+    if (mFilter->hasIsolation())
+    {
+        LogFilterChips::sChip chip;
+        chip.kind  = LogFilterChips::eChipKind::ChipIsolate;
+        chip.label = tr("only %1").arg(mIsolationText);
+        chip.hint  = tr("Every other process, thread and scope is kept out of this window.");
+        chips.append(chip);
+    }
+
+    if (mFilter->viewPriority() != 0)
+    {
+        LogFilterChips::sChip chip;
+        chip.kind  = LogFilterChips::eChipKind::ChipPriority;
+        chip.label = tr("priority: %1").arg(mSessionBar->priorityFilterName());
+        chip.hint  = tr("Only the rows of these priorities are drawn. The target keeps producing every one of them.");
+        chips.append(chip);
+    }
+
+    if (mLogModel->hasRefusedScopes())
+    {
+        LogFilterChips::sChip chip;
+        chip.kind  = LogFilterChips::eChipKind::ChipScopes;
+        chip.label = tr("hidden scopes");
+        chip.hint  = tr("The navigation tree is hiding scopes. Dropping this shows every scope again.");
+        chips.append(chip);
+    }
+
+    mSessionBar->ctrlChips()->setChips(chips);
+}
+
+void LogViewerBase::_dropChip(const LogFilterChips::sChip& chip)
+{
+    if (chip.kind == LogFilterChips::eChipKind::ChipScopes)
+    {
+        mLogModel->requestShowAllScopes();
+    }
+    else if (chip.kind == LogFilterChips::eChipKind::ChipIsolate)
+    {
+        mFilter->clearIsolation();
+        mIsolationText.clear();
+    }
+    else if (chip.kind == LogFilterChips::eChipKind::ChipPriority)
+    {
+        mSessionBar->resetPriorityFilter();
+    }
+    else if (chip.kind == LogFilterChips::eChipKind::ChipColumn)
+    {
+        const int index{ mHeader->getColumnIndex(static_cast<LoggingModelBase::eColumn>(chip.column)) };
+        LogHeaderItem* item{ mHeader->getHeaderItem(index) };
+        if (item != nullptr)
+        {
+            item->resetFilter();
+        }
+    }
+
+    _updateChips();
+    _updateCounters();
+}
+
+void LogViewerBase::filterToPhrase(const NELusanCommon::FilterString& phrase)
+{
+    if (mHeader == nullptr)
+        return;
+
+    const int index{ mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage) };
+    LogHeaderItem* item{ mHeader->getHeaderItem(index) };
+    if (item == nullptr)
+        return;
+
+    _resetSearchResult();
+    item->setFilterData(phrase);
+    _updateChips();
+    _updateCounters();
+}
+
+void LogViewerBase::clearEveryFilter()
+{
+    resetFilters();
+    mFilter->clearIsolation();
+    mIsolationText.clear();
+    mSessionBar->resetPriorityFilter();
+    if (mLogModel->hasRefusedScopes())
+    {
+        mLogModel->requestShowAllScopes();
+    }
+
+    _updateChips();
+    _updateCounters();
+}
+
 void LogViewerBase::_updateEmptyState()
 {
     if ((mEmptyState == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr))
@@ -369,7 +530,7 @@ void LogViewerBase::_updateEmptyState()
     }
 
     mEmptyState->setGeometry(mLogTable->viewport()->rect());
-    mEmptyState->setReason(reason, total - shown, mLogModel->hasRefusedScopes(), mFilter->hasColumnFilters());
+    mEmptyState->setReason(reason, total - shown, mLogModel->hasRefusedScopes(), mFilter->hasWindowFilters());
 }
 
 QString LogViewerBase::_formatOffset(qint64 offsetUs)
@@ -398,7 +559,8 @@ void LogViewerBase::onSourceRowsInserted(const QModelIndex& parent, int first, i
     {
         mSkewShown = true;
         const LogClockSkew::sSkewReport& report{ mSkew.report() };
-        mSessionBar->showNotice(tr("The clocks disagree: %1 stamps its logs %2 ahead of the collector, so its rows sort into an order that never happened.")
+        mSessionBar->showNotice(LogSessionBar::eNotice::NoticeClockSkew
+                               , tr("The clocks disagree: %1 stamps its logs %2 ahead of the collector, so its rows sort into an order that never happened.")
                                 .arg(report.source, LogViewerBase::_formatOffset(report.offsetUs)));
     }
 }
@@ -460,42 +622,154 @@ void LogViewerBase::onSearchClicked(bool newSearch)
         _resetSearchResult();
         return;
     }
-    
+
+    // The scope decides which rows the search walks: the ones the table draws, or every row
+    // the window holds. Changing it changes what a row number means, so the search restarts.
+    const bool allLogs{ mSessionBar->isSearchingAllLogs() };
+    QAbstractItemModel* searchIn{ allLogs ? static_cast<QAbstractItemModel*>(mLogModel)
+                                          : static_cast<QAbstractItemModel*>(mFilter) };
+    if (mSearch.getLogModel() != searchIn)
+    {
+        mSearch.setLogModel(searchIn);
+        newSearch = true;
+    }
+
     if (newSearch || (mSearch.isValidPosition(mFoundPos) == false))
     {
-        QModelIndex idx{ctrlTable()->currentIndex()};
-        int row = idx.isValid() ? idx.row() : 0;
-        
+        const QModelIndex idx{ ctrlTable()->currentIndex() };
+        uint32_t row{ 0 };
+        if (idx.isValid())
+        {
+            row = allLogs ? static_cast<uint32_t>(mFilter->mapToSource(idx).row())
+                          : static_cast<uint32_t>(idx.row());
+        }
+
         mFoundPos = mSearch.startSearch(  searchPhrase
-                                        , static_cast<uint32_t>(row)
+                                        , row
                                         , mLogSearch->isMatchCaseChecked()
                                         , mLogSearch->isMatchWordChecked()
                                         , mLogSearch->isWildCardChecked()
                                         , mLogSearch->isBackwardChecked());
+
+        mHits       = mSearch.collectMatches();
+        mHiddenHits = 0;
+        if (allLogs)
+        {
+            for (uint32_t hit : mHits)
+            {
+                if (mFilter->mapFromSource(mLogModel->index(static_cast<int>(hit), 0)).isValid() == false)
+                {
+                    ++mHiddenHits;
+                }
+            }
+        }
     }
     else
     {
-        mFoundPos = mSearch.nextSearch(mFoundPos.rowFound);
+        mFoundPos = mSearch.nextSearch(mFoundRow);
     }
-    
+
     if (mSearch.isValidPosition(mFoundPos))
     {
-        mFoundPos.colFound = mHighlightColumn >= 0 ? mHighlightColumn : 0;
+        mFoundRow = mFoundPos.rowFound;
         mLogSearch->setStyleSheet(QString());
-        moveToRow(mFoundPos.rowFound, true);
-        mLogSearch->update();
+        _showSearchHit(allLogs);
     }
     else
     {
+        mFoundRow = LogSearchModel::InvalidPos;
         mFoundPos.colFound = static_cast<int32_t>(LogSearchModel::InvalidPos);
         mLogSearch->setStyleSheet(QString::fromUtf8("QLineEdit { background-color: #ffcccc; }"));
-        mLogSearch->update();
     }
+
+    _drawSearchState(allLogs);
+    mLogSearch->update();
 
     if (mHighlight)
     {
         mLogTable->viewport()->update();
     }
+}
+
+void LogViewerBase::_showSearchHit(bool allLogs)
+{
+    int drawnRow{ static_cast<int>(mFoundRow) };
+    if (allLogs)
+    {
+        const QModelIndex source{ mLogModel->index(static_cast<int>(mFoundRow), 0) };
+        QModelIndex drawn{ mFilter->mapFromSource(source) };
+        if (drawn.isValid() == false)
+        {
+            // The hit is on a row a filter keeps out. It is let through and marked, so it is
+            // never mistaken for a row that passed the filters.
+            mFilter->revealRow(source.row());
+            drawn = mFilter->mapFromSource(source);
+        }
+
+        drawnRow = drawn.isValid() ? drawn.row() : -1;
+    }
+
+    mFoundPos.rowFound = (drawnRow >= 0) ? static_cast<uint32_t>(drawnRow) : LogSearchModel::InvalidPos;
+    mFoundPos.colFound = mHighlightColumn >= 0 ? mHighlightColumn : 0;
+    if (drawnRow >= 0)
+    {
+        moveToRow(drawnRow, true);
+    }
+}
+
+void LogViewerBase::_drawSearchState(bool allLogs)
+{
+    if (mLogSearch->text().isEmpty())
+    {
+        mLogSearch->setCounter(QString());
+        mSessionBar->hideNotice(LogSessionBar::eNotice::NoticeRevealed);
+        return;
+    }
+
+    if (mHits.isEmpty() || (mFoundRow == LogSearchModel::InvalidPos))
+    {
+        mLogSearch->setCounter(tr("no match"));
+    }
+    else
+    {
+        const int at{ static_cast<int>(std::lower_bound(mHits.cbegin(), mHits.cend(), mFoundRow) - mHits.cbegin()) + 1 };
+        mLogSearch->setCounter(allLogs && (mHiddenHits > 0)
+            ? tr("%1 of %2 - %3 hidden").arg(at).arg(mHits.size()).arg(mHiddenHits)
+            : tr("%1 of %2").arg(at).arg(mHits.size()));
+    }
+
+    if (mFilter->hasRevealedRows())
+    {
+        mSessionBar->showNotice(LogSessionBar::eNotice::NoticeRevealed
+                               , tr("A row below is drawn only because the search found it. %1").arg(_filterSummary())
+                               , tr("Drop the filters"));
+    }
+    else
+    {
+        mSessionBar->hideNotice(LogSessionBar::eNotice::NoticeRevealed);
+    }
+}
+
+QString LogViewerBase::_filterSummary() const
+{
+    QStringList names;
+    const LogViewerFilter::ListActiveFilters filters{ mFilter->activeFilters() };
+    for (const LogViewerFilter::sActiveFilter& entry : filters)
+    {
+        const int index{ mHeader->getColumnIndex(static_cast<LoggingModelBase::eColumn>(entry.column)) };
+        if (index >= 0)
+        {
+            names.append(mLogModel->getHeaderName(index));
+        }
+    }
+
+    if (mLogModel->hasRefusedScopes())
+    {
+        names.append(tr("hidden scopes"));
+    }
+
+    return names.isEmpty() ? tr("No filter is on.")
+                           : tr("It is kept out by: %1.").arg(names.join(QStringLiteral(", ")));
 }
 
 QTableView* LogViewerBase::ctrlTable()
@@ -600,16 +874,13 @@ void LogViewerBase::selectSourceElement(const QModelIndex & index)
         Q_ASSERT(mFilter != nullptr);
         if (_selectSourceLog(index) == false)
         {
-            QMessageBox box(  QMessageBox::Question
-                            , tr("Clear Filters?")
-                            , tr("The log entry is not visible and cannot be select due to active filters.\nDo you want to clean filters and select the log?")
-                            , QMessageBox::Yes | QMessageBox::No
-                            , this);
-            if (box.exec() == static_cast<int>(QMessageBox::Yes))
-            {
-                resetFilters();
-                _selectSourceLog(index);
-            }
+            // The row is kept out by a filter. It is let through and marked apart, so the
+            // reader sees the row and what hid it instead of answering a dialog first.
+            mFilter->revealRow(index.row());
+            _selectSourceLog(index);
+            mSessionBar->showNotice(LogSessionBar::eNotice::NoticeRevealed
+                                   , tr("The selected row is drawn only because it was asked for. %1").arg(_filterSummary())
+                                   , tr("Drop the filters"));
         }
     }
 }
@@ -647,7 +918,11 @@ void LogViewerBase::onHeaderContextMenu(const QPoint& pos)
 void LogViewerBase::onTableContextMenu(const QPoint& pos)
 {
     QMenu menu(this);
-    QModelIndex idx{ ctrlTable()->currentIndex() };
+    QModelIndex idx{ ctrlTable()->indexAt(pos) };
+    if (idx.isValid() == false)
+    {
+        idx = ctrlTable()->currentIndex();
+    }
 
     QAction* copyMsg = menu.addAction(tr("Copy message"));
     copyMsg->setShortcut(QKeySequence::Copy);
@@ -660,9 +935,66 @@ void LogViewerBase::onTableContextMenu(const QPoint& pos)
     connect(copyRow, &QAction::triggered, this, &LogViewerBase::onCopyRow);
 
     menu.addSeparator();
+    QMenu* isolateMenu = menu.addMenu(tr("Isolate"));
+    _populateIsolateMenu(isolateMenu, idx.isValid() ? idx.row() : -1);
+
+    menu.addSeparator();
     QMenu* columnsMenu = menu.addMenu(tr("Columns"));
     _populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
     menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
+}
+
+void LogViewerBase::_populateIsolateMenu(QMenu* menu, int row)
+{
+    const QModelIndex source{ (row >= 0) && (mFilter != nullptr)
+                            ? mFilter->mapToSource(mFilter->index(row, 0, QModelIndex()))
+                            : QModelIndex() };
+    const areg::LogEntry* entry{ source.isValid() ? mLogModel->getLogData(source.row()) : nullptr };
+
+    if (entry != nullptr)
+    {
+        LogViewerFilter::sIsolation base;
+        base.cookie    = entry->logCookie;
+        base.thread    = entry->logThreadId;
+        base.scopeId   = entry->logScopeId;
+        base.sessionId = entry->logSessionId;
+
+        const QString process{ QString(entry->logModule) };
+        const QString thread { QString(entry->logThread) };
+        QString scope { mLogModel->getScopeName(entry->logCookie, entry->logScopeId) };
+        if (scope.isEmpty())
+        {
+            scope = tr("scope %1").arg(entry->logScopeId);
+        }
+
+        const auto addEntry = [this, menu, base](const QString& text, const QString& chip, LogViewerFilter::eIsolation kind) {
+                QAction* action = menu->addAction(text);
+                connect(action, &QAction::triggered, this, [this, base, chip, kind]() {
+                        LogViewerFilter::sIsolation pick{ base };
+                        pick.kind = kind;
+                        mIsolationText = chip;
+                        mFilter->setIsolation(pick);
+                        _resetSearchResult();
+                        _updateChips();
+                        _updateCounters();
+                    });
+            };
+
+        addEntry(tr("Only this call of %1").arg(scope) , tr("one call of %1").arg(scope) , LogViewerFilter::eIsolation::IsolationCall);
+        addEntry(tr("Only the thread %1").arg(thread)  , tr("thread %1").arg(thread)     , LogViewerFilter::eIsolation::IsolationThread);
+        addEntry(tr("Only the process %1").arg(process), tr("process %1").arg(process)   , LogViewerFilter::eIsolation::IsolationProcess);
+        addEntry(tr("Only the scope %1").arg(scope)    , scope                           , LogViewerFilter::eIsolation::IsolationScope);
+        menu->addSeparator();
+    }
+
+    QAction* drop = menu->addAction(tr("Show every process and scope again"));
+    drop->setEnabled(mFilter->hasIsolation());
+    connect(drop, &QAction::triggered, this, [this]() {
+            mFilter->clearIsolation();
+            mIsolationText.clear();
+            _updateChips();
+            _updateCounters();
+        });
 }
 
 QList<int> LogViewerBase::_selectedRows(void) const
@@ -897,7 +1229,25 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
 inline void LogViewerBase::_resetSearchResult()
 {
     mFoundPos = LogSearchModel::sFoundPos{};
+    mFoundRow = LogSearchModel::InvalidPos;
+    mHits.clear();
+    mHiddenHits = 0;
     mSearch.resetSearch();
+    if (mFilter != nullptr)
+    {
+        mFilter->clearRevealedRows();
+    }
+
+    if (mLogSearch != nullptr)
+    {
+        mLogSearch->setCounter(QString());
+    }
+
+    if (mSessionBar != nullptr)
+    {
+        mSessionBar->hideNotice(LogSessionBar::eNotice::NoticeRevealed);
+    }
+
     mLogTable->viewport()->update();
 }
 
