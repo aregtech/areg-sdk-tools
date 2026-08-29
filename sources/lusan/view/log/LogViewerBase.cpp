@@ -20,6 +20,8 @@
 #include "lusan/view/log/LogViewerBase.hpp"
 #include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/view/log/LogHeaderItem.hpp"
@@ -238,6 +240,7 @@ void LogViewerBase::setupWidgets()
         mLogTable->setItemDelegate(mHighlight);
     }
     _updateHighlightColumn();
+    _restoreLayout();
 
     connect(mFilter, &QAbstractItemModel::columnsInserted, this
             , [this](const QModelIndex&, int, int) {
@@ -785,6 +788,93 @@ void LogViewerBase::_drawSearchState(bool allLogs)
     }
 }
 
+void LogViewerBase::_saveLayout(void) const
+{
+    if ((mLogTable == nullptr) || (mLogModel == nullptr))
+        return;
+
+    OptionsManager& options{ LusanApplication::getOptions() };
+    WorkspaceEntry workspace{ options.getActiveWorkspace() };
+    if (workspace.isValid() == false)
+        return;
+
+    WorkspaceEntry::ListLogColumns columns;
+    const QList<LoggingModelBase::eColumn>& active{ mLogModel->getActiveColumns() };
+    for (int i = 0; i < active.size(); ++i)
+    {
+        WorkspaceEntry::sLogColumn column;
+        column.key   = LoggingModelBase::getColumnKey(active[i]);
+        column.width = mLogTable->columnWidth(i);
+        if (column.key.isEmpty() == false)
+        {
+            columns.append(column);
+        }
+    }
+
+    workspace.setLogColumns(columns);
+    workspace.setLogDatabase(mLogModel->getDatabasePath());
+    options.updateWorkspace(workspace);
+    options.writeOptions();
+}
+
+void LogViewerBase::_restoreLayout(void)
+{
+    const WorkspaceEntry workspace{ LusanApplication::getActiveWorkspace() };
+    const WorkspaceEntry::ListLogColumns& saved{ workspace.getLogColumns() };
+    if (saved.isEmpty())
+        return;
+
+    QList<LoggingModelBase::eColumn> columns;
+    QList<int> widths;
+    for (const WorkspaceEntry::sLogColumn& column : saved)
+    {
+        const LoggingModelBase::eColumn col{ LoggingModelBase::getColumnByKey(column.key) };
+        if ((col != LoggingModelBase::eColumn::LogColumnInvalid) && (columns.contains(col) == false))
+        {
+            columns.append(col);
+            widths.append(column.width);
+        }
+    }
+
+    if (columns.isEmpty())
+        return;
+
+    // The message column can never be hidden, so it comes back even if the file lost it.
+    if (columns.contains(LoggingModelBase::eColumn::LogColumnMessage) == false)
+    {
+        columns.append(LoggingModelBase::eColumn::LogColumnMessage);
+        widths.append(0);
+    }
+
+    mLogTable->setModel(nullptr);
+    mLogModel->setActiveColumns(columns);
+    mLogTable->setModel(mFilter);
+
+    // A view drops every section size when a model is set, so the widths are applied here and
+    // never before the model.
+    for (int i = 0; i < widths.size(); ++i)
+    {
+        if (widths[i] > 0)
+        {
+            mLogTable->setColumnWidth(i, widths[i]);
+        }
+    }
+
+    _updateHighlightColumn();
+}
+
+void LogViewerBase::_forgetLayout(void) const
+{
+    OptionsManager& options{ LusanApplication::getOptions() };
+    WorkspaceEntry workspace{ options.getActiveWorkspace() };
+    if (workspace.isValid() == false)
+        return;
+
+    workspace.setLogColumns(WorkspaceEntry::ListLogColumns());
+    options.updateWorkspace(workspace);
+    options.writeOptions();
+}
+
 void LogViewerBase::_stepToProblem(bool forward)
 {
     if ((mFilter == nullptr) || (mLogModel == nullptr))
@@ -1154,29 +1244,50 @@ QString LogViewerBase::_rowsToText(const QList<int>& rows, bool fullLayout) cons
             continue;
         }
 
-        // The layout the target writes into its own log file, see areg.init:
-        //   message  %d: [ %a.%x.%t.%p >>> ] %m
+        // The layout the target writes into its own log file, see areg.init, with the two
+        // fields the framework's own lines drop: the scope name on a message row, and the
+        // elapsed time on an exit row.
+        //   message  %d: [ %a.%x.%t.%z.%p >>> ] %m
         //   enter    %d: [ %a.%x.%t.%z: Enter -->]
-        //   exit     %d: [ %a.%x.%t.%z: Exit <-- ]
+        //   exit     %d: [ %a.%x.%t.%z: Exit <-- ] (elapsed)
+        const bool enters{ entry->logMsgType == areg::LogMessageType::ScopeEnter };
+        const bool leaves{ entry->logMsgType == areg::LogMessageType::ScopeExit  };
+
+        QString scope{ mLogModel->getScopeName(entry->logCookie, entry->logScopeId) };
+        if (scope.isEmpty())
+        {
+            // An enter or exit row carries the scope name as its message, so it names itself
+            // even when the target never announced its scopes.
+            scope = (enters || leaves) ? message : QString("scope %1").arg(entry->logScopeId);
+        }
+
         const QString stamp{ QString::fromStdString(areg::DateTime(entry->logTimestamp).format_time().data()) };
-        const QString head { QString("%1: [ %2.%3.%4.")
+        const QString head { QString("%1: [ %2.%3.%4.%5")
                                 .arg(stamp)
                                 .arg(static_cast<quint64>(entry->logCookie))
                                 .arg(QString::fromUtf8(entry->logModule))
-                                .arg(static_cast<quint64>(entry->logThreadId)) };
+                                .arg(static_cast<quint64>(entry->logThreadId))
+                                .arg(scope) };
 
-        if (entry->logMsgType == areg::LogMessageType::ScopeEnter)
+        if (enters)
         {
-            lines.append(head + message + ": Enter -->]");
+            lines.append(head + ": Enter -->]");
         }
-        else if (entry->logMsgType == areg::LogMessageType::ScopeExit)
+        else if (leaves)
         {
-            lines.append(head + message + ": Exit <-- ]");
+            lines.append(head + QString(": Exit <-- ] (%1 ms)")
+                                    .arg(static_cast<double>(entry->logDuration) / 1000.0, 0, 'f', 3));
         }
         else
         {
             const QString prio{ QString::fromStdString(areg::priority_to_string(entry->logMessagePrio).data()) };
-            lines.append(head + prio + " >>> ] " + message);
+            QString tail{ message };
+            if (areg::is_log_message_cut(*entry))
+            {
+                tail += QString(" [message cut, %1 characters original]").arg(entry->logMessageLen);
+            }
+
+            lines.append(head + "." + prio + " >>> ] " + tail);
         }
     }
 
@@ -1230,6 +1341,9 @@ void LogViewerBase::onCurrentRowChanged(const QModelIndex &current, const QModel
 
 inline void LogViewerBase::_clearResources()
 {
+    // The columns are read off the table, so this runs while the table is still alive.
+    _saveLayout();
+
     if (mFilter != nullptr)
     {
         disconnect(mFilter, nullptr, this, nullptr);
@@ -1326,6 +1440,7 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
     QAction* actResetColumns = menu->addAction(tr("Reset Columns"));
     actResetColumns->setCheckable(false);
     connect(actResetColumns, &QAction::triggered, this, [this]() {
+            _forgetLayout();
             mLogModel->setActiveColumns(QList<LoggingModelBase::eColumn>());
             resetColumnOrder();
             ctrlTable()->viewport()->update();

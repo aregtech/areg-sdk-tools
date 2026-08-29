@@ -33,6 +33,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QEvent>
+#include <QFont>
 #include <QHBoxLayout>
 #include <QItemSelectionModel>
 #include <QHeaderView>
@@ -53,6 +54,25 @@
 #include <QTreeView>
 #include <QVBoxLayout>
 #include <QWidgetAction>
+
+namespace
+{
+    //! Adds a group label to a menu. `QMenu::addSection` draws it as a bare separator on the
+    //! Windows style, which loses the words, so the label is an entry of its own.
+    void addMenuSection(QMenu& menu, const QString& text)
+    {
+        if (menu.isEmpty() == false)
+        {
+            menu.addSeparator();
+        }
+
+        QAction* label{ menu.addAction(text) };
+        label->setEnabled(false);
+        QFont caption{ label->font() };
+        caption.setBold(true);
+        label->setFont(caption);
+    }
+}
 
 NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent)
     : NaviToolbarWindow (naviWindow, wndMain, parent)
@@ -1056,7 +1076,7 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
     temporary->setToolTip(tr("Raising a scope from here puts it back on its own after five minutes."));
 
     menu.addSeparator();
-    menu.addSection(tr("Apply to"));
+    addMenuSection(menu, tr("Apply to"));
 
     QActionGroup* reach = new QActionGroup(&menu);
     reach->setExclusive(true);
@@ -1084,7 +1104,7 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
     }
 
     menu.addSeparator();
-    menu.addSection(tr("Show and hide"));
+    addMenuSection(menu, tr("Show and hide"));
 
     QAction* solo = menu.addAction(NELusanCommon::iconScopeSolo(NELusanCommon::SizeBig), tr("Show &only this"));
     solo->setData(static_cast<int>(eScopeMenu::MenuShowOnlyThis));
@@ -1119,7 +1139,7 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
     if (hasSavePrioMenu())
     {
         menu.addSeparator();
-        menu.addSection(tr("Target"));
+        addMenuSection(menu, tr("Target"));
 
         const bool canSave{ canSavePrio() };
         QAction* saveOne = menu.addAction(NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("Save priorities on &target"));

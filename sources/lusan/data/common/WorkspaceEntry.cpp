@@ -22,6 +22,17 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+namespace
+{
+    //! The log window settings inside the workspace entry. They are named here rather than in
+    //! the shared name list because nothing outside this file reads or writes them.
+    const QString   _xmlElementLogView  { "LogView"  };
+    const QString   _xmlElementColumn   { "Column"   };
+    const QString   _xmlAttributeName   { "name"     };
+    const QString   _xmlAttributeWidth  { "width"    };
+    const QString   _xmlAttributeDb     { "database" };
+}
+
 QString WorkspaceEntry::nameFromRoot(const QString& root)
 {
     const QString name{ QDir(root).dirName() };
@@ -40,6 +51,8 @@ WorkspaceEntry::WorkspaceEntry()
     , mIncludes     ("")
     , mDelivery     ("")
     , mLogFiles     ("")
+    , mLogDatabase  ("")
+    , mLogColumns   ( )
 {
 }
 
@@ -53,6 +66,8 @@ WorkspaceEntry::WorkspaceEntry(const QString& root, const QString& name, const Q
     , mIncludes     ("")
     , mDelivery     ("")
     , mLogFiles     ("")
+    , mLogDatabase  ("")
+    , mLogColumns   ( )
 {
 }
 
@@ -66,6 +81,8 @@ WorkspaceEntry::WorkspaceEntry(QXmlStreamReader& xml)
     , mIncludes     ("")
     , mDelivery     ("")
     , mLogFiles     ("")
+    , mLogDatabase  ("")
+    , mLogColumns   ( )
 {
     readFromXml(xml);
 }
@@ -80,6 +97,8 @@ WorkspaceEntry::WorkspaceEntry(const WorkspaceEntry& src)
     , mIncludes     (src.mIncludes)
     , mDelivery     (src.mDelivery)
     , mLogFiles     (src.mLogFiles)
+    , mLogDatabase  (src.mLogDatabase)
+    , mLogColumns   (src.mLogColumns)
 {
 }
 
@@ -93,6 +112,8 @@ WorkspaceEntry::WorkspaceEntry(WorkspaceEntry&& src) noexcept
     , mIncludes     (std::move(src.mIncludes))
     , mDelivery     (std::move(src.mDelivery))
     , mLogFiles     (std::move(src.mLogFiles))
+    , mLogDatabase  (std::move(src.mLogDatabase))
+    , mLogColumns   (std::move(src.mLogColumns))
 {
 }
 
@@ -109,6 +130,8 @@ WorkspaceEntry& WorkspaceEntry::operator = (const WorkspaceEntry& src)
         mIncludes       = src.mIncludes;
         mDelivery       = src.mDelivery;
         mLogFiles       = src.mLogFiles;
+        mLogDatabase    = src.mLogDatabase;
+        mLogColumns     = src.mLogColumns;
     }
 
     return *this;
@@ -127,9 +150,44 @@ WorkspaceEntry& WorkspaceEntry::operator = (WorkspaceEntry&& src) noexcept
         mIncludes       = std::move(src.mIncludes);
         mDelivery       = std::move(src.mDelivery);
         mLogFiles       = std::move(src.mLogFiles);
+        mLogDatabase    = std::move(src.mLogDatabase);
+        mLogColumns     = std::move(src.mLogColumns);
     }
 
     return *this;
+}
+
+void WorkspaceEntry::_readLogView(QXmlStreamReader& xml)
+{
+    mLogDatabase = NELusanCommon::fixPath(xml.attributes().value(_xmlAttributeDb).toString());
+    mLogColumns.clear();
+
+    QXmlStreamReader::TokenType tokenType{ xml.tokenType() };
+    QStringView xmlName{ xml.name() };
+    if (xmlName == _xmlElementLogView)
+    {
+        xml.readNext();
+        tokenType = xml.tokenType();
+        xmlName = xml.name();
+    }
+
+    while (!xml.atEnd() && (xmlName != _xmlElementLogView))
+    {
+        if ((tokenType == QXmlStreamReader::StartElement) && (xmlName == _xmlElementColumn))
+        {
+            WorkspaceEntry::sLogColumn column;
+            column.key   = xml.attributes().value(_xmlAttributeName).toString();
+            column.width = xml.attributes().value(_xmlAttributeWidth).toInt();
+            if (column.key.isEmpty() == false)
+            {
+                mLogColumns.append(column);
+            }
+        }
+
+        xml.readNext();
+        tokenType = xml.tokenType();
+        xmlName = xml.name();
+    }
 }
 
 bool WorkspaceEntry::operator==(const WorkspaceEntry& other) const
@@ -221,6 +279,10 @@ inline void WorkspaceEntry::_readSettings(QXmlStreamReader& xml)
             {
                 _readDirectories(xml);
             }
+            else if (xmlName == _xmlElementLogView)
+            {
+                _readLogView(xml);
+            }
         }
 
         xml.readNext();
@@ -285,6 +347,20 @@ bool WorkspaceEntry::writeToXml(QXmlStreamWriter& xml) const
                 xml.writeTextElement(NELusanCommon::xmlElementDelivery, mDelivery);
                 xml.writeTextElement(NELusanCommon::xmlElementLogs, mLogFiles);
             xml.writeEndElement();
+
+            if ((mLogColumns.isEmpty() == false) || (mLogDatabase.isEmpty() == false))
+            {
+                xml.writeStartElement(_xmlElementLogView);
+                    xml.writeAttribute(_xmlAttributeDb, mLogDatabase);
+                    for (const WorkspaceEntry::sLogColumn& column : mLogColumns)
+                    {
+                        xml.writeStartElement(_xmlElementColumn);
+                            xml.writeAttribute(_xmlAttributeName, column.key);
+                            xml.writeAttribute(_xmlAttributeWidth, QString::number(column.width));
+                        xml.writeEndElement();
+                    }
+                xml.writeEndElement();
+            }
         xml.writeEndElement();
     xml.writeEndElement();
 

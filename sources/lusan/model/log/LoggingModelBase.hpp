@@ -146,6 +146,22 @@ public:
      **/
     static const QList<LoggingModelBase::eColumn>& getDefaultColumns();
 
+    /**
+     * \brief   Returns the stored name of the given column.
+     * \param   column  The column to name.
+     * \return  A short name, empty for an unknown column.
+     * \note    This is what a saved setting is keyed by, so it never changes and is never
+     *          translated. The header name the reader sees is `getHeaderName`.
+     **/
+    static QString getColumnKey(LoggingModelBase::eColumn column);
+
+    /**
+     * \brief   Returns the column of the given stored name.
+     * \param   key     The name written by `getColumnKey`.
+     * \return  The column, or LogColumnInvalid when the name is not known.
+     **/
+    static LoggingModelBase::eColumn getColumnByKey(const QString& key);
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////

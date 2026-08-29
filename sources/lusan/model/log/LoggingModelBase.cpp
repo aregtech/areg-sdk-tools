@@ -75,6 +75,47 @@ const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns()
     return _columnIds;
 }
 
+namespace
+{
+    //! The stored name of every column. A saved setting is keyed by these, so they are fixed
+    //! and never translated.
+    const struct { LoggingModelBase::eColumn column; const char* key; } _columnKeys[]
+    {
+          { LoggingModelBase::eColumn::LogColumnPriority    , "priority"  }
+        , { LoggingModelBase::eColumn::LogColumnTimestamp   , "timestamp" }
+        , { LoggingModelBase::eColumn::LogColumnTimeReceived, "received"  }
+        , { LoggingModelBase::eColumn::LogColumnTimeDuration, "duration"  }
+        , { LoggingModelBase::eColumn::LogColumnSource      , "source"    }
+        , { LoggingModelBase::eColumn::LogColumnSourceId    , "sourceId"  }
+        , { LoggingModelBase::eColumn::LogColumnThread      , "thread"    }
+        , { LoggingModelBase::eColumn::LogColumnThreadId    , "threadId"  }
+        , { LoggingModelBase::eColumn::LogColumnScopeId     , "scopeId"   }
+        , { LoggingModelBase::eColumn::LogColumnMessage     , "message"   }
+    };
+}
+
+QString LoggingModelBase::getColumnKey(LoggingModelBase::eColumn column)
+{
+    for (const auto& entry : _columnKeys)
+    {
+        if (entry.column == column)
+            return QString::fromLatin1(entry.key);
+    }
+
+    return QString();
+}
+
+LoggingModelBase::eColumn LoggingModelBase::getColumnByKey(const QString& key)
+{
+    for (const auto& entry : _columnKeys)
+    {
+        if (key == QLatin1String(entry.key))
+            return entry.column;
+    }
+
+    return LoggingModelBase::eColumn::LogColumnInvalid;
+}
+
 const QString & LoggingModelBase::getFileExtension()
 {
     static QString _fileExtension = QStringLiteral("sqlog");

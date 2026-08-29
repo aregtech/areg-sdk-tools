@@ -406,6 +406,21 @@ private:
     void _stepToProblem(bool forward);
 
     /**
+     * \brief   Writes the columns of the table and the open database into the workspace.
+     **/
+    void _saveLayout(void) const;
+
+    /**
+     * \brief   Applies the columns the workspace remembers. Does nothing when it holds none.
+     **/
+    void _restoreLayout(void);
+
+    /**
+     * \brief   Drops the remembered columns, so the defaults come back on the next run.
+     **/
+    void _forgetLayout(void) const;
+
+    /**
      * \brief   Returns the filters that are on, named in one line.
      **/
     QString _filterSummary() const;
