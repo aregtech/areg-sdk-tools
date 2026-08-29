@@ -65,6 +65,8 @@
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
+#include "lusan/view/common/SearchLineEdit.hpp"
+
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
@@ -211,7 +213,6 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mSearchCase   (nullptr)
     , mSearchWord   (nullptr)
     , mSearchRegex  (nullptr)
-    , mSearchStatus (nullptr)
     , mZoomBox      (nullptr)
     , mHScroll      (nullptr)
     , mVScroll      (nullptr)
@@ -302,36 +303,27 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     topLayout->setSpacing(4);
     topLayout->addWidget(mBreadcrumb, 1);
 
-    mSearchEdit = new QLineEdit(topBar);
+    // The canvas searches with the same control as the log windows and the scope panels: the
+    // mark, the option toggles, the match counter and the clear button all live inside the field.
+    const QList<SearchLineEdit::eToolButton> searchTools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
+                                                        , SearchLineEdit::eToolButton::ToolButtonMatchWord
+                                                        , SearchLineEdit::eToolButton::ToolButtonWildCard };
+
+    mSearchEdit = new SearchLineEdit(searchTools, topBar);
     mSearchEdit->setObjectName(QStringLiteral("smCanvasSearch"));
     mSearchEdit->setPlaceholderText(tr("Find state / transition (Ctrl+F)"));
-    mSearchEdit->setClearButtonEnabled(true);
-    mSearchEdit->setMaximumWidth(240);
+    mSearchEdit->setMaximumWidth(320);
     mSearchEdit->installEventFilter(this);
     topLayout->addWidget(mSearchEdit);
 
-    // Search option toggles (match case, whole word, regular expression). Re-running the
-    // search on toggle keeps the result live as the user tunes the query.
-    auto makeSearchOption = [this, topBar, topLayout](const QIcon& icon, const QString& tip, const QString& name) -> QToolButton*
-    {
-        QToolButton* button = new QToolButton(topBar);
-        button->setObjectName(name);
-        button->setIcon(icon);
-        button->setToolTip(tip);
-        button->setCheckable(true);
-        button->setAutoRaise(true);
-        connect(button, &QToolButton::toggled, this, [this](bool) { onSearchTextChanged(); });
-        topLayout->addWidget(button);
-        return button;
-    };
-    mSearchCase  = makeSearchOption(NELusanCommon::iconSearchMatchCase(), tr("Match case"), QStringLiteral("smCanvasSearchCase"));
-    mSearchWord  = makeSearchOption(NELusanCommon::iconSearchMatchWord(), tr("Match whole word"), QStringLiteral("smCanvasSearchWord"));
-    mSearchRegex = makeSearchOption(NELusanCommon::iconSearchWildCard(), tr("Regular expression"), QStringLiteral("smCanvasSearchRegex"));
+    mSearchCase  = mSearchEdit->buttonMatchCase();
+    mSearchWord  = mSearchEdit->buttonMatchWord();
+    mSearchRegex = mSearchEdit->buttonWildCard();
 
-    mSearchStatus = new QLabel(topBar);
-    mSearchStatus->setObjectName(QStringLiteral("smCanvasSearchStatus"));
-    mSearchStatus->setMinimumWidth(72);
-    topLayout->addWidget(mSearchStatus);
+    // Re-running the search on a toggle keeps the result live as the query is tuned.
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchMatchCaseClicked, this, [this](bool) { onSearchTextChanged(); });
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchMatchWordClicked, this, [this](bool) { onSearchTextChanged(); });
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchWildCardClicked , this, [this](bool) { onSearchTextChanged(); });
 
     // The Design page is a QMainWindow: the canvas is its central widget, and the drawing toolbar,
     // Properties and Outline panels dock to its edges and can move to the Navigation Window.
@@ -353,7 +345,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     setCentralWidget(central);
 
     connect(mSearchEdit, &QLineEdit::textChanged, this, &SMDesign::onSearchTextChanged);
-    connect(mSearchEdit, &QLineEdit::returnPressed, this, &SMDesign::advanceSearch);
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchClicked, this, [this](bool) { advanceSearch(); });
     // No local Ctrl+F shortcut here: the main window's Edit > Find owns Ctrl+F and calls
     // beginSearch(), so the two never collide into an ambiguous-shortcut no-op (issue #538).
 
@@ -2865,7 +2857,7 @@ void SMDesign::onSearchTextChanged()
     if (query.isEmpty())
     {
         mSeedActive = false;
-        mSearchStatus->clear();
+        mSearchEdit->setCounter(QString());
         return;
     }
 
@@ -2889,7 +2881,7 @@ void SMDesign::onSearchTextChanged()
     if (mSearchHits.isEmpty())
     {
         // No match: leave the canvas untouched, show a clear affordance.
-        mSearchStatus->setText(tr("No match"));
+        mSearchEdit->setCounter(tr("No match"));
         return;
     }
 
@@ -2902,7 +2894,7 @@ void SMDesign::advanceSearch()
 {
     if (mSearchEdit->text().trimmed().isEmpty())
     {
-        mSearchStatus->clear();
+        mSearchEdit->setCounter(QString());
         return;
     }
 
@@ -3079,7 +3071,7 @@ void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rul
 
 void SMDesign::updateSearchStatus()
 {
-    mSearchStatus->setText(tr("%1 / %2").arg(mSearchIndex + 1).arg(mSearchHits.size()));
+    mSearchEdit->setCounter(tr("%1 / %2").arg(mSearchIndex + 1).arg(mSearchHits.size()));
 }
 
 void SMDesign::collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const

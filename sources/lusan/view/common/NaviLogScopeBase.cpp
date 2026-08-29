@@ -72,7 +72,6 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
     , mFilterCount      (nullptr)
     , mFindBar          (nullptr)
     , mFindEdit         (nullptr)
-    , mFindCount        (nullptr)
     , mHighlight        (nullptr)
     , mFindAt           ( )
 
@@ -233,8 +232,7 @@ void NaviLogScopeBase::setupScopeSearch(void)
 
     const QList<SearchLineEdit::eToolButton> findTools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
                                                       , SearchLineEdit::eToolButton::ToolButtonMatchWord
-                                                      , SearchLineEdit::eToolButton::ToolButtonBackward
-                                                      , SearchLineEdit::eToolButton::ToolButtonSearch };
+                                                      , SearchLineEdit::eToolButton::ToolButtonBackward };
 
     mFindBar = new QWidget(this);
     mFindBar->setObjectName(QStringLiteral("scopeFindBar"));
@@ -242,7 +240,7 @@ void NaviLogScopeBase::setupScopeSearch(void)
     findRow->setContentsMargins(0, 0, 0, 0);
     findRow->setSpacing(4);
 
-    mFindEdit = new SearchLineEdit(findTools, QSize(18, 18), mFindBar);
+    mFindEdit = new SearchLineEdit(findTools, mFindBar);
     mFindEdit->setObjectName(QStringLiteral("scopeFindEdit"));
     mFindEdit->setPlaceholderText(tr("Find scope"));
     mFindEdit->setToolTip(tr("Walk to the next scope whose name carries this text. The tree is left whole."));
@@ -251,9 +249,6 @@ void NaviLogScopeBase::setupScopeSearch(void)
     mFindEdit->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Fixed);
     mFindEdit->installEventFilter(this);
 
-    mFindCount = new QLabel(mFindBar);
-    mFindCount->setEnabled(false);
-
     QToolButton* findClose = new QToolButton(mFindBar);
     findClose->setIcon(NELusanCommon::iconClose(NELusanCommon::SizeSmall));
     findClose->setAutoRaise(true);
@@ -261,7 +256,6 @@ void NaviLogScopeBase::setupScopeSearch(void)
     findClose->setAccessibleName(findClose->toolTip());
 
     findRow->addWidget(mFindEdit, 1);
-    findRow->addWidget(mFindCount, 0);
     findRow->addWidget(findClose, 0);
     addNaviBar(mFindBar);
     mFindBar->setVisible(false);
@@ -444,7 +438,7 @@ void NaviLogScopeBase::showScopeFind(bool show)
     else
     {
         mFindAt = QPersistentModelIndex();
-        mFindCount->clear();
+        mFindEdit->setCounter(QString());
         if (ctrlTable() != nullptr)
         {
             ctrlTable()->setFocus();
@@ -463,7 +457,7 @@ void NaviLogScopeBase::findScope(int step)
     const QString needle{ mFindEdit->text() };
     if (needle.isEmpty())
     {
-        mFindCount->clear();
+        mFindEdit->setCounter(QString());
         updateMatchMark();
         return;
     }
@@ -474,7 +468,7 @@ void NaviLogScopeBase::findScope(int step)
     if (matches.isEmpty())
     {
         mFindAt = QPersistentModelIndex();
-        mFindCount->setText(tr("none"));
+        mFindEdit->setCounter(tr("none"));
         updateMatchMark();
         return;
     }
@@ -509,7 +503,7 @@ void NaviLogScopeBase::findScope(int step)
     mFindAt = hit;
     tree->setCurrentIndex(hit);
     tree->scrollTo(hit, QAbstractItemView::ScrollHint::EnsureVisible);
-    mFindCount->setText(tr("%1 of %2").arg(at + 1).arg(count));
+    mFindEdit->setCounter(tr("%1 of %2").arg(at + 1).arg(count));
     updateMatchMark();
 }
 

@@ -44,6 +44,7 @@ class QDockWidget;
 class QHBoxLayout;
 class QKeyEvent;
 class QLabel;
+class SearchLineEdit;
 class QLineEdit;
 class QMenu;
 class QScrollBar;
@@ -897,11 +898,10 @@ private:
     SMScene*            mScene;         //!< The displayed level's scene.
     QWidget*            mBreadcrumb;    //!< The level-path bar above the viewport.
     QHBoxLayout*        mBreadcrumbLayout; //!< The breadcrumb content layout.
-    QLineEdit*          mSearchEdit;    //!< The canvas search box (find state / transition).
-    QToolButton*        mSearchCase;    //!< Match-case option toggle.
-    QToolButton*        mSearchWord;    //!< Match-whole-word option toggle.
-    QToolButton*        mSearchRegex;   //!< Regular-expression option toggle.
-    QLabel*             mSearchStatus;  //!< The "current / total" match counter (or "No match").
+    SearchLineEdit*     mSearchEdit;    //!< The canvas search box (find state / transition).
+    QToolButton*        mSearchCase;    //!< Match-case option toggle, owned by the search box.
+    QToolButton*        mSearchWord;    //!< Match-whole-word option toggle, owned by the search box.
+    QToolButton*        mSearchRegex;   //!< Regular-expression option toggle, owned by the search box.
     QComboBox*          mZoomBox;       //!< Zoom readout and picker, left of the scrollbar.
     QScrollBar*         mHScroll;       //!< The canvas horizontal scrollbar, owned by the bottom
                                         //!< row so the zoom box can share its line. The view's

@@ -162,14 +162,13 @@ void LogSessionBar::_buildMainRow(void)
     _addSeparator();
 
     QList<SearchLineEdit::eToolButton> tools;
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonWildCard);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
 
     mSearch = new SearchLineEdit(owner);
-    mSearch->initialize(tools, QSize(NaviToolbarWindow::NAVI_TOOL_ICON, NaviToolbarWindow::NAVI_TOOL_ICON));
+    mSearch->initialize(tools);
     mSearch->setPlaceholderText(tr("search a phrase in logs"));
     mSearch->setToolTip(tr("Moves to the next row that carries the phrase. It removes no row."));
     // initialize() gives the field a right text margin the width of the button strip, so the

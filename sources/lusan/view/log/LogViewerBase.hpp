@@ -285,9 +285,6 @@ protected:
     //!< Returns the pointer to the search line edit control.
     SearchLineEdit* ctrlSearchText();
 
-    //!< Returns the pointer to the search next button of the search line edit control.
-    QToolButton* ctrlButtonSearch();
-
     //!< Returns the pointer to the search case sensitive button of the search line edit control.
     QToolButton* ctrlButtonCaseSensitive();
 

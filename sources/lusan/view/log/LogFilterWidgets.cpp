@@ -150,7 +150,7 @@ LogTextFilterBase::LogTextFilterBase(bool extend, QWidget* parent)
         QList<SearchLineEdit::eToolButton> tools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
                                                 , SearchLineEdit::eToolButton::ToolButtonMatchWord
                                                 , SearchLineEdit::eToolButton::ToolButtonWildCard};
-        setWidget(new SearchLineEdit(tools, QSize(20, 20), this));
+        setWidget(new SearchLineEdit(tools, this));
         SearchLineEdit* widget = static_cast<SearchLineEdit*>(editWidget());
         std::function<void(bool)> func = [this](bool checked) {
             SearchLineEdit* w = static_cast<SearchLineEdit*>(editWidget());

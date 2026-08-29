@@ -513,11 +513,6 @@ SearchLineEdit* LogViewerBase::ctrlSearchText()
     return mLogSearch;
 }
 
-QToolButton* LogViewerBase::ctrlButtonSearch()
-{
-    return mLogSearch->buttonSearch();
-}
-
 QToolButton* LogViewerBase::ctrlButtonCaseSensitive()
 {
     return mLogSearch->buttonMatchCase();

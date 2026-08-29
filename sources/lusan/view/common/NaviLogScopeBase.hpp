@@ -490,7 +490,6 @@ private:
     QLabel*                 mFilterCount;   //!< How many scope names carry the filter text
     QWidget*                mFindBar;       //!< The row that carries the find box, closed until it is asked for
     SearchLineEdit*         mFindEdit;      //!< The box that walks from one matching scope to the next
-    QLabel*                 mFindCount;     //!< The position of the scope the find box stopped on
     ScopeNameDelegate*     mHighlight;     //!< The delegate that marks the matched part of a scope name
     QPersistentModelIndex   mFindAt;        //!< The scope the find box stopped on last
 

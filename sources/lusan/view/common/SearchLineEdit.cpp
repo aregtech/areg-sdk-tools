@@ -20,248 +20,207 @@
 #include "lusan/view/common/SearchLineEdit.hpp"
 
 #include "lusan/common/NELusanCommon.hpp"
+
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QKeyEvent>
-#include <QWidget>
+#include <QLabel>
+#include <QResizeEvent>
+#include <QToolButton>
 
-SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, QSize buttonSize, QWidget* parent)
+SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, QWidget* parent /*= nullptr*/)
+    : SearchLineEdit(parent)
+{
+    initialize(addButtons);
+}
+
+SearchLineEdit::SearchLineEdit(QWidget* parent /*= nullptr*/)
     : QLineEdit     (parent)
-    
+
     , mIsInitialized(false)
-    , mToolButtons  (nullptr)
-    , mBtnSearch    (nullptr)
+    , mMark         (nullptr)
+    , mTrailing     (nullptr)
+    , mCounter      (nullptr)
+    , mBtnClear     (nullptr)
     , mBtnMatchCase (nullptr)
     , mBtnMatchWord (nullptr)
     , mBtnWildCard  (nullptr)
     , mBtnBackward  (nullptr)
-    , mButtonFlags  (0)
-    , mButtons      ( )
-{
-    initialize(addButtons, buttonSize);
-}
-
-SearchLineEdit::SearchLineEdit(QWidget* parent)
-    : QLineEdit     (parent)
-    
-    , mIsInitialized(false)
-    , mToolButtons  (nullptr)
-    , mBtnSearch    (nullptr)
-    , mBtnMatchCase (nullptr)
-    , mBtnMatchWord (nullptr)
-    , mBtnWildCard  (nullptr)
-    , mBtnBackward  (nullptr)
-    , mButtonFlags  (0)
-    , mButtons      ( )
+    , mTrailWidth   (-1)
 {
 }
 
-void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addButtons, QSize buttonSize /*= QSize(16, 16)*/)
+void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton>& addButtons)
 {
     if (mIsInitialized)
         return;
-    
+
     mIsInitialized = true;
-    // Layout for buttons
-    mToolButtons = new QWidget(this);
-    QHBoxLayout* layout = new QHBoxLayout(mToolButtons);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(2);
-    if ((addButtons.isEmpty() == false) && (addButtons[0] != SearchLineEdit::eToolButton::ToolButtonNothing))
+
+    mMark = new QLabel(this);
+    mMark->setObjectName(QStringLiteral("searchMark"));
+    mMark->setPixmap(NELusanCommon::iconSearch(NELusanCommon::SizeBig).pixmap(SearchLineEdit::SEARCH_ICON, SearchLineEdit::SEARCH_ICON));
+    mMark->setAttribute(Qt::WidgetAttribute::WA_TransparentForMouseEvents, true);
+    mMark->setEnabled(false);
+
+    mTrailing = new QWidget(this);
+    QHBoxLayout* trail = new QHBoxLayout(mTrailing);
+    trail->setContentsMargins(0, 0, 0, 0);
+    trail->setSpacing(1);
+
+    mCounter = new QLabel(mTrailing);
+    mCounter->setObjectName(QStringLiteral("searchCounter"));
+    mCounter->setEnabled(false);
+    mCounter->setVisible(false);
+    trail->addWidget(mCounter);
+
+    for (auto entry : addButtons)
     {
-        for (auto entry : addButtons)
+        switch (entry)
         {
-            switch (entry)
-            {
-            case SearchLineEdit::eToolButton::ToolButtonSearch:
-            {
-                
-                mButtonFlags |= static_cast<uint32_t>(entry);
-                mButtons.push_back(entry);
-                mBtnSearch = new QToolButton(this);
-                mBtnSearch->setObjectName("buttonSearch");
-                mBtnSearch->setEnabled(true);
-                mBtnSearch->setCheckable(false);
-                mBtnSearch->setMinimumSize(buttonSize);
-                mBtnSearch->setMaximumSize(buttonSize);
-                mBtnSearch->setAutoFillBackground(true);
-                mBtnSearch->setCheckable(true);
-                mBtnSearch->setIcon(NELusanCommon::iconSearch(NELusanCommon::SizeSmall));
-                mBtnSearch->setShortcut(QString::fromUtf8("Ctrl+F, F3, Alt+F"));
-                mBtnSearch->setToolTip(tr("Find text (Ctrl + F, F3, Alt + F)"));
-                mBtnSearch->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
-                mBtnSearch->setAutoRaise(true);
-                connect(mBtnSearch, &QToolButton::toggled, this, [this](bool checked) {
-                        emit signalButtonSearchClicked(checked);
-                        emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
-                        setFocus();
-                    });
-                layout->addWidget(mBtnSearch, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-            }
+        case SearchLineEdit::eToolButton::ToolButtonMatchCase:
+            mBtnMatchCase = _addOption( NELusanCommon::iconSearchMatchCase(NELusanCommon::SizeBig)
+                                      , tr("Match case")
+                                      , QStringLiteral("buttonMatchCase"));
+            connect(mBtnMatchCase, &QToolButton::toggled, this, [this](bool checked) {
+                    emit signalButtonSearchMatchCaseClicked(checked);
+                    _emitFilter();
+                });
             break;
-                
-            case SearchLineEdit::eToolButton::ToolButtonMatchCase:
-            {
-                mButtonFlags |= static_cast<uint32_t>(entry);
-                mButtons.push_back(entry);
-                mBtnMatchCase = new QToolButton(this);
-                mBtnMatchCase->setObjectName("buttonMatchCase");
-                mBtnMatchCase->setEnabled(true);
-                mBtnMatchCase->setCheckable(true);
-                mBtnMatchCase->setChecked(false);                
-                mBtnMatchCase->setMinimumSize(buttonSize);
-                mBtnMatchCase->setMaximumSize(buttonSize);
-                mBtnMatchCase->setAutoFillBackground(true);
-                mBtnMatchCase->setIcon(NELusanCommon::iconSearchMatchCase(NELusanCommon::SizeSmall));
-                mBtnMatchCase->setShortcut(QString::fromUtf8("Ctrl+C"));
-                mBtnMatchCase->setToolTip(tr("Find text exact match (Ctrl + C)"));
-                mBtnMatchCase->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
-                mBtnMatchCase->setStyleSheet(NELusanCommon::getStyleToolbutton());
-                mBtnMatchCase->setAutoRaise(true);
-                layout->addWidget(mBtnMatchCase, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnMatchCase, &QToolButton::toggled, this, [this](bool checked) {
-                        emit signalButtonSearchMatchWordClicked(checked);
-                        setFocus();
-                    });
-            }
+
+        case SearchLineEdit::eToolButton::ToolButtonMatchWord:
+            mBtnMatchWord = _addOption( NELusanCommon::iconSearchMatchWord(NELusanCommon::SizeBig)
+                                      , tr("Match whole word")
+                                      , QStringLiteral("buttonMatchWord"));
+            connect(mBtnMatchWord, &QToolButton::toggled, this, [this](bool checked) {
+                    emit signalButtonSearchMatchWordClicked(checked);
+                    _emitFilter();
+                });
             break;
-                
-            case SearchLineEdit::eToolButton::ToolButtonMatchWord:
-            {
-                mButtonFlags |= static_cast<uint32_t>(entry);
-                mButtons.push_back(entry);
-                mBtnMatchWord = new QToolButton(this);
-                mBtnMatchWord->setObjectName("buttonMatchWord");
-                mBtnMatchWord->setEnabled(true);
-                mBtnMatchWord->setCheckable(true);
-                mBtnMatchWord->setChecked(false);                
-                mBtnMatchWord->setMinimumSize(buttonSize);
-                mBtnMatchWord->setMaximumSize(buttonSize);
-                mBtnMatchWord->setAutoFillBackground(true);
-                mBtnMatchWord->setIcon(NELusanCommon::iconSearchMatchWord(NELusanCommon::SizeSmall));
-                mBtnMatchWord->setShortcut(QString::fromUtf8("Ctrl+W"));
-                mBtnMatchWord->setToolTip(tr("Find text exact match (Ctrl + W)"));
-                mBtnMatchWord->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
-                mBtnMatchWord->setStyleSheet(NELusanCommon::getStyleToolbutton());
-                mBtnMatchWord->setAutoRaise(true);
-                layout->addWidget(mBtnMatchWord, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnMatchWord, &QToolButton::toggled, this, [this](bool checked) {
-                        emit signalButtonSearchMatchCaseClicked(checked);
-                        setFocus();
-                    });
-            }
+
+        case SearchLineEdit::eToolButton::ToolButtonWildCard:
+            mBtnWildCard = _addOption( NELusanCommon::iconSearchWildCard(NELusanCommon::SizeBig)
+                                     , tr("Read the text as a pattern")
+                                     , QStringLiteral("buttonWildCard"));
+            connect(mBtnWildCard, &QToolButton::toggled, this, [this](bool checked) {
+                    emit signalButtonSearchWildCardClicked(checked);
+                    _emitFilter();
+                });
             break;
-                
-            case SearchLineEdit::eToolButton::ToolButtonWildCard:
-            {
-                mButtonFlags |= static_cast<uint32_t>(entry);
-                mButtons.push_back(entry);
-                mBtnWildCard = new QToolButton(this);
-                mBtnWildCard->setObjectName("buttonWildCard");
-                mBtnWildCard->setEnabled(true);
-                mBtnWildCard->setCheckable(true);
-                mBtnWildCard->setChecked(false);                
-                mBtnWildCard->setMinimumSize(buttonSize);
-                mBtnWildCard->setMaximumSize(buttonSize);
-                mBtnWildCard->setAutoFillBackground(true);
-                mBtnWildCard->setIcon(NELusanCommon::iconSearchWildCard(NELusanCommon::SizeSmall));
-                mBtnWildCard->setShortcut(QString::fromUtf8("Alt+R"));
-                mBtnWildCard->setToolTip(tr("Search with wild-card (Ctrl + R)"));
-                mBtnWildCard->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
-                mBtnWildCard->setStyleSheet(NELusanCommon::getStyleToolbutton());
-                mBtnWildCard->setAutoRaise(true);
-                layout->addWidget(mBtnWildCard, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnWildCard, &QToolButton::toggled, this, [this](bool checked) {
-                        emit signalButtonSearchWildCardClicked(checked);
-                        setFocus();
-                    });
-            }
+
+        case SearchLineEdit::eToolButton::ToolButtonBackward:
+            mBtnBackward = _addOption( NELusanCommon::iconGoUp(NELusanCommon::SizeBig)
+                                     , tr("Walk the matches backwards (Shift+F3)")
+                                     , QStringLiteral("buttonSearchBackward"));
+            connect(mBtnBackward, &QToolButton::toggled, this, [this](bool checked) {
+                    emit signalButtonSearchBackwardClicked(checked);
+                    _emitFilter();
+                });
             break;
-                
-            case SearchLineEdit::eToolButton::ToolButtonBackward:
-            {
-                mButtonFlags |= static_cast<uint32_t>(entry);
-                mButtons.push_back(entry);
-                mBtnBackward = new QToolButton(this);
-                mBtnBackward->setObjectName("buttonSearchBackward");
-                mBtnBackward->setEnabled(true);
-                mBtnBackward->setCheckable(true);
-                mBtnBackward->setChecked(false);                
-                mBtnBackward->setMinimumSize(buttonSize);
-                mBtnBackward->setMaximumSize(buttonSize);
-                mBtnBackward->setAutoFillBackground(true);
-                mBtnBackward->setIcon(NELusanCommon::iconGoUp(NELusanCommon::SizeSmall));
-                mBtnBackward->setShortcut(QString::fromUtf8("Shift+F3"));
-                mBtnBackward->setToolTip(tr("Search text backward (Schift+F3)"));
-                mBtnBackward->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
-                mBtnBackward->setStyleSheet(NELusanCommon::getStyleToolbutton());
-                mBtnBackward->setAutoRaise(true);
-                mBtnBackward->setArrowType(Qt::ArrowType::UpArrow);
-                layout->addWidget(mBtnBackward, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnBackward, &QToolButton::toggled, this, [this](bool checked) {
-                        emit signalButtonSearchMatchCaseClicked(checked);
-                        setFocus();
-                    });
-            }
+
+        default:
             break;
-            
-            default:
-                break;
-            }
         }
     }
-    
-    this->setMinimumHeight(buttonSize.height() + 3);
-    this->setMaximumHeight(buttonSize.height() + 3);
-    // Place the widget inside the line edit
-    setTextMargins(1, 1, mToolButtons->sizeHint().width() + 1, 1);
-    mToolButtons->setFixedHeight(this->sizeHint().height());
-    mToolButtons->move(rect().right() - mToolButtons->width(), 0);
-    mToolButtons->show();
-    
-    // Update position on resize
-    connect(this, &QLineEdit::textChanged, [this](const QString & newText) {
-            mToolButtons->move(rect().right() - mToolButtons->width(), 0);
+
+    mBtnClear = _addOption(NELusanCommon::iconClose(NELusanCommon::SizeBig), tr("Clear the search text"), QStringLiteral("buttonSearchClear"));
+    mBtnClear->setCheckable(false);
+    mBtnClear->setVisible(false);
+    connect(mBtnClear, &QToolButton::clicked, this, [this]() { clear(); setFocus(); });
+
+    // The field is at least as tall as its natural height and never shorter than the marks it
+    // holds. Clamping it to the button height alone cuts the descenders off the typed text.
+    setMinimumHeight(qMax(QLineEdit::sizeHint().height(), SearchLineEdit::SEARCH_BUTTON + (SearchLineEdit::SEARCH_AIR / 2) * 2));
+
+    connect(this, &QLineEdit::textChanged, this, [this](const QString& newText) {
+            mBtnClear->setVisible(newText.isEmpty() == false);
+            _placeMarks();
             emit signalSearchTextChanged(newText);
-            emit signalFilterText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
+            _emitFilter();
         });
+
+    _placeMarks();
+    mTrailing->show();
+    mMark->show();
 }
-    
-void SearchLineEdit::resizeEvent(QResizeEvent *event)
+
+QToolButton* SearchLineEdit::_addOption(const QIcon& icon, const QString& toolTip, const QString& name)
+{
+    QToolButton* button = new QToolButton(mTrailing);
+    button->setObjectName(name);
+    button->setIcon(icon);
+    button->setIconSize(QSize(SearchLineEdit::SEARCH_ICON, SearchLineEdit::SEARCH_ICON));
+    button->setFixedSize(SearchLineEdit::SEARCH_BUTTON, SearchLineEdit::SEARCH_BUTTON);
+    button->setCheckable(true);
+    button->setChecked(false);
+    button->setAutoRaise(true);
+    button->setToolTip(toolTip);
+    button->setStatusTip(toolTip);
+    button->setAccessibleName(toolTip);
+    button->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
+    button->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    static_cast<QHBoxLayout*>(mTrailing->layout())->addWidget(button);
+    return button;
+}
+
+void SearchLineEdit::setCounter(const QString& text)
+{
+    if (mCounter == nullptr)
+        return;
+
+    mCounter->setText(text);
+    mCounter->setVisible(text.isEmpty() == false);
+    _placeMarks();
+}
+
+void SearchLineEdit::_emitFilter(void)
+{
+    emit signalFilterText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
+}
+
+void SearchLineEdit::_placeMarks(void)
+{
+    if (mTrailing == nullptr)
+        return;
+
+    const int box{ height() };
+    const QSize markHint{ mMark->sizeHint() };
+    mMark->setGeometry(SearchLineEdit::SEARCH_AIR, (box - markHint.height()) / 2, markHint.width(), markHint.height());
+
+    const int trailWidth{ mTrailing->sizeHint().width() };
+    mTrailing->setGeometry(width() - trailWidth - SearchLineEdit::SEARCH_AIR, 0, trailWidth, box);
+
+    // Setting the margins lays the field out again, so it is done only when the trailing group
+    // actually changed width -- a counter appearing, or the clear button coming and going.
+    if (trailWidth != mTrailWidth)
+    {
+        mTrailWidth = trailWidth;
+        const int left{ SearchLineEdit::SEARCH_AIR + markHint.width() + SearchLineEdit::SEARCH_AIR };
+        setTextMargins(left, 1, trailWidth + (SearchLineEdit::SEARCH_AIR * 2), 1);
+    }
+}
+
+void SearchLineEdit::resizeEvent(QResizeEvent* event)
 {
     QLineEdit::resizeEvent(event);
-    if (mToolButtons != nullptr)
-    {
-        mToolButtons->move(rect().right() - mToolButtons->width(), 0);
-    }
+    _placeMarks();
 }
 
 void SearchLineEdit::keyPressEvent(QKeyEvent* event)
 {
-    // Handle keyboard shortcuts for search functionality
-    if (event->key() == Qt::Key_F && (event->modifiers() & Qt::ControlModifier))
+    if ((event->key() == Qt::Key_F3) || (event->key() == Qt::Key_Return) || (event->key() == Qt::Key_Enter))
     {
-        // Ctrl+F: Focus on search field
-        setFocus();
-        selectAll();
-        event->accept();
-        return;
-    }
-    else if ((event->key() == Qt::Key_F3) || (event->key() == Qt::Key_Return))
-    {
-        // F3: Find next (same as clicking search button)
         emit signalButtonSearchClicked(true);
         emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
-        setFocus();
         event->accept();
         return;
     }
     else if (event->key() == Qt::Key_Escape)
     {
-        // Escape: Clear search field and focus table
         clear();
         event->accept();
+        return;
     }
 
-    // Pass through to parent class
     QLineEdit::keyPressEvent(event);
 }
