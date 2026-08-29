@@ -134,9 +134,6 @@ protected:
      **/
     int applyRememberedPriorities(ScopeRoot & root) override;
 
-    //!< Sends the priorities of every scope of the given process to its target.
-    bool pushPriorities(ScopeRoot& root) override;
-
 private:
 
     /**

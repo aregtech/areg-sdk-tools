@@ -294,7 +294,7 @@ public:
     void noteUnknownAttributes(eDocElementKind kind, int rule, const QList<DocUnknownAttribute>& unknown);
 
     /**
-     * rief   Returns the retired element matching the given tag, or nullptr when the format
+     * \brief   Returns the retired element matching the given tag, or nullptr when the format
      *          never defined it there and the tag is simply unknown.
      * \param   tag         The element as the document spells it.
      * \param   parent      The element it was read inside.

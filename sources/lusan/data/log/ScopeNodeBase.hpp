@@ -53,6 +53,7 @@ public:
         uint8_t levelHigh;  //!< The highest level any scope below produces.
         bool    linesSome;  //!< At least one scope below writes enter and exit lines.
         bool    linesAll;   //!< Every scope below writes enter and exit lines.
+        bool    prioSome;   //!< At least one scope below carries a priority.
     };
 
     //!< The highest level a scope can produce.
@@ -167,15 +168,6 @@ public:
      * \brief   Returns true if the object is a leaf. Leafs have parent, but cannot have children nodes.
      **/
     inline bool isLeaf() const;
-
-    //!< Returns the priority the target reported when it registered the scope.
-    inline unsigned int defaultPriority() const;
-
-    //!< Sets the priority the target reported when it registered the scope.
-    inline void setDefaultPriority(unsigned int prio);
-
-    //!< Returns true if the scope generates less than the target registered it with.
-    inline bool isBelowDefault() const;
 
     /**
      * \brief   Returns true if the node is valid.
@@ -650,8 +642,6 @@ protected:
     ScopeNodeBase*              mParent;
     //!< The priority flags set bitwise.
     unsigned int                mPrioStates;
-    //!< The priority the target reported when it registered the scope.
-    unsigned int                mDefaultPrio;
     //!< The name of the node.
     QString                     mNodeName;
     //!< False when the log window is asked not to draw the rows of this scope.
@@ -665,21 +655,6 @@ protected:
 inline const QString & ScopeNodeBase::getNodeName() const
 {
     return mNodeName;
-}
-
-inline unsigned int ScopeNodeBase::defaultPriority() const
-{
-    return mDefaultPrio;
-}
-
-inline void ScopeNodeBase::setDefaultPriority(unsigned int prio)
-{
-    mDefaultPrio = prio;
-}
-
-inline bool ScopeNodeBase::isBelowDefault() const
-{
-    return (isLeaf() && (ScopeNodeBase::priorityLevel(mPrioStates) < ScopeNodeBase::priorityLevel(mDefaultPrio)));
 }
 
 inline bool ScopeNodeBase::isShown() const

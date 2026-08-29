@@ -71,17 +71,28 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Returns the level the bar is showing.
+     * \brief   Returns the highest level the bar is showing.
      **/
     inline eLogLevel level(void) const;
 
     /**
-     * \brief   Sets the level the bar shows, without emitting a change.
+     * \brief   Sets the level the bar shows, without emitting a change. Every cell up to
+     *          it is drawn filled.
      **/
     void setLevel(eLogLevel newLevel);
 
     /**
-     * \brief   Returns true if the scope flag is on.
+     * \brief   Sets the span of levels the selected scopes produce, without emitting a
+     *          change. Cells up to the lowest level are filled, because every scope
+     *          produces them. Cells the highest level reaches but the lowest does not
+     *          carry the rail alone, because only some scopes produce them.
+     * \param   levelLow    The lowest level any selected scope produces.
+     * \param   levelHigh   The highest level any selected scope produces.
+     **/
+    void setLevelRange(eLogLevel levelLow, eLogLevel levelHigh);
+
+    /**
+     * \brief   Returns true if the scope flag is on for every selected scope.
      **/
     inline bool isScopeEnabled(void) const;
 
@@ -91,10 +102,13 @@ public:
     void setScopeEnabled(bool enabled);
 
     /**
-     * \brief   Draws the ladder cells hollow rather than filled, to say that the
-     *          selected scopes do not agree on one level.
+     * \brief   Sets the scope flag from what the selected scopes carry, without emitting
+     *          a change. The cell is filled when they all write scope lines, and carries
+     *          the rail alone when only some of them do.
+     * \param   linesSome   True if at least one selected scope writes scope lines.
+     * \param   linesAll    True if every selected scope writes scope lines.
      **/
-    void setMixed(bool mixed);
+    void setScopeRange(bool linesSome, bool linesAll);
 
     /**
      * \brief   Returns true if the bar shows no level at all.
@@ -106,6 +120,15 @@ public:
      *          nothing to read a level from. Choosing a cell clears it.
      **/
     void setIdle(bool idle);
+
+    /**
+     * \brief   Sets the width one severity cell takes. The leading cell keeps its share of
+     *          it and the scope cell matches it, so the whole bar follows.
+     * \param   cellWidth   The width of one cell, at least one pixel.
+     * \note    Give it the width of a tool button when the bar sits in a tool row, so the
+     *          cells and the buttons beside them read as one grid.
+     **/
+    void setCellWidth(int cellWidth);
 
     /**
      * \brief   Returns the size the bar needs. The height is fixed at the toolbar row.
@@ -150,6 +173,17 @@ private:
     static constexpr int    ScopeCell   { 5 };
 
     /**
+     * \brief   Returns the width of the leading cell.
+     **/
+    int _offWidth(void) const;
+
+    /**
+     * \brief   Returns the running width of the cells before the one with the given index.
+     *          Passing CellCount gives the width of all of them.
+     **/
+    int _cellStop(int cell) const;
+
+    /**
      * \brief   Returns the rectangle of the cell with the given index.
      **/
     QRect _cellRect(int cell) const;
@@ -164,9 +198,11 @@ private:
      **/
     void _activateCell(int cell);
 
-    eLogLevel   mLevel;         //!< The level the bar shows.
-    bool        mScopes;        //!< The state of the scope flag.
-    bool        mMixed;         //!< The selected scopes do not agree on one level.
+    eLogLevel   mLevelLow;      //!< The lowest level the selected scopes produce.
+    eLogLevel   mLevelHigh;     //!< The highest level the selected scopes produce.
+    bool        mScopesSome;    //!< At least one selected scope writes scope lines.
+    bool        mScopesAll;     //!< Every selected scope writes scope lines.
+    int         mCellWidth;     //!< The width one severity cell takes.
     bool        mIdle;          //!< There is nothing to read a level from.
     int         mHovered;       //!< The cell under the cursor, or -1.
 };
@@ -177,12 +213,12 @@ private:
 
 inline LogPriorityBar::eLogLevel LogPriorityBar::level(void) const
 {
-    return mLevel;
+    return mLevelHigh;
 }
 
 inline bool LogPriorityBar::isScopeEnabled(void) const
 {
-    return mScopes;
+    return mScopesAll;
 }
 
 inline bool LogPriorityBar::isIdle(void) const

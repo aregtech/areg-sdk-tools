@@ -77,8 +77,6 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
     , mFindAt           ( )
 
     , mGuardBar         (nullptr)
-    , mBelowRow         (nullptr)
-    , mBelowText        (nullptr)
     , mRaiseRow         (nullptr)
     , mRaiseText        (nullptr)
     , mTempRaise        (false)
@@ -88,20 +86,9 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
 
 void NaviLogScopeBase::setupScopeToolbar(void)
 {
-    mToolCollapse = addToolButton( NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig)
-                                 , tr("Collapse or expand log scopes")
-                                 , tr("Collapse or expand log scopes.")
-                                 , true);
-    mToolCollapse->setStyleSheet(NELusanCommon::getStyleToolbutton());
-
+    // The row runs in the order the work does: bring the logs in, set what the scopes
+    // generate, narrow down what is shown, then move around the tree.
     addSpecificTools();
-
-    mToolFind = addToolButton( NELusanCommon::iconSearch(NELusanCommon::SizeBig)
-                             , tr("Find a scope")
-                             , tr("Walk from one scope whose name carries the text to the next.")
-                             , true);
-
-    addToolSeparator();
 
     mPrioBar = new LogPriorityBar(this);
     mPrioBar->setToolTip(tr("Set how much the selected scopes generate. The last cell switches the enter and exit lines."));
@@ -110,9 +97,16 @@ void NaviLogScopeBase::setupScopeToolbar(void)
     mPrioBar->setAccessibleName(tr("Scope priority"));
     mPrioBar->setIdle(true);
     mPrioBar->setEnabled(false);
+    // One grid across the row: a ladder cell is as wide and as tall as a tool button.
+    mPrioBar->setFixedHeight(NaviToolbarWindow::toolButtonHeight());
+    mPrioBar->setCellWidth(NaviToolbarWindow::toolButtonWidth());
+    // The ladder carries its own outline, which parts it from the buttons on either side.
     addToolWidget(mPrioBar);
 
-    addToolSeparator();
+    mToolFind = addToolButton( NELusanCommon::iconSearch(NELusanCommon::SizeBig)
+                             , tr("Find a scope")
+                             , tr("Walk from one scope whose name carries the text to the next.")
+                             , true);
 
     mToolShowOnly = addToolButton( NELusanCommon::iconScopeSolo(NELusanCommon::SizeBig)
                                  , tr("Show only the selected scopes")
@@ -126,12 +120,18 @@ void NaviLogScopeBase::setupScopeToolbar(void)
 
     addToolSeparator();
 
+    mToolCollapse = addToolButton( NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig)
+                                 , tr("Collapse or expand log scopes")
+                                 , tr("Collapse or expand log scopes.")
+                                 , true);
+    mToolCollapse->setStyleSheet(NELusanCommon::getStyleToolbutton());
+
     addMoveTools();
 
     // A narrow dock gives the row up from the least used entry. The priority ladder never
     // moves: without it the panel is a tree with a connect button.
     setToolRank(mToolCollapse, 10);
-    setToolRank(mToolShowAll , 20);
+    setToolRank(mToolShowAll , 25);
     setToolRank(mToolHide    , 30);
     setToolRank(mToolShowOnly, 40);
     setToolRank(mToolFind    , 50);
@@ -152,28 +152,6 @@ void NaviLogScopeBase::setupSafeguards(void)
     QVBoxLayout* guards = new QVBoxLayout(mGuardBar);
     guards->setContentsMargins(0, 0, 0, 0);
     guards->setSpacing(2);
-
-    mBelowRow = new QWidget(mGuardBar);
-    QHBoxLayout* belowRow = new QHBoxLayout(mBelowRow);
-    belowRow->setContentsMargins(0, 0, 0, 0);
-    belowRow->setSpacing(4);
-
-    QLabel* belowIcon = new QLabel(mBelowRow);
-    belowIcon->setPixmap(NELusanCommon::iconWarning(NELusanCommon::SizeSmall).pixmap(NELusanCommon::SizeSmall));
-
-    mBelowText = new QLabel(mBelowRow);
-    mBelowText->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Preferred);
-
-    QToolButton* restore = new QToolButton(mBelowRow);
-    restore->setText(tr("Restore all"));
-    restore->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
-    restore->setAutoRaise(true);
-    restore->setToolTip(tr("Put every scope back to the priority its target started with."));
-    restore->setAccessibleName(restore->toolTip());
-
-    belowRow->addWidget(belowIcon, 0);
-    belowRow->addWidget(mBelowText, 1);
-    belowRow->addWidget(restore, 0);
 
     mRaiseRow = new QWidget(mGuardBar);
     QHBoxLayout* raiseRow = new QHBoxLayout(mRaiseRow);
@@ -197,18 +175,9 @@ void NaviLogScopeBase::setupSafeguards(void)
     raiseRow->addWidget(mRaiseText, 1);
     raiseRow->addWidget(keep, 0);
 
-    guards->addWidget(mBelowRow);
     guards->addWidget(mRaiseRow);
     addNaviBar(mGuardBar);
     mGuardBar->setVisible(false);
-
-    connect(restore, &QToolButton::clicked, this, [this]() {
-        if (mScopesModel != nullptr)
-        {
-            mScopesModel->restoreDefaults();
-            refreshSafeguards();
-        }
-    });
 
     connect(keep, &QToolButton::clicked, this, [this]() {
         if (mScopesModel != nullptr)
@@ -224,31 +193,15 @@ void NaviLogScopeBase::refreshSafeguards(void)
     if ((mGuardBar == nullptr) || (mScopesModel == nullptr))
         return;
 
-    QMap<QString, int> perProcess;
-    const int below{ mScopesModel->countBelowDefault(perProcess) };
     const int raised{ mScopesModel->tempRaiseCount() };
-
-    if (below != 0)
-    {
-        mBelowText->setText(tr("%1 scopes below default").arg(below));
-        QStringList where;
-        for (auto entry = perProcess.constBegin(); entry != perProcess.constEnd(); ++entry)
-        {
-            where.append(tr("%1: %2").arg(entry.key()).arg(entry.value()));
-        }
-
-        mBelowText->setToolTip(where.join(QStringLiteral("\n")));
-    }
-
     if (raised != 0)
     {
         mRaiseText->setText(tr("%1 raised, going back").arg(raised));
         mRaiseText->setToolTip(tr("These scopes go back to what they generated before, on their own."));
     }
 
-    mBelowRow->setVisible(below != 0);
     mRaiseRow->setVisible(raised != 0);
-    mGuardBar->setVisible((below != 0) || (raised != 0));
+    mGuardBar->setVisible(raised != 0);
 }
 
 void NaviLogScopeBase::setupScopeSearch(void)
@@ -275,6 +228,9 @@ void NaviLogScopeBase::setupScopeSearch(void)
     mFilterEdit->setAccessibleName(tr("Scope name filter"));
     // The dock is narrow. Without this the box holds its own width and pushes the count out.
     mFilterEdit->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Fixed);
+    // The same height the workspace selector takes, so the tree starts on the same line
+    // whichever navigation panel the user is on.
+    mFilterEdit->setFixedHeight(NaviToolbarWindow::naviInputHeight(*mFilterEdit));
 
     mFilterCount = new QLabel(mFilterBar);
     mFilterCount->setObjectName(QStringLiteral("scopeFilterCount"));
@@ -706,6 +662,12 @@ bool NaviLogScopeBase::areRootsCollapsed(void) const
     return result;
 }
 
+void NaviLogScopeBase::refreshButtons(void)
+{
+    const QTreeView* tree = ctrlTable();
+    enableButtons(tree != nullptr ? tree->currentIndex() : QModelIndex());
+}
+
 void NaviLogScopeBase::enableButtons(const QModelIndex& selection)
 {
     validateControls();
@@ -718,17 +680,16 @@ void NaviLogScopeBase::enableButtons(const QModelIndex& selection)
     if (node != nullptr)
     {
         const ScopeNodeBase::sPrioRollup rollup{ node->priorityRollup() };
-        mPrioBar->setLevel(static_cast<LogPriorityBar::eLogLevel>(NaviLogScopeBase::levelOfPriority(node->getPriority())));
-        mPrioBar->setScopeEnabled(node->hasScopeEntries());
-        mPrioBar->setMixed(rollup.levelLow != rollup.levelHigh);
+        mPrioBar->setLevelRange( static_cast<LogPriorityBar::eLogLevel>(rollup.levelLow)
+                               , static_cast<LogPriorityBar::eLogLevel>(rollup.levelHigh));
+        mPrioBar->setScopeRange(rollup.linesSome, rollup.linesAll);
 
-        // A lit ladder says "this is what the selection generates". A node that carries no
-        // priority yet says nothing, so the ladder shows nothing.
-        mPrioBar->setIdle((node->isValid() == false) || node->hasPrioNotset());
+        // A lit ladder says "this is what the selection generates". Nothing below carries
+        // a priority yet, so the ladder shows nothing.
+        mPrioBar->setIdle((node->isValid() == false) || (rollup.prioSome == false));
     }
     else
     {
-        mPrioBar->setMixed(false);
         mPrioBar->setIdle(true);
     }
 
@@ -799,8 +760,6 @@ void NaviLogScopeBase::expandChildNodesRecursive(const QModelIndex& idxNode, con
             }
         }
     }
-
-    enableButtons(idxNode);
 }
 
 void NaviLogScopeBase::collapseRoots(void)
@@ -838,6 +797,8 @@ void NaviLogScopeBase::expandNodeAndChildren(const QModelIndex& node, bool markE
     {
         expandNode(mScopesModel->index(row, 0, node), markExpanded);
     }
+
+    refreshButtons();
 }
 
 void NaviLogScopeBase::onPriorityLevelChosen(int level)
@@ -1065,16 +1026,19 @@ void NaviLogScopeBase::copyScopePath(const QModelIndex& node) const
 
 void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, const ScopeNodeBase& entry)
 {
-    const int level{ NaviLogScopeBase::levelOfPriority(entry.getPriority()) };
-    const bool isMixed{ entry.priorityRollup().levelLow != entry.priorityRollup().levelHigh };
-    const bool hasLines{ entry.hasScopeEntries() };
+    const ScopeNodeBase::sPrioRollup rollup{ entry.priorityRollup() };
+    const int  level   { static_cast<int>(rollup.levelHigh) };
+    const bool isMixed { rollup.levelLow != rollup.levelHigh };
+    const bool hasLines{ rollup.linesSome };
 
     // The ladder is one click at the cursor. The text items below it drive the same slot and
     // are what the keyboard and a screen reader reach.
     LogPriorityBar* ladder = new LogPriorityBar(&menu);
-    ladder->setLevel(static_cast<LogPriorityBar::eLogLevel>(level));
-    ladder->setScopeEnabled(hasLines);
-    ladder->setMixed(isMixed);
+    ladder->setCellWidth(NaviToolbarWindow::toolButtonWidth());
+    ladder->setLevelRange( static_cast<LogPriorityBar::eLogLevel>(rollup.levelLow)
+                         , static_cast<LogPriorityBar::eLogLevel>(rollup.levelHigh));
+    ladder->setScopeRange(rollup.linesSome, rollup.linesAll);
+    ladder->setIdle((entry.isValid() == false) || (rollup.prioSome == false));
     connect(ladder, &LogPriorityBar::signalLevelChanged, &menu, [this, &menu, node](LogPriorityBar::eLogLevel newLevel) {
         menu.close();
         applyPriorityLevel(node, static_cast<int>(newLevel));

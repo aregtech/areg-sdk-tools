@@ -248,20 +248,6 @@ public:
     void setTargetState(const QModelIndex& node, ScopeRoot::eTargetState state);
 
     /**
-     * \brief   Counts the scopes that generate less than the target registered them with.
-     * \param   perProcess  On output, how many such scopes each process carries, by its name.
-     * \return  The number of scopes below their default.
-     **/
-    int countBelowDefault(QMap<QString, int>& perProcess) const;
-
-    /**
-     * \brief   Puts every scope that generates less than its default back to it and sends the
-     *          result to the targets.
-     * \return  The number of scopes that were put back.
-     **/
-    int restoreDefaults(void);
-
-    /**
      * \brief   Puts the given scope back to the given priority after the given time, unless the
      *          raise is kept before then. Does nothing on an archive.
      * \param   node    The index the priority was raised on.
@@ -483,13 +469,6 @@ protected:
      * \return  The number of scopes the priority was applied to.
      **/
     virtual int applyRememberedPriorities(ScopeRoot & root);
-
-    /**
-     * \brief   Sends the priorities of every scope of the given process to its target.
-     *          An archive has no target and does nothing.
-     * \return  True if the request was sent.
-     **/
-    virtual bool pushPriorities(ScopeRoot& root);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

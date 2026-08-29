@@ -53,13 +53,14 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
 
     mNaviLayout->setContentsMargins(0, 0, 0, 0);
     mNaviLayout->setSpacing(4);
-    mNaviLayout->addWidget(mToolbar, 0, Qt::AlignmentFlag::AlignLeft);
+    mNaviLayout->addWidget(mToolbar);
     mNaviLayout->addWidget(mNaviTree);
 
     mToolbar->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Fixed);
+    mToolbar->setFixedHeight(NaviToolbarWindow::toolRowHeight());
 
-    // The row is as tall as its buttons and no taller: two pixels of air above and below.
-    mToolLayout->setContentsMargins(2, 2, 2, 2);
+    // The row is as tall as its buttons and no taller: one pixel of air above and below.
+    mToolLayout->setContentsMargins(2, NAVI_TOOL_AIR, 2, NAVI_TOOL_AIR);
     mToolLayout->setSpacing(2);
 
     const QSize chevron(NAVI_TOOL_ICON, NAVI_TOOL_ICON);
@@ -69,10 +70,63 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
     mToolOverflow->setToolTip(tr("More tools"));
     mToolOverflow->setStatusTip(tr("Show the tools that do not fit the row."));
     mToolOverflow->setAccessibleName(mToolOverflow->toolTip());
+    mToolOverflow->setFixedWidth(NaviToolbarWindow::_overflowWidth());
     mToolOverflow->setVisible(false);
+    // The slack of the row sits here, so the entries stay left and the overflow button
+    // stays against the right edge whatever the dock width is.
+    mToolLayout->addStretch(1);
     mToolLayout->addWidget(mToolOverflow);
 
     connect(mToolOverflow, &QToolButton::clicked, this, [this]() { showToolOverflow(); });
+}
+
+void NaviToolbarWindow::_insertTool(QWidget* widget)
+{
+    // Two items always close the row: the slack and the overflow button.
+    mToolLayout->insertWidget(mToolLayout->count() - 2, widget);
+}
+
+QSize NaviToolbarWindow::_toolButtonHint(void)
+{
+    // Measured on a button set up the way addToolButton() sets one up, so the row cannot
+    // drift from the buttons it holds when the style or the font changes.
+    QToolButton probe;
+    probe.setText(QStringLiteral("..."));
+    probe.setIconSize(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON));
+    probe.setAutoRaise(true);
+    return probe.sizeHint();
+}
+
+int NaviToolbarWindow::toolButtonHeight(void)
+{
+    return NaviToolbarWindow::_toolButtonHint().height();
+}
+
+int NaviToolbarWindow::toolButtonWidth(void)
+{
+    return NaviToolbarWindow::_toolButtonHint().width();
+}
+
+int NaviToolbarWindow::_overflowWidth(void)
+{
+    // The mark stands upright inside its icon, which already holds it clear of the edges,
+    // so the button is the icon and needs no padding of its own.
+    return NAVI_TOOL_ICON;
+}
+
+void NaviToolbarWindow::setToolOverflowIcon(const QIcon& icon)
+{
+    mToolOverflow->setIcon(icon);
+}
+
+int NaviToolbarWindow::toolRowHeight(void)
+{
+    return NaviToolbarWindow::toolButtonHeight() + (NAVI_TOOL_AIR * 2);
+}
+
+int NaviToolbarWindow::naviInputHeight(const QWidget& owner)
+{
+    return QFontMetrics(owner.font()).height() + NAVI_INPUT_AIR;
 }
 
 QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& toolTip, const QString& statusTip, bool checkable /*= false*/)
@@ -89,7 +143,7 @@ QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& 
     // One extent for every navigation panel toolbar, so their marks carry the same stroke
     // weight instead of whatever the active style would pick.
     button->setIconSize(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON));
-    mToolLayout->insertWidget(mToolLayout->count() - 1, button);
+    _insertTool(button);
     mToolItems.append(sToolItem{ button, ToolRankNormal, false });
     return button;
 }
@@ -99,7 +153,7 @@ void NaviToolbarWindow::addToolSeparator(void)
     QFrame* line = new QFrame(mToolbar);
     line->setFrameShape(QFrame::Shape::VLine);
     line->setFrameShadow(QFrame::Shadow::Sunken);
-    mToolLayout->insertWidget(mToolLayout->count() - 1, line);
+    _insertTool(line);
     mToolItems.append(sToolItem{ line, ToolRankFixed, true });
 }
 
@@ -108,7 +162,7 @@ void NaviToolbarWindow::addToolWidget(QWidget* widget)
     if (widget != nullptr)
     {
         widget->setParent(mToolbar);
-        mToolLayout->insertWidget(mToolLayout->count() - 1, widget);
+        _insertTool(widget);
         mToolItems.append(sToolItem{ widget, ToolRankFixed, false });
     }
 }
@@ -122,15 +176,6 @@ void NaviToolbarWindow::setToolRank(QWidget* widget, int rank)
             item.rank = rank;
             break;
         }
-    }
-}
-
-void NaviToolbarWindow::setNaviHeader(QWidget* header)
-{
-    if (header != nullptr)
-    {
-        header->setParent(this);
-        mNaviLayout->insertWidget(0, header);
     }
 }
 
@@ -202,7 +247,7 @@ void NaviToolbarWindow::updateToolOverflow(void)
         return;
     }
 
-    int budget{ available - mToolOverflow->sizeHint().width() - spacing };
+    int budget{ available - NaviToolbarWindow::_overflowWidth() - spacing };
     QList<int> order;
     for (int pos = 0; pos < mToolItems.size(); ++pos)
     {
@@ -296,6 +341,7 @@ void NaviToolbarWindow::closeToolOverflow(void)
         mToolLayout->addWidget(item.widget);
     }
 
+    mToolLayout->addStretch(1);
     mToolLayout->addWidget(mToolOverflow);
     updateToolOverflow();
 }

@@ -79,6 +79,10 @@ NaviLiveLogsScopes::~NaviLiveLogsScopes()
 
 void NaviLiveLogsScopes::addSpecificTools(void)
 {
+    // Comparison only: this panel wears the four dot overflow mark and the archive panel
+    // wears the three dot one, so the two can be judged side by side in the running tool.
+    setToolOverflowIcon(NELusanCommon::iconToolbarMoreFour(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON)));
+
     mToolConnect = addToolButton( NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig)
                                 , tr("Connect to log collector")
                                 , tr("Connect or disconnect log collector service.")
@@ -93,11 +97,11 @@ void NaviLiveLogsScopes::addSpecificTools(void)
                              , tr("Save log priorities on every connected target")
                              , tr("Writes the current log priorities into the configuration file of every connected target."));
 
-    // Connect reports the state of the panel, so it stays whatever the width is. The other two
-    // are rare and give up their place before anything else.
+    // Connect reports the state of the panel, so it stays whatever the width is. The other
+    // two are rare, and rank with the file commands of the archive panel.
     setToolRank(mToolConnect , NaviToolbarWindow::ToolRankFixed);
-    setToolRank(mToolSettings, 4);
-    setToolRank(mToolSave    , 6);
+    setToolRank(mToolSettings, 20);
+    setToolRank(mToolSave    , 22);
 }
 
 void NaviLiveLogsScopes::addMoveTools(void)
@@ -112,8 +116,8 @@ void NaviLiveLogsScopes::addMoveTools(void)
                                 , tr("Show the first log of the session."));
     mToolMoveTop->setWhatsThis(tr("Moves the log view to the first row, where the logging started."));
 
-    setToolRank(mToolMoveBottom, 8);
-    setToolRank(mToolMoveTop   , 9);
+    setToolRank(mToolMoveBottom, 15);
+    setToolRank(mToolMoveTop   , 12);
 }
 
 bool NaviLiveLogsScopes::hasSavePrioMenu(void) const
@@ -413,7 +417,7 @@ void NaviLiveLogsScopes::onScopesInserted(const QModelIndex & parent)
     Q_ASSERT(mScopesModel != nullptr);
     if (parent.isValid())
     {
-        enableButtons(parent);
+        refreshButtons();
         expandNode(parent, true);
     }
 }
@@ -422,14 +426,14 @@ void NaviLiveLogsScopes::onScopesUpdated(const QModelIndex & parent)
 {
     if (parent.isValid())
     {
-        enableButtons(parent);
+        refreshButtons();
         ctrlTable()->update(parent);
     }
 }
 
 void NaviLiveLogsScopes::onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles /*= QList<int>()*/)
 {
-    enableButtons(ctrlTable()->currentIndex());
+    refreshButtons();
     updateExpanded(ctrlTable()->rootIndex());
 }
 

@@ -43,9 +43,6 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     , mToolMoveTop      (nullptr)
 {
     setupScopeToolbar();
-    setBaseSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    setMinimumSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-
     setupModel(new OfflineScopesModel(this));
     setupScopeControls();
     setupSignals();
@@ -73,10 +70,11 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
                                 , tr("Refresh and reset filters")
                                 , tr("Reloads the scopes and clears every filter."));
 
-    // The file commands are used once when the archive is opened, so they give up the row early.
-    setToolRank(mToolDbOpen , 4);
-    setToolRank(mToolDbClose, 5);
-    setToolRank(mToolRefresh, 6);
+    // Open is what the panel is for, so it stays whatever the width is. The other two are
+    // used once an archive is loaded and give up the row early.
+    setToolRank(mToolDbOpen , NaviToolbarWindow::ToolRankFixed);
+    setToolRank(mToolDbClose, 20);
+    setToolRank(mToolRefresh, 22);
 }
 
 void NaviOfflineLogsScopes::addMoveTools(void)
@@ -91,8 +89,8 @@ void NaviOfflineLogsScopes::addMoveTools(void)
                                 , tr("Show the first log of the archive."));
     mToolMoveTop->setWhatsThis(tr("Moves the log view to the first row, where the logging started."));
 
-    setToolRank(mToolMoveBottom, 8);
-    setToolRank(mToolMoveTop   , 9);
+    setToolRank(mToolMoveBottom, 15);
+    setToolRank(mToolMoveTop   , 12);
 }
 
 bool NaviOfflineLogsScopes::hasSelectAllPrioMenu(void) const
@@ -300,7 +298,7 @@ void NaviOfflineLogsScopes::onRefreshDatabaseClicked()
 void NaviOfflineLogsScopes::onRootUpdated(const QModelIndex& root)
 {
     Q_ASSERT(mScopesModel != nullptr);
-    enableButtons(root);
+    refreshButtons();
     expandNodeAndChildren(root, false);
 }
 

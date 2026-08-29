@@ -656,85 +656,6 @@ int LoggingScopesModelBase::applyRememberedPriorities(ScopeRoot & root)
     return root.restorePriorities();
 }
 
-int LoggingScopesModelBase::countBelowDefault(QMap<QString, int>& perProcess) const
-{
-    perProcess.clear();
-    if (mLoggingModel == nullptr)
-        return 0;
-
-    int total{ 0 };
-    const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
-    for (const ScopeRoot* root : roots)
-    {
-        if (root == nullptr)
-            continue;
-
-        std::vector<ScopeNodeBase*> leafs;
-        root->extractNodeLeafs(leafs);
-
-        int count{ 0 };
-        for (const ScopeNodeBase* leaf : leafs)
-        {
-            count += leaf->isBelowDefault() ? 1 : 0;
-        }
-
-        if (count != 0)
-        {
-            perProcess.insert(root->getDisplayName(), count);
-            total += count;
-        }
-    }
-
-    return total;
-}
-
-int LoggingScopesModelBase::restoreDefaults(void)
-{
-    if (mLoggingModel == nullptr)
-        return 0;
-
-    int total{ 0 };
-    LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
-    for (int pos = 0; pos < static_cast<int>(roots.size()); ++pos)
-    {
-        ScopeRoot* root = roots[pos];
-        if (root == nullptr)
-            continue;
-
-        std::vector<ScopeNodeBase*> leafs;
-        root->extractNodeLeafs(leafs);
-
-        int count{ 0 };
-        for (ScopeNodeBase* leaf : leafs)
-        {
-            if (leaf->isBelowDefault())
-            {
-                leaf->setPriority(leaf->defaultPriority());
-                ++count;
-            }
-        }
-
-        if (count == 0)
-            continue;
-
-        root->resetPrioritiesRecursive(true);
-        root->refreshPrioritiesRecursive();
-
-        const bool sent{ pushPriorities(*root) };
-        const QModelIndex idxRoot{ index(pos, 0, mRootIndex) };
-        setTargetState(idxRoot, sent ? ScopeRoot::eTargetState::TargetSent : ScopeRoot::eTargetState::TargetPending);
-        _notifyBranchChanged(idxRoot);
-        total += count;
-    }
-
-    if (total != 0)
-    {
-        emit signalSafeguardsChanged();
-    }
-
-    return total;
-}
-
 void LoggingScopesModelBase::scheduleRevert(const QModelIndex& node, uint32_t prio, int afterMs)
 {
     const ScopeNodeBase* entry{ node.isValid() ? static_cast<const ScopeNodeBase*>(node.internalPointer()) : nullptr };
@@ -838,12 +759,6 @@ QModelIndex LoggingScopesModelBase::_indexOfNode(ScopeNodeBase* node) const
     }
 
     return (pos != static_cast<int>(areg::INVALID_INDEX)) ? createIndex(pos, 0, node) : QModelIndex();
-}
-
-bool LoggingScopesModelBase::pushPriorities(ScopeRoot& root)
-{
-    Q_UNUSED(root);
-    return false;
 }
 
 void LoggingScopesModelBase::setTargetState(const QModelIndex& node, ScopeRoot::eTargetState state)

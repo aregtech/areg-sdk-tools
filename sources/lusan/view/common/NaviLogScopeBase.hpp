@@ -148,6 +148,15 @@ public:
     virtual void enableButtons(const QModelIndex& selection);
 
     /**
+     * \brief   Puts the priority ladder and the show and hide buttons in the state the scope
+     *          the user has selected calls for.
+     * \note    Every caller that reacts to the tree changing under the user, rather than to
+     *          the user picking another scope, must use this. Passing the index the change
+     *          arrived on would make the ladder describe a scope nobody selected.
+     **/
+    void refreshButtons(void);
+
+    /**
      * \brief   Updates the expanded of the log scopes model based on the current index.
      * \param   current    The current index to update expanded.
      **/
@@ -306,8 +315,7 @@ protected:
     void updateMatchMark(void);
 
     /**
-     * \brief   Shows what is standing: how many scopes generate less than their default,
-     *          and how many raises go back on their own. Hides itself when neither holds.
+     * \brief   Shows how many raises go back on their own. Hides itself when none do.
      **/
     void refreshSafeguards(void);
 
@@ -492,8 +500,6 @@ private:
     QPersistentModelIndex   mFindAt;        //!< The scope the find box stopped on last
 
     QWidget*                mGuardBar;      //!< The row that names what is standing, hidden when nothing is
-    QWidget*                mBelowRow;      //!< The line about the scopes that generate less than their default
-    QLabel*                 mBelowText;     //!< How many scopes generate less than their default
     QWidget*                mRaiseRow;      //!< The line about the raises that go back on their own
     QLabel*                 mRaiseText;     //!< How many raises go back on their own
     bool                    mTempRaise;     //!< True while a raise is meant to go back on its own

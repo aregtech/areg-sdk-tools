@@ -290,6 +290,13 @@ private:
     void _updateHighlightColumn();
 
     /**
+     * \brief   Widens every selected range back to the full row. Inserting or removing
+     *          a column cuts the selected rows at that column, which would leave the
+     *          moved cells out of a selection the user made by row.
+     **/
+    void _refitRowSelection();
+
+    /**
      * \brief   Resets the search result in the log viewer.
      **/
     inline void _resetSearchResult();

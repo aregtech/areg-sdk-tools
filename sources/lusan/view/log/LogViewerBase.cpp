@@ -33,6 +33,7 @@
 #include <QClipboard>
 #include <QFontDatabase>
 #include <QGuiApplication>
+#include <QItemSelectionModel>
 #include <QVBoxLayout>
 #include <QKeyEvent>
 #include <QMdiSubWindow>
@@ -196,10 +197,12 @@ void LogViewerBase::setupWidgets()
     connect(mFilter, &QAbstractItemModel::columnsInserted, this
             , [this](const QModelIndex&, int, int) {
                 _updateHighlightColumn();
+                _refitRowSelection();
             });
     connect(mFilter, &QAbstractItemModel::columnsRemoved, this
             , [this](const QModelIndex&, int, int) {
                 _updateHighlightColumn();
+                _refitRowSelection();
             });
     connect(mFilter, &QAbstractItemModel::modelReset, this
             , [this]() {
@@ -663,6 +666,29 @@ void LogViewerBase::_updateHighlightColumn()
         return;
 
     mHighlightColumn = mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage);
+}
+
+void LogViewerBase::_refitRowSelection()
+{
+    QItemSelectionModel* selection{ mLogTable != nullptr ? mLogTable->selectionModel() : nullptr };
+    if ((selection == nullptr) || (selection->hasSelection() == false))
+        return;
+
+    const QAbstractItemModel* model{ selection->model() };
+    const int lastColumn{ model != nullptr ? model->columnCount() - 1 : -1 };
+    if (lastColumn < 0)
+        return;
+
+    QItemSelection rows;
+    const QItemSelection current{ selection->selection() };
+    for (const QItemSelectionRange& range : current)
+    {
+        const QModelIndex left { model->index(range.top()   , 0         , range.parent()) };
+        const QModelIndex right{ model->index(range.bottom(), lastColumn, range.parent()) };
+        rows.merge(QItemSelection(left, right), QItemSelectionModel::Select);
+    }
+
+    selection->select(rows, QItemSelectionModel::ClearAndSelect);
 }
 
 void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)

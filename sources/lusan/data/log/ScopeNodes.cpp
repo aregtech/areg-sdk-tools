@@ -42,6 +42,7 @@ namespace
             into.levelHigh = std::max(into.levelHigh, from.levelHigh);
             into.linesSome = into.linesSome || from.linesSome;
             into.linesAll  = into.linesAll  && from.linesAll;
+            into.prioSome  = into.prioSome  || from.prioSome;
         }
     }
 }

@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Lusan icon: the tools that do not fit the row, a double chevron pointing right -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<path d="M5.4 6.2L11.2 12 5.4 17.8"/>
-<path d="M12.8 6.2L18.6 12 12.8 17.8"/>
+<!-- Lusan icon: the tools that do not fit the row, three dots on the middle column.
+     The dots stand upright, across the run of tool icons rather than along it, so the mark
+     reads as a control and not as one more tool. They are drawn heavier than the stroke of
+     the set: the mark has to be seen, or the tools behind it are never looked for. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="currentColor" stroke="none">
+<circle cx="12" cy="5.5" r="2.5"/>
+<circle cx="12" cy="12" r="2.5"/>
+<circle cx="12" cy="18.5" r="2.5"/>
 </g>
 </svg>

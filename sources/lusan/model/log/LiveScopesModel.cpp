@@ -185,11 +185,6 @@ int LiveScopesModel::applyRememberedPriorities(ScopeRoot & root)
     return count;
 }
 
-bool LiveScopesModel::pushPriorities(ScopeRoot& root)
-{
-    return _requestNodePriority(root, root);
-}
-
 bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node)
 {
     bool result{false};

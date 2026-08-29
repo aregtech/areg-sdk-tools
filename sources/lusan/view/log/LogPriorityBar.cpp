@@ -29,26 +29,15 @@
 namespace
 {
     constexpr int   BarHeight   { 24 };  //!< The toolbar row height.
-    constexpr int   OffWidth    { 22 };  //!< The leading cell that silences the scope.
-    constexpr int   CellWidth   { 31 };  //!< One severity cell.
-    constexpr int   NotchWidth  {  6 };  //!< The break between the ladder and the scope flag.
-    constexpr int   ScopeWidth  { 31 };  //!< The scope flag.
+    constexpr int   CellWidth   { 31 };  //!< One severity cell until the owner sets another.
+    constexpr int   NotchWidth  {  5 };  //!< The break between the ladder and the scope flag.
     constexpr int   RailHeight  {  3 };  //!< The mark that says a cell is chosen.
     constexpr qreal Radius      { 5.0 }; //!< The corner of the shell.
 
-    //! The share of the width each cell takes, as running totals over the six cells.
-    constexpr int   _cellStops[7]{ 0, OffWidth
-                                 , OffWidth + CellWidth
-                                 , OffWidth + (CellWidth * 2)
-                                 , OffWidth + (CellWidth * 3)
-                                 , OffWidth + (CellWidth * 4)
-                                 , OffWidth + (CellWidth * 4) + ScopeWidth };
-
-    //! The sum of the cell shares.
-    constexpr int   CellStopMax { _cellStops[6] };
-
-    //! The narrowest the six cells may be squeezed to before the letters stop reading.
-    constexpr int   MinCellSpan { (CellStopMax * 2) / 3 };
+    //! The leading cell is narrower than a severity cell: silence is not a priority, and the
+    //! dash it carries is the narrowest mark in the row.
+    constexpr int   OffNumer    { 22 };
+    constexpr int   OffDenom    { 31 };
 
     //! The letters of the four severity cells, in ladder order.
     const char* const _letters[4]{ "E", "W", "I", "D" };
@@ -71,12 +60,14 @@ namespace
 }
 
 LogPriorityBar::LogPriorityBar(QWidget* parent /*= nullptr*/)
-    : QWidget   (parent)
-    , mLevel    (LogPriorityBar::eLogLevel::LevelOff)
-    , mScopes   (false)
-    , mMixed    (false)
-    , mIdle     (false)
-    , mHovered  (-1)
+    : QWidget       (parent)
+    , mLevelLow     (LogPriorityBar::eLogLevel::LevelOff)
+    , mLevelHigh    (LogPriorityBar::eLogLevel::LevelOff)
+    , mScopesSome   (false)
+    , mScopesAll    (false)
+    , mCellWidth    (CellWidth)
+    , mIdle         (false)
+    , mHovered      (-1)
 {
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -85,37 +76,56 @@ LogPriorityBar::LogPriorityBar(QWidget* parent /*= nullptr*/)
 
 QSize LogPriorityBar::sizeHint(void) const
 {
-    return QSize(OffWidth + (CellWidth * 4) + NotchWidth + ScopeWidth + 2, BarHeight);
+    return QSize(_cellStop(LogPriorityBar::CellCount) + NotchWidth + 2, BarHeight);
 }
 
 QSize LogPriorityBar::minimumSizeHint(void) const
 {
-    return QSize(MinCellSpan + NotchWidth + 2, BarHeight);
+    return QSize(((_cellStop(LogPriorityBar::CellCount) * 2) / 3) + NotchWidth + 2, BarHeight);
+}
+
+void LogPriorityBar::setCellWidth(int cellWidth)
+{
+    const int width{ qMax(cellWidth, 1) };
+    if (mCellWidth != width)
+    {
+        mCellWidth = width;
+        updateGeometry();
+        update();
+    }
 }
 
 void LogPriorityBar::setLevel(LogPriorityBar::eLogLevel newLevel)
 {
-    if (mLevel != newLevel)
+    setLevelRange(newLevel, newLevel);
+}
+
+void LogPriorityBar::setLevelRange(LogPriorityBar::eLogLevel levelLow, LogPriorityBar::eLogLevel levelHigh)
+{
+    const eLogLevel high{ levelHigh };
+    const eLogLevel low { levelLow < levelHigh ? levelLow : levelHigh };
+
+    if ((mLevelLow != low) || (mLevelHigh != high))
     {
-        mLevel = newLevel;
+        mLevelLow  = low;
+        mLevelHigh = high;
         update();
     }
 }
 
 void LogPriorityBar::setScopeEnabled(bool enabled)
 {
-    if (mScopes != enabled)
-    {
-        mScopes = enabled;
-        update();
-    }
+    setScopeRange(enabled, enabled);
 }
 
-void LogPriorityBar::setMixed(bool mixed)
+void LogPriorityBar::setScopeRange(bool linesSome, bool linesAll)
 {
-    if (mMixed != mixed)
+    const bool some{ linesSome || linesAll };
+
+    if ((mScopesSome != some) || (mScopesAll != linesAll))
     {
-        mMixed = mixed;
+        mScopesSome = some;
+        mScopesAll  = linesAll;
         update();
     }
 }
@@ -129,17 +139,29 @@ void LogPriorityBar::setIdle(bool idle)
     }
 }
 
+int LogPriorityBar::_offWidth(void) const
+{
+    return (mCellWidth * OffNumer) / OffDenom;
+}
+
+int LogPriorityBar::_cellStop(int cell) const
+{
+    // Running total over the six cells: the off cell, four levels, and the scope flag.
+    return cell <= 0 ? 0 : _offWidth() + (mCellWidth * (cell - 1));
+}
+
 QRect LogPriorityBar::_cellRect(int cell) const
 {
     if ((cell < 0) || (cell >= LogPriorityBar::CellCount))
         return QRect();
 
+    const int stopMax{ _cellStop(LogPriorityBar::CellCount) };
     // The cells keep their proportions at any width, so the bar fits a narrow dock
     // without the letters leaving their cells.
-    const int span { qMax(width() - NotchWidth - 2, MinCellSpan) };
+    const int span { qMax(width() - NotchWidth - 2, (stopMax * 2) / 3) };
     const int notch{ cell == LogPriorityBar::ScopeCell ? NotchWidth : 0 };
-    const int left { 1 + notch + ((_cellStops[cell]     * span) / CellStopMax) };
-    const int right{ 1 + notch + ((_cellStops[cell + 1] * span) / CellStopMax) };
+    const int left { 1 + notch + ((_cellStop(cell)     * span) / stopMax) };
+    const int right{ 1 + notch + ((_cellStop(cell + 1) * span) / stopMax) };
 
     return QRect(left, 1, right - left, height() - 2);
 }
@@ -159,21 +181,25 @@ void LogPriorityBar::_activateCell(int cell)
 {
     if (cell == LogPriorityBar::ScopeCell)
     {
-        mScopes = mIdle ? true : (mScopes == false);
-        mIdle   = false;
+        // Only a cell every selected scope already carries switches off. A cell some of
+        // them carry switches the rest on.
+        const bool enabled{ mIdle ? true : (mScopesAll == false) };
+        mScopesSome = enabled;
+        mScopesAll  = enabled;
+        mIdle       = false;
         update();
-        emit signalScopeToggled(mScopes);
+        emit signalScopeToggled(enabled);
     }
     else if ((cell >= 0) && (cell <= 4))
     {
         const eLogLevel chosen{ static_cast<eLogLevel>(cell) };
-        if ((chosen != mLevel) || mMixed || mIdle)
+        if ((chosen != mLevelHigh) || (mLevelLow != mLevelHigh) || mIdle)
         {
-            mLevel = chosen;
-            mMixed = false;
-            mIdle  = false;
+            mLevelLow  = chosen;
+            mLevelHigh = chosen;
+            mIdle      = false;
             update();
-            emit signalLevelChanged(mLevel);
+            emit signalLevelChanged(chosen);
         }
     }
 }
@@ -198,41 +224,42 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
     painter.setClipPath(shape);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
-    const int  levelValue{ mIdle ? -1 : static_cast<int>(mLevel) };
-    const bool scopes    { (mIdle == false) && mScopes };
+    const int  lowValue { mIdle ? -1 : static_cast<int>(mLevelLow) };
+    const int  highValue{ mIdle ? -1 : static_cast<int>(mLevelHigh) };
+    const bool scopesAny{ (mIdle == false) && mScopesSome };
+    const bool scopesAll{ (mIdle == false) && mScopesAll };
 
     // The leading cell. It is selected, never lit: silence is not a priority, so it
     // takes a colourless rail and no fill.
     {
         const QRect cell{ _cellRect(0) };
-        if (levelValue == 0)
+        if (highValue == 0)
         {
             painter.fillRect(QRect(cell.left(), cell.bottom() - RailHeight + 1, cell.width(), RailHeight), muted);
         }
 
-        painter.setPen(levelValue == 0 ? text : muted);
+        painter.setPen(highValue == 0 ? text : muted);
         painter.drawText(cell, Qt::AlignCenter, QStringLiteral("-"));
     }
 
-    // The four severity cells, filled up to the chosen level.
+    // The four severity cells. A cell every selected scope reaches is filled and railed.
+    // A cell only some of them reach keeps the rail alone.
     for (int index = 0; index < 4; ++index)
     {
         const QRect cell{ _cellRect(index + 1) };
-        const bool  lit { levelValue >= (index + 1) };
+        const bool  lit { highValue >= (index + 1) };
+        const bool  full{ lowValue  >= (index + 1) };
         const QColor hue{ NELogPalette::railColor(_roles[index]) };
         const QColor ink{ NELogPalette::textColor(_roles[index]) };
 
-        if (lit && (mMixed == false))
+        if (full)
         {
             painter.fillRect(cell, tintOf(hue));
-            painter.fillRect(QRect(cell.left(), cell.bottom() - RailHeight + 1, cell.width(), RailHeight), hue);
         }
-        else if (lit)
+
+        if (lit)
         {
-            // The selected scopes disagree: say so with an outline instead of a fill,
-            // because dimming already means the process is gone.
-            painter.setPen(hue);
-            painter.drawRect(cell.adjusted(1, 1, -2, -2));
+            painter.fillRect(QRect(cell.left(), cell.bottom() - RailHeight + 1, cell.width(), RailHeight), hue);
         }
 
         painter.setPen(lit ? ink : muted);
@@ -251,13 +278,17 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
 
         const QColor hue{ NELogPalette::railColor(NELogPalette::eLogColorRole::RoleScope) };
         const QColor ink{ NELogPalette::textColor(NELogPalette::eLogColorRole::RoleScope) };
-        if (scopes)
+        if (scopesAll)
         {
             painter.fillRect(cell.adjusted(1, 0, 0, 0), tintOf(hue));
+        }
+
+        if (scopesAny)
+        {
             painter.fillRect(QRect(cell.left() + 1, cell.bottom() - RailHeight + 1, cell.width() - 1, RailHeight), hue);
         }
 
-        painter.setPen(scopes ? ink : muted);
+        painter.setPen(scopesAny ? ink : muted);
         QFont letter{ font() };
         letter.setBold(true);
         painter.setFont(letter);
@@ -319,7 +350,7 @@ void LogPriorityBar::leaveEvent(QEvent* event)
 
 void LogPriorityBar::keyPressEvent(QKeyEvent* event)
 {
-    const int levelValue{ mIdle ? -1 : static_cast<int>(mLevel) };
+    const int levelValue{ mIdle ? -1 : static_cast<int>(mLevelHigh) };
 
     // The arrows walk the ladder and stop at Debug. They never reach the scope flag,
     // because that would put two different axes on one key.
