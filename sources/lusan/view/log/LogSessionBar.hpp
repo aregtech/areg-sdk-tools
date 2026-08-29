@@ -124,6 +124,9 @@ public:
     //!< Returns the button that turns the typed phrase into a filter on the message column.
     inline QToolButton* ctrlFilterMatches(void) const;
 
+    //!< Returns the button that lists every row the phrase matches.
+    inline QToolButton* ctrlHitList(void) const;
+
     /**
      * \brief   Returns the control that says which rows the search walks. While it is
      *          checked the search walks every row the window holds, filtered out or not.
@@ -347,6 +350,7 @@ private:
     QLabel*             mSpan;          //!< The time the archive covers. Offline mode.
     SearchLineEdit*     mSearch;        //!< The search field.
     QToolButton*        mFilterMatches; //!< Turns the typed phrase into a filter on the message column.
+    QToolButton*        mHitList;       //!< Lists every row the phrase matches.
     QToolButton*        mSearchScope;   //!< Says whether the search walks the shown rows or every row.
     QLabel*             mCounters;      //!< How many rows are shown out of how many there are.
     QToolButton*        mMoveTop;       //!< Move the table to its first row.
@@ -392,6 +396,11 @@ inline QToolButton* LogSessionBar::ctrlFilterMatches(void) const
 inline QToolButton* LogSessionBar::ctrlSearchScope(void) const
 {
     return mSearchScope;
+}
+
+inline QToolButton* LogSessionBar::ctrlHitList(void) const
+{
+    return mHitList;
 }
 
 inline LogFilterChips* LogSessionBar::ctrlChips(void) const

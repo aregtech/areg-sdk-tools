@@ -303,11 +303,21 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         mLogViewer->logServiceConnected(isConnected, address, port, dbPath);
         if (isConnected == false)
         {
-            // Copy logs to offline log viewer
-            OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
-            mNaviDock.getLiveScopes().setLoggingModel(nullptr);
-            mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviOfflineLogs);
-            offlineLog->show();
+            // A session that recorded nothing has no archive to hand over, so the panel stays
+            // where the live scopes are instead of opening an empty offline window.
+            const bool hasLogs{ mLogViewer->isEmpty() == false };
+            if (hasLogs)
+            {
+                OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
+                mNaviDock.getLiveScopes().setLoggingModel(nullptr);
+                mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviOfflineLogs);
+                offlineLog->show();
+            }
+            else
+            {
+                mNaviDock.getLiveScopes().setLoggingModel(nullptr);
+                mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviLiveLogs);
+            }
 
             // Properly close and delete the live log window and viewer
             if (mLiveLogWnd != nullptr)

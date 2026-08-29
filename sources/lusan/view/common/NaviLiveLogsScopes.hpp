@@ -40,9 +40,11 @@ class LiveLogsModel;
 class LiveLogViewer;
 class MdiMainWindow;
 class MdiChild;
+class QAction;
+class QLabel;
+class QTimer;
 class QToolButton;
 class QTreeView;
-class QAction;
 
 //////////////////////////////////////////////////////////////////////////
 // NaviLiveLogsScopes class declaration
@@ -61,6 +63,7 @@ private:
     {
           LoggingUndefined      = 0 //!< Undefined logging state
         , LoggingConfigured         //!< Logging is initialized, but not connected
+        , LoggingConnecting         //!< Logging is waiting for the log collector service to answer
         , LoggingConnected          //!< Logging is connected to the log collector service
         , LoggingStopped            //!< Logging is stopped, but can be restarted
         , LoggingPaused             //!< Logging is paused, but can be resumed
@@ -130,6 +133,9 @@ public:
 
     //!< Returns true if connected to log observer service.
     inline bool isConnected() const;
+
+    //!< Returns true while waiting for the log collector service to answer.
+    inline bool isConnecting() const;
 
     //!< Returns true if connected to log observer service and receives messages.
     inline bool isRunning() const;
@@ -201,6 +207,43 @@ private:
      * \brief   Initializes the signals.
      **/
     void setupSignals();
+
+    /**
+     * \brief   Builds the row that says the panel is waiting for the log collector service.
+     *          The row stays hidden until a connection is asked for.
+     **/
+    void setupConnectStatus();
+
+    /**
+     * \brief   Enters the waiting state: the panel keeps asking for the log collector service
+     *          until it answers, and the row says so.
+     **/
+    void beginConnecting();
+
+    /**
+     * \brief   Leaves the waiting state and hides the row.
+     **/
+    void stopConnecting();
+
+    /**
+     * \brief   Counts one refused attempt and writes it into the row.
+     **/
+    void countAttempt();
+
+    /**
+     * \brief   Writes the current attempt into the row and shows it.
+     **/
+    void updateConnectStatus();
+
+    /**
+     * \brief   Asks for the log collector service again while the panel is waiting.
+     **/
+    void retryConnect();
+
+    /**
+     * \brief   Returns the absolute path of the database the live session writes into.
+     **/
+    QString databasePath() const;
 
     /**
      * \brief   Blocks the basic signals.
@@ -321,6 +364,10 @@ private:
     QString                 mLogLocation;   //!< The location of log files.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
+    QWidget*                mConnectBar;    //!< The row that says the panel is waiting for the log collector, hidden when it is not.
+    QLabel*                 mConnectText;   //!< What the panel is waiting for and how many attempts it took.
+    QTimer*                 mRetryTimer;    //!< Asks for the log collector service again while the panel is waiting.
+    int                     mAttempts;      //!< How many times the log collector service refused the connection.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -347,6 +394,7 @@ inline bool NaviLiveLogsScopes::isConfigured() const
     switch (mState)
     {
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingConnected:
     case eLoggingStates::LoggingPaused:
     case eLoggingStates::LoggingRunning:
@@ -369,6 +417,7 @@ inline bool NaviLiveLogsScopes::isDisconnected() const
     {
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingPaused:
@@ -394,6 +443,7 @@ inline bool NaviLiveLogsScopes::isConnected() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingPaused:
@@ -405,6 +455,11 @@ inline bool NaviLiveLogsScopes::isConnected() const
     }
 }
 
+inline bool NaviLiveLogsScopes::isConnecting() const
+{
+    return mState == eLoggingStates::LoggingConnecting;
+}
+
 inline bool NaviLiveLogsScopes::isRunning() const
 {
     switch (mState)
@@ -414,6 +469,7 @@ inline bool NaviLiveLogsScopes::isRunning() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingPaused:
@@ -435,6 +491,7 @@ inline bool NaviLiveLogsScopes::isPaused() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingConnected:
@@ -456,6 +513,7 @@ inline bool NaviLiveLogsScopes::isStopped() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingConnected:
     case eLoggingStates::LoggingRunning:

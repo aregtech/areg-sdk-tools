@@ -77,6 +77,7 @@ LogSessionBar::LogSessionBar(LogSessionBar::eSessionMode mode, QWidget* parent /
     , mSpan         (nullptr)
     , mSearch       (nullptr)
     , mFilterMatches(nullptr)
+    , mHitList      (nullptr)
     , mSearchScope  (nullptr)
     , mCounters     (nullptr)
     , mMoveTop      (nullptr)
@@ -225,6 +226,12 @@ void LogSessionBar::_buildMainRow(void)
                                , tr("Keep only the rows that carry this phrase"));
     mFilterMatches->setEnabled(false);
     mFilterMatches->setWhatsThis(tr("Turns the typed phrase into a filter on the message column. The filter appears as a chip and one click drops it again."));
+
+    // The whole set of matches at once, for picking one instead of stepping to it.
+    mHitList = _addButton(NELusanCommon::iconSearchUsages(NELusanCommon::SizeBig)
+                         , tr("List every row that carries this phrase"));
+    mHitList->setEnabled(false);
+    mHitList->setWhatsThis(tr("Opens the matches as a list. Choosing one moves the table to it."));
 
     // Which rows the search walks. The label names the state it is in, and the pressed look
     // marks the one that is not the default, so a glance answers both.

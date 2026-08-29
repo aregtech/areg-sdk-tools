@@ -25,6 +25,9 @@
 #include <QWidget>
 
 #include <QRect>
+#include <QString>
+
+class QPainter;
 
 /**
  * \brief   The priority bar of the scope panel.
@@ -35,8 +38,10 @@
  *          after a visible break, so the shell reads as a group holding two controls
  *          rather than as one control with five positions.
  *
- *          The left cell sets level zero, which silences the scope. It carries no colour,
- *          because silence is not a priority.
+ *          On a bar that changes the target the left cell sets level zero, which silences
+ *          the scope. It carries no colour, because silence is not a priority. On a bar that
+ *          narrows a view the left cell brings every row back; it stands behind a break of
+ *          its own, so it is never read as the zero of the ladder.
  **/
 class LogPriorityBar : public QWidget
 {
@@ -180,6 +185,9 @@ protected:
 
     virtual void keyPressEvent(QKeyEvent* event) override;
 
+    //!< Shows the tool tip of the cell under the cursor instead of the tool tip of the bar.
+    virtual bool event(QEvent* event) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members and methods
 //////////////////////////////////////////////////////////////////////////
@@ -190,10 +198,36 @@ private:
     //!< The index of the scope flag among the cells.
     static constexpr int    ScopeCell   { 5 };
 
+    //!< The air the leading mark of a view bar keeps on either side of itself.
+    static constexpr int    AllMarkAir  { 4 };
+
     /**
      * \brief   Returns the width of the leading cell.
      **/
     int _offWidth(void) const;
+
+    /**
+     * \brief   Returns how many breaks the bar draws. A view bar breaks twice: its leading
+     *          cell is a control of its own, not the zero of the ladder.
+     **/
+    int _notchCount(void) const;
+
+    /**
+     * \brief   Returns the width the breaks before the cell with the given index take.
+     **/
+    int _notchBefore(int cell) const;
+
+    /**
+     * \brief   Draws the mark of the leading cell of a view bar: the ladder in miniature,
+     *          four rows in the colours of the four priorities.
+     **/
+    void _paintAllMark(QPainter& painter, const QRect& cell) const;
+
+    /**
+     * \brief   Returns the tool tip of the cell with the given index, or an empty string
+     *          when there is no cell at that index.
+     **/
+    QString _cellTip(int cell) const;
 
     /**
      * \brief   Returns the running width of the cells before the one with the given index.

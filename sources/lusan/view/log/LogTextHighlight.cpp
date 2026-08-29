@@ -20,6 +20,7 @@
 #include "lusan/view/log/LogTextHighlight.hpp"
 
 #include "lusan/common/NELogPalette.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 
 #include "areg/logging/LoggingDefs.hpp"
@@ -32,6 +33,8 @@
 LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent /*= nullptr*/)
     : QStyledItemDelegate(parent)
     , mFoundPos(foundPos)
+    , mMarkEnter(NELusanCommon::iconScopeEnter(QSize(LogTextHighlight::MarkSide, LogTextHighlight::MarkSide)))
+    , mMarkExit (NELusanCommon::iconScopeExit (QSize(LogTextHighlight::MarkSide, LogTextHighlight::MarkSide)))
 {
 }
 
@@ -39,13 +42,21 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
 {
     _paintRevealed(painter, option, index);
     _paintPriorityRail(painter, option, index);
+    _paintScopeMark(painter, option, index);
+
+    // The gutter belongs to the delegate, so the text of the leading column starts after it.
+    QStyleOptionViewItem cell{ option };
+    if (index.column() == 0)
+    {
+        cell.rect.setLeft(cell.rect.left() + LogTextHighlight::GutterWidth);
+    }
 
     const int foundColumn = static_cast<int>(mFoundPos.colFound);
     if ((static_cast<int>(mFoundPos.rowFound) != index.row()) ||
         ((foundColumn >= 0) && (foundColumn != index.column())) ||
         (mFoundPos.posStart < 0) || (mFoundPos.posEnd <= mFoundPos.posStart))
     {
-        QStyledItemDelegate::paint(painter, option, index);
+        QStyledItemDelegate::paint(painter, cell, index);
         return;
     }
     
@@ -71,16 +82,16 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QTextLine line = layout.createLine();
 
     // Set the line width to match the highlighted text only
-    line.setLineWidth(option.rect.width());
+    line.setLineWidth(cell.rect.width());
     layout.endLayout();
 
-    painter->setFont(option.font);
+    painter->setFont(cell.font);
 
     // Calculate vertical alignment (centered)
     float textHeight = static_cast<int>(line.height());
-    float yOffset = static_cast<float>(option.rect.top()) + static_cast<float>(option.rect.height() - textHeight) / 2;
+    float yOffset = static_cast<float>(cell.rect.top()) + static_cast<float>(cell.rect.height() - textHeight) / 2;
 
-    QPointF textPos(option.rect.left() + 2, yOffset + 1);
+    QPointF textPos(cell.rect.left() + 2, yOffset + 1);
 
     layout.draw(painter, textPos);
     painter->restore();
@@ -104,6 +115,34 @@ void LogTextHighlight::_paintRevealed(QPainter* painter, const QStyleOptionViewI
                          , NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkRevealedEdge));
     }
 
+    painter->restore();
+}
+
+void LogTextHighlight::_paintScopeMark(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    if (index.column() != 0)
+        return;
+
+    const QVariant entryData{ index.data(Qt::UserRole) };
+    const areg::LogEntry* entry{ entryData.value<const areg::LogEntry*>() };
+    if (entry == nullptr)
+        return;
+
+    const bool enters{ entry->logMsgType == areg::LogMessageType::ScopeEnter };
+    if ((enters == false) && (entry->logMsgType != areg::LogMessageType::ScopeExit))
+        return;
+
+    const int side{ qMin(LogTextHighlight::MarkSide, option.rect.height() - 2) };
+    if (side <= 0)
+        return;
+
+    const QRect box( option.rect.left() + LogTextHighlight::MarkLeft
+                   , option.rect.top() + ((option.rect.height() - side) / 2)
+                   , side
+                   , side);
+
+    painter->save();
+    (enters ? mMarkEnter : mMarkExit).paint(painter, box);
     painter->restore();
 }
 

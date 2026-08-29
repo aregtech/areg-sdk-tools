@@ -23,6 +23,7 @@
 #include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/view/log/LogHeaderItem.hpp"
+#include "lusan/view/log/LogHitMap.hpp"
 #include "lusan/view/log/LogSessionBar.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/view/log/ScopeOutputViewer.hpp"
@@ -78,6 +79,7 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mIsolationText( )
     , mCountTimer(nullptr)
     , mEmptyState(nullptr)
+    , mHitMap   (nullptr)
     , mSkew     ( )
     , mSkewShown(false)
     , mFollowScroll(false)
@@ -176,9 +178,20 @@ void LogViewerBase::setupWidgets()
 
     mFilter = new LogViewerFilter(mLogModel);
     mHeader = new LogTableHeader(mLogTable, mLogModel);
+    mHitMap = new LogHitMap(mLogTable);
+    mHitMap->setSource(mLogModel, mFilter);
     QShortcut* shortcutSearch = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this);
     QShortcut* shortcutCopyMsg = new QShortcut(QKeySequence::Copy, this);
     QShortcut* shortcutCopyRow = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C), this);
+    QShortcut* shortcutNextBad = new QShortcut(QKeySequence(Qt::Key_F8), this);
+    QShortcut* shortcutPrevBad = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
+
+    // Every MDI child shares one window, so a window wide shortcut in two of them is ambiguous
+    // and Qt then fires neither. Each one answers only while the focus is inside this window.
+    for (QShortcut* shortcut : { shortcutSearch, shortcutCopyMsg, shortcutCopyRow, shortcutNextBad, shortcutPrevBad })
+    {
+        shortcut->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    }
     mSearch.setLogModel(mFilter);
 
     mLogTable->setHorizontalHeader(mHeader);
@@ -265,9 +278,12 @@ void LogViewerBase::setupWidgets()
     connect(mLogTable   , &QTableView::doubleClicked                    , this, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
     
     connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , this, [this](const QString& text) {
-                mLogSearch->setStyleSheet("");
                 mSearch.resetSearch();
                 mSessionBar->ctrlFilterMatches()->setEnabled(text.isEmpty() == false);
+                if (text.isEmpty() && (mHitMap != nullptr))
+                {
+                    mHitMap->clearHits();
+                }
             });
     connect(mLogSearch  , &SearchLineEdit::signalSearchText             , this
             , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {
@@ -280,12 +296,18 @@ void LogViewerBase::setupWidgets()
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
     connect(shortcutCopyMsg, &QShortcut::activated                      , this, &LogViewerBase::onCopyMessage);
     connect(shortcutCopyRow, &QShortcut::activated                      , this, &LogViewerBase::onCopyRow);
+    connect(shortcutNextBad, &QShortcut::activated                      , this, [this]() { _stepToProblem(true);  });
+    connect(shortcutPrevBad, &QShortcut::activated                      , this, [this]() { _stepToProblem(false); });
 
     connect(mSessionBar->ctrlFilterMatches(), &QToolButton::clicked, this, [this]() {
                 filterToPhrase(NELusanCommon::FilterString{ mLogSearch->text()
                                                           , mLogSearch->isMatchCaseChecked()
                                                           , mLogSearch->isMatchWordChecked()
                                                           , mLogSearch->isWildCardChecked() });
+            });
+
+    connect(mSessionBar->ctrlHitList(), &QToolButton::clicked, this, [this]() {
+                _showHitList();
             });
 
     connect(mSessionBar->ctrlSearchScope(), &QToolButton::toggled, this, [this](bool) {
@@ -680,14 +702,17 @@ void LogViewerBase::onSearchClicked(bool newSearch)
     if (mSearch.isValidPosition(mFoundPos))
     {
         mFoundRow = mFoundPos.rowFound;
-        mLogSearch->setStyleSheet(QString());
         _showSearchHit(allLogs);
     }
     else
     {
         mFoundRow = LogSearchModel::InvalidPos;
         mFoundPos.colFound = static_cast<int32_t>(LogSearchModel::InvalidPos);
-        mLogSearch->setStyleSheet(QString::fromUtf8("QLineEdit { background-color: #ffcccc; }"));
+    }
+
+    if (mHitMap != nullptr)
+    {
+        mHitMap->setHits(mHits, mFoundRow == LogSearchModel::InvalidPos ? -1 : static_cast<int>(mFoundRow));
     }
 
     _drawSearchState(allLogs);
@@ -727,6 +752,8 @@ void LogViewerBase::_showSearchHit(bool allLogs)
 
 void LogViewerBase::_drawSearchState(bool allLogs)
 {
+    mSessionBar->ctrlHitList()->setEnabled(mHits.isEmpty() == false);
+
     if (mLogSearch->text().isEmpty())
     {
         mLogSearch->setCounter(QString());
@@ -755,6 +782,77 @@ void LogViewerBase::_drawSearchState(bool allLogs)
     else
     {
         mSessionBar->hideNotice(LogSessionBar::eNotice::NoticeRevealed);
+    }
+}
+
+void LogViewerBase::_stepToProblem(bool forward)
+{
+    if ((mFilter == nullptr) || (mLogModel == nullptr))
+        return;
+
+    const int shown{ mFilter->rowCount(QModelIndex()) };
+    if (shown <= 0)
+        return;
+
+    const QModelIndex current{ ctrlTable()->currentIndex() };
+    const int from{ current.isValid() ? current.row() : (forward ? -1 : shown) };
+    const int step{ forward ? 1 : -1 };
+
+    for (int row = from + step; (row >= 0) && (row < shown); row += step)
+    {
+        const QModelIndex source{ mFilter->mapToSource(mFilter->index(row, 0)) };
+        if (LoggingModelBase::isProblemEntry(mLogModel->getLogData(source.row())) == false)
+            continue;
+
+        const QModelIndex target{ mFilter->index(row, current.isValid() ? current.column() : 0) };
+        ctrlTable()->setCurrentIndex(target);
+        ctrlTable()->scrollTo(target, QAbstractItemView::ScrollHint::PositionAtCenter);
+        return;
+    }
+}
+
+void LogViewerBase::_showHitList(void)
+{
+    if (mHits.isEmpty() || (mLogModel == nullptr))
+        return;
+
+    QMenu menu(this);
+    int listed{ 0 };
+    for (uint32_t hit : mHits)
+    {
+        if (listed >= LogViewerBase::HitListMax)
+        {
+            QAction* more = menu.addAction(tr("... and %1 more").arg(mHits.size() - listed));
+            more->setEnabled(false);
+            break;
+        }
+
+        const areg::LogEntry* entry{ mLogModel->getLogData(static_cast<int>(hit)) };
+        if (entry == nullptr)
+            continue;
+
+        QString text{ QString::fromUtf8(entry->logMessage).simplified() };
+        if (text.size() > LogViewerBase::HitListChars)
+        {
+            text = text.left(LogViewerBase::HitListChars) + QStringLiteral("...");
+        }
+
+        QAction* action = menu.addAction(tr("%1:  %2").arg(hit + 1).arg(text));
+        action->setData(hit);
+        ++listed;
+    }
+
+    QAction* chosen{ menu.exec(mSessionBar->ctrlHitList()->mapToGlobal(QPoint(0, mSessionBar->ctrlHitList()->height()))) };
+    if ((chosen == nullptr) || chosen->data().isValid() == false)
+        return;
+
+    mFoundRow = chosen->data().toUInt();
+    mFoundPos.rowFound = mFoundRow;
+    _showSearchHit(mSessionBar->isSearchingAllLogs());
+    _drawSearchState(mSessionBar->isSearchingAllLogs());
+    if (mHitMap != nullptr)
+    {
+        mHitMap->setHits(mHits, static_cast<int>(mFoundRow));
     }
 }
 
@@ -1148,6 +1246,7 @@ inline void LogViewerBase::_clearResources()
     mHighlightColumn = -1;
     mSessionBar = nullptr;
     mEmptyState = nullptr;
+    mHitMap = nullptr;
 
     delete mFilter;
     mFilter = nullptr;

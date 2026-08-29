@@ -30,6 +30,7 @@
  ************************************************************************/
 class LoggingModelBase;
 class LogEmptyState;
+class LogHitMap;
 class LogSessionBar;
 class LogTableHeader;
 class LogViewerFilter;
@@ -60,6 +61,12 @@ public:
     //!< The rows keep arriving faster than a counter can be read. The changes are
     //!< collected for this many milliseconds and drawn once.
     static constexpr int    COUNTER_DELAY_MS    { 200 };
+
+    //!< The most matches the hit list draws before it says how many are left.
+    static constexpr int    HitListMax          { 300 };
+
+    //!< The longest a message stays in a hit list entry.
+    static constexpr int    HitListChars        { 110 };
 
     /**
      * \brief   Returns the file extension of the offline log files.
@@ -387,6 +394,18 @@ private:
     void _drawSearchState(bool allLogs);
 
     /**
+     * \brief   Opens the rows the phrase matches as a list under the search field. Choosing
+     *          one moves the table to it.
+     **/
+    void _showHitList(void);
+
+    /**
+     * \brief   Moves the table to the next row of warning priority or worse.
+     * \param   forward True to walk down the table, false to walk up.
+     **/
+    void _stepToProblem(bool forward);
+
+    /**
      * \brief   Returns the filters that are on, named in one line.
      **/
     QString _filterSummary() const;
@@ -445,6 +464,7 @@ protected:
     QString                     mIsolationText; //!< What the chip of the isolated row says.
     QTimer*                     mCountTimer;//!< Collects the row changes so the counters are drawn once instead of once per row.
     LogEmptyState*              mEmptyState;//!< What the table says when it has no row to draw.
+    LogHitMap*                  mHitMap;    //!< The marks on the scrollbar naming the hits and the rows above a severity.
     LogClockSkew                mSkew;      //!< Watches the sources for a clock that disagrees with the collector.
     bool                        mSkewShown; //!< True once the clock notice was raised, so it is raised once per session.
     bool                        mFollowScroll; //!< True while the application scrolls the table itself.

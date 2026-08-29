@@ -1061,6 +1061,10 @@ void SMDesign::buildDesignPanels()
 
     QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
+    // Every MDI child shares one window, so these answer only while the focus is inside this
+    // one. A window wide binding would reach the key from any other open document.
+    nextIssue->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    prevIssue->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(nextIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(1); });
     connect(prevIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(-1); });
 }

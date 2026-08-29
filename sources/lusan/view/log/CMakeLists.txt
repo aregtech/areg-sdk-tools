@@ -6,6 +6,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/log/LogFilterChips.cpp
     ${LUSAN}/view/log/LogFilterWidgets.cpp
     ${LUSAN}/view/log/LogHeaderItem.cpp
+    ${LUSAN}/view/log/LogHitMap.cpp
     ${LUSAN}/view/log/LogPriorityBar.cpp
     ${LUSAN}/view/log/LogSessionBar.cpp
     ${LUSAN}/view/log/LogTableHeader.cpp
@@ -21,6 +22,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/log/LogFilterChips.hpp
     ${LUSAN}/view/log/LogFilterWidgets.hpp
     ${LUSAN}/view/log/LogHeaderItem.hpp
+    ${LUSAN}/view/log/LogHitMap.hpp
     ${LUSAN}/view/log/LogPriorityBar.hpp
     ${LUSAN}/view/log/LogSessionBar.hpp
     ${LUSAN}/view/log/LogTableHeader.hpp

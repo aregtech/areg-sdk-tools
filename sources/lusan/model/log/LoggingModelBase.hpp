@@ -346,6 +346,13 @@ public:
     inline const areg::LogEntry* getLogData(int row) const;
 
     /**
+     * \brief   Returns true if the entry is a problem row, meaning warning priority or worse.
+     *          The scrollbar marks and the step to the next problem read the same answer here.
+     * \param   entry   The entry to weigh, may be nullptr.
+     **/
+    static inline bool isProblemEntry(const areg::LogEntry* entry);
+
+    /**
      * \brief   Return the logging message entry of specified row and column.
      **/
     inline QString getLogEntry(int row, int col) const;
@@ -937,6 +944,15 @@ inline void LoggingModelBase::selectTop()
 inline const areg::LogEntry* LoggingModelBase::getLogData(int row) const
 {
     return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? reinterpret_cast<const areg::LogEntry*>(mLogs[row].buffer()) : nullptr);
+}
+
+inline bool LoggingModelBase::isProblemEntry(const areg::LogEntry* entry)
+{
+    constexpr uint16_t problems{ static_cast<uint16_t>(areg::LogPriority::PrioWarning)
+                               | static_cast<uint16_t>(areg::LogPriority::PrioError)
+                               | static_cast<uint16_t>(areg::LogPriority::PrioFatal) };
+
+    return (entry != nullptr) && ((static_cast<uint16_t>(entry->logMessagePrio) & problems) != 0);
 }
 
 inline QString LoggingModelBase::getLogEntry(int row, int col) const
