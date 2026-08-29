@@ -19,6 +19,8 @@
  *
  ************************************************************************/
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/model/log/LogClockSkew.hpp"
+#include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
 #include "areg/base/areg_global.h"
 
@@ -26,6 +28,8 @@
  * Dependencies
  ************************************************************************/
 class LoggingModelBase;
+class LogEmptyState;
+class LogSessionBar;
 class LogTableHeader;
 class LogViewerFilter;
 class SearchLineEdit;
@@ -36,6 +40,7 @@ class QModelIndex;
 class QPoint;
 class QString;
 class QTableView;
+class QTimer;
 class QToolButton;
 class QWidget;
 
@@ -51,6 +56,10 @@ class LogViewerBase : public MdiChild
     Q_OBJECT
 
 public:
+    //!< The rows keep arriving faster than a counter can be read. The changes are
+    //!< collected for this many milliseconds and drawn once.
+    static constexpr int    COUNTER_DELAY_MS    { 200 };
+
     /**
      * \brief   Returns the file extension of the offline log files.
      **/
@@ -88,9 +97,20 @@ public:
     inline QTableView* getLoggingTable() const;
 
     /**
+     * \brief   Returns the session bar of this log window.
+     **/
+    inline LogSessionBar* getSessionBar() const;
+
+    /**
      * \brief   Returns true if the offline log database is successfully opened.
      **/
     bool isDatabaseOpen() const;
+
+    /**
+     * \brief   Returns true if the window has a source that can produce rows: an open
+     *          archive, or a connected log collector.
+     **/
+    virtual bool isSourceReady() const;
 
     /**
      * \brief   Opens the offline log database file.
@@ -215,6 +235,22 @@ protected:
      * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
      **/
     virtual void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous);
+
+    /**
+     * \brief   Keeps the empty-state panel over the table viewport.
+     * \param   watched The object the event came from.
+     * \param   event   The event.
+     **/
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+    /**
+     * \brief   Slot, triggered when rows are appended to the logging model. It measures the
+     *          clocks of the sources and raises the notice when two of them disagree.
+     * \param   parent  The parent index of the inserted rows.
+     * \param   first   The first inserted row.
+     * \param   last    The last inserted row.
+     **/
+    void onSourceRowsInserted(const QModelIndex& parent, int first, int last);
     
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -227,6 +263,13 @@ protected:
      * \brief   Resets filters.
      **/
     void resetFilters();
+
+    /**
+     * \brief   Moves the table to its last row without turning the follow toggle off.
+     *          Every scroll the application makes itself goes through this method; a scroll
+     *          the user makes is what switches following off.
+     **/
+    void scrollFollowing();
 
 //////////////////////////////////////////////////////////////////////////
 // attributes
@@ -297,6 +340,22 @@ private:
     void _refitRowSelection();
 
     /**
+     * \brief   Draws the row counters of the session bar.
+     **/
+    void _updateCounters();
+
+    /**
+     * \brief   Draws, or hides, the panel that says why the table has no row.
+     **/
+    void _updateEmptyState();
+
+    /**
+     * \brief   Returns the given number of microseconds as a phrase, in the largest unit
+     *          that keeps the value readable.
+     **/
+    static QString _formatOffset(qint64 offsetUs);
+
+    /**
      * \brief   Resets the search result in the log viewer.
      **/
     inline void _resetSearchResult();
@@ -329,6 +388,12 @@ protected:
     LogSearchModel::sFoundPos   mFoundPos;  //!< The found position of the search in the log viewer.
     LogTextHighlight*           mHighlight; //!< The text highlight object, used for highlighting the search results in the log viewer.
     int                         mHighlightColumn; //!< The current logical column index where highlight delegate is installed.
+    LogSessionBar*              mSessionBar;//!< The bar above the table, carrying the state, the counters and the controls of the window.
+    QTimer*                     mCountTimer;//!< Collects the row changes so the counters are drawn once instead of once per row.
+    LogEmptyState*              mEmptyState;//!< What the table says when it has no row to draw.
+    LogClockSkew                mSkew;      //!< Watches the sources for a clock that disagrees with the collector.
+    bool                        mSkewShown; //!< True once the clock notice was raised, so it is raised once per session.
+    bool                        mFollowScroll; //!< True while the application scrolls the table itself.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls.
@@ -349,6 +414,11 @@ inline LoggingModelBase* LogViewerBase::getLoggingModel() const
 inline QTableView* LogViewerBase::getLoggingTable() const
 {
     return mLogTable;
+}
+
+inline LogSessionBar* LogViewerBase::getSessionBar() const
+{
+    return mSessionBar;
 }
 
 #endif  // LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP

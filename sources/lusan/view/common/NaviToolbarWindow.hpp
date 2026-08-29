@@ -109,13 +109,12 @@ protected:
     void addToolWidget(QWidget* widget);
 
     /**
-     * \brief   Sets how firmly an entry of the tool button row keeps its place when the row
-     *          is too narrow. Entries with the lowest rank move into the overflow first, and
-     *          `ToolRankFixed` never moves.
+     * \brief   Marks an entry of the tool button row as one that must stay in the row at
+     *          every width. The row gives up its entries from the right, so marking an entry
+     *          also keeps every entry before it.
      * \param   widget  An entry already added to the row.
-     * \param   rank    The rank to give it.
      **/
-    void setToolRank(QWidget* widget, int rank);
+    void setToolFixed(QWidget* widget);
 
     /**
      * \brief   Places a widget between the tool button row and the tree view, after every
@@ -123,12 +122,6 @@ protected:
      * \param   bar     The widget to show above the tree.
      **/
     void addNaviBar(QWidget* bar);
-
-    /**
-     * \brief   Sets the mark the overflow button carries.
-     * \param   icon    The mark to draw on the button.
-     **/
-    void setToolOverflowIcon(const QIcon& icon);
 
     /**
      * \brief   Applies the tree view setup shared by the navigation windows.
@@ -161,6 +154,9 @@ public:
     //!< The air the tool row keeps above and below its buttons.
     static constexpr int NAVI_TOOL_AIR          { 1 };
 
+    //!< The gap the tool row keeps between two entries.
+    static constexpr int NAVI_TOOL_GAP          { 1 };
+
     //!< The air an input row keeps around one line of text.
     static constexpr int NAVI_INPUT_AIR         { 3 };
 
@@ -191,12 +187,6 @@ public:
      **/
     static int naviInputHeight(const QWidget& owner);
 
-    //!< An entry with this rank stays in the row at every width.
-    static constexpr int ToolRankFixed          { 1000 };
-
-    //!< The rank an entry gets unless the panel sets another one.
-    static constexpr int ToolRankNormal         { 100 };
-
 //////////////////////////////////////////////////////////////////////////
 // Internal types and methods
 //////////////////////////////////////////////////////////////////////////
@@ -205,7 +195,7 @@ private:
     struct sToolItem
     {
         QWidget*    widget  { nullptr };     //!< The button, separator or custom widget.
-        int         rank    { 0 };           //!< The order in which it gives up its place.
+        bool        fixed   { false };       //!< True if the entry must stay in the row.
         bool        divider { false };       //!< True for a separator.
     };
 

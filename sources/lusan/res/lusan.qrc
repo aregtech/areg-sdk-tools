@@ -79,7 +79,6 @@
         <file alias="tree-expand">icons/ui-tree-expand.svg</file>
         <file alias="tree-collapse">icons/ui-tree-collapse.svg</file>
         <file alias="toolbar-more">icons/ui-toolbar-more.svg</file>
-        <file alias="toolbar-more-four">icons/ui-toolbar-more-four.svg</file>
         <file alias="signal-on">icons/ui-signal-on.svg</file>
         <file alias="signal-off">icons/ui-signal-off.svg</file>
         <file alias="media-play">icons/ui-media-play.svg</file>

@@ -645,10 +645,6 @@ namespace NELusanCommon
     //<! Loads the icon of the toolbar entries that do not fit the row
     inline QIcon iconToolbarMore(const QSize & size = QSize{ 32, 32 });
 
-    //!< Returns the four dot form of the overflow mark, kept beside the three dot form
-    //!< so the two can be compared in the running tool.
-    inline QIcon iconToolbarMoreFour(const QSize & size = QSize{ 32, 32 });
-
     //<! Loads open workspace icon and sets the specified size
     inline QIcon iconWorkspaceOpen(const QSize & size = QSize{ 32, 32 });
 
@@ -1055,11 +1051,6 @@ inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
 inline QIcon NELusanCommon::iconToolbarMore(const QSize & size)
 {
     return loadIcon(":/icons/toolbar-more", size);
-}
-
-inline QIcon NELusanCommon::iconToolbarMoreFour(const QSize & size)
-{
-    return loadIcon(":/icons/toolbar-more-four", size);
 }
 
 inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)

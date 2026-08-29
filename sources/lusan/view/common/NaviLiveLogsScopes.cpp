@@ -53,8 +53,6 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mToolConnect      (nullptr)
     , mToolSettings     (nullptr)
     , mToolSave         (nullptr)
-    , mToolMoveBottom   (nullptr)
-    , mToolMoveTop      (nullptr)
     , mAddress          ()
     , mPort             (areg::InvalidPort)
     , mInitLogFile      ( )
@@ -79,10 +77,6 @@ NaviLiveLogsScopes::~NaviLiveLogsScopes()
 
 void NaviLiveLogsScopes::addSpecificTools(void)
 {
-    // Comparison only: this panel wears the four dot overflow mark and the archive panel
-    // wears the three dot one, so the two can be judged side by side in the running tool.
-    setToolOverflowIcon(NELusanCommon::iconToolbarMoreFour(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON)));
-
     mToolConnect = addToolButton( NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig)
                                 , tr("Connect to log collector")
                                 , tr("Connect or disconnect log collector service.")
@@ -97,27 +91,8 @@ void NaviLiveLogsScopes::addSpecificTools(void)
                              , tr("Save log priorities on every connected target")
                              , tr("Writes the current log priorities into the configuration file of every connected target."));
 
-    // Connect reports the state of the panel, so it stays whatever the width is. The other
-    // two are rare, and rank with the file commands of the archive panel.
-    setToolRank(mToolConnect , NaviToolbarWindow::ToolRankFixed);
-    setToolRank(mToolSettings, 20);
-    setToolRank(mToolSave    , 22);
-}
-
-void NaviLiveLogsScopes::addMoveTools(void)
-{
-    mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
-                                   , tr("Move to bottom")
-                                   , tr("Show the newest log and keep following the new ones."));
-    mToolMoveBottom->setWhatsThis(tr("Moves the log view to the last row. The view keeps scrolling with the arriving logs, so the newest log stays in sight."));
-
-    mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
-                                , tr("Move to top")
-                                , tr("Show the first log of the session."));
-    mToolMoveTop->setWhatsThis(tr("Moves the log view to the first row, where the logging started."));
-
-    setToolRank(mToolMoveBottom, 15);
-    setToolRank(mToolMoveTop   , 12);
+    // Connect reports the state of the panel, so it stays whatever the width is.
+    setToolFixed(mToolConnect);
 }
 
 bool NaviLiveLogsScopes::hasSavePrioMenu(void) const
@@ -181,10 +156,8 @@ void NaviLiveLogsScopes::setupWidgets()
 void NaviLiveLogsScopes::setupSignals()
 {
     connect(ctrlConnect()       , &QToolButton::clicked, this, &NaviLiveLogsScopes::onConnectClicked);
-    connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &NaviLiveLogsScopes::onMoveBottomClicked);
     connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &NaviLiveLogsScopes::onSaveSettingsClicked);
     connect(ctrlSettings()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onOptionsClicked);
-    connect(mMainWindow         , &MdiMainWindow::signalMdiWindowCreated, this  , &NaviLiveLogsScopes::onWindowCreated);
     connect(mMainWindow         , &MdiMainWindow::signalNewLiveLog      , this  , [this](){onConnectClicked(true);});
 
     setupLogSignals(true);
@@ -361,16 +334,6 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
     enableButtons(QModelIndex());
 }
 
-void NaviLiveLogsScopes::onMoveBottomClicked()
-{
-    Q_ASSERT(mMainWindow != nullptr);
-    MdiChild* wndActive = mMainWindow->getActiveWindow();
-    if ((wndActive != nullptr) && wndActive->isLogViewerWindow())
-    {
-        qobject_cast<LiveLogViewer*>(wndActive)->moveToBottom(true);
-    }
-}
-
 void NaviLiveLogsScopes::onSaveSettingsClicked(bool checked)
 {
     if (mScopesModel != nullptr)
@@ -481,7 +444,3 @@ void NaviLiveLogsScopes::optionClosed(bool OKpressed)
     }
 }
 
-void NaviLiveLogsScopes::onWindowCreated(MdiChild* mdiChild)
-{
-    ctrlMoveBottom()->setEnabled((mdiChild != nullptr) && (mdiChild->isLogViewerWindow()));
-}

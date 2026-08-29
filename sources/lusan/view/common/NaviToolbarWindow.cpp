@@ -61,11 +61,15 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
 
     // The row is as tall as its buttons and no taller: one pixel of air above and below.
     mToolLayout->setContentsMargins(2, NAVI_TOOL_AIR, 2, NAVI_TOOL_AIR);
-    mToolLayout->setSpacing(2);
+    // One pixel between entries. Each button already carries its own padding, so the gap
+    // only has to keep two hover marks apart, and every pixel saved is room for a tool.
+    mToolLayout->setSpacing(NAVI_TOOL_GAP);
 
-    const QSize chevron(NAVI_TOOL_ICON, NAVI_TOOL_ICON);
-    mToolOverflow->setIcon(NELusanCommon::iconToolbarMore(chevron));
-    mToolOverflow->setIconSize(chevron);
+    // The overflow mark is the one icon of the set that fills its button instead of sitting
+    // inset in a square, so that it is seen at all.
+    const QSize more(NaviToolbarWindow::_overflowWidth(), NaviToolbarWindow::toolButtonHeight());
+    mToolOverflow->setIcon(NELusanCommon::iconToolbarMore(more));
+    mToolOverflow->setIconSize(more);
     mToolOverflow->setAutoRaise(true);
     mToolOverflow->setToolTip(tr("More tools"));
     mToolOverflow->setStatusTip(tr("Show the tools that do not fit the row."));
@@ -109,14 +113,10 @@ int NaviToolbarWindow::toolButtonWidth(void)
 
 int NaviToolbarWindow::_overflowWidth(void)
 {
-    // The mark stands upright inside its icon, which already holds it clear of the edges,
-    // so the button is the icon and needs no padding of its own.
-    return NAVI_TOOL_ICON;
-}
-
-void NaviToolbarWindow::setToolOverflowIcon(const QIcon& icon)
-{
-    mToolOverflow->setIcon(icon);
+    // The mark stands upright, so its ink is a few pixels across where a tool icon is
+    // sixteen. Half a tool button holds it with room on both sides, and the row keeps the
+    // rest for the tools.
+    return (NaviToolbarWindow::toolButtonWidth() + 1) / 2;
 }
 
 int NaviToolbarWindow::toolRowHeight(void)
@@ -144,7 +144,7 @@ QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& 
     // weight instead of whatever the active style would pick.
     button->setIconSize(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON));
     _insertTool(button);
-    mToolItems.append(sToolItem{ button, ToolRankNormal, false });
+    mToolItems.append(sToolItem{ button, false, false });
     return button;
 }
 
@@ -154,7 +154,7 @@ void NaviToolbarWindow::addToolSeparator(void)
     line->setFrameShape(QFrame::Shape::VLine);
     line->setFrameShadow(QFrame::Shadow::Sunken);
     _insertTool(line);
-    mToolItems.append(sToolItem{ line, ToolRankFixed, true });
+    mToolItems.append(sToolItem{ line, false, true });
 }
 
 void NaviToolbarWindow::addToolWidget(QWidget* widget)
@@ -163,17 +163,17 @@ void NaviToolbarWindow::addToolWidget(QWidget* widget)
     {
         widget->setParent(mToolbar);
         _insertTool(widget);
-        mToolItems.append(sToolItem{ widget, ToolRankFixed, false });
+        mToolItems.append(sToolItem{ widget, true, false });
     }
 }
 
-void NaviToolbarWindow::setToolRank(QWidget* widget, int rank)
+void NaviToolbarWindow::setToolFixed(QWidget* widget)
 {
     for (sToolItem& item : mToolItems)
     {
         if (item.widget == widget)
         {
-            item.rank = rank;
+            item.fixed = true;
             break;
         }
     }
@@ -205,7 +205,11 @@ void NaviToolbarWindow::capToolButtonIconSizes(int iconExtent /*= NAVI_TOOL_ICON
     const QList<QToolButton*> buttons = findChildren<QToolButton*>();
     for (QToolButton* button : buttons)
     {
-        button->setIconSize(extent);
+        // The overflow button is the one exception: its mark fills the whole button.
+        if (button != mToolOverflow)
+        {
+            button->setIconSize(extent);
+        }
     }
 }
 
@@ -247,38 +251,32 @@ void NaviToolbarWindow::updateToolOverflow(void)
         return;
     }
 
-    int budget{ available - NaviToolbarWindow::_overflowWidth() - spacing };
-    QList<int> order;
+    // What stays is always the front of the row, never a picking of it. An entry that is
+    // still shown is shown where it has always been, so the order the user learned is the
+    // order they keep seeing at every width.
+    int keep{ 0 };
     for (int pos = 0; pos < mToolItems.size(); ++pos)
     {
-        order.append(pos);
+        if (mToolItems[pos].fixed)
+        {
+            keep = pos + 1;
+        }
     }
 
-    // The lowest rank gives up its place first; equal ranks give up from the right.
-    std::stable_sort(order.begin(), order.end(), [this](int left, int right) {
-        return mToolItems[left].rank != mToolItems[right].rank
-                ? mToolItems[left].rank < mToolItems[right].rank
-                : left > right;
-    });
-
-    QSet<int> dropped;
-    for (int pos : order)
+    const int budget{ available - NaviToolbarWindow::_overflowWidth() - spacing };
+    int shown{ static_cast<int>(mToolItems.size()) };
+    while ((needed > budget) && (shown > keep))
     {
-        if (needed <= budget)
-            break;
-        else if (mToolItems[pos].rank >= ToolRankFixed)
-            continue;
-
-        needed -= mToolItems[pos].widget->sizeHint().width() + spacing;
-        dropped.insert(pos);
+        --shown;
+        needed -= mToolItems[shown].widget->sizeHint().width() + spacing;
     }
 
     for (int pos = 0; pos < mToolItems.size(); ++pos)
     {
-        mToolItems[pos].widget->setVisible(dropped.contains(pos) == false);
+        mToolItems[pos].widget->setVisible(pos < shown);
     }
 
-    mToolOverflow->setVisible(dropped.isEmpty() == false);
+    mToolOverflow->setVisible(shown < mToolItems.size());
     _hideDanglingSeparators();
 }
 

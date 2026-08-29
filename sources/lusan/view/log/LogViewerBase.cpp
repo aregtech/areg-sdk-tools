@@ -20,6 +20,8 @@
 #include "lusan/view/log/LogViewerBase.hpp"
 #include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/log/LogEmptyState.hpp"
+#include "lusan/view/log/LogSessionBar.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/view/log/ScopeOutputViewer.hpp"
 
@@ -40,8 +42,11 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPoint>
+#include <QScrollBar>
 #include <QShortcut>
 #include <QTableView>
+#include <QTimer>
+#include <QToolButton>
 
 #include <algorithm>
 
@@ -64,6 +69,12 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mFoundPos ()
     , mHighlight(nullptr)
     , mHighlightColumn(-1)
+    , mSessionBar(nullptr)
+    , mCountTimer(nullptr)
+    , mEmptyState(nullptr)
+    , mSkew     ( )
+    , mSkewShown(false)
+    , mFollowScroll(false)
 {
 }
 
@@ -136,16 +147,26 @@ void LogViewerBase::keyPressEvent(QKeyEvent* event)
 
 void LogViewerBase::setupWidgets()
 {
-    Q_ASSERT((mLogTable != nullptr) && (mLogSearch != nullptr) && (mLogModel != nullptr));
-    Q_ASSERT((mFilter == nullptr) && (mHeader == nullptr));
+    Q_ASSERT(mLogModel != nullptr);
+    Q_ASSERT((mLogTable == nullptr) && (mFilter == nullptr) && (mHeader == nullptr));
 
-    QList<SearchLineEdit::eToolButton> tools;
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonWildCard);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
-    mLogSearch->initialize(tools, QSize(20, 20));
+    const LogSessionBar::eSessionMode barMode
+        { getMdiWindowType() == MdiChild::eMdiWindow::MdiLogViewer
+        ? LogSessionBar::eSessionMode::ModeLive
+        : LogSessionBar::eSessionMode::ModeOffline };
+
+    mSessionBar = new LogSessionBar(barMode, mMdiWindow);
+    mLogTable   = new QTableView(mMdiWindow);
+    mLogSearch  = mSessionBar->ctrlSearch();
+    mEmptyState = new LogEmptyState(mLogTable->viewport());
+    mLogTable->viewport()->installEventFilter(this);
+    connect(mEmptyState, &LogEmptyState::signalClearFilters, this, [this]() { resetFilters(); });
+
+    QVBoxLayout* stack = new QVBoxLayout(mMdiWindow);
+    stack->setContentsMargins(0, 0, 0, 0);
+    stack->setSpacing(0);
+    stack->addWidget(mSessionBar);
+    stack->addWidget(mLogTable, 1);
 
     mFilter = new LogViewerFilter(mLogModel);
     mHeader = new LogTableHeader(mLogTable, mLogModel);
@@ -179,8 +200,13 @@ void LogViewerBase::setupWidgets()
     fixed.setPointSizeF(font().pointSizeF());
     mLogTable->setFont(fixed);
 
-    // Set the layout
+    mLogTable->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    mLogTable->setWordWrap(false);
+    mLogTable->setHorizontalScrollMode(QAbstractItemView::ScrollMode::ScrollPerItem);
+
     QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
     layout->addWidget(mMdiWindow);
     setLayout(layout);
     setAttribute(Qt::WA_DeleteOnClose);
@@ -242,6 +268,139 @@ void LogViewerBase::setupWidgets()
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
     connect(shortcutCopyMsg, &QShortcut::activated                      , this, &LogViewerBase::onCopyMessage);
     connect(shortcutCopyRow, &QShortcut::activated                      , this, &LogViewerBase::onCopyRow);
+
+    connect(mSessionBar->ctrlMoveTop()   , &QToolButton::clicked, this, [this]() {
+                mSessionBar->setFollowing(false);
+                moveToTop(false);
+            });
+    connect(mSessionBar->ctrlMoveBottom(), &QToolButton::clicked, this, [this](bool checked) {
+                // Unchecking means "stop holding the end", so the table stays where it is.
+                if (checked || (mSessionBar->ctrlMoveBottom()->isCheckable() == false))
+                {
+                    scrollFollowing();
+                }
+            });
+
+    connect(mLogTable->verticalScrollBar(), &QAbstractSlider::valueChanged, this, [this](int value) {
+                QScrollBar* scroll{ mLogTable->verticalScrollBar() };
+                if ((mFollowScroll == false) && (value < scroll->maximum()))
+                {
+                    mSessionBar->setFollowing(false);
+                }
+            });
+
+    mCountTimer = new QTimer(this);
+    mCountTimer->setSingleShot(true);
+    mCountTimer->setInterval(LogViewerBase::COUNTER_DELAY_MS);
+    connect(mCountTimer, &QTimer::timeout, this, &LogViewerBase::_updateCounters);
+
+    const auto countLater = [this]() { if (mCountTimer->isActive() == false) mCountTimer->start(); };
+    connect(mFilter  , &QAbstractItemModel::rowsInserted , this, countLater);
+    connect(mFilter  , &QAbstractItemModel::rowsRemoved  , this, countLater);
+    connect(mFilter  , &QAbstractItemModel::modelReset   , this, countLater);
+    connect(mFilter  , &QAbstractItemModel::layoutChanged, this, countLater);
+    connect(mLogModel, &QAbstractItemModel::rowsInserted , this, countLater);
+    connect(mLogModel, &QAbstractItemModel::rowsRemoved  , this, countLater);
+    connect(mLogModel, &QAbstractItemModel::modelReset   , this, countLater);
+
+    connect(mLogModel, &QAbstractItemModel::rowsInserted , this, &LogViewerBase::onSourceRowsInserted);
+    connect(mLogModel, &QAbstractItemModel::modelReset   , this, [this]() {
+                mSkew.reset();
+                mSkewShown = false;
+                mSessionBar->hideNotice();
+            });
+
+    _updateCounters();
+}
+
+bool LogViewerBase::eventFilter(QObject* watched, QEvent* event)
+{
+    if ((mEmptyState != nullptr) && (mLogTable != nullptr) && (watched == mLogTable->viewport())
+        && (event->type() == QEvent::Type::Resize))
+    {
+        mEmptyState->setGeometry(mLogTable->viewport()->rect());
+    }
+
+    return MdiChild::eventFilter(watched, event);
+}
+
+bool LogViewerBase::isSourceReady() const
+{
+    return isDatabaseOpen();
+}
+
+void LogViewerBase::scrollFollowing()
+{
+    Q_ASSERT(mLogTable != nullptr);
+    mFollowScroll = true;
+    mLogTable->scrollToBottom();
+    mFollowScroll = false;
+}
+
+void LogViewerBase::_updateCounters()
+{
+    if ((mSessionBar == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr))
+        return;
+
+    mSessionBar->setCounters(mFilter->rowCount(QModelIndex()), mLogModel->rowCount(QModelIndex()));
+    _updateEmptyState();
+}
+
+void LogViewerBase::_updateEmptyState()
+{
+    if ((mEmptyState == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr))
+        return;
+
+    const int total{ mLogModel->rowCount(QModelIndex()) };
+    const int shown{ mFilter->rowCount(QModelIndex()) };
+    const bool live { getMdiWindowType() == MdiChild::eMdiWindow::MdiLogViewer };
+
+    LogEmptyState::eEmptyReason reason{ LogEmptyState::eEmptyReason::ReasonNone };
+    if (shown == 0)
+    {
+        if (total > 0)
+            reason = LogEmptyState::eEmptyReason::ReasonFiltered;
+        else if (isSourceReady() == false)
+            reason = live ? LogEmptyState::eEmptyReason::ReasonNotConnected
+                          : LogEmptyState::eEmptyReason::ReasonNoArchive;
+        else
+            reason = live ? LogEmptyState::eEmptyReason::ReasonNoLiveLogs
+                          : LogEmptyState::eEmptyReason::ReasonEmptyArchive;
+    }
+
+    mEmptyState->setGeometry(mLogTable->viewport()->rect());
+    mEmptyState->setReason(reason, total - shown, mLogModel->hasRefusedScopes(), mFilter->hasColumnFilters());
+}
+
+QString LogViewerBase::_formatOffset(qint64 offsetUs)
+{
+    if (offsetUs >= 1000000)
+        return tr("%1 s").arg(QString::number(offsetUs / 1000000.0, 'f', 1));
+    else
+        return tr("%1 ms").arg(offsetUs / 1000);
+}
+
+void LogViewerBase::onSourceRowsInserted(const QModelIndex& parent, int first, int last)
+{
+    Q_UNUSED(parent);
+    Q_ASSERT(mLogModel != nullptr);
+
+    for (int row = first; row <= last; ++row)
+    {
+        const areg::LogEntry* entry{ mLogModel->getLogData(row) };
+        if (entry != nullptr)
+        {
+            mSkew.feed(*entry);
+        }
+    }
+
+    if (mSkew.hasSkew() && (mSkewShown == false))
+    {
+        mSkewShown = true;
+        const LogClockSkew::sSkewReport& report{ mSkew.report() };
+        mSessionBar->showNotice(tr("The clocks disagree: %1 stamps its logs %2 ahead of the collector, so its rows sort into an order that never happened.")
+                                .arg(report.source, LogViewerBase::_formatOffset(report.offsetUs)));
+    }
 }
 
 void LogViewerBase::onWindowClosing(bool isActive)
@@ -652,6 +811,8 @@ inline void LogViewerBase::_clearResources()
     mLogSearch = nullptr;
     mHighlight = nullptr;
     mHighlightColumn = -1;
+    mSessionBar = nullptr;
+    mEmptyState = nullptr;
 
     delete mFilter;
     mFilter = nullptr;

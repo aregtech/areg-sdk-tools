@@ -135,11 +135,6 @@ protected:
     void addSpecificTools(void) override;
 
     /**
-     * \brief   Adds the move to bottom and move to top tool buttons.
-     **/
-    void addMoveTools(void) override;
-
-    /**
      * \brief   Returns true, the offline explorer offers to select all priorities at once.
      **/
     bool hasSelectAllPrioMenu(void) const override;
@@ -154,12 +149,6 @@ private:
 
     //!< Returns the control object to refresh the current database.
     inline QToolButton* ctrlRefreshDatabase(void) const;
-
-    //!< Returns the control object to move to the top of log window.
-    inline QToolButton* ctrlMoveTop(void) const;
-
-    //!< Returns the control object to move to the bottom of log window.
-    inline QToolButton* ctrlMoveBottom(void) const;
 
     /**
      * \brief   Initializes the signals.
@@ -217,8 +206,6 @@ private:
     QToolButton*    mToolDbOpen;    //!< The tool button to open a log database file.
     QToolButton*    mToolDbClose;   //!< The tool button to close the opened log database file.
     QToolButton*    mToolRefresh;   //!< The tool button to reload the opened log database file.
-    QToolButton*    mToolMoveBottom;//!< The tool button to move to the bottom of the log window.
-    QToolButton*    mToolMoveTop;   //!< The tool button to move to the top of the log window.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -238,16 +225,6 @@ inline QToolButton* NaviOfflineLogsScopes::ctrlCloseDatabase(void) const
 inline QToolButton* NaviOfflineLogsScopes::ctrlRefreshDatabase(void) const
 {
     return mToolRefresh;
-}
-
-inline QToolButton* NaviOfflineLogsScopes::ctrlMoveTop(void) const
-{
-    return mToolMoveTop;
-}
-
-inline QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom(void) const
-{
-    return mToolMoveBottom;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP

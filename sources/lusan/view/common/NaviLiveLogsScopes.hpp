@@ -172,11 +172,6 @@ protected:
     void addSpecificTools(void) override;
 
     /**
-     * \brief   Adds the move to bottom tool button.
-     **/
-    void addMoveTools(void) override;
-
-    /**
      * \brief   Returns true, the live explorer can save priorities on the logging targets.
      **/
     bool hasSavePrioMenu(void) const override;
@@ -196,12 +191,6 @@ private:
 
     //!< Returns the control object to save current settings.
     inline QToolButton* ctrlSaveSettings(void) const;
-
-    //!< Returns the control object to move to the bottom of log window.
-    inline QToolButton* ctrlMoveBottom(void) const;
-
-    //!< Returns the control object to move to the top of log window.
-    inline QToolButton* ctrlMoveTop(void) const;
 
     /**
      * \brief   Initializes the widgets.
@@ -279,11 +268,6 @@ private slots:
      **/
     void onConnectClicked(bool checked);
 
-    /**
-     * \brief   The slot is triggered when the move to bottom tool button is clicked.
-     **/
-    void onMoveBottomClicked();
-
     // Slot for saving log priority changes on the target configuration.
     void onSaveSettingsClicked(bool checked);
 
@@ -316,12 +300,6 @@ private slots:
      **/
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
-    /**
-     * \brief   The slot is triggered when the application is about to exit.
-     * \param   mdiChild    The MDI child window that is about to be closed.
-     **/
-    void onWindowCreated(MdiChild* mdiChild);
-    
 //////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
@@ -336,8 +314,6 @@ private:
     QToolButton*            mToolConnect;   //!< The tool button to connect or disconnect the log collector.
     QToolButton*            mToolSettings;  //!< The tool button to open the logging options.
     QToolButton*            mToolSave;      //!< The tool button to save the log settings.
-    QToolButton*            mToolMoveBottom;//!< The tool button to move to the bottom of the log window.
-    QToolButton*            mToolMoveTop;   //!< The tool button to move to the top of the log window.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
@@ -366,15 +342,6 @@ inline QToolButton* NaviLiveLogsScopes::ctrlSaveSettings(void) const
     return mToolSave;
 }
 
-inline QToolButton* NaviLiveLogsScopes::ctrlMoveBottom(void) const
-{
-    return mToolMoveBottom;
-}
-
-inline QToolButton* NaviLiveLogsScopes::ctrlMoveTop(void) const
-{
-    return mToolMoveTop;
-}
 inline bool NaviLiveLogsScopes::isConfigured() const
 {
     switch (mState)

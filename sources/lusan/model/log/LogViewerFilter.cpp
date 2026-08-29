@@ -137,6 +137,23 @@ void LogViewerFilter::clearFilters()
     invalidateRowFilter();
 }
 
+bool LogViewerFilter::hasColumnFilters(void) const
+{
+    for (auto it = mComboFilters.cbegin(); it != mComboFilters.cend(); ++it)
+    {
+        if (it.value().isEmpty() == false)
+            return true;
+    }
+
+    for (auto it = mTextFilters.cbegin(); it != mTextFilters.cend(); ++it)
+    {
+        if (it.value().isEmpty() == false)
+            return true;
+    }
+
+    return false;
+}
+
 bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
     LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());

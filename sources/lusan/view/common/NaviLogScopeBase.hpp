@@ -267,8 +267,8 @@ protected:
     /**
      * \brief   Creates the tool button row and the scope tree of the explorer. Call it from
      *          the constructor of the derived class, before the scope model is set.
-     * \note    It calls addSpecificTools() and addMoveTools(), so the derived object must be
-     *          constructed before the call.
+     * \note    It calls addSpecificTools(), so the derived object must be constructed before
+     *          the call.
      **/
     void setupScopeToolbar(void);
 
@@ -349,11 +349,6 @@ protected:
      *          the find buttons.
      **/
     virtual void addSpecificTools(void);
-
-    /**
-     * \brief   Adds the tool buttons of the derived explorer placed at the end of the row.
-     **/
-    virtual void addMoveTools(void);
 
     /**
      * \brief   Returns true if the context menu offers the entries to save the priorities on

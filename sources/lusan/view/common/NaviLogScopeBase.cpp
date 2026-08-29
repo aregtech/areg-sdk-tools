@@ -126,16 +126,6 @@ void NaviLogScopeBase::setupScopeToolbar(void)
                                  , true);
     mToolCollapse->setStyleSheet(NELusanCommon::getStyleToolbutton());
 
-    addMoveTools();
-
-    // A narrow dock gives the row up from the least used entry. The priority ladder never
-    // moves: without it the panel is a tree with a connect button.
-    setToolRank(mToolCollapse, 10);
-    setToolRank(mToolShowAll , 25);
-    setToolRank(mToolHide    , 30);
-    setToolRank(mToolShowOnly, 40);
-    setToolRank(mToolFind    , 50);
-
     setupTreeView(QSize(NaviLogScopeBase::ScopeIconExtent, NaviLogScopeBase::ScopeIconExtent));
     ctrlTable()->setRootIsDecorated(false);
     ctrlTable()->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
@@ -570,10 +560,6 @@ void NaviLogScopeBase::setupScopeControls(void)
 }
 
 void NaviLogScopeBase::addSpecificTools(void)
-{
-}
-
-void NaviLogScopeBase::addMoveTools(void)
 {
 }
 

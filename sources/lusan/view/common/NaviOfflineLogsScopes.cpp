@@ -39,8 +39,6 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     , mToolDbOpen       (nullptr)
     , mToolDbClose      (nullptr)
     , mToolRefresh      (nullptr)
-    , mToolMoveBottom   (nullptr)
-    , mToolMoveTop      (nullptr)
 {
     setupScopeToolbar();
     setupModel(new OfflineScopesModel(this));
@@ -70,27 +68,8 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
                                 , tr("Refresh and reset filters")
                                 , tr("Reloads the scopes and clears every filter."));
 
-    // Open is what the panel is for, so it stays whatever the width is. The other two are
-    // used once an archive is loaded and give up the row early.
-    setToolRank(mToolDbOpen , NaviToolbarWindow::ToolRankFixed);
-    setToolRank(mToolDbClose, 20);
-    setToolRank(mToolRefresh, 22);
-}
-
-void NaviOfflineLogsScopes::addMoveTools(void)
-{
-    mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
-                                   , tr("Move to bottom")
-                                   , tr("Show the last log of the archive."));
-    mToolMoveBottom->setWhatsThis(tr("Moves the log view to the last row of the archive."));
-
-    mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
-                                , tr("Move to top")
-                                , tr("Show the first log of the archive."));
-    mToolMoveTop->setWhatsThis(tr("Moves the log view to the first row, where the logging started."));
-
-    setToolRank(mToolMoveBottom, 15);
-    setToolRank(mToolMoveTop   , 12);
+    // Open is what the panel is for, so it stays whatever the width is.
+    setToolFixed(mToolDbOpen);
 }
 
 bool NaviOfflineLogsScopes::hasSelectAllPrioMenu(void) const
