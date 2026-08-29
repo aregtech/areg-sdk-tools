@@ -293,6 +293,14 @@ void LogViewerBase::setupWidgets()
                 _resetSearchResult();
             });
 
+    connect(mSessionBar, &LogSessionBar::signalViewPriorityChanged, this, [this](uint16_t mask) {
+                mFilter->setViewPriority(mask);
+                _resetSearchResult();
+                _updateChips();
+                _updateCounters();
+                _updateEmptyState();
+            });
+
     connect(mSessionBar, &LogSessionBar::signalNoticeAction, this, [this](LogSessionBar::eNotice which) {
                 if (which == LogSessionBar::eNotice::NoticeRevealed)
                 {
@@ -430,7 +438,7 @@ void LogViewerBase::_updateChips()
     {
         LogFilterChips::sChip chip;
         chip.kind  = LogFilterChips::eChipKind::ChipPriority;
-        chip.label = tr("priority: %1").arg(mSessionBar->priorityFilterName());
+        chip.label = mSessionBar->priorityFilterName();
         chip.hint  = tr("Only the rows of these priorities are drawn. The target keeps producing every one of them.");
         chips.append(chip);
     }

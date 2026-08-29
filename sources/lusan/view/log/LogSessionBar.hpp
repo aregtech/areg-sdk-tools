@@ -33,6 +33,7 @@
  * Dependencies
  ************************************************************************/
 class LogFilterChips;
+class LogPriorityBar;
 class SearchLineEdit;
 
 class QHBoxLayout;
@@ -135,6 +136,21 @@ public:
     //!< Returns the row that names the filters the window has on.
     inline LogFilterChips* ctrlChips(void) const;
 
+    //!< Returns the ladder that narrows the priorities the table draws.
+    inline LogPriorityBar* ctrlPriority(void) const;
+
+    /**
+     * \brief   Returns the priorities the table draws, as a bit mask of areg::LogPriority
+     *          values. Zero means every priority is drawn.
+     **/
+    uint16_t viewPriorityMask(void) const;
+
+    /**
+     * \brief   Returns the words that name the priority filter, as a chip shows them, for
+     *          example "at least Warning". Empty when no priority is filtered out.
+     **/
+    QString priorityFilterName(void) const;
+
     //!< Returns the button that moves the table to its first row.
     inline QToolButton* ctrlMoveTop(void) const;
 
@@ -200,6 +216,12 @@ public:
     void setDatabasePath(const QString& path);
 
     /**
+     * \brief   Draws every priority again and emits the change. The ladder returns to its
+     *          leading cell and the scope lines come back.
+     **/
+    void resetPriorityFilter(void);
+
+    /**
      * \brief   Draws the time the archive spans. Offline mode only.
      * \param   firstUs The timestamp of the first log, in microseconds since the epoch.
      * \param   lastUs  The timestamp of the last log, in microseconds since the epoch.
@@ -243,6 +265,13 @@ signals:
      * \param   which   The line the link belongs to.
      **/
     void signalNoticeAction(LogSessionBar::eNotice which);
+
+    /**
+     * \brief   Emitted when the reader changes the priorities the table draws.
+     * \param   mask    The priorities to draw, as a bit mask of areg::LogPriority values.
+     *                  Zero lets every priority through.
+     **/
+    void signalViewPriorityChanged(uint16_t mask);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -322,6 +351,7 @@ private:
     QLabel*             mCounters;      //!< How many rows are shown out of how many there are.
     QToolButton*        mMoveTop;       //!< Move the table to its first row.
     QToolButton*        mMoveBottom;    //!< Move the table to its last row, and keep it there while checked.
+    LogPriorityBar*     mPriority;      //!< The ladder that narrows the priorities the table draws.
     LogFilterChips*     mChips;         //!< The row that names the filters the window has on.
     QWidget*            mNoticeRow;     //!< The row that carries the notice lines.
     QWidget*            mNoticeLine[static_cast<int>(LogSessionBar::eNotice::NoticeCount)];  //!< One line per notice.
@@ -367,6 +397,11 @@ inline QToolButton* LogSessionBar::ctrlSearchScope(void) const
 inline LogFilterChips* LogSessionBar::ctrlChips(void) const
 {
     return mChips;
+}
+
+inline LogPriorityBar* LogSessionBar::ctrlPriority(void) const
+{
+    return mPriority;
 }
 
 inline QToolButton* LogSessionBar::ctrlMoveTop(void) const

@@ -57,10 +57,20 @@ namespace
     {
         return NELogPalette::withOpacity(hue, NELogPalette::eLogOpacity::OpacityTint);
     }
+
+    //! The ground of a bar that narrows a view. It sits halfway between the input ground of a
+    //! bar that changes the target and the toolbar behind it, so the two never read alike.
+    QColor viewGround(const QColor& base, const QColor& window)
+    {
+        return QColor( (base.red()   + window.red())   / 2
+                     , (base.green() + window.green()) / 2
+                     , (base.blue()  + window.blue())  / 2 );
+    }
 }
 
 LogPriorityBar::LogPriorityBar(QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
+    , mRole         (LogPriorityBar::eBarRole::RoleTarget)
     , mLevelLow     (LogPriorityBar::eLogLevel::LevelOff)
     , mLevelHigh    (LogPriorityBar::eLogLevel::LevelOff)
     , mScopesSome   (false)
@@ -93,6 +103,20 @@ void LogPriorityBar::setCellWidth(int cellWidth)
         updateGeometry();
         update();
     }
+}
+
+void LogPriorityBar::setRole(LogPriorityBar::eBarRole role)
+{
+    if (mRole == role)
+        return;
+
+    mRole = role;
+    if (mRole == LogPriorityBar::eBarRole::RoleView)
+    {
+        setToolTip(tr("Draws only the rows of these priorities. The target keeps producing every one of them."));
+    }
+
+    update();
 }
 
 void LogPriorityBar::setLevel(LogPriorityBar::eLogLevel newLevel)
@@ -210,7 +234,9 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
     painter.setRenderHint(QPainter::Antialiasing, true);
 
     const QPalette& pal{ palette() };
-    const QColor base  { pal.color(QPalette::Base) };
+    const bool   view  { mRole == LogPriorityBar::eBarRole::RoleView };
+    const QColor base  { view ? viewGround(pal.color(QPalette::Base), pal.color(QPalette::Window))
+                              : pal.color(QPalette::Base) };
     const QColor border{ pal.color(QPalette::Mid) };
     const QColor muted { pal.color(QPalette::Disabled, QPalette::WindowText) };
     const QColor text  { pal.color(isEnabled() ? QPalette::Active : QPalette::Disabled, QPalette::WindowText) };
@@ -229,8 +255,9 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
     const bool scopesAny{ (mIdle == false) && mScopesSome };
     const bool scopesAll{ (mIdle == false) && mScopesAll };
 
-    // The leading cell. It is selected, never lit: silence is not a priority, so it
-    // takes a colourless rail and no fill.
+    // The leading cell. It is selected, never lit: neither silence nor every priority is a
+    // priority, so it takes a colourless rail and no fill. A dash silences the target, a
+    // star keeps every row.
     {
         const QRect cell{ _cellRect(0) };
         if (highValue == 0)
@@ -239,7 +266,7 @@ void LogPriorityBar::paintEvent(QPaintEvent* /*event*/)
         }
 
         painter.setPen(highValue == 0 ? text : muted);
-        painter.drawText(cell, Qt::AlignCenter, QStringLiteral("-"));
+        painter.drawText(cell, Qt::AlignCenter, view ? QStringLiteral("*") : QStringLiteral("-"));
     }
 
     // The four severity cells. A cell every selected scope reaches is filled and railed.

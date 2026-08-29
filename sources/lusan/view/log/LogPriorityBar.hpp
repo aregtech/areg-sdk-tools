@@ -230,6 +230,11 @@ private:
 // LogPriorityBar inline methods
 //////////////////////////////////////////////////////////////////////////
 
+inline LogPriorityBar::eBarRole LogPriorityBar::role(void) const
+{
+    return mRole;
+}
+
 inline LogPriorityBar::eLogLevel LogPriorityBar::level(void) const
 {
     return mLevelHigh;

@@ -19,11 +19,14 @@
 
 #include "lusan/view/log/LogSessionBar.hpp"
 
+#include "areg/logging/LoggingDefs.hpp"
+
 #include "lusan/common/NELogPalette.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/NaviToolbarWindow.hpp"
 #include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
+#include "lusan/view/log/LogPriorityBar.hpp"
 
 #include <QApplication>
 #include <QClipboard>
@@ -78,6 +81,7 @@ LogSessionBar::LogSessionBar(LogSessionBar::eSessionMode mode, QWidget* parent /
     , mCounters     (nullptr)
     , mMoveTop      (nullptr)
     , mMoveBottom   (nullptr)
+    , mPriority     (nullptr)
     , mChips        (nullptr)
     , mNoticeRow    (nullptr)
     , mNoticeLine   { }
@@ -165,6 +169,32 @@ void LogSessionBar::_buildMainRow(void)
 
         mShrinkable << mSpan << mClose << mReload;
     }
+
+    _addSeparator();
+
+    // The same ladder the scope panel carries, acting on the view instead of the target. It
+    // is drawn on its own ground so the two are never taken for one another.
+    mPriority = new LogPriorityBar(owner);
+    mPriority->setRole(LogPriorityBar::eBarRole::RoleView);
+    mPriority->setFixedHeight(NaviToolbarWindow::toolButtonHeight());
+    mPriority->setCellWidth(NaviToolbarWindow::toolButtonWidth());
+    mPriority->setLevel(LogPriorityBar::eLogLevel::LevelDebug);
+    mPriority->setScopeEnabled(true);
+    mMainLayout->addWidget(mPriority);
+    connect(mPriority, &LogPriorityBar::signalLevelChanged, this, [this](LogPriorityBar::eLogLevel level) {
+            // The leading cell is the way back to every row, not a level of its own. It fills
+            // the ladder again instead of emptying it, so one look tells what the table draws.
+            if (level == LogPriorityBar::eLogLevel::LevelOff)
+            {
+                mPriority->setLevel(LogPriorityBar::eLogLevel::LevelDebug);
+                mPriority->setScopeEnabled(true);
+            }
+
+            emit signalViewPriorityChanged(viewPriorityMask());
+        });
+    connect(mPriority, &LogPriorityBar::signalScopeToggled, this, [this](bool) {
+            emit signalViewPriorityChanged(viewPriorityMask());
+        });
 
     _addSeparator();
 
@@ -403,6 +433,95 @@ void LogSessionBar::setDatabasePath(const QString& path)
 
     mFullPath = path;
     _drawIdentityHint();
+}
+
+uint16_t LogSessionBar::viewPriorityMask(void) const
+{
+    if (mPriority == nullptr)
+        return 0;
+
+    const int  level { static_cast<int>(mPriority->level()) };
+    const bool scopes{ mPriority->isScopeEnabled() };
+
+    // The leading cell, and a full ladder with the scope lines on, both draw every row. They
+    // report no mask at all, so nothing counts them as a filter.
+    if ((level == static_cast<int>(LogPriorityBar::eLogLevel::LevelOff))
+        || ((level == static_cast<int>(LogPriorityBar::eLogLevel::LevelDebug)) && scopes))
+    {
+        return 0;
+    }
+
+    uint16_t mask{ 0 };
+    if (level >= static_cast<int>(LogPriorityBar::eLogLevel::LevelError))
+    {
+        mask = static_cast<uint16_t>(mask | static_cast<uint16_t>(areg::LogPriority::PrioFatal)
+                                          | static_cast<uint16_t>(areg::LogPriority::PrioError));
+    }
+
+    if (level >= static_cast<int>(LogPriorityBar::eLogLevel::LevelWarning))
+    {
+        mask = static_cast<uint16_t>(mask | static_cast<uint16_t>(areg::LogPriority::PrioWarning));
+    }
+
+    if (level >= static_cast<int>(LogPriorityBar::eLogLevel::LevelInformation))
+    {
+        mask = static_cast<uint16_t>(mask | static_cast<uint16_t>(areg::LogPriority::PrioInfo));
+    }
+
+    if (level >= static_cast<int>(LogPriorityBar::eLogLevel::LevelDebug))
+    {
+        mask = static_cast<uint16_t>(mask | static_cast<uint16_t>(areg::LogPriority::PrioDebug));
+    }
+
+    if (scopes)
+    {
+        mask = static_cast<uint16_t>(mask | static_cast<uint16_t>(areg::LogPriority::PrioScope));
+    }
+
+    return mask;
+}
+
+QString LogSessionBar::priorityFilterName(void) const
+{
+    if (viewPriorityMask() == 0)
+        return QString();
+
+    const int level{ static_cast<int>(mPriority->level()) };
+    QString name;
+    switch (static_cast<LogPriorityBar::eLogLevel>(level))
+    {
+    case LogPriorityBar::eLogLevel::LevelError:
+        name = tr("at least Error");
+        break;
+
+    case LogPriorityBar::eLogLevel::LevelWarning:
+        name = tr("at least Warning");
+        break;
+
+    case LogPriorityBar::eLogLevel::LevelInformation:
+        name = tr("at least Information");
+        break;
+
+    default:
+        break;
+    }
+
+    if (mPriority->isScopeEnabled() == false)
+    {
+        name = name.isEmpty() ? tr("no scope lines") : tr("%1, no scope lines").arg(name);
+    }
+
+    return name;
+}
+
+void LogSessionBar::resetPriorityFilter(void)
+{
+    if ((mPriority == nullptr) || (viewPriorityMask() == 0))
+        return;
+
+    mPriority->setLevel(LogPriorityBar::eLogLevel::LevelDebug);
+    mPriority->setScopeEnabled(true);
+    emit signalViewPriorityChanged(0);
 }
 
 void LogSessionBar::_drawIdentityHint(void)
