@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Lusan icon: bring every hidden row back, a stack pulled out to the left -->
+<!-- Lusan icon: let a target send again, a module and the stream leaving it -->
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
 <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<path d="M 8.5643 7.5071 L 2.75 12 L 8.5643 16.4929"/>
-<path d="M 11.2071 4.7321 H 21.25"/>
-<path d="M 11.2071 12 H 21.25"/>
-<path d="M 11.2071 19.2679 H 21.25"/>
+<rect x="2.75" y="5.5" width="8.25" height="13" rx="1.9"/>
+<path d="M13.2 12H20.5"/>
+<path d="M17.6 8.6L21.25 12L17.6 15.4"/>
 </g>
 </svg>

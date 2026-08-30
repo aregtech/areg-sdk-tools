@@ -62,6 +62,8 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mToolConnect      (nullptr)
     , mToolSettings     (nullptr)
     , mToolSave         (nullptr)
+    , mToolTargetSend   (nullptr)
+    , mTargetSending    (true)
     , mAddress          ()
     , mPort             (areg::InvalidPort)
     , mInitLogFile      ( )
@@ -104,6 +106,15 @@ void NaviLiveLogsScopes::addSpecificTools(void)
                              , tr("Save log priorities on every connected target")
                              , tr("Writes the current log priorities into the configuration file of every connected target."));
 
+    mToolTargetSend = addToolButton( NELusanCommon::iconTargetStop(NELusanCommon::SizeBig)
+                                   , tr("Stop this target sending")
+                                   , tr("The target keeps producing its logs and drops them. Its priorities are not changed."));
+    mToolTargetSend->setEnabled(false);
+
+    connect(mToolTargetSend, &QToolButton::clicked, this, [this]() {
+        applyTargetSending(ctrlTable()->currentIndex(), mTargetSending == false);
+    });
+
     // Connect reports the state of the panel, so it stays whatever the width is.
     setToolFixed(mToolConnect);
 }
@@ -116,6 +127,29 @@ bool NaviLiveLogsScopes::hasSavePrioMenu(void) const
 bool NaviLiveLogsScopes::canSavePrio(void) const
 {
     return LogObserver::isConnected();
+}
+
+void NaviLiveLogsScopes::refreshTargetControls(const QModelIndex& selection)
+{
+    if (mToolTargetSend == nullptr)
+        return;
+
+    const bool waiting{ selection.isValid() && selection.data(LoggingScopesModelBase::RoleSourceWait).toBool() };
+    mTargetSending = (selection.isValid() == false) || (selection.data(LoggingScopesModelBase::RoleSourcePaused).toBool() == false);
+
+    mToolTargetSend->setIcon(mTargetSending ? NELusanCommon::iconTargetStop(NELusanCommon::SizeBig)
+                                            : NELusanCommon::iconTargetResume(NELusanCommon::SizeBig));
+
+    const QString text{ mTargetSending ? tr("Stop this target sending") : tr("Let this target send again") };
+    mToolTargetSend->setText(text);
+    mToolTargetSend->setToolTip(waiting
+                                 ? tr("Waiting for the target to answer.")
+                                 : mTargetSending
+                                     ? tr("The target keeps producing its logs and drops them. Its priorities are not changed.")
+                                     : tr("The target sends the logs it produces again."));
+    mToolTargetSend->setStatusTip(mToolTargetSend->toolTip());
+    mToolTargetSend->setAccessibleName(text);
+    mToolTargetSend->setEnabled(selection.isValid() && (waiting == false) && canSavePrio());
 }
 
 const QString& NaviLiveLogsScopes::getLogCollectorAddress() const

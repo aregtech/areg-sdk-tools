@@ -26,6 +26,7 @@
 #include <QList>
 #include <QMap>
 #include <QSet>
+#include <QStringList>
 
 #include "lusan/data/log/ScopeNodes.hpp"
 
@@ -69,6 +70,12 @@ public:
 
     //!< The role that carries how strongly the target mark is drawn, from 1.0 down to 0.0.
     static constexpr int    RoleTargetFade  { Qt::ItemDataRole::UserRole + 2 };
+
+    //!< The role that carries whether the target of a process is not sending the logs it produces.
+    static constexpr int    RoleSourcePaused{ Qt::ItemDataRole::UserRole + 3 };
+
+    //!< The role that carries whether a request to change the sending state waits for its answer.
+    static constexpr int    RoleSourceWait  { Qt::ItemDataRole::UserRole + 4 };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -238,6 +245,34 @@ public:
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
     virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) = 0;
+
+    /**
+     * \brief   Asks the target of the given tree entry to send the logs it produces, or to keep
+     *          producing them and drop them. The scope priorities are not touched.
+     * \param   node    Any entry of the target. An invalid index reaches every target.
+     * \param   active  True to make the target send its logs, false to make it drop them.
+     * \return  True if the request was sent.
+     * \note    The controls redraw when the answer arrives, never on the call.
+     **/
+    virtual bool setSourceState(const QModelIndex& node, bool active);
+
+    /**
+     * \brief   Asks the target of the given tree entry to read its log configuration file again,
+     *          so its scope priorities go back to what the file holds.
+     * \param   node    Any entry of the target. An invalid index reaches every target.
+     * \return  True if the request was sent.
+     **/
+    virtual bool restoreConfiguration(const QModelIndex& node);
+
+    /**
+     * \brief   Returns the names of the targets that are not sending the logs they produce.
+     **/
+    QStringList pausedTargetNames(void) const;
+
+    /**
+     * \brief   Returns the tree entry of the target with the given ID, invalid when there is none.
+     **/
+    QModelIndex targetIndex(ITEM_ID target) const;
 
     /**
      * \brief   Records what the target of the given node knows about its priorities and
@@ -434,6 +469,14 @@ protected:
      * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
      **/
     int findRoot(ITEM_ID rootId) const;
+
+    /**
+     * \brief   Holds what the collector said about the sending state of a target and redraws it.
+     * \param   target      The ID of the target.
+     * \param   active      True when the target sends the logs it produces.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void _applySourceState(ITEM_ID target, bool active, ITEM_ID byObserver);
 
     /**
      * \brief   Collects the identifiers of every scope the log window should not draw.

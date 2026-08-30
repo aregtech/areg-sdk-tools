@@ -126,6 +126,16 @@ bool LogObserver::requestSaveConfig(ITEM_ID target /*= areg::TARGET_ALL*/)
     return LogObserver::getClient().request_save_config(target);
 }
 
+bool LogObserver::requestRestoreConfig(ITEM_ID target /*= areg::TARGET_ALL*/)
+{
+    return LogObserver::getClient().request_restore_config(target);
+}
+
+bool LogObserver::requestSourceState(ITEM_ID target, areg::LogSourceState state)
+{
+    return LogObserver::getClient().request_source_state(target, state);
+}
+
 void LogObserver::saveLoggerConfig()
 {
     LogObserver::getClient().save_logger_config();
@@ -331,6 +341,8 @@ void LogObserver::startup_service_interface(areg::Component & holder)
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogRegisterScopes       , this, &LogObserver::slotLogRegisterScopes        , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogUpdateScopes         , this, &LogObserver::slotLogUpdateScopes          , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogMessage              , this, &LogObserver::slotLogMessage               , Qt::DirectConnection);
+    QObject::connect(&mLogClient, &LogCollectorClient::signalLogSourceState          , this, &LogObserver::slotLogSourceState           , Qt::DirectConnection);
+    QObject::connect(&mLogClient, &LogCollectorClient::signalLogConfigRestored       , this, &LogObserver::slotLogConfigRestored        , Qt::DirectConnection);
     
     if (mLogClient.is_initialized() == false)
     {
@@ -363,6 +375,8 @@ void LogObserver::shutdown_service_interface(Component & holder) noexcept
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogRegisterScopes        , this, &LogObserver::slotLogRegisterScopes);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogUpdateScopes          , this, &LogObserver::slotLogUpdateScopes);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogMessage               , this, &LogObserver::slotLogMessage);
+    QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogSourceState           , this, &LogObserver::slotLogSourceState);
+    QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogConfigRestored        , this, &LogObserver::slotLogConfigRestored);
 
     QString address { mLogClient.logger_ip_address().c_str() };
     uint16_t port   { mLogClient.logger_port() };
@@ -548,6 +562,26 @@ void LogObserver::process_event(const LogObserverEventData& data)
     }
     break;
 
+    case LogObserverEventData::LogObserverCommand::CMD_SourceState:
+    {
+        ITEM_ID cookie{ areg::COOKIE_ANY };
+        uint8_t state{ 0 };
+        ITEM_ID byObserver{ areg::COOKIE_ANY };
+        stream >> cookie >> state >> byObserver;
+
+        emit signalLogSourceState(cookie, state, byObserver);
+    }
+    break;
+
+    case LogObserverEventData::LogObserverCommand::CMD_ConfigRestored:
+    {
+        ITEM_ID cookie{ areg::COOKIE_ANY };
+        stream >> cookie;
+
+        emit signalLogConfigRestored(cookie);
+    }
+    break;
+
     default:
         break;
     }
@@ -643,4 +677,18 @@ void LogObserver::slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, i
 void LogObserver::slotLogMessage(const areg::MessageEnvelope& logMessage)
 {
     postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, areg::SharedBuffer(logMessage)));
+}
+
+void LogObserver::slotLogSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver)
+{
+    areg::SharedBuffer stream;
+    stream << cookie << state << byObserver;
+    postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_SourceState, stream));
+}
+
+void LogObserver::slotLogConfigRestored(ITEM_ID cookie)
+{
+    areg::SharedBuffer stream;
+    stream << cookie;
+    postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ConfigRestored, stream));
 }

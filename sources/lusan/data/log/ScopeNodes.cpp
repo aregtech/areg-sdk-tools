@@ -714,6 +714,10 @@ ScopeRoot::ScopeRoot()
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
+    , mSourceActive (true)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
@@ -727,6 +731,10 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId)
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
+    , mSourceActive (true)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
@@ -740,6 +748,10 @@ ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
+    , mSourceActive (true)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
@@ -753,6 +765,10 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString& rootName)
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
+    , mSourceActive (true)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
@@ -766,6 +782,10 @@ ScopeRoot::ScopeRoot(const ScopeRoot& src)
     , mTargetState( src.mTargetState )
     , mTargetAge  ( src.mTargetAge )
     , mTargetFade ( src.mTargetFade )
+    , mSourceActive ( src.mSourceActive )
+    , mSourceWaiting( src.mSourceWaiting )
+    , mSourceAge    ( src.mSourceAge )
+    , mPausedBy     ( src.mPausedBy )
 {
 }
 
@@ -779,6 +799,10 @@ ScopeRoot::ScopeRoot(ScopeRoot&& src) noexcept
     , mTargetState( src.mTargetState )
     , mTargetAge  ( src.mTargetAge )
     , mTargetFade ( src.mTargetFade )
+    , mSourceActive ( src.mSourceActive )
+    , mSourceWaiting( src.mSourceWaiting )
+    , mSourceAge    ( src.mSourceAge )
+    , mPausedBy     ( src.mPausedBy )
 {
 }
 
@@ -793,6 +817,10 @@ ScopeRoot& ScopeRoot::operator = (const ScopeRoot& src)
     mTargetState = src.mTargetState;
     mTargetAge = src.mTargetAge;
     mTargetFade = src.mTargetFade;
+    mSourceActive = src.mSourceActive;
+    mSourceWaiting = src.mSourceWaiting;
+    mSourceAge = src.mSourceAge;
+    mPausedBy = src.mPausedBy;
     return (*this);
 }
 
@@ -807,6 +835,10 @@ ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
     mTargetState = src.mTargetState;
     mTargetAge = src.mTargetAge;
     mTargetFade = src.mTargetFade;
+    mSourceActive = src.mSourceActive;
+    mSourceWaiting = src.mSourceWaiting;
+    mSourceAge = src.mSourceAge;
+    mPausedBy = src.mPausedBy;
     return (*this);
 }
 
@@ -834,29 +866,57 @@ void ScopeRoot::setTargetState(ScopeRoot::eTargetState state)
     mTargetFade = (state == ScopeRoot::eTargetState::TargetApplied) ? 0.0 : 1.0;
 }
 
+void ScopeRoot::markSourceRequest(void)
+{
+    mSourceWaiting = true;
+    mSourceAge = 0;
+}
+
+void ScopeRoot::setSourceState(bool active, ITEM_ID byObserver)
+{
+    mSourceActive = active;
+    mSourceWaiting = false;
+    mSourceAge = 0;
+    mPausedBy = active ? areg::COOKIE_ANY : byObserver;
+}
+
 bool ScopeRoot::ageTargetState(int elapsedMs)
 {
-    if (isTargetAgeing() == false)
-        return false;
+    bool changed{ false };
 
-    mTargetAge += elapsedMs;
+    if (mSourceWaiting)
+    {
+        mSourceAge += elapsedMs;
+        if (mSourceAge >= ScopeRoot::TargetWaitMs)
+        {
+            mSourceWaiting = false;
+            mSourceAge = 0;
+            changed = true;
+        }
+    }
 
     if (mTargetState == ScopeRoot::eTargetState::TargetSent)
     {
-        if (mTargetAge < ScopeRoot::TargetWaitMs)
-            return false;
-
-        setTargetState(ScopeRoot::eTargetState::TargetPending);
-        return true;
+        mTargetAge += elapsedMs;
+        if (mTargetAge >= ScopeRoot::TargetWaitMs)
+        {
+            setTargetState(ScopeRoot::eTargetState::TargetPending);
+            changed = true;
+        }
     }
-
-    mTargetFade = 1.0 - (static_cast<qreal>(mTargetAge) / static_cast<qreal>(ScopeRoot::TargetFadeMs));
-    if (mTargetFade <= 0.0)
+    else if (mTargetState == ScopeRoot::eTargetState::TargetSaved)
     {
-        setTargetState(ScopeRoot::eTargetState::TargetApplied);
+        mTargetAge += elapsedMs;
+        mTargetFade = 1.0 - (static_cast<qreal>(mTargetAge) / static_cast<qreal>(ScopeRoot::TargetFadeMs));
+        if (mTargetFade <= 0.0)
+        {
+            setTargetState(ScopeRoot::eTargetState::TargetApplied);
+        }
+
+        changed = true;
     }
 
-    return true;
+    return changed;
 }
 
 void ScopeRoot::savePriorities(void)

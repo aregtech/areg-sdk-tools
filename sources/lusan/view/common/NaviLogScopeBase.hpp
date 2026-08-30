@@ -100,6 +100,11 @@ protected:
         , MenuCollapseAll       //!< Collapse all nodes
         , MenuSavePrioTarget    //!< Save priority settings of the selected target
         , MenuSavePrioAll       //!< Save priority settings of all targets
+        , MenuRestorePrioTarget //!< Make the selected target read its configuration file again
+        , MenuRestorePrioAll    //!< Make every target read its configuration file again
+        , MenuTargetStop        //!< Stop the selected target sending the logs it produces
+        , MenuTargetResume      //!< Let the selected target send its logs again
+        , MenuTargetResumeAll   //!< Let every stopped target send its logs again
         , MenuCopyScopePath     //!< Copy the full path of the clicked node
     };
 
@@ -352,6 +357,20 @@ protected:
     void refreshSafeguards(void);
 
     /**
+     * \brief   Redraws the controls that act on the target of the given tree entry.
+     * \param   selection   The current tree entry, invalid when there is none.
+     **/
+    virtual void refreshTargetControls(const QModelIndex& selection);
+
+    /**
+     * \brief   Asks the target of the given tree entry to send its logs or to drop them.
+     *          A stop is confirmed first, naming the target.
+     * \param   node    Any entry of the target.
+     * \param   active  True to make the target send its logs, false to make it drop them.
+     **/
+    void applyTargetSending(const QModelIndex& node, bool active);
+
+    /**
      * \brief   Closes the find row when Escape is pressed inside its box.
      **/
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -527,6 +546,8 @@ private:
     QWidget*                mGuardBar;      //!< The row that names what is standing, hidden when nothing is
     QWidget*                mRaiseRow;      //!< The line about the raises that go back on their own
     QLabel*                 mRaiseText;     //!< How many raises go back on their own
+    QWidget*                mStopRow;       //!< The line about the targets that are not sending
+    QLabel*                 mStopText;      //!< Which targets are not sending
     bool                    mTempRaise;     //!< True while a raise is meant to go back on its own
     QString                 mPrioTip;       //!< The tool tip of the priority bar while the target is reachable
 

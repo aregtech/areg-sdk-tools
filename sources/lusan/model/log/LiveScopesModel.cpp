@@ -30,16 +30,126 @@
 
 LiveScopesModel::LiveScopesModel(QObject* parent)
     : LoggingScopesModelBase( parent )
+    , mPausedSources    ( )
+    , mConSourceState   ( )
+    , mConConfigRestored( )
 {
 }
 
 LiveScopesModel::~LiveScopesModel()
 {
+    _setupObserverSignals(false);
 }
 
 void LiveScopesModel::setLoggingModel(LoggingModelBase* model)
 {
     LoggingScopesModelBase::setLoggingModel(model);
+    _setupObserverSignals(model != nullptr);
+}
+
+void LiveScopesModel::_setupObserverSignals(bool doSetup)
+{
+    LogObserver* log{ LogObserver::getComponent() };
+    if (doSetup)
+    {
+        if ((log == nullptr) || mConSourceState)
+            return;
+
+        mConSourceState = connect(log, &LogObserver::signalLogSourceState, this, [this](ITEM_ID cookie, uint8_t state, ITEM_ID byObserver) {
+            _onSourceState(cookie, state, byObserver);
+        });
+
+        mConConfigRestored = connect(log, &LogObserver::signalLogConfigRestored, this, [this](ITEM_ID cookie) {
+            setTargetState(targetIndex(cookie), ScopeRoot::eTargetState::TargetApplied);
+        });
+    }
+    else
+    {
+        disconnect(mConSourceState);
+        disconnect(mConConfigRestored);
+        mConSourceState = QMetaObject::Connection();
+        mConConfigRestored = QMetaObject::Connection();
+    }
+}
+
+void LiveScopesModel::_onSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver)
+{
+    const bool active{ static_cast<areg::LogSourceState>(state) != areg::LogSourceState::Paused };
+    if (active)
+    {
+        mPausedSources.remove(cookie);
+    }
+    else
+    {
+        mPausedSources.insert(cookie, byObserver);
+    }
+
+    _applySourceState(cookie, active, byObserver);
+}
+
+bool LiveScopesModel::setSourceState(const QModelIndex& node, bool active)
+{
+    const areg::LogSourceState state{ active ? areg::LogSourceState::Active : areg::LogSourceState::Paused };
+    ScopeNodeBase* entry = node.isValid() ? static_cast<ScopeNodeBase*>(node.internalPointer()) : nullptr;
+    ScopeNodeBase* treeRoot = entry != nullptr ? entry->getTreeRoot() : nullptr;
+
+    if (treeRoot == nullptr)
+    {
+        const bool result{ LogObserver::requestSourceState(areg::TARGET_ALL, state) };
+        if (result)
+        {
+            _markAllSourceRequests();
+        }
+
+        return result;
+    }
+
+    ScopeRoot* root{ static_cast<ScopeRoot *>(treeRoot) };
+    const bool result{ LogObserver::requestSourceState(root->getRootId(), state) };
+    if (result)
+    {
+        root->markSourceRequest();
+        const QModelIndex idxRoot{ targetIndex(root->getRootId()) };
+        emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleSourceWait
+                                                     , Qt::ItemDataRole::ToolTipRole });
+        emit signalSafeguardsChanged();
+    }
+
+    return result;
+}
+
+bool LiveScopesModel::restoreConfiguration(const QModelIndex& node)
+{
+    ScopeNodeBase* entry = node.isValid() ? static_cast<ScopeNodeBase*>(node.internalPointer()) : nullptr;
+    ScopeNodeBase* treeRoot = entry != nullptr ? entry->getTreeRoot() : nullptr;
+    const ITEM_ID target{ treeRoot != nullptr ? static_cast<ScopeRoot *>(treeRoot)->getRootId() : areg::TARGET_ALL };
+
+    return LogObserver::requestRestoreConfig(target);
+}
+
+void LiveScopesModel::_markAllSourceRequests(void)
+{
+    if (mLoggingModel == nullptr)
+        return;
+
+    LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    for (int pos = 0; pos < static_cast<int>(roots.size()); ++pos)
+    {
+        ScopeRoot* root = roots[pos];
+        if (root != nullptr)
+        {
+            root->markSourceRequest();
+        }
+    }
+
+    if (roots.empty() == false)
+    {
+        const QModelIndex idxFirst{ index(0, LoggingScopesModelBase::ColumnName, mRootIndex) };
+        const QModelIndex idxLast { index(static_cast<int>(roots.size()) - 1, LoggingScopesModelBase::ColumnName, mRootIndex) };
+        emit dataChanged(idxFirst, idxLast, QList<int>{ LoggingScopesModelBase::RoleSourceWait
+                                                      , Qt::ItemDataRole::ToolTipRole });
+        emit signalSafeguardsChanged();
+    }
 }
 
 bool LiveScopesModel::isLiveSession() const
@@ -164,8 +274,15 @@ bool LiveScopesModel::slotInstancesAvailable(const std::vector<areg::ConnectedIn
         for (const auto & entry : instances)
         {
             LogObserver::requestScopes(entry.ciCookie);
+
+            // The collector may have named a stopped target before its tree row existed.
+            const auto found{ mPausedSources.constFind(entry.ciCookie) };
+            if (found != mPausedSources.constEnd())
+            {
+                _applySourceState(entry.ciCookie, false, found.value());
+            }
         }
-        
+
         return true;
     }
     else

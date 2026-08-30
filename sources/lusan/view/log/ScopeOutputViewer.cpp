@@ -20,6 +20,8 @@
 #include "ui/ui_ScopeOutputViewer.h"
 
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/view/log/ScopeOutputDelegate.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/common/OutputDock.hpp"
 #include "lusan/view/log/LogViewerBase.hpp"
@@ -31,9 +33,16 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     , ui            (new Ui::ScopeOutputViewer)
     , mFilter       (new ScopeLogViewerFilter())
     , mLogModel     (nullptr)
+    , mStructure    (new ScopeOutputDelegate(this))
+    , mToolFold     (nullptr)
+    , mToolPick     (nullptr)
+    , mToolClock    (nullptr)
+    , mSlowUs       (ScopeOutputViewer::SlowCallUs)
 {
-    ui->setupUi(this);    
+    ui->setupUi(this);
+    setupCallControls();
     ctrlTable()->setModel(nullptr);
+    ctrlTable()->setItemDelegate(mStructure);
     QItemSelectionModel *selModel = ctrlTable()->selectionModel();
     Q_ASSERT(selModel != nullptr);
     connect(ctrlLogShow()       , &QToolButton::clicked     , this, [this]()              { onShowLog(getSelectedIndex());              });
@@ -66,6 +75,7 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 
 ScopeOutputViewer::~ScopeOutputViewer()
 {
+    ctrlTable()->setItemDelegate(nullptr);
     ctrlTable()->setModel(nullptr);
     if (mFilter != nullptr)
     {
@@ -161,6 +171,77 @@ void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
     default:
         mFilter->filterData(ScopeLogViewerFilter::eDataFilter::NoFilter);
         break;
+    }
+}
+
+void ScopeOutputViewer::setupCallControls(void)
+{
+    QLayout* row{ ui->horizontalLayout };
+    Q_ASSERT(row != nullptr);
+
+    auto build = [this, row](const QIcon& icon, const QString& text, const QString& tip) -> QToolButton*
+    {
+        QToolButton* button = new QToolButton(this);
+        button->setIcon(icon);
+        button->setText(text);
+        button->setToolTip(tip);
+        button->setStatusTip(tip);
+        button->setAccessibleName(text);
+        button->setCheckable(true);
+        button->setAutoRaise(true);
+        button->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonIconOnly);
+        row->addWidget(button);
+        return button;
+    };
+
+    mToolFold = build( NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig)
+                     , tr("Fold the quiet calls")
+                     , tr("Folds every call that carries nothing above Information. A folded call shows only the line that opened it, with the time it took."));
+
+    mToolPick = build( NELusanCommon::iconFilter(NELusanCommon::SizeBig)
+                     , tr("Only what is worth reading")
+                     , tr("Keeps the entries of Warning priority or worse, and the calls that carry one or ran longer than %1 ms.").arg(static_cast<double>(ScopeOutputViewer::SlowCallUs) / 1000.0, 0, 'f', 0));
+
+    mToolClock = build( NELusanCommon::iconTimer(NELusanCommon::SizeBig)
+                      , tr("Time since the call started")
+                      , tr("The time column counts from the moment the call the row belongs to was entered, instead of showing the time of day."));
+
+    connect(mToolFold , &QToolButton::toggled, this, [this](bool checked) { onAutoFoldToggled(checked);      });
+    connect(mToolPick , &QToolButton::toggled, this, [this](bool checked) { onInterestingToggled(checked);   });
+    connect(mToolClock, &QToolButton::toggled, this, [this](bool checked) { onRelativeTimeToggled(checked);  });
+}
+
+void ScopeOutputViewer::refreshCallControls(void)
+{
+    const bool hasRows{ (mFilter != nullptr) && (mFilter->rowCount() != 0) };
+    mToolFold->setEnabled(hasRows);
+    mToolPick->setEnabled(hasRows);
+    mToolClock->setEnabled(hasRows);
+}
+
+void ScopeOutputViewer::onAutoFoldToggled(bool checked)
+{
+    if (mFilter != nullptr)
+    {
+        mFilter->setAutoFold(checked);
+        refreshCallControls();
+    }
+}
+
+void ScopeOutputViewer::onInterestingToggled(bool checked)
+{
+    if (mFilter != nullptr)
+    {
+        mFilter->setInterestingOnly(checked, mSlowUs);
+        refreshCallControls();
+    }
+}
+
+void ScopeOutputViewer::onRelativeTimeToggled(bool checked)
+{
+    if (mFilter != nullptr)
+    {
+        mFilter->setRelativeTime(checked);
     }
 }
 
@@ -275,7 +356,8 @@ inline void ScopeOutputViewer::updateControls(bool selectSession)
     ctrlRadioProcess()->setEnabled(hasEntries);
 
     updateToolbuttons(count, getSelectedIndex());
-    
+    refreshCallControls();
+
     blockSignals(false);
 }
 

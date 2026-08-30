@@ -131,6 +131,20 @@ signals:
      **/
     void signalLogMessage(const areg::MessageEnvelope & logMessage);
 
+    /**
+     * \brief   The signal triggered when a log source started or stopped sending the logs it produces.
+     * \param   cookie      The ID of the log source.
+     * \param   state       The state of the source: it sends its logs, or it drops them.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void signalLogSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver);
+
+    /**
+     * \brief   The signal triggered when a log source read its configuration file again.
+     * \param   cookie      The ID of the log source.
+     **/
+    void signalLogConfigRestored(ITEM_ID cookie);
+
 //////////////////////////////////////////////////////////////////////////
 // Protected Overrides / Callbacks
 //////////////////////////////////////////////////////////////////////////
@@ -241,6 +255,20 @@ protected:
      * \param   logMessage  The structure of the message to log.
      **/
     void on_log_message(const areg::MessageEnvelope& logMessage) final;
+
+    /**
+     * \brief   Callback triggered when a log source started or stopped sending its logs.
+     * \param   cookie      The ID of the log source.
+     * \param   state       The state of the source: it sends its logs, or it drops them.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void on_log_source_state(ITEM_ID cookie, areg::LogSourceState state, ITEM_ID byObserver) final;
+
+    /**
+     * \brief   Callback triggered when a log source read its configuration file again.
+     * \param   cookie      The ID of the log source.
+     **/
+    void on_log_configuration_restored(ITEM_ID cookie) final;
 
 };
 

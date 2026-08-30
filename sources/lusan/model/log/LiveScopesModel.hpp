@@ -31,6 +31,8 @@
 #include "areg/logging/areg_log.h"
 #include "areglogger/client/LogObserverApi.h"
 
+#include <QHash>
+
 /************************************************************************
  * Dependencies
  ************************************************************************/
@@ -110,6 +112,22 @@ public:
     bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) override;
 
     /**
+     * \brief   Asks the target of the given tree entry to send the logs it produces, or to keep
+     *          producing them and drop them. The scope priorities are not touched.
+     * \param   node    Any entry of the target. An invalid index reaches every target.
+     * \param   active  True to make the target send its logs, false to make it drop them.
+     * \return  True if the request was sent.
+     **/
+    bool setSourceState(const QModelIndex& node, bool active) override;
+
+    /**
+     * \brief   Asks the target of the given tree entry to read its log configuration file again.
+     * \param   node    Any entry of the target. An invalid index reaches every target.
+     * \return  True if the request was sent.
+     **/
+    bool restoreConfiguration(const QModelIndex& node) override;
+
+    /**
      * \brief   Returns true. The model follows running targets, so a process that goes is marked.
      **/
     bool isLiveSession() const override;
@@ -137,12 +155,42 @@ protected:
 private:
 
     /**
+     * \brief   Marks every process as waiting for the answer of a sending request.
+     **/
+    void _markAllSourceRequests(void);
+
+    /**
+     * \brief   Connects to or disconnects from the log observer notifications this model reads.
+     * \param   doSetup  True to connect, false to disconnect.
+     **/
+    void _setupObserverSignals(bool doSetup);
+
+    /**
+     * \brief   Holds what the collector said about the sending state of a target and draws it.
+     * \param   cookie      The ID of the target.
+     * \param   state       The state of the target, as `areg::LogSourceState` holds it.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void _onSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver);
+
+    /**
      * \brief   Requests the log priority for the given node.
      * \param   root    The root of the scope.
      * \param   node    The node to request priority.
      * \return  True if succeeded to request the log priority, false otherwise.
      **/
     bool _requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    //!< The targets the collector reports as not sending, each with the observer that stopped it.
+    QHash<ITEM_ID, ITEM_ID> mPausedSources;
+    //!< The connection to the sending state notification.
+    QMetaObject::Connection mConSourceState;
+    //!< The connection to the configuration restored notification.
+    QMetaObject::Connection mConConfigRestored;
 };
 
 #endif  // LUSAN_MODEL_LOG_LIVESCOPESMODEL_HPP

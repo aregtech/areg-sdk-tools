@@ -62,6 +62,17 @@ namespace
     //! The pace the target state is moved on with, in milliseconds.
     constexpr int _targetTickMs { 120 };
 
+    //! Returns the sentence that says whether the target is sending the logs it produces.
+    QString _sourceStateText(const ScopeRoot& root)
+    {
+        if (root.isSourceWaiting())
+            return QObject::tr("Asked to change what it sends, waiting for its answer.");
+        else if (root.isSourceActive() == false)
+            return QObject::tr("Stopped. It keeps producing its logs and drops them, and the logs produced meanwhile are gone.");
+
+        return QString();
+    }
+
     //! Returns the sentence that says what the target knows about its priorities.
     QVariant _targetStateText(ScopeRoot::eTargetState state)
     {
@@ -79,6 +90,25 @@ namespace
         default:
             return QVariant();
         }
+    }
+
+    //! Returns the tool tip of a process row, empty when it has nothing to say.
+    QVariant _rootTipText(const ScopeRoot& root)
+    {
+        QStringList lines;
+        const QString sending{ _sourceStateText(root) };
+        if (sending.isEmpty() == false)
+        {
+            lines.append(sending);
+        }
+
+        const QVariant prio{ _targetStateText(root.targetState()) };
+        if (prio.isValid())
+        {
+            lines.append(prio.toString());
+        }
+
+        return lines.isEmpty() ? QVariant() : QVariant(lines.join(QChar('\n')));
     }
 }
 
@@ -320,7 +350,7 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
 
     case Qt::ItemDataRole::ToolTipRole:
     {
-        return entry->isRoot() ? _targetStateText(static_cast<const ScopeRoot *>(entry)->targetState()) : QVariant();
+        return entry->isRoot() ? _rootTipText(*static_cast<const ScopeRoot *>(entry)) : QVariant();
     }
         
     default:
@@ -334,6 +364,10 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
             return QVariant(static_cast<int>(root->targetState()));
         else if (role == LoggingScopesModelBase::RoleTargetFade)
             return QVariant(root->targetFade());
+        else if (role == LoggingScopesModelBase::RoleSourcePaused)
+            return QVariant(root->isSourceActive() == false);
+        else if (role == LoggingScopesModelBase::RoleSourceWait)
+            return QVariant(root->isSourceWaiting());
     }
 
     return QVariant();
@@ -780,6 +814,63 @@ void LoggingScopesModelBase::setTargetState(const QModelIndex& node, ScopeRoot::
                                                  , LoggingScopesModelBase::RoleTargetFade
                                                  , Qt::ItemDataRole::ToolTipRole });
     _runTargetClock();
+}
+
+bool LoggingScopesModelBase::setSourceState(const QModelIndex& /*node*/, bool /*active*/)
+{
+    return false;
+}
+
+bool LoggingScopesModelBase::restoreConfiguration(const QModelIndex& /*node*/)
+{
+    return false;
+}
+
+QStringList LoggingScopesModelBase::pausedTargetNames(void) const
+{
+    QStringList result;
+    if (mLoggingModel == nullptr)
+        return result;
+
+    const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    for (const ScopeRoot* root : roots)
+    {
+        if ((root != nullptr) && (root->isSourceActive() == false))
+        {
+            result.append(root->getDisplayName());
+        }
+    }
+
+    return result;
+}
+
+QModelIndex LoggingScopesModelBase::targetIndex(ITEM_ID target) const
+{
+    const int pos{ findRoot(target) };
+    return (pos != static_cast<int>(areg::INVALID_INDEX))
+            ? index(pos, LoggingScopesModelBase::ColumnName, mRootIndex)
+            : QModelIndex();
+}
+
+void LoggingScopesModelBase::_applySourceState(ITEM_ID target, bool active, ITEM_ID byObserver)
+{
+    if (mLoggingModel == nullptr)
+        return;
+
+    const int pos{ findRoot(target) };
+    if (pos == static_cast<int>(areg::INVALID_INDEX))
+        return;
+
+    ScopeRoot* root{ mLoggingModel->getRootList()[pos] };
+    if (root == nullptr)
+        return;
+
+    root->setSourceState(active, byObserver);
+    const QModelIndex idxRoot{ index(pos, LoggingScopesModelBase::ColumnName, mRootIndex) };
+    emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleSourcePaused
+                                                 , LoggingScopesModelBase::RoleSourceWait
+                                                 , Qt::ItemDataRole::ToolTipRole });
+    emit signalSafeguardsChanged();
 }
 
 void LoggingScopesModelBase::_ageTargetStates(void)

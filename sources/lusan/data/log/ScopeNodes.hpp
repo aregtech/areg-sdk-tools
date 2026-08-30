@@ -603,6 +603,28 @@ public:
      **/
     int restorePriorities(void);
 
+    //!< Returns true if the target sends the logs it produces.
+    inline bool isSourceActive(void) const;
+
+    //!< Returns true while a request to start or stop the sending waits for its answer.
+    inline bool isSourceWaiting(void) const;
+
+    //!< Returns the ID of the observer that stopped the target, or zero while it sends.
+    inline ITEM_ID pausedBy(void) const;
+
+    /**
+     * \brief   Marks that a request to start or stop the sending is on its way, so the
+     *          interface draws it as in flight until the answer arrives.
+     **/
+    void markSourceRequest(void);
+
+    /**
+     * \brief   Holds what the collector said about the sending state of the target.
+     * \param   active      True when the target sends the logs it produces.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void setSourceState(bool active, ITEM_ID byObserver);
+
 //////////////////////////////////////////////////////////////////////////
 // Protected members
 //////////////////////////////////////////////////////////////////////////
@@ -623,6 +645,14 @@ private:
     int                      mTargetAge;
     //!< How strongly the target mark is drawn, from 1.0 down to 0.0.
     qreal                    mTargetFade;
+    //!< False while the target produces its logs and drops them instead of sending them.
+    bool                     mSourceActive;
+    //!< True while a request to start or stop the sending waits for its answer.
+    bool                     mSourceWaiting;
+    //!< The time the pending sending request has waited for an answer, in milliseconds.
+    int                      mSourceAge;
+    //!< The ID of the observer that stopped the target, zero while it sends.
+    ITEM_ID                  mPausedBy;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -708,7 +738,24 @@ inline qreal ScopeRoot::targetFade(void) const
 
 inline bool ScopeRoot::isTargetAgeing(void) const
 {
-    return ((mTargetState == ScopeRoot::eTargetState::TargetSent) || (mTargetState == ScopeRoot::eTargetState::TargetSaved));
+    return (  (mTargetState == ScopeRoot::eTargetState::TargetSent)
+           || (mTargetState == ScopeRoot::eTargetState::TargetSaved)
+           || mSourceWaiting);
+}
+
+inline bool ScopeRoot::isSourceActive(void) const
+{
+    return mSourceActive;
+}
+
+inline bool ScopeRoot::isSourceWaiting(void) const
+{
+    return mSourceWaiting;
+}
+
+inline ITEM_ID ScopeRoot::pausedBy(void) const
+{
+    return mPausedBy;
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODES_HPP

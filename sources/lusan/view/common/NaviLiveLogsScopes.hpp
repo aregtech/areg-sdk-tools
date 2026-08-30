@@ -187,6 +187,12 @@ protected:
      **/
     bool canSavePrio(void) const override;
 
+    /**
+     * \brief   Draws the target sending button for the state the given tree entry reports.
+     * \param   selection   The current tree entry, invalid when there is none.
+     **/
+    void refreshTargetControls(const QModelIndex& selection) override;
+
 private:
 
     //!< Returns the control object to connect to log observer service.
@@ -357,6 +363,8 @@ private:
     QToolButton*            mToolConnect;   //!< The tool button to connect or disconnect the log collector.
     QToolButton*            mToolSettings;  //!< The tool button to open the logging options.
     QToolButton*            mToolSave;      //!< The tool button to save the log settings.
+    QToolButton*            mToolTargetSend;//!< The tool button that stops the selected target sending, or lets it send again.
+    bool                    mTargetSending; //!< The sending state the target button is currently drawn for.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.

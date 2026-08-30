@@ -2,9 +2,9 @@
 <!-- Lusan icon: hide these rows, a stack of lines struck through -->
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
 <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<path d="M5 6.5H19"/>
-<path d="M5 12H19"/>
-<path d="M5 17.5H19"/>
-<path d="M6.2 18.6L17.8 5.4"/>
+<path d="M 2.75 4.7321 H 21.25"/>
+<path d="M 2.75 12 H 21.25"/>
+<path d="M 2.75 19.2679 H 21.25"/>
+<path d="M 4.3357 20.7214 L 19.6643 3.2786"/>
 </g>
 </svg>

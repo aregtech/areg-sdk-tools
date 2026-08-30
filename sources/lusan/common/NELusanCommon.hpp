@@ -764,6 +764,12 @@ namespace NELusanCommon
     //<! Loads the icon of the scope enter and exit lines
     inline QIcon iconScopeLines(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads the icon that stops a target sending its logs
+    inline QIcon iconTargetStop(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that lets a target send its logs again
+    inline QIcon iconTargetResume(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
     
@@ -922,6 +928,16 @@ inline QIcon NELusanCommon::iconScopeRestoreAll(const QSize & size)
 inline QIcon NELusanCommon::iconScopeLines(const QSize & size)
 {
     return loadIcon(":/icons/scope-lines", size);
+}
+
+inline QIcon NELusanCommon::iconTargetStop(const QSize & size)
+{
+    return loadIcon(":/icons/target-stop", size);
+}
+
+inline QIcon NELusanCommon::iconTargetResume(const QSize & size)
+{
+    return loadIcon(":/icons/target-resume", size);
 }
 
 inline QIcon NELusanCommon::iconServiceInterfaceTab(const QSize & size)
