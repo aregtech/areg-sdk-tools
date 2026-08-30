@@ -43,6 +43,7 @@
         <file alias="scope-lines">icons/ui-scope-lines.svg</file>
         <file alias="target-stop">icons/ui-target-stop.svg</file>
         <file alias="target-resume">icons/ui-target-resume.svg</file>
+        <file alias="target-pause">icons/ui-target-pause.svg</file>
         <file alias="sm-event">icons/sm-event.svg</file>
         <file alias="sm-timer">icons/sm-timer.svg</file>
         <file alias="sm method trigger">icons/sm-method-trigger.svg</file>

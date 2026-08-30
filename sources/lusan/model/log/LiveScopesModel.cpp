@@ -74,22 +74,27 @@ void LiveScopesModel::_setupObserverSignals(bool doSetup)
 
 void LiveScopesModel::_onSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver)
 {
-    const bool active{ static_cast<areg::LogSourceState>(state) != areg::LogSourceState::Paused };
-    if (active)
+    const areg::LogSourceState reported{ static_cast<areg::LogSourceState>(state) };
+    if (areg::is_source_state_valid(reported) == false)
+        return;
+
+    if (reported == areg::LogSourceState::Active)
     {
         mPausedSources.remove(cookie);
     }
     else
     {
-        mPausedSources.insert(cookie, byObserver);
+        mPausedSources.insert(cookie, qMakePair(reported, byObserver));
     }
 
-    _applySourceState(cookie, active, byObserver);
+    _applySourceState(cookie, reported, byObserver);
 }
 
-bool LiveScopesModel::setSourceState(const QModelIndex& node, bool active)
+bool LiveScopesModel::setSourceState(const QModelIndex& node, areg::LogSourceState state)
 {
-    const areg::LogSourceState state{ active ? areg::LogSourceState::Active : areg::LogSourceState::Paused };
+    if (areg::is_source_state_valid(state) == false)
+        return false;
+
     ScopeNodeBase* entry = node.isValid() ? static_cast<ScopeNodeBase*>(node.internalPointer()) : nullptr;
     ScopeNodeBase* treeRoot = entry != nullptr ? entry->getTreeRoot() : nullptr;
 
@@ -98,7 +103,7 @@ bool LiveScopesModel::setSourceState(const QModelIndex& node, bool active)
         const bool result{ LogObserver::requestSourceState(areg::TARGET_ALL, state) };
         if (result)
         {
-            _markAllSourceRequests();
+            _markAllSourceRequests(state);
         }
 
         return result;
@@ -108,7 +113,7 @@ bool LiveScopesModel::setSourceState(const QModelIndex& node, bool active)
     const bool result{ LogObserver::requestSourceState(root->getRootId(), state) };
     if (result)
     {
-        root->markSourceRequest();
+        root->markSourceRequest(state);
         const QModelIndex idxRoot{ targetIndex(root->getRootId()) };
         emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleSourceWait
                                                      , Qt::ItemDataRole::ToolTipRole });
@@ -127,7 +132,7 @@ bool LiveScopesModel::restoreConfiguration(const QModelIndex& node)
     return LogObserver::requestRestoreConfig(target);
 }
 
-void LiveScopesModel::_markAllSourceRequests(void)
+void LiveScopesModel::_markAllSourceRequests(areg::LogSourceState wanted)
 {
     if (mLoggingModel == nullptr)
         return;
@@ -138,7 +143,7 @@ void LiveScopesModel::_markAllSourceRequests(void)
         ScopeRoot* root = roots[pos];
         if (root != nullptr)
         {
-            root->markSourceRequest();
+            root->markSourceRequest(wanted);
         }
     }
 
@@ -279,7 +284,7 @@ bool LiveScopesModel::slotInstancesAvailable(const std::vector<areg::ConnectedIn
             const auto found{ mPausedSources.constFind(entry.ciCookie) };
             if (found != mPausedSources.constEnd())
             {
-                _applySourceState(entry.ciCookie, false, found.value());
+                _applySourceState(entry.ciCookie, found.value().first, found.value().second);
             }
         }
 

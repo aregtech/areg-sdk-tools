@@ -23,6 +23,7 @@
 #include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "areg/base/areg_global.h"
 
 /************************************************************************
@@ -421,6 +422,9 @@ private:
      * \brief   Applies the columns the workspace remembers. Does nothing when it holds none.
      **/
     void _restoreLayout(void);
+
+    //!< Returns which column record this window reads and writes.
+    WorkspaceEntry::eLogMode _columnMode(void) const;
 
     /**
      * \brief   Drops the remembered columns, so the defaults come back on the next run.

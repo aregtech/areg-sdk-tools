@@ -100,6 +100,8 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
     , mRaiseText        (nullptr)
     , mStopRow          (nullptr)
     , mStopText         (nullptr)
+    , mQuietRow         (nullptr)
+    , mQuietText        (nullptr)
     , mTempRaise        (false)
     , mPrioTip          ( )
 
@@ -207,22 +209,52 @@ void NaviLogScopeBase::setupSafeguards(void)
     resume->setText(tr("Resume"));
     resume->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
     resume->setAutoRaise(true);
-    resume->setToolTip(tr("Let every stopped target send its logs again."));
+    resume->setToolTip(tr("Let every held or stopped target produce and send its logs again."));
     resume->setAccessibleName(resume->toolTip());
 
     stopRow->addWidget(stopIcon, 0);
     stopRow->addWidget(mStopText, 1);
     stopRow->addWidget(resume, 0);
 
+    mQuietRow = new QWidget(mGuardBar);
+    QHBoxLayout* quietRow = new QHBoxLayout(mQuietRow);
+    quietRow->setContentsMargins(0, 0, 0, 0);
+    quietRow->setSpacing(4);
+
+    QLabel* quietIcon = new QLabel(mQuietRow);
+    quietIcon->setPixmap(NELusanCommon::iconScopeMute(NELusanCommon::SizeSmall).pixmap(NELusanCommon::SizeSmall));
+
+    mQuietText = new QLabel(mQuietRow);
+    mQuietText->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Preferred);
+
+    QToolButton* restoreAll = new QToolButton(mQuietRow);
+    restoreAll->setText(tr("Restore all"));
+    restoreAll->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    restoreAll->setAutoRaise(true);
+    restoreAll->setToolTip(tr("Every target applies the priorities it has saved. One that was never configured applies its built-in defaults."));
+    restoreAll->setAccessibleName(restoreAll->toolTip());
+
+    quietRow->addWidget(quietIcon, 0);
+    quietRow->addWidget(mQuietText, 1);
+    quietRow->addWidget(restoreAll, 0);
+
+    connect(restoreAll, &QToolButton::clicked, this, [this]() {
+        if (mScopesModel != nullptr)
+        {
+            mScopesModel->restoreConfiguration(QModelIndex());
+        }
+    });
+
     guards->addWidget(mRaiseRow);
     guards->addWidget(mStopRow);
+    guards->addWidget(mQuietRow);
     addNaviBar(mGuardBar);
     mGuardBar->setVisible(false);
 
     connect(resume, &QToolButton::clicked, this, [this]() {
         if (mScopesModel != nullptr)
         {
-            mScopesModel->setSourceState(QModelIndex(), true);
+            mScopesModel->setSourceState(QModelIndex(), areg::LogSourceState::Active);
         }
     });
 
@@ -251,14 +283,28 @@ void NaviLogScopeBase::refreshSafeguards(void)
     if (stopped.isEmpty() == false)
     {
         mStopText->setText(stopped.size() == 1
-                            ? tr("%1 stopped, sending nothing").arg(stopped.first())
-                            : tr("%1 targets stopped, sending nothing").arg(stopped.size()));
-        mStopText->setToolTip(tr("These targets keep producing their logs and drop them:\n%1").arg(stopped.join(QChar('\n'))));
+                            ? tr("%1, sending nothing").arg(stopped.first())
+                            : tr("%1 targets sending nothing").arg(stopped.size()));
+        mStopText->setToolTip(tr("A held target produces its logs and keeps them. A stopped target produces none:\n%1").arg(stopped.join(QChar('\n'))));
+    }
+
+    QStringList quieted;
+    const int quietCount{ mScopesModel->quietedScopes(quieted, 12) };
+    if (quietCount != 0)
+    {
+        mQuietText->setText(quietCount == 1
+                            ? tr("1 scope generating less than it did")
+                            : tr("%1 scopes generating less than they did").arg(quietCount));
+        mQuietText->setToolTip(quietCount > quieted.size()
+                                ? tr("These generate less than their target reported, and %1 more:\n%2")
+                                    .arg(quietCount - quieted.size()).arg(quieted.join(QChar('\n')))
+                                : tr("These generate less than their target reported:\n%1").arg(quieted.join(QChar('\n'))));
     }
 
     mRaiseRow->setVisible(raised != 0);
     mStopRow->setVisible(stopped.isEmpty() == false);
-    mGuardBar->setVisible((raised != 0) || (stopped.isEmpty() == false));
+    mQuietRow->setVisible(quietCount != 0);
+    mGuardBar->setVisible((raised != 0) || (stopped.isEmpty() == false) || (quietCount != 0));
 
     refreshTargetControls(ctrlTable()->currentIndex());
 }
@@ -267,12 +313,14 @@ void NaviLogScopeBase::refreshTargetControls(const QModelIndex& /*selection*/)
 {
 }
 
-void NaviLogScopeBase::applyTargetSending(const QModelIndex& node, bool active)
+void NaviLogScopeBase::applyTargetState(const QModelIndex& node, areg::LogSourceState state)
 {
     if (mScopesModel == nullptr)
         return;
 
-    if (active == false)
+    // Only a stop is confirmed. It turns every scope priority off, so it changes what the
+    // target holds and not only what it sends.
+    if (state == areg::LogSourceState::Stopped)
     {
         ScopeNodeBase* entry = node.isValid() ? static_cast<ScopeNodeBase*>(node.internalPointer()) : nullptr;
         ScopeNodeBase* treeRoot = entry != nullptr ? entry->getTreeRoot() : nullptr;
@@ -280,10 +328,11 @@ void NaviLogScopeBase::applyTargetSending(const QModelIndex& node, bool active)
 
         const QMessageBox::StandardButton answer
             = QMessageBox::question( this
-                                   , tr("Stop sending")
-                                   , tr("Stop %1 from sending its logs?\n\n"
-                                        "It keeps producing them and drops them. The logs it produces while stopped are gone: "
-                                        "they are not kept and not sent when it starts again. Its scope priorities are not changed.").arg(name)
+                                   , tr("Stop logging")
+                                   , tr("Stop %1 producing any log?\n\n"
+                                        "Every scope priority is turned off, so nothing is produced and nothing is written anywhere. "
+                                        "Letting it log again puts the priorities back as they are now. "
+                                        "The logs of the meantime never exist.").arg(name)
                                    , QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::Cancel
                                    , QMessageBox::StandardButton::Cancel);
 
@@ -291,7 +340,7 @@ void NaviLogScopeBase::applyTargetSending(const QModelIndex& node, bool active)
             return;
     }
 
-    mScopesModel->setSourceState(node, active);
+    mScopesModel->setSourceState(node, state);
 }
 
 void NaviLogScopeBase::setupScopeSearch(void)
@@ -1245,28 +1294,39 @@ void NaviLogScopeBase::buildScopeMenu(QMenu& menu, const QModelIndex& node, cons
 
         targetMenu->addSeparator();
 
-        QAction* restoreOne = targetMenu->addAction(NELusanCommon::iconScopeRestoreAll(NELusanCommon::SizeBig), tr("&Restore priorities from the target's file"));
+        QAction* restoreOne = targetMenu->addAction(NELusanCommon::iconScopeRestoreAll(NELusanCommon::SizeBig), tr("&Restore the saved priorities of this target"));
         restoreOne->setData(static_cast<int>(eScopeMenu::MenuRestorePrioTarget));
         restoreOne->setEnabled(canSave);
-        restoreOne->setToolTip(tr("The target reads its configuration file again, so its scopes go back to what the file holds."));
+        restoreOne->setToolTip(tr("The target applies the priorities it has saved. One that was never configured applies its built-in defaults."));
 
-        QAction* restoreAll = targetMenu->addAction(tr("Restore all targets from their files"));
+        QAction* restoreAll = targetMenu->addAction(tr("Restore the saved priorities of all targets"));
         restoreAll->setData(static_cast<int>(eScopeMenu::MenuRestorePrioAll));
         restoreAll->setEnabled(canSave);
 
         targetMenu->addSeparator();
 
-        const bool sending{ mScopesModel->data(node, LoggingScopesModelBase::RoleSourcePaused).toBool() == false };
-        QAction* sendOne = sending
-                            ? targetMenu->addAction(NELusanCommon::iconTargetStop(NELusanCommon::SizeBig), tr("St&op this target sending"))
-                            : targetMenu->addAction(NELusanCommon::iconTargetResume(NELusanCommon::SizeBig), tr("Let this target sen&d again"));
-        sendOne->setData(static_cast<int>(sending ? eScopeMenu::MenuTargetStop : eScopeMenu::MenuTargetResume));
-        sendOne->setEnabled(canSave);
-        sendOne->setToolTip(sending
-                             ? tr("The target keeps producing its logs and drops them. Its priorities are not changed.")
-                             : tr("The target sends the logs it produces again."));
+        const areg::LogSourceState state
+            { static_cast<areg::LogSourceState>(mScopesModel->data(node, LoggingScopesModelBase::RoleSourceState).toInt()) };
+        const bool active { state == areg::LogSourceState::Active  };
+        const bool paused { state == areg::LogSourceState::Paused  };
+        const bool stopped{ state == areg::LogSourceState::Stopped };
 
-        QAction* resumeAll = targetMenu->addAction(tr("Let e&very target send again"));
+        QAction* stopOne = targetMenu->addAction(NELusanCommon::iconTargetStop(NELusanCommon::SizeBig), tr("St&op this target logging"));
+        stopOne->setData(static_cast<int>(eScopeMenu::MenuTargetStop));
+        stopOne->setEnabled(canSave && (stopped == false));
+        stopOne->setToolTip(tr("The target produces no log at all. Every scope priority is turned off and put back when it starts again."));
+
+        QAction* pauseOne = targetMenu->addAction(NELusanCommon::iconTargetPause(NELusanCommon::SizeBig), tr("&Hold what this target sends"));
+        pauseOne->setData(static_cast<int>(eScopeMenu::MenuTargetPause));
+        pauseOne->setEnabled(canSave && (paused == false));
+        pauseOne->setToolTip(tr("The target keeps producing its logs and stops sending them here. Its priorities are not changed."));
+
+        QAction* resumeOne = targetMenu->addAction(NELusanCommon::iconTargetResume(NELusanCommon::SizeBig), tr("Let this target log an&d send again"));
+        resumeOne->setData(static_cast<int>(eScopeMenu::MenuTargetResume));
+        resumeOne->setEnabled(canSave && (active == false));
+        resumeOne->setToolTip(tr("The target produces and sends its logs again, with the priorities it had before it was held or stopped."));
+
+        QAction* resumeAll = targetMenu->addAction(tr("Let e&very target log and send again"));
         resumeAll->setData(static_cast<int>(eScopeMenu::MenuTargetResumeAll));
         resumeAll->setEnabled(mScopesModel->pausedTargetNames().isEmpty() == false);
     }
@@ -1364,15 +1424,19 @@ bool NaviLogScopeBase::runScopeMenu(const QAction& action, const QModelIndex& no
         break;
 
     case eScopeMenu::MenuTargetStop:
-        applyTargetSending(node, false);
+        applyTargetState(node, areg::LogSourceState::Stopped);
+        break;
+
+    case eScopeMenu::MenuTargetPause:
+        applyTargetState(node, areg::LogSourceState::Paused);
         break;
 
     case eScopeMenu::MenuTargetResume:
-        applyTargetSending(node, true);
+        applyTargetState(node, areg::LogSourceState::Active);
         break;
 
     case eScopeMenu::MenuTargetResumeAll:
-        mScopesModel->setSourceState(QModelIndex(), true);
+        mScopesModel->setSourceState(QModelIndex(), areg::LogSourceState::Active);
         break;
 
     case eScopeMenu::MenuCopyScopePath:

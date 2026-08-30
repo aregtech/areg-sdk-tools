@@ -100,11 +100,12 @@ protected:
         , MenuCollapseAll       //!< Collapse all nodes
         , MenuSavePrioTarget    //!< Save priority settings of the selected target
         , MenuSavePrioAll       //!< Save priority settings of all targets
-        , MenuRestorePrioTarget //!< Make the selected target read its configuration file again
-        , MenuRestorePrioAll    //!< Make every target read its configuration file again
-        , MenuTargetStop        //!< Stop the selected target sending the logs it produces
-        , MenuTargetResume      //!< Let the selected target send its logs again
-        , MenuTargetResumeAll   //!< Let every stopped target send its logs again
+        , MenuRestorePrioTarget //!< Make the selected target apply the priorities it has saved
+        , MenuRestorePrioAll    //!< Make every target apply the priorities it has saved
+        , MenuTargetStop        //!< Stop the selected target producing any log
+        , MenuTargetPause       //!< Let the selected target produce its logs and hold them
+        , MenuTargetResume      //!< Let the selected target produce and send its logs again
+        , MenuTargetResumeAll   //!< Let every held or stopped target produce and send again
         , MenuCopyScopePath     //!< Copy the full path of the clicked node
     };
 
@@ -363,12 +364,12 @@ protected:
     virtual void refreshTargetControls(const QModelIndex& selection);
 
     /**
-     * \brief   Asks the target of the given tree entry to send its logs or to drop them.
-     *          A stop is confirmed first, naming the target.
+     * \brief   Asks the target of the given tree entry to take a state. A stop is confirmed
+     *          first, naming the target, because it turns every scope priority off.
      * \param   node    Any entry of the target.
-     * \param   active  True to make the target send its logs, false to make it drop them.
+     * \param   state   The state the target should take.
      **/
-    void applyTargetSending(const QModelIndex& node, bool active);
+    void applyTargetState(const QModelIndex& node, areg::LogSourceState state);
 
     /**
      * \brief   Closes the find row when Escape is pressed inside its box.
@@ -548,6 +549,8 @@ private:
     QLabel*                 mRaiseText;     //!< How many raises go back on their own
     QWidget*                mStopRow;       //!< The line about the targets that are not sending
     QLabel*                 mStopText;      //!< Which targets are not sending
+    QWidget*                mQuietRow;      //!< The line about the scopes turned down and left that way
+    QLabel*                 mQuietText;     //!< How many scopes generate less than their target reported
     bool                    mTempRaise;     //!< True while a raise is meant to go back on its own
     QString                 mPrioTip;       //!< The tool tip of the priority bar while the target is reachable
 

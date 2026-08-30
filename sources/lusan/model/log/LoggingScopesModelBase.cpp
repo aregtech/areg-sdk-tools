@@ -62,13 +62,15 @@ namespace
     //! The pace the target state is moved on with, in milliseconds.
     constexpr int _targetTickMs { 120 };
 
-    //! Returns the sentence that says whether the target is sending the logs it produces.
+    //! Returns the sentence that says how the target produces and sends its logs.
     QString _sourceStateText(const ScopeRoot& root)
     {
         if (root.isSourceWaiting())
-            return QObject::tr("Asked to change what it sends, waiting for its answer.");
-        else if (root.isSourceActive() == false)
-            return QObject::tr("Stopped. It keeps producing its logs and drops them, and the logs produced meanwhile are gone.");
+            return QObject::tr("Asked to change how it logs, waiting for its answer.");
+        else if (root.isSourceStopped())
+            return QObject::tr("Stopped. Every scope priority is off, so it produces nothing at all. Letting it log again puts the priorities back.");
+        else if (root.isSourcePaused())
+            return QObject::tr("Held. It keeps producing its logs and stops sending them here, and what it produced meanwhile never arrives.");
 
         return QString();
     }
@@ -364,8 +366,8 @@ QVariant LoggingScopesModelBase::data(const QModelIndex& index, int role) const
             return QVariant(static_cast<int>(root->targetState()));
         else if (role == LoggingScopesModelBase::RoleTargetFade)
             return QVariant(root->targetFade());
-        else if (role == LoggingScopesModelBase::RoleSourcePaused)
-            return QVariant(root->isSourceActive() == false);
+        else if (role == LoggingScopesModelBase::RoleSourceState)
+            return QVariant(static_cast<int>(root->sourceState()));
         else if (role == LoggingScopesModelBase::RoleSourceWait)
             return QVariant(root->isSourceWaiting());
     }
@@ -684,6 +686,10 @@ void LoggingScopesModelBase::reviveRoot(int pos, const areg::ConnectedInstance &
     root->removeChildren();
     root->setRootId(instance.ciCookie);
     root->setConnected(true);
+
+    // The returning process states its own starting point again, so what it was turned down from
+    // is read from the scope list it is about to send and not from the connection that ended.
+    root->clearBaseline();
 }
 
 int LoggingScopesModelBase::applyRememberedPriorities(ScopeRoot & root)
@@ -816,7 +822,7 @@ void LoggingScopesModelBase::setTargetState(const QModelIndex& node, ScopeRoot::
     _runTargetClock();
 }
 
-bool LoggingScopesModelBase::setSourceState(const QModelIndex& /*node*/, bool /*active*/)
+bool LoggingScopesModelBase::setSourceState(const QModelIndex& /*node*/, areg::LogSourceState /*state*/)
 {
     return false;
 }
@@ -824,6 +830,32 @@ bool LoggingScopesModelBase::setSourceState(const QModelIndex& /*node*/, bool /*
 bool LoggingScopesModelBase::restoreConfiguration(const QModelIndex& /*node*/)
 {
     return false;
+}
+
+int LoggingScopesModelBase::quietedScopes(QStringList& names, int limit) const
+{
+    if (mLoggingModel == nullptr)
+        return 0;
+
+    int result{ 0 };
+    const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    for (const ScopeRoot* root : roots)
+    {
+        if (root == nullptr)
+            continue;
+
+        QStringList paths;
+        result += root->quietedScopes(paths);
+        for (const QString& path : paths)
+        {
+            if (names.size() >= limit)
+                break;
+
+            names.append(root->getDisplayName() + QStringLiteral(" / ") + path);
+        }
+    }
+
+    return result;
 }
 
 QStringList LoggingScopesModelBase::pausedTargetNames(void) const
@@ -837,7 +869,8 @@ QStringList LoggingScopesModelBase::pausedTargetNames(void) const
     {
         if ((root != nullptr) && (root->isSourceActive() == false))
         {
-            result.append(root->getDisplayName());
+            result.append(root->getDisplayName()
+                          + (root->isSourceStopped() ? QObject::tr(" (stopped)") : QObject::tr(" (paused)")));
         }
     }
 
@@ -852,7 +885,7 @@ QModelIndex LoggingScopesModelBase::targetIndex(ITEM_ID target) const
             : QModelIndex();
 }
 
-void LoggingScopesModelBase::_applySourceState(ITEM_ID target, bool active, ITEM_ID byObserver)
+void LoggingScopesModelBase::_applySourceState(ITEM_ID target, areg::LogSourceState state, ITEM_ID byObserver)
 {
     if (mLoggingModel == nullptr)
         return;
@@ -865,9 +898,9 @@ void LoggingScopesModelBase::_applySourceState(ITEM_ID target, bool active, ITEM
     if (root == nullptr)
         return;
 
-    root->setSourceState(active, byObserver);
+    root->setSourceState(state, byObserver);
     const QModelIndex idxRoot{ index(pos, LoggingScopesModelBase::ColumnName, mRootIndex) };
-    emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleSourcePaused
+    emit dataChanged(idxRoot, idxRoot, QList<int>{ LoggingScopesModelBase::RoleSourceState
                                                  , LoggingScopesModelBase::RoleSourceWait
                                                  , Qt::ItemDataRole::ToolTipRole });
     emit signalSafeguardsChanged();
@@ -1063,6 +1096,7 @@ void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector
 
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
+        root->captureBaseline();
         if (root->targetState() == ScopeRoot::eTargetState::TargetSent)
         {
             root->setTargetState(ScopeRoot::eTargetState::TargetApplied);

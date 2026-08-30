@@ -71,10 +71,10 @@ public:
     //!< The role that carries how strongly the target mark is drawn, from 1.0 down to 0.0.
     static constexpr int    RoleTargetFade  { Qt::ItemDataRole::UserRole + 2 };
 
-    //!< The role that carries whether the target of a process is not sending the logs it produces.
-    static constexpr int    RoleSourcePaused{ Qt::ItemDataRole::UserRole + 3 };
+    //!< The role that carries the way a process produces and sends its logs, as areg::LogSourceState.
+    static constexpr int    RoleSourceState { Qt::ItemDataRole::UserRole + 3 };
 
-    //!< The role that carries whether a request to change the sending state waits for its answer.
+    //!< The role that carries whether a request to change the source state waits for its answer.
     static constexpr int    RoleSourceWait  { Qt::ItemDataRole::UserRole + 4 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -254,7 +254,7 @@ public:
      * \return  True if the request was sent.
      * \note    The controls redraw when the answer arrives, never on the call.
      **/
-    virtual bool setSourceState(const QModelIndex& node, bool active);
+    virtual bool setSourceState(const QModelIndex& node, areg::LogSourceState state);
 
     /**
      * \brief   Asks the target of the given tree entry to read its log configuration file again,
@@ -299,6 +299,15 @@ public:
 
     //!< Returns how many raises go back on their own.
     inline int tempRaiseCount(void) const;
+
+    /**
+     * \brief   Returns the scopes that generate less than their target reported when it first
+     *          named them, as "process / scope path" lines.
+     * \param   names   Receives the lines, appended, at most the given number of them.
+     * \param   limit   How many lines to append at most.
+     * \return  The number of quieted scopes, which may be more than the number of lines.
+     **/
+    int quietedScopes(QStringList& names, int limit) const;
     
     /**
      * \brief   Sets the logging model object used to retrieve logging scopes data.
@@ -476,7 +485,7 @@ protected:
      * \param   active      True when the target sends the logs it produces.
      * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
      **/
-    void _applySourceState(ITEM_ID target, bool active, ITEM_ID byObserver);
+    void _applySourceState(ITEM_ID target, areg::LogSourceState state, ITEM_ID byObserver);
 
     /**
      * \brief   Collects the identifiers of every scope the log window should not draw.

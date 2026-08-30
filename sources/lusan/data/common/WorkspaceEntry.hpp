@@ -39,6 +39,16 @@ public:
     static const WorkspaceEntry InvalidWorkspace;
 
     /**
+     * \brief   Which log window a column record belongs to. Every offline window shares one
+     *          record, because they all read the same kind of archive.
+     **/
+    enum class eLogMode : uint8_t
+    {
+          LogModeLive       = 0 //!< The window that follows a running collector
+        , LogModeOffline    = 1 //!< Every window that reads an archive
+    };
+
+    /**
      * \brief   One column of the log table, as the workspace remembers it. The order of the
      *          list is the order of the columns.
      **/
@@ -238,15 +248,17 @@ public:
     inline const QString& getDirLogs() const;
 
     /**
-     * \brief   Sets the columns of the log table, in the order they are drawn.
+     * \brief   Sets the columns of a log table, in the order they are drawn.
+     * \param   mode    Which kind of log window the columns belong to.
      * \param   columns The columns to remember. An empty list restores the defaults.
      **/
-    inline void setLogColumns(const WorkspaceEntry::ListLogColumns& columns);
+    inline void setLogColumns(WorkspaceEntry::eLogMode mode, const WorkspaceEntry::ListLogColumns& columns);
 
     /**
-     * \brief   Gets the columns of the log table. Empty when none was ever saved.
+     * \brief   Gets the columns of a log table. Empty when none was ever saved.
+     * \param   mode    Which kind of log window to read.
      **/
-    inline const WorkspaceEntry::ListLogColumns& getLogColumns() const;
+    inline const WorkspaceEntry::ListLogColumns& getLogColumns(WorkspaceEntry::eLogMode mode) const;
 
     /**
      * \brief   Sets the log database the workspace opened last.
@@ -342,7 +354,20 @@ private:
     QString     mDelivery;          //!< The delivery directory of the workspace.
     QString     mLogFiles;          //!< The location of logging files.
     QString     mLogDatabase;       //!< The log database the workspace opened last.
-    ListLogColumns mLogColumns;     //!< The columns of the log table, in the order they are drawn.
+    ListLogColumns mLogColumns;     //!< The columns of the live log table, in the order they are drawn.
+    ListLogColumns mLogColumnsFile; //!< The columns every offline log table shares, in the order they are drawn.
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    /**
+     * \brief   Writes one column record.
+     * \param   xml     The writer to write into.
+     * \param   columns The columns to write, in the order they are drawn.
+     * \param   mode    The value of the mode attribute. An empty string writes no attribute.
+     **/
+    void _writeLogColumns(QXmlStreamWriter& xml, const WorkspaceEntry::ListLogColumns& columns, const QString& mode) const;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -419,14 +444,21 @@ inline const QString& WorkspaceEntry::getDirLogs() const
     return mLogFiles;
 }
 
-inline void WorkspaceEntry::setLogColumns(const WorkspaceEntry::ListLogColumns& columns)
+inline void WorkspaceEntry::setLogColumns(WorkspaceEntry::eLogMode mode, const WorkspaceEntry::ListLogColumns& columns)
 {
-    mLogColumns = columns;
+    if (mode == WorkspaceEntry::eLogMode::LogModeLive)
+    {
+        mLogColumns = columns;
+    }
+    else
+    {
+        mLogColumnsFile = columns;
+    }
 }
 
-inline const WorkspaceEntry::ListLogColumns& WorkspaceEntry::getLogColumns() const
+inline const WorkspaceEntry::ListLogColumns& WorkspaceEntry::getLogColumns(WorkspaceEntry::eLogMode mode) const
 {
-    return mLogColumns;
+    return (mode == WorkspaceEntry::eLogMode::LogModeLive) ? mLogColumns : mLogColumnsFile;
 }
 
 inline void WorkspaceEntry::setLogDatabase(const QString& path)

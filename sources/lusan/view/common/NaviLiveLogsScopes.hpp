@@ -363,8 +363,10 @@ private:
     QToolButton*            mToolConnect;   //!< The tool button to connect or disconnect the log collector.
     QToolButton*            mToolSettings;  //!< The tool button to open the logging options.
     QToolButton*            mToolSave;      //!< The tool button to save the log settings.
-    QToolButton*            mToolTargetSend;//!< The tool button that stops the selected target sending, or lets it send again.
-    bool                    mTargetSending; //!< The sending state the target button is currently drawn for.
+    QToolButton*            mToolTargetStop;   //!< The tool button that stops the selected target producing any log.
+    QToolButton*            mToolTargetPause;  //!< The tool button that holds what the selected target sends.
+    QToolButton*            mToolTargetResume; //!< The tool button that lets the selected target log and send again.
+    QToolButton*            mToolTargetRestore;//!< The tool button that applies the priorities the target has saved.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.

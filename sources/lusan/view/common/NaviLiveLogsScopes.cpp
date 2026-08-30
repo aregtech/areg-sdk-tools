@@ -62,8 +62,10 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mToolConnect      (nullptr)
     , mToolSettings     (nullptr)
     , mToolSave         (nullptr)
-    , mToolTargetSend   (nullptr)
-    , mTargetSending    (true)
+    , mToolTargetStop   (nullptr)
+    , mToolTargetPause  (nullptr)
+    , mToolTargetResume (nullptr)
+    , mToolTargetRestore(nullptr)
     , mAddress          ()
     , mPort             (areg::InvalidPort)
     , mInitLogFile      ( )
@@ -106,13 +108,43 @@ void NaviLiveLogsScopes::addSpecificTools(void)
                              , tr("Save log priorities on every connected target")
                              , tr("Writes the current log priorities into the configuration file of every connected target."));
 
-    mToolTargetSend = addToolButton( NELusanCommon::iconTargetStop(NELusanCommon::SizeBig)
-                                   , tr("Stop this target sending")
-                                   , tr("The target keeps producing its logs and drops them. Its priorities are not changed."));
-    mToolTargetSend->setEnabled(false);
+    mToolTargetStop = addToolButton( NELusanCommon::iconTargetStop(NELusanCommon::SizeBig)
+                                   , tr("Stop this target logging")
+                                   , tr("The target produces no log at all. Every scope priority is turned off and put back when it logs again."));
+    mToolTargetStop->setEnabled(false);
 
-    connect(mToolTargetSend, &QToolButton::clicked, this, [this]() {
-        applyTargetSending(ctrlTable()->currentIndex(), mTargetSending == false);
+    mToolTargetPause = addToolButton( NELusanCommon::iconTargetPause(NELusanCommon::SizeBig)
+                                    , tr("Hold what this target sends")
+                                    , tr("The target keeps producing its logs and stops sending them here. Its priorities are not changed."));
+    mToolTargetPause->setEnabled(false);
+
+    mToolTargetResume = addToolButton( NELusanCommon::iconTargetResume(NELusanCommon::SizeBig)
+                                     , tr("Let this target log and send again")
+                                     , tr("The target produces and sends its logs again, with the priorities it had before."));
+    mToolTargetResume->setEnabled(false);
+
+    mToolTargetRestore = addToolButton( NELusanCommon::iconScopeRestoreAll(NELusanCommon::SizeBig)
+                                      , tr("Restore the saved priorities of this target")
+                                      , tr("The target applies the priorities it has saved. One that was never configured applies its built-in defaults."));
+    mToolTargetRestore->setEnabled(false);
+
+    connect(mToolTargetStop, &QToolButton::clicked, this, [this]() {
+        applyTargetState(ctrlTable()->currentIndex(), areg::LogSourceState::Stopped);
+    });
+
+    connect(mToolTargetPause, &QToolButton::clicked, this, [this]() {
+        applyTargetState(ctrlTable()->currentIndex(), areg::LogSourceState::Paused);
+    });
+
+    connect(mToolTargetResume, &QToolButton::clicked, this, [this]() {
+        applyTargetState(ctrlTable()->currentIndex(), areg::LogSourceState::Active);
+    });
+
+    connect(mToolTargetRestore, &QToolButton::clicked, this, [this]() {
+        if (mScopesModel != nullptr)
+        {
+            mScopesModel->restoreConfiguration(ctrlTable()->currentIndex());
+        }
     });
 
     // Connect reports the state of the panel, so it stays whatever the width is.
@@ -131,25 +163,45 @@ bool NaviLiveLogsScopes::canSavePrio(void) const
 
 void NaviLiveLogsScopes::refreshTargetControls(const QModelIndex& selection)
 {
-    if (mToolTargetSend == nullptr)
+    if (mToolTargetStop == nullptr)
         return;
 
     const bool waiting{ selection.isValid() && selection.data(LoggingScopesModelBase::RoleSourceWait).toBool() };
-    mTargetSending = (selection.isValid() == false) || (selection.data(LoggingScopesModelBase::RoleSourcePaused).toBool() == false);
+    const bool live   { selection.isValid() && (waiting == false) && canSavePrio() };
+    const areg::LogSourceState state
+        { selection.isValid()
+            ? static_cast<areg::LogSourceState>(selection.data(LoggingScopesModelBase::RoleSourceState).toInt())
+            : areg::LogSourceState::Undefined };
 
-    mToolTargetSend->setIcon(mTargetSending ? NELusanCommon::iconTargetStop(NELusanCommon::SizeBig)
-                                            : NELusanCommon::iconTargetResume(NELusanCommon::SizeBig));
+    // A control the target is already in the state of stays visible and goes dead, so the row
+    // never moves under the pointer and the enabled set alone reports where the target stands.
+    mToolTargetStop->setEnabled(live && (state != areg::LogSourceState::Stopped));
+    mToolTargetPause->setEnabled(live && (state != areg::LogSourceState::Paused));
+    mToolTargetResume->setEnabled(live && (state != areg::LogSourceState::Active));
+    mToolTargetRestore->setEnabled(live);
 
-    const QString text{ mTargetSending ? tr("Stop this target sending") : tr("Let this target send again") };
-    mToolTargetSend->setText(text);
-    mToolTargetSend->setToolTip(waiting
-                                 ? tr("Waiting for the target to answer.")
-                                 : mTargetSending
-                                     ? tr("The target keeps producing its logs and drops them. Its priorities are not changed.")
-                                     : tr("The target sends the logs it produces again."));
-    mToolTargetSend->setStatusTip(mToolTargetSend->toolTip());
-    mToolTargetSend->setAccessibleName(text);
-    mToolTargetSend->setEnabled(selection.isValid() && (waiting == false) && canSavePrio());
+    if (waiting)
+    {
+        const QString wait{ tr("Waiting for the target to answer.") };
+        mToolTargetStop->setToolTip(wait);
+        mToolTargetPause->setToolTip(wait);
+        mToolTargetResume->setToolTip(wait);
+        mToolTargetRestore->setToolTip(wait);
+    }
+    else
+    {
+        mToolTargetStop->setToolTip(tr("The target produces no log at all. Every scope priority is turned off and put back when it logs again."));
+        mToolTargetPause->setToolTip(tr("The target keeps producing its logs and stops sending them here. Its priorities are not changed."));
+        mToolTargetResume->setToolTip(state == areg::LogSourceState::Stopped
+                                        ? tr("The target produces and sends its logs again, with the priorities it had before it was stopped.")
+                                        : tr("The target sends the logs it produces again."));
+        mToolTargetRestore->setToolTip(tr("The target applies the priorities it has saved. One that was never configured applies its built-in defaults."));
+    }
+
+    for (QToolButton* button : { mToolTargetStop, mToolTargetPause, mToolTargetResume, mToolTargetRestore })
+    {
+        button->setStatusTip(button->toolTip());
+    }
 }
 
 const QString& NaviLiveLogsScopes::getLogCollectorAddress() const

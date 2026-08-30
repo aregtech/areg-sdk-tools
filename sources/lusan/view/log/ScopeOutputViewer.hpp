@@ -34,6 +34,7 @@ class LoggingModelBase;
 class ScopeOutputDelegate;
 class QCheckBox;
 class QLineEdit;
+class QMenu;
 class QRadioButton;
 class QTableView;
 class QToolButton;
@@ -68,6 +69,10 @@ private:
 public:
     //!< How long a call must run to count as slow while the view is narrowed, in microseconds.
     static constexpr uint32_t   SlowCallUs { 10000 };
+
+    //!< The steps the slow-call threshold can be set to, in microseconds. Zero keeps no call
+    //!< for its duration alone, so only the priority of the entries decides.
+    static constexpr uint32_t   SlowCallSteps[] { 0u, 1000u, 10000u, 100000u };
 
     ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
     virtual ~ScopeOutputViewer();
@@ -197,6 +202,16 @@ private:
     //!< Draws the fold and the interesting-only controls for what the filter currently holds.
     void refreshCallControls(void);
 
+    /**
+     * \brief   Takes the chosen slow-call threshold and applies it if the view is narrowed.
+     * \param   slowUs  How long a call must run to count as slow, in microseconds. Zero keeps
+     *                  no call for its duration alone.
+     **/
+    void onSlowStepChosen(uint32_t slowUs);
+
+    //!< Writes the chosen threshold into the tool tip of the interesting-only control.
+    void refreshSlowTip(void);
+
     //!< Returns the pointer to the table view control.
     inline QTableView* ctrlTable() const;
 
@@ -244,6 +259,7 @@ private:
     QToolButton*            mToolFold;  //!< Folds the calls that carry nothing above information.
     QToolButton*            mToolPick;  //!< Narrows the view to the rows worth reading.
     QToolButton*            mToolClock; //!< Counts the time column from the entry of the call.
+    QMenu*                  mSlowMenu;  //!< Chooses how long a call must run to count as slow.
     uint32_t                mSlowUs;    //!< How long a call must run to count as slow, in microseconds.
 };
 

@@ -711,10 +711,12 @@ ScopeRoot::ScopeRoot()
     , mLocation ()
     , mConnected(true)
     , mSavedPrio()
+    , mBasePrio()
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
-    , mSourceActive (true)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
     , mSourceWaiting(false)
     , mSourceAge    (0)
     , mPausedBy     (areg::COOKIE_ANY)
@@ -728,10 +730,12 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId)
     , mLocation ()
     , mConnected(true)
     , mSavedPrio()
+    , mBasePrio()
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
-    , mSourceActive (true)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
     , mSourceWaiting(false)
     , mSourceAge    (0)
     , mPausedBy     (areg::COOKIE_ANY)
@@ -745,10 +749,12 @@ ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
     , mLocation (QString::fromStdString(instance.ciLocation))
     , mConnected(true)
     , mSavedPrio()
+    , mBasePrio()
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
-    , mSourceActive (true)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
     , mSourceWaiting(false)
     , mSourceAge    (0)
     , mPausedBy     (areg::COOKIE_ANY)
@@ -762,10 +768,12 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString& rootName)
     , mLocation ()
     , mConnected(true)
     , mSavedPrio()
+    , mBasePrio()
     , mTargetState(ScopeRoot::eTargetState::TargetApplied)
     , mTargetAge  (0)
     , mTargetFade (0.0)
-    , mSourceActive (true)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
     , mSourceWaiting(false)
     , mSourceAge    (0)
     , mPausedBy     (areg::COOKIE_ANY)
@@ -779,10 +787,12 @@ ScopeRoot::ScopeRoot(const ScopeRoot& src)
     , mLocation ( src.mLocation )
     , mConnected( src.mConnected )
     , mSavedPrio( src.mSavedPrio )
+    , mBasePrio( src.mBasePrio )
     , mTargetState( src.mTargetState )
     , mTargetAge  ( src.mTargetAge )
     , mTargetFade ( src.mTargetFade )
-    , mSourceActive ( src.mSourceActive )
+    , mSourceState  ( src.mSourceState )
+    , mSourceWanted ( src.mSourceWanted )
     , mSourceWaiting( src.mSourceWaiting )
     , mSourceAge    ( src.mSourceAge )
     , mPausedBy     ( src.mPausedBy )
@@ -796,10 +806,12 @@ ScopeRoot::ScopeRoot(ScopeRoot&& src) noexcept
     , mLocation ( std::move(src.mLocation) )
     , mConnected( src.mConnected )
     , mSavedPrio( std::move(src.mSavedPrio) )
+    , mBasePrio( std::move(src.mBasePrio) )
     , mTargetState( src.mTargetState )
     , mTargetAge  ( src.mTargetAge )
     , mTargetFade ( src.mTargetFade )
-    , mSourceActive ( src.mSourceActive )
+    , mSourceState  ( src.mSourceState )
+    , mSourceWanted ( src.mSourceWanted )
     , mSourceWaiting( src.mSourceWaiting )
     , mSourceAge    ( src.mSourceAge )
     , mPausedBy     ( src.mPausedBy )
@@ -814,10 +826,12 @@ ScopeRoot& ScopeRoot::operator = (const ScopeRoot& src)
     mLocation  = src.mLocation;
     mConnected = src.mConnected;
     mSavedPrio = src.mSavedPrio;
+    mBasePrio = src.mBasePrio;
     mTargetState = src.mTargetState;
     mTargetAge = src.mTargetAge;
     mTargetFade = src.mTargetFade;
-    mSourceActive = src.mSourceActive;
+    mSourceState = src.mSourceState;
+    mSourceWanted = src.mSourceWanted;
     mSourceWaiting = src.mSourceWaiting;
     mSourceAge = src.mSourceAge;
     mPausedBy = src.mPausedBy;
@@ -832,10 +846,12 @@ ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
     mLocation  = std::move(src.mLocation);
     mConnected = src.mConnected;
     mSavedPrio = std::move(src.mSavedPrio);
+    mBasePrio = std::move(src.mBasePrio);
     mTargetState = src.mTargetState;
     mTargetAge = src.mTargetAge;
     mTargetFade = src.mTargetFade;
-    mSourceActive = src.mSourceActive;
+    mSourceState = src.mSourceState;
+    mSourceWanted = src.mSourceWanted;
     mSourceWaiting = src.mSourceWaiting;
     mSourceAge = src.mSourceAge;
     mPausedBy = src.mPausedBy;
@@ -866,18 +882,20 @@ void ScopeRoot::setTargetState(ScopeRoot::eTargetState state)
     mTargetFade = (state == ScopeRoot::eTargetState::TargetApplied) ? 0.0 : 1.0;
 }
 
-void ScopeRoot::markSourceRequest(void)
+void ScopeRoot::markSourceRequest(areg::LogSourceState wanted)
 {
+    mSourceWanted = wanted;
     mSourceWaiting = true;
     mSourceAge = 0;
 }
 
-void ScopeRoot::setSourceState(bool active, ITEM_ID byObserver)
+void ScopeRoot::setSourceState(areg::LogSourceState state, ITEM_ID byObserver)
 {
-    mSourceActive = active;
+    mSourceState = state;
+    mSourceWanted = areg::LogSourceState::Undefined;
     mSourceWaiting = false;
     mSourceAge = 0;
-    mPausedBy = active ? areg::COOKIE_ANY : byObserver;
+    mPausedBy = (state == areg::LogSourceState::Active) ? areg::COOKIE_ANY : byObserver;
 }
 
 bool ScopeRoot::ageTargetState(int elapsedMs)
@@ -889,6 +907,7 @@ bool ScopeRoot::ageTargetState(int elapsedMs)
         mSourceAge += elapsedMs;
         if (mSourceAge >= ScopeRoot::TargetWaitMs)
         {
+            mSourceWanted = areg::LogSourceState::Undefined;
             mSourceWaiting = false;
             mSourceAge = 0;
             changed = true;
@@ -929,6 +948,46 @@ void ScopeRoot::savePriorities(void)
         Q_ASSERT(node != nullptr);
         mSavedPrio.insert(node->makePath(), node->getPriority());
     }
+}
+
+void ScopeRoot::captureBaseline(void)
+{
+    if (mBasePrio.isEmpty() == false)
+        return;
+
+    QList<ScopeNodeBase *> nodes;
+    extractChildNodesWithPriority(nodes);
+    for (const ScopeNodeBase * node : nodes)
+    {
+        Q_ASSERT(node != nullptr);
+        mBasePrio.insert(node->makePath(), node->getPriority());
+    }
+}
+
+void ScopeRoot::clearBaseline(void)
+{
+    mBasePrio.clear();
+}
+
+int ScopeRoot::quietedScopes(QStringList& names) const
+{
+    int result{ 0 };
+    for (auto it = mBasePrio.constBegin(); it != mBasePrio.constEnd(); ++it)
+    {
+        const ScopeNodeBase * node = findChildByPath(it.key());
+        if (node == nullptr)
+            continue;
+
+        // A bit that the target reported and no longer carries is a priority it has stopped
+        // generating. A bit gained is a raise and is not counted.
+        if ((it.value() & ~node->getPriority()) != 0)
+        {
+            names.append(it.key());
+            ++result;
+        }
+    }
+
+    return result;
 }
 
 int ScopeRoot::restorePriorities(void)

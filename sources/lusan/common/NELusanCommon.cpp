@@ -392,7 +392,7 @@ QToolButton* NELusanCommon::createToolButton(QWidget* parent, const QString& ico
     button->setCursor(Qt::PointingHandCursor);
     button->setMouseTracking(true);
     button->setToolTip(toolTip);
-    button->setIcon(QIcon(iconName));
+    button->setIcon(loadIcon(iconName, QSize(TOOLBUTTON_ICON, TOOLBUTTON_ICON)));
     button->setIconSize(QSize(TOOLBUTTON_ICON, TOOLBUTTON_ICON));
     button->setShortcut(shortcut);
     return button;

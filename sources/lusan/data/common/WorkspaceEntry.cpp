@@ -31,6 +31,8 @@ namespace
     const QString   _xmlAttributeName   { "name"     };
     const QString   _xmlAttributeWidth  { "width"    };
     const QString   _xmlAttributeDb     { "database" };
+    const QString   _xmlAttributeMode   { "mode"     };
+    const QString   _xmlModeOffline     { "offline"  };
 }
 
 QString WorkspaceEntry::nameFromRoot(const QString& root)
@@ -157,10 +159,26 @@ WorkspaceEntry& WorkspaceEntry::operator = (WorkspaceEntry&& src) noexcept
     return *this;
 }
 
+void WorkspaceEntry::_writeLogColumns(QXmlStreamWriter& xml, const WorkspaceEntry::ListLogColumns& columns, const QString& mode) const
+{
+    for (const WorkspaceEntry::sLogColumn& column : columns)
+    {
+        xml.writeStartElement(_xmlElementColumn);
+            xml.writeAttribute(_xmlAttributeName, column.key);
+            xml.writeAttribute(_xmlAttributeWidth, QString::number(column.width));
+            if (mode.isEmpty() == false)
+            {
+                xml.writeAttribute(_xmlAttributeMode, mode);
+            }
+        xml.writeEndElement();
+    }
+}
+
 void WorkspaceEntry::_readLogView(QXmlStreamReader& xml)
 {
     mLogDatabase = NELusanCommon::fixPath(xml.attributes().value(_xmlAttributeDb).toString());
     mLogColumns.clear();
+    mLogColumnsFile.clear();
 
     QXmlStreamReader::TokenType tokenType{ xml.tokenType() };
     QStringView xmlName{ xml.name() };
@@ -180,7 +198,22 @@ void WorkspaceEntry::_readLogView(QXmlStreamReader& xml)
             column.width = xml.attributes().value(_xmlAttributeWidth).toInt();
             if (column.key.isEmpty() == false)
             {
-                mLogColumns.append(column);
+                // A file written before the two records existed carries no mode. Its one record
+                // then stands for both, so neither window loses what it had.
+                const QStringView mode{ xml.attributes().value(_xmlAttributeMode) };
+                if (mode.isEmpty())
+                {
+                    mLogColumns.append(column);
+                    mLogColumnsFile.append(column);
+                }
+                else if (mode == _xmlModeOffline)
+                {
+                    mLogColumnsFile.append(column);
+                }
+                else
+                {
+                    mLogColumns.append(column);
+                }
             }
         }
 
@@ -348,17 +381,12 @@ bool WorkspaceEntry::writeToXml(QXmlStreamWriter& xml) const
                 xml.writeTextElement(NELusanCommon::xmlElementLogs, mLogFiles);
             xml.writeEndElement();
 
-            if ((mLogColumns.isEmpty() == false) || (mLogDatabase.isEmpty() == false))
+            if ((mLogColumns.isEmpty() == false) || (mLogColumnsFile.isEmpty() == false) || (mLogDatabase.isEmpty() == false))
             {
                 xml.writeStartElement(_xmlElementLogView);
                     xml.writeAttribute(_xmlAttributeDb, mLogDatabase);
-                    for (const WorkspaceEntry::sLogColumn& column : mLogColumns)
-                    {
-                        xml.writeStartElement(_xmlElementColumn);
-                            xml.writeAttribute(_xmlAttributeName, column.key);
-                            xml.writeAttribute(_xmlAttributeWidth, QString::number(column.width));
-                        xml.writeEndElement();
-                    }
+                    _writeLogColumns(xml, mLogColumns, QString());
+                    _writeLogColumns(xml, mLogColumnsFile, _xmlModeOffline);
                 xml.writeEndElement();
             }
         xml.writeEndElement();

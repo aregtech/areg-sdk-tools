@@ -812,16 +812,25 @@ void LogViewerBase::_saveLayout(void) const
         }
     }
 
-    workspace.setLogColumns(columns);
+    workspace.setLogColumns(_columnMode(), columns);
     workspace.setLogDatabase(mLogModel->getDatabasePath());
     options.updateWorkspace(workspace);
-    options.writeOptions();
+
+    // The record is only cached here. It reaches the file when the application closes, so a
+    // window that opens and closes many times in one run costs no write.
+}
+
+WorkspaceEntry::eLogMode LogViewerBase::_columnMode(void) const
+{
+    return ((mLogModel != nullptr) && mLogModel->isLiveLogging())
+                ? WorkspaceEntry::eLogMode::LogModeLive
+                : WorkspaceEntry::eLogMode::LogModeOffline;
 }
 
 void LogViewerBase::_restoreLayout(void)
 {
     const WorkspaceEntry workspace{ LusanApplication::getActiveWorkspace() };
-    const WorkspaceEntry::ListLogColumns& saved{ workspace.getLogColumns() };
+    const WorkspaceEntry::ListLogColumns& saved{ workspace.getLogColumns(_columnMode()) };
     if (saved.isEmpty())
         return;
 
@@ -871,7 +880,8 @@ void LogViewerBase::_forgetLayout(void) const
     if (workspace.isValid() == false)
         return;
 
-    workspace.setLogColumns(WorkspaceEntry::ListLogColumns());
+    workspace.setLogColumns(WorkspaceEntry::eLogMode::LogModeLive, WorkspaceEntry::ListLogColumns());
+    workspace.setLogColumns(WorkspaceEntry::eLogMode::LogModeOffline, WorkspaceEntry::ListLogColumns());
     options.updateWorkspace(workspace);
     options.writeOptions();
 }

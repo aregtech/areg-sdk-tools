@@ -2233,6 +2233,10 @@ void MdiMainWindow::writeSettings()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setValue("geometry", saveGeometry());
+
+    // Every log window has already handed its columns to the options while it closed, so this
+    // is the one write that puts the whole run on disk.
+    LusanApplication::getOptions().writeOptions();
 }
 
 MdiChild* MdiMainWindow::activeMdiChild() const

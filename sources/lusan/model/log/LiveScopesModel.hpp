@@ -112,16 +112,18 @@ public:
     bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) override;
 
     /**
-     * \brief   Asks the target of the given tree entry to send the logs it produces, or to keep
-     *          producing them and drop them. The scope priorities are not touched.
+     * \brief   Asks the target of the given tree entry to take a state. Active produces the logs
+     *          and sends them, Paused produces them and drops them, Stopped produces none because
+     *          every scope priority is turned off. Leaving Stopped puts the priorities back.
      * \param   node    Any entry of the target. An invalid index reaches every target.
-     * \param   active  True to make the target send its logs, false to make it drop them.
+     * \param   state   The state the target should take.
      * \return  True if the request was sent.
      **/
-    bool setSourceState(const QModelIndex& node, bool active) override;
+    bool setSourceState(const QModelIndex& node, areg::LogSourceState state) override;
 
     /**
-     * \brief   Asks the target of the given tree entry to read its log configuration file again.
+     * \brief   Asks the target of the given tree entry to apply the scope priorities it has
+     *          saved. A target that was never configured applies its built-in defaults.
      * \param   node    Any entry of the target. An invalid index reaches every target.
      * \return  True if the request was sent.
      **/
@@ -155,9 +157,10 @@ protected:
 private:
 
     /**
-     * \brief   Marks every process as waiting for the answer of a sending request.
+     * \brief   Marks every process as waiting for the answer of a state request.
+     * \param   wanted  The state every target was asked to take.
      **/
-    void _markAllSourceRequests(void);
+    void _markAllSourceRequests(areg::LogSourceState wanted);
 
     /**
      * \brief   Connects to or disconnects from the log observer notifications this model reads.
@@ -185,8 +188,8 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    //!< The targets the collector reports as not sending, each with the observer that stopped it.
-    QHash<ITEM_ID, ITEM_ID> mPausedSources;
+    //!< The state of every target the collector named, with the observer that asked for it.
+    QHash<ITEM_ID, QPair<areg::LogSourceState, ITEM_ID> > mPausedSources;
     //!< The connection to the sending state notification.
     QMetaObject::Connection mConSourceState;
     //!< The connection to the configuration restored notification.

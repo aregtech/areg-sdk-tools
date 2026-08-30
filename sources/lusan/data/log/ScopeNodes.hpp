@@ -24,6 +24,7 @@
 #include "lusan/data/log/ScopeNodeBase.hpp"
 #include "areg/base/SortedLinkedList.hpp"
 #include "areg/component/ServiceDefs.hpp"
+#include "areg/logging/LoggingDefs.hpp"
 
 #include <QMap>
 
@@ -572,6 +573,24 @@ public:
      **/
     void savePriorities(void);
 
+    /**
+     * \brief   Remembers what the target reported the first time it named its scopes. The call
+     *          does nothing once the record exists, so the record keeps the starting point of
+     *          the target and not the last thing the reader did.
+     **/
+    void captureBaseline(void);
+
+    //!< Forgets the starting point, so the next scope list of the target becomes the new one.
+    void clearBaseline(void);
+
+    /**
+     * \brief   Returns the paths of the scopes that generate less than the target reported when
+     *          it first named them. A scope that generates more is not counted.
+     * \param   names   Receives the paths, appended. Nothing is appended when none is quieted.
+     * \return  The number of quieted scopes.
+     **/
+    int quietedScopes(QStringList& names) const;
+
     //!< Returns what the target knows about the priorities set on this process.
     inline ScopeRoot::eTargetState targetState(void) const;
 
@@ -603,27 +622,40 @@ public:
      **/
     int restorePriorities(void);
 
-    //!< Returns true if the target sends the logs it produces.
+    //!< Returns the way the target produces and sends its logs.
+    inline areg::LogSourceState sourceState(void) const;
+
+    //!< Returns true if the target produces its logs and sends them.
     inline bool isSourceActive(void) const;
 
-    //!< Returns true while a request to start or stop the sending waits for its answer.
+    //!< Returns true if the target produces its logs and drops them.
+    inline bool isSourcePaused(void) const;
+
+    //!< Returns true if the target produces no log because every scope priority is off.
+    inline bool isSourceStopped(void) const;
+
+    //!< Returns true while a request to change the state waits for its answer.
     inline bool isSourceWaiting(void) const;
 
-    //!< Returns the ID of the observer that stopped the target, or zero while it sends.
+    //!< Returns the ID of the observer that took the target out of the active state, or zero.
     inline ITEM_ID pausedBy(void) const;
 
-    /**
-     * \brief   Marks that a request to start or stop the sending is on its way, so the
-     *          interface draws it as in flight until the answer arrives.
-     **/
-    void markSourceRequest(void);
+    //!< Returns the state a pending request asked for, Undefined when nothing is pending.
+    inline areg::LogSourceState wantedSourceState(void) const;
 
     /**
-     * \brief   Holds what the collector said about the sending state of the target.
-     * \param   active      True when the target sends the logs it produces.
+     * \brief   Marks that a request to change the state is on its way, so the interface draws
+     *          it as in flight until the answer arrives.
+     * \param   wanted  The state the target was asked to take.
+     **/
+    void markSourceRequest(areg::LogSourceState wanted);
+
+    /**
+     * \brief   Holds what the collector said about the state of the target.
+     * \param   state       The state the target is in.
      * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
      **/
-    void setSourceState(bool active, ITEM_ID byObserver);
+    void setSourceState(areg::LogSourceState state, ITEM_ID byObserver);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -639,19 +671,23 @@ private:
     bool        mConnected;
     //!< The priority of every scope that carried one, kept across a disconnect.
     QMap<QString, uint32_t>  mSavedPrio;
+    //!< What the target reported the first time it named its scopes.
+    QMap<QString, uint32_t>  mBasePrio;
     //!< What the target knows about the priorities set here.
     ScopeRoot::eTargetState  mTargetState;
     //!< The time the current target state has been held, in milliseconds.
     int                      mTargetAge;
     //!< How strongly the target mark is drawn, from 1.0 down to 0.0.
     qreal                    mTargetFade;
-    //!< False while the target produces its logs and drops them instead of sending them.
-    bool                     mSourceActive;
-    //!< True while a request to start or stop the sending waits for its answer.
+    //!< The way the target produces and sends its logs.
+    areg::LogSourceState     mSourceState;
+    //!< The state a pending request asked for, Undefined when nothing is pending.
+    areg::LogSourceState     mSourceWanted;
+    //!< True while a request to change the state waits for its answer.
     bool                     mSourceWaiting;
-    //!< The time the pending sending request has waited for an answer, in milliseconds.
+    //!< The time the pending request has waited for an answer, in milliseconds.
     int                      mSourceAge;
-    //!< The ID of the observer that stopped the target, zero while it sends.
+    //!< The ID of the observer that took the target out of the active state, zero otherwise.
     ITEM_ID                  mPausedBy;
 };
 
@@ -743,9 +779,29 @@ inline bool ScopeRoot::isTargetAgeing(void) const
            || mSourceWaiting);
 }
 
+inline areg::LogSourceState ScopeRoot::sourceState(void) const
+{
+    return mSourceState;
+}
+
 inline bool ScopeRoot::isSourceActive(void) const
 {
-    return mSourceActive;
+    return (mSourceState == areg::LogSourceState::Active);
+}
+
+inline bool ScopeRoot::isSourcePaused(void) const
+{
+    return (mSourceState == areg::LogSourceState::Paused);
+}
+
+inline bool ScopeRoot::isSourceStopped(void) const
+{
+    return (mSourceState == areg::LogSourceState::Stopped);
+}
+
+inline areg::LogSourceState ScopeRoot::wantedSourceState(void) const
+{
+    return mSourceWanted;
 }
 
 inline bool ScopeRoot::isSourceWaiting(void) const

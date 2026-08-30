@@ -28,6 +28,9 @@
 
 #include "areg/logging/areg_log.h"
 
+#include <QActionGroup>
+#include <QMenu>
+
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
     , ui            (new Ui::ScopeOutputViewer)
@@ -37,6 +40,7 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     , mToolFold     (nullptr)
     , mToolPick     (nullptr)
     , mToolClock    (nullptr)
+    , mSlowMenu     (nullptr)
     , mSlowUs       (ScopeOutputViewer::SlowCallUs)
 {
     ui->setupUi(this);
@@ -200,7 +204,28 @@ void ScopeOutputViewer::setupCallControls(void)
 
     mToolPick = build( NELusanCommon::iconFilter(NELusanCommon::SizeBig)
                      , tr("Only what is worth reading")
-                     , tr("Keeps the entries of Warning priority or worse, and the calls that carry one or ran longer than %1 ms.").arg(static_cast<double>(ScopeOutputViewer::SlowCallUs) / 1000.0, 0, 'f', 0));
+                     , QString());
+
+    mSlowMenu = new QMenu(mToolPick);
+    QActionGroup* steps = new QActionGroup(mSlowMenu);
+    steps->setExclusive(true);
+    for (uint32_t step : ScopeOutputViewer::SlowCallSteps)
+    {
+        QAction* entry = mSlowMenu->addAction(step == 0u
+                                                ? tr("Warnings and worse only")
+                                                : tr("Also calls slower than %1 ms").arg(static_cast<double>(step) / 1000.0, 0, 'g', 3));
+        entry->setCheckable(true);
+        entry->setChecked(step == mSlowUs);
+        entry->setData(step);
+        steps->addAction(entry);
+    }
+
+    connect(steps, &QActionGroup::triggered, this, [this](QAction* entry) {
+        onSlowStepChosen(entry != nullptr ? entry->data().toUInt() : ScopeOutputViewer::SlowCallUs);
+    });
+
+    NELusanCommon::decorateToolButton(mToolPick, mSlowMenu);
+    refreshSlowTip();
 
     mToolClock = build( NELusanCommon::iconTimer(NELusanCommon::SizeBig)
                       , tr("Time since the call started")
@@ -209,6 +234,30 @@ void ScopeOutputViewer::setupCallControls(void)
     connect(mToolFold , &QToolButton::toggled, this, [this](bool checked) { onAutoFoldToggled(checked);      });
     connect(mToolPick , &QToolButton::toggled, this, [this](bool checked) { onInterestingToggled(checked);   });
     connect(mToolClock, &QToolButton::toggled, this, [this](bool checked) { onRelativeTimeToggled(checked);  });
+}
+
+void ScopeOutputViewer::onSlowStepChosen(uint32_t slowUs)
+{
+    if (mSlowUs == slowUs)
+        return;
+
+    mSlowUs = slowUs;
+    refreshSlowTip();
+    if ((mFilter != nullptr) && mToolPick->isChecked())
+    {
+        mFilter->setInterestingOnly(true, mSlowUs);
+        refreshCallControls();
+    }
+}
+
+void ScopeOutputViewer::refreshSlowTip(void)
+{
+    const QString tip{ mSlowUs == 0u
+                        ? tr("Keeps the entries of Warning priority or worse, and the calls that carry one.")
+                        : tr("Keeps the entries of Warning priority or worse, and the calls that carry one or ran longer than %1 ms.")
+                            .arg(static_cast<double>(mSlowUs) / 1000.0, 0, 'g', 3) };
+    mToolPick->setToolTip(tip);
+    mToolPick->setStatusTip(tip);
 }
 
 void ScopeOutputViewer::refreshCallControls(void)

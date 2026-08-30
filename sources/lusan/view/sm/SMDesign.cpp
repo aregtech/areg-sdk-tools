@@ -865,8 +865,8 @@ void SMDesign::setupActions()
     mActGridSize->setIcon(SMToolIcons::icon(eIcon::GridSize));
     mActEnterSubmachine->setIcon(SMToolIcons::icon(eIcon::EnterSubmachine));
     mActGoToParent->setIcon(SMToolIcons::icon(eIcon::GoToParent));
-    mActAddSubmachine->setIcon(QIcon(QStringLiteral(":/icons/entry add")));
-    mActRemoveSubmachine->setIcon(QIcon(QStringLiteral(":/icons/entry delete")));
+    mActAddSubmachine->setIcon(NELusanCommon::loadIcon(QStringLiteral(":/icons/entry add"), NELusanCommon::SizeSmall));
+    mActRemoveSubmachine->setIcon(NELusanCommon::loadIcon(QStringLiteral(":/icons/entry delete"), NELusanCommon::SizeSmall));
     mActCenterMachine->setIcon(SMToolIcons::icon(eIcon::CenterMachine));
     mActZoomIn->setIcon(SMToolIcons::icon(eIcon::ZoomIn));
     mActZoomOut->setIcon(SMToolIcons::icon(eIcon::ZoomOut));
