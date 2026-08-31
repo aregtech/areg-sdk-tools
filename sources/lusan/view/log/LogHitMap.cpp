@@ -151,7 +151,11 @@ void LogHitMap::_followScrollBar(void)
 void LogHitMap::_build(void)
 {
     const int lines{ height() };
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     mLines.assign(lines > 0 ? lines : 0, static_cast<uint8_t>(LogHitMap::eMark::MarkNone));
+#else   // QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    mLines.fill(static_cast<uint8_t>(LogHitMap::eMark::MarkNone), lines > 0 ? lines : 0);
+#endif  // QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
 
     if ((lines <= 0) || (mModel == nullptr) || (mFilter == nullptr))
         return;
