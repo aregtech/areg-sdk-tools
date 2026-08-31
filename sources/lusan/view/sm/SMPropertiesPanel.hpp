@@ -40,6 +40,7 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
+class QScrollArea;
 class QSpinBox;
 class QStackedWidget;
 class QTabWidget;
@@ -155,9 +156,10 @@ signals:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   The panel's own, fixed minimum width (\ref NESMDesign::PanelMinWidth), independent
-     *          of what the current selection puts on screen -- the hosting dock reads this to
-     *          decide how narrow the user may drag it.
+     * \brief   The panel's own, fixed minimum size (\ref NESMDesign::PanelMinWidth by
+     *          \ref NESMDesign::PanelMinHeight), independent of what the current selection puts
+     *          on screen -- the hosting dock reads this to decide how far the user may shrink it.
+     *          The content scrolls inside the panel below that size.
      **/
     virtual QSize minimumSizeHint() const override;
 
@@ -264,6 +266,7 @@ private:
 private:
     StateMachineModel&  mModel;         //!< The document facade.
     QStackedWidget*     mStack;         //!< The page container.
+    QScrollArea*        mScroll;        //!< Scrolls the page container when the panel is short.
     ePage               mPage;          //!< The shown page.
     uint32_t            mCurrentId;     //!< The shown element ID (0 = none).
     bool                mUpdating;      //!< Guards field population against commit signals.

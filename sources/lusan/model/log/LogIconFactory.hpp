@@ -28,6 +28,9 @@
 
 #include <QColor>
 #include <QIcon>
+#include <QRectF>
+
+class QPainter;
 
 /************************************************************************
  * Class LogIconFactory
@@ -54,23 +57,31 @@ public:
         , PrioScopeExit = static_cast<uint32_t>(areg::LogPriority::PrioScope) | 8
     };
 
-    //!< The indexes of log colors, which are used in the log scope tree view and log messages.
-    enum class eLogColor
+    //!< The way the scope lines of the charger are drawn.
+    enum class eScopeLines : uint8_t
     {
-          ColorNotSet   = 0 //!< Not set color, used for invalid log priority
-        , ColorFatal        //!< Fatal log color
-        , ColorError        //!< Error log color
-        , ColorWarn         //!< Warning log color
-        , ColorInfo         //!< Info log color
-        , ColorDebug        //!< Debug log color
-        , ColorScope        //!< Scope log color, used for scope log messages
-        , ColorScopeEnter   //!< Scope enter log color, used for scope enter log messages
-        , ColorScopeExit    //!< Scope exit log color, used for scope exit log messages
-        , ColorWithScope    //!< Scope log color, used for log messages with scope
-        , ColorDefault      //!< The default color
-
-        , ColorCount        //<!< The number of log colors
+          LinesOff      = 0 //!< Scope lines are off everywhere below: corners only
+        , LinesOn           //!< Scope lines are on everywhere below: the full bracket pair
+        , LinesPartial      //!< Scope lines are on for some scopes below: the pair, interrupted
     };
+
+    /**
+     * \brief   What the charger of one tree node shows.
+     *
+     *          The charger reads as a range: the cells fill from the bottom up to the
+     *          chosen level, so everything up to that level is generated. The brackets
+     *          around the cells carry the scope lines.
+     **/
+    struct sCharger
+    {
+        uint8_t     level;  //!< 0 nothing, 1 Error, 2 Warning, 3 Information, 4 Debug
+        uint8_t     mixed;  //!< One bit per cell, bit 0 Error to bit 3 Debug, set when the scopes below disagree
+        eScopeLines lines;  //!< The state of the scope lines
+        bool        frozen; //!< The process is gone, so the whole charger greys
+    };
+
+    //!< The number of cells the charger has, one per severity.
+    static constexpr int    ChargerCells    { 4 };
 
     //!< Size of the icon in pixels to display in the scope navigation tree view.
     static constexpr int    IconPixels      { 16 };
@@ -96,34 +107,38 @@ public:
     static QIcon getLogIcon(eLogIcons prio, bool active, uint32_t pixels = ButtonPixels);
 
     /**
-     * \brief   Returns the color for the log priority.
-     * \param   logPrio      The log priority.
+     * \brief   Draws the charger inside the given box.
+     *          The drawing is centred and keeps its proportions, so the box may be any size.
+     * \param   painter The painter to draw with. Its state is restored on return.
+     * \param   box     The rectangle to draw into.
+     * \param   charger What the charger shows.
      **/
-    static QColor getColor(areg::LogPriority logPrio);
+    static void paintCharger(QPainter & painter, const QRectF & box, const sCharger & charger);
 
     /**
-     * \brief   Returns the color for the log priority.
-     * \param   logPrio      The log priority.
+     * \brief   Returns the charger as an icon of the given size. The icons are cached,
+     *          and the cache is dropped when the theme changes.
+     * \param   charger The charger to draw.
+     * \param   pixels  The extent of the square icon.
      **/
-    static QColor getLogColor(LogIconFactory::eLogColor logPrio);
+    static QIcon chargerIcon(const sCharger & charger, uint32_t pixels = IconPixels);
 
     /**
-     * \brief   Returns the color for the log message.
-     * \param   logMessage   The log message to get color.
+     * \brief   Returns the charger that stands for the given combination of priorities.
+     *          The scopes below are taken to agree, so no cell is drawn hollow.
+     * \param   scopePrio   The bits of combination of scope priorities.
      **/
-    static QColor getLogColor(const areg::LogEntry & logMessage);
+    static sCharger chargerOf(uint32_t scopePrio);
 
     /**
-     * \brief   Returns the background color for the log message based on log message priority.
-     * \param   logMessage  The log message with message priority information to get background color.
+     * \brief   Returns the charger of a node whose scopes below do not all produce the same.
+     *          Cells up to the lowest level are solid, the cells between the two levels are
+     *          hollow, and the rest stay ghosted.
+     * \param   levelLow    The lowest level any scope below produces, 0 up to ChargerCells.
+     * \param   levelHigh   The highest level any scope below produces, 0 up to ChargerCells.
+     * \param   lines       The state of the scope lines below.
      **/
-    static QColor getLogBackgroundColor(const areg::LogEntry & logMessage);
-
-    /**
-     * \brief   Returns the background color for the specified log priority.
-     * \param   logPrio     The log message priority.
-     **/
-    static QColor getLogBackgroundColor(areg::LogPriority logPrio);
+    static sCharger chargerOfRange(uint8_t levelLow, uint8_t levelHigh, eScopeLines lines);
 };
 
 #endif  // LUSAN_MODEL_LOG_LogIconFactory_HPP

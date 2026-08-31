@@ -19,9 +19,19 @@
 
 #include "lusan/view/common/NaviToolbarWindow.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
+
+#include <algorithm>
+
+#include <QEvent>
 #include <QFrame>
+#include <QLayoutItem>
+#include <QMargins>
+#include <QPalette>
+#include <QSet>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QResizeEvent>
 #include <QSizePolicy>
 #include <QToolButton>
 #include <QTreeView>
@@ -34,15 +44,94 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
     , mToolbar          (new QWidget(this))
     , mToolLayout       (new QHBoxLayout(mToolbar))
     , mNaviTree         (new QTreeView(this))
+    , mToolOverflow     (new QToolButton(mToolbar))
+    , mOverflowRow      (nullptr)
+    , mOverflowLayout   (nullptr)
+    , mToolItems        ( )
 {
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     mNaviLayout->setContentsMargins(0, 0, 0, 0);
-    mNaviLayout->setSpacing(7);
-    mNaviLayout->addWidget(mToolbar, 0, Qt::AlignmentFlag::AlignLeft);
+    mNaviLayout->setSpacing(4);
+    mNaviLayout->addWidget(mToolbar);
     mNaviLayout->addWidget(mNaviTree);
 
-    mToolbar->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+    mToolbar->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Fixed);
+    mToolbar->setFixedHeight(NaviToolbarWindow::toolRowHeight());
+
+    NaviToolbarWindow::_applyRowMetrics(*mToolLayout);
+
+    // The overflow mark is the one icon of the set that fills its button instead of sitting
+    // inset in a square, so that it is seen at all.
+    const QSize more(NaviToolbarWindow::_overflowWidth(), NaviToolbarWindow::toolButtonHeight());
+    mToolOverflow->setIcon(NELusanCommon::iconToolbarMore(more));
+    mToolOverflow->setIconSize(more);
+    mToolOverflow->setAutoRaise(true);
+    mToolOverflow->setToolTip(tr("More tools"));
+    mToolOverflow->setStatusTip(tr("Show the tools that do not fit the row."));
+    mToolOverflow->setAccessibleName(mToolOverflow->toolTip());
+    mToolOverflow->setFixedWidth(NaviToolbarWindow::_overflowWidth());
+    mToolOverflow->setVisible(false);
+    // The slack of the row sits here, so the entries stay left and the overflow button
+    // stays against the right edge whatever the dock width is.
+    mToolLayout->addStretch(1);
+    mToolLayout->addWidget(mToolOverflow);
+
+    connect(mToolOverflow, &QToolButton::clicked, this, [this]() { showToolOverflow(); });
+}
+
+void NaviToolbarWindow::_applyRowMetrics(QHBoxLayout& row)
+{
+    // A row is as tall as its buttons and no taller: one pixel of air above and below, and one
+    // pixel between two entries. Each button carries its own padding, so the gap only has to
+    // keep two hover marks apart, and every pixel saved is room for a tool.
+    row.setContentsMargins(2, NAVI_TOOL_AIR, 2, NAVI_TOOL_AIR);
+    row.setSpacing(NAVI_TOOL_GAP);
+}
+
+void NaviToolbarWindow::_insertTool(QWidget* widget)
+{
+    // Two items always close the row: the slack and the overflow button.
+    mToolLayout->insertWidget(mToolLayout->count() - 2, widget);
+}
+
+QSize NaviToolbarWindow::_toolButtonHint(void)
+{
+    // Measured on a button set up the way addToolButton() sets one up, so the row cannot
+    // drift from the buttons it holds when the style or the font changes.
+    QToolButton probe;
+    probe.setText(QStringLiteral("..."));
+    probe.setIconSize(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON));
+    probe.setAutoRaise(true);
+    return probe.sizeHint();
+}
+
+int NaviToolbarWindow::toolButtonHeight(void)
+{
+    return NaviToolbarWindow::_toolButtonHint().height();
+}
+
+int NaviToolbarWindow::toolButtonWidth(void)
+{
+    return NaviToolbarWindow::_toolButtonHint().width();
+}
+
+int NaviToolbarWindow::_overflowWidth(void)
+{
+    // The mark stands upright, so its ink is a few pixels across where a tool icon is
+    // sixteen. Half a tool button holds it with room on both sides, and the row keeps the
+    // rest for the tools.
+    return (NaviToolbarWindow::toolButtonWidth() + 1) / 2;
+}
+
+int NaviToolbarWindow::toolRowHeight(void)
+{
+    return NaviToolbarWindow::toolButtonHeight() + (NAVI_TOOL_AIR * 2);
+}
+
+int NaviToolbarWindow::naviInputHeight(const QWidget& owner)
+{
+    return NELusanCommon::inputRowHeight(owner);
 }
 
 QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& toolTip, const QString& statusTip, bool checkable /*= false*/)
@@ -57,9 +146,10 @@ QToolButton* NaviToolbarWindow::addToolButton(const QIcon& icon, const QString& 
     button->setCheckable(checkable);
     button->setAutoRaise(true);
     // One extent for every navigation panel toolbar, so their marks carry the same stroke
-    // weight as the rail beside them instead of whatever the active style would pick.
+    // weight instead of whatever the active style would pick.
     button->setIconSize(QSize(NAVI_TOOL_ICON, NAVI_TOOL_ICON));
-    mToolLayout->addWidget(button);
+    _insertTool(button);
+    mToolItems.append(sToolItem{ button, false, false });
     return button;
 }
 
@@ -68,15 +158,38 @@ void NaviToolbarWindow::addToolSeparator(void)
     QFrame* line = new QFrame(mToolbar);
     line->setFrameShape(QFrame::Shape::VLine);
     line->setFrameShadow(QFrame::Shadow::Sunken);
-    mToolLayout->addWidget(line);
+    _insertTool(line);
+    mToolItems.append(sToolItem{ line, false, true });
 }
 
-void NaviToolbarWindow::setNaviHeader(QWidget* header)
+void NaviToolbarWindow::addToolWidget(QWidget* widget)
 {
-    if (header != nullptr)
+    if (widget != nullptr)
     {
-        header->setParent(this);
-        mNaviLayout->insertWidget(0, header);
+        widget->setParent(mToolbar);
+        _insertTool(widget);
+        mToolItems.append(sToolItem{ widget, true, false });
+    }
+}
+
+void NaviToolbarWindow::setToolFixed(QWidget* widget)
+{
+    for (sToolItem& item : mToolItems)
+    {
+        if (item.widget == widget)
+        {
+            item.fixed = true;
+            break;
+        }
+    }
+}
+
+void NaviToolbarWindow::addNaviBar(QWidget* bar)
+{
+    if (bar != nullptr)
+    {
+        bar->setParent(this);
+        mNaviLayout->insertWidget(mNaviLayout->indexOf(mNaviTree), bar);
     }
 }
 
@@ -91,12 +204,183 @@ void NaviToolbarWindow::setupTreeView(const QSize& iconSize)
     mNaviTree->setHeaderHidden(true);
 }
 
-void NaviToolbarWindow::capToolButtonIconSizes(int iconExtent /*= 12*/)
+void NaviToolbarWindow::capToolButtonIconSizes(int iconExtent /*= NAVI_TOOL_ICON*/)
 {
     const QSize extent(iconExtent, iconExtent);
     const QList<QToolButton*> buttons = findChildren<QToolButton*>();
     for (QToolButton* button : buttons)
     {
-        button->setIconSize(extent);
+        // The overflow button is the one exception: its mark fills the whole button.
+        if (button != mToolOverflow)
+        {
+            button->setIconSize(extent);
+        }
+    }
+}
+
+void NaviToolbarWindow::resizeEvent(QResizeEvent* event)
+{
+    NavigationWindow::resizeEvent(event);
+    updateToolOverflow();
+}
+
+void NaviToolbarWindow::updateToolOverflow(void)
+{
+    if (mToolItems.isEmpty())
+        return;
+
+    // The second row holds the entries while it is open, so their widths are not measurable.
+    if ((mOverflowRow != nullptr) && mOverflowRow->isVisible())
+        return;
+
+    const int spacing{ mToolLayout->spacing() > 0 ? mToolLayout->spacing() : 0 };
+    QMargins margins{ mToolLayout->contentsMargins() };
+    const int available{ width() - margins.left() - margins.right() };
+
+    int needed{ 0 };
+    for (const sToolItem& item : mToolItems)
+    {
+        needed += item.widget->sizeHint().width() + spacing;
+    }
+
+    // Every entry fits, so the chevron is not needed.
+    if (needed <= available)
+    {
+        for (const sToolItem& item : mToolItems)
+        {
+            item.widget->setVisible(true);
+        }
+
+        mToolOverflow->setVisible(false);
+        _hideDanglingSeparators();
+        return;
+    }
+
+    // What stays is always the front of the row, never a picking of it. An entry that is
+    // still shown is shown where it has always been, so the order the user learned is the
+    // order they keep seeing at every width.
+    int keep{ 0 };
+    for (int pos = 0; pos < mToolItems.size(); ++pos)
+    {
+        if (mToolItems[pos].fixed)
+        {
+            keep = pos + 1;
+        }
+    }
+
+    const int budget{ available - NaviToolbarWindow::_overflowWidth() - spacing };
+    int shown{ static_cast<int>(mToolItems.size()) };
+    while ((needed > budget) && (shown > keep))
+    {
+        --shown;
+        needed -= mToolItems[shown].widget->sizeHint().width() + spacing;
+    }
+
+    for (int pos = 0; pos < mToolItems.size(); ++pos)
+    {
+        mToolItems[pos].widget->setVisible(pos < shown);
+    }
+
+    mToolOverflow->setVisible(shown < mToolItems.size());
+    _hideDanglingSeparators();
+}
+
+void NaviToolbarWindow::showToolOverflow(void)
+{
+    if (mOverflowRow == nullptr)
+    {
+        // The second row is the tool row carried on, so it is built to the same measures and
+        // the buttons keep the size and the spacing they have in the row itself.
+        QFrame* row = new QFrame(this, Qt::WindowType::Popup);
+        row->setObjectName(QStringLiteral("naviToolOverflow"));
+        row->setFrameShape(QFrame::Shape::StyledPanel);
+        row->ensurePolished();
+        mOverflowLayout = new QHBoxLayout(row);
+        NaviToolbarWindow::_applyRowMetrics(*mOverflowLayout);
+        // Held to the height of the tool row plus the frame it draws. Left to size itself it
+        // would give an entry the height the entry asks for, which is a pixel more than the
+        // row grants it.
+        row->setFixedHeight(NaviToolbarWindow::toolRowHeight() + (row->frameWidth() * 2));
+        row->installEventFilter(this);
+        mOverflowRow = row;
+    }
+
+    for (const sToolItem& item : mToolItems)
+    {
+        if ((item.widget->isVisible() == false) && (item.divider == false))
+        {
+            mOverflowLayout->addWidget(item.widget);
+            item.widget->setVisible(true);
+        }
+    }
+
+    mOverflowRow->adjustSize();
+    const QPoint below{ mToolOverflow->mapToGlobal(QPoint(0, mToolOverflow->height())) };
+    mOverflowRow->move(below.x() + mToolOverflow->width() - mOverflowRow->width(), below.y() + 2);
+    mOverflowRow->show();
+}
+
+void NaviToolbarWindow::closeToolOverflow(void)
+{
+    if (mOverflowRow == nullptr)
+        return;
+
+    bool borrowed{ false };
+    for (const sToolItem& item : mToolItems)
+    {
+        if (item.widget->parentWidget() == mOverflowRow)
+        {
+            borrowed = true;
+            break;
+        }
+    }
+
+    if (borrowed == false)
+        return;
+
+    // The entries left the row, so the layout is rebuilt from the recorded order instead of
+    // guessing the index each one came from.
+    QLayoutItem* taken{ nullptr };
+    while ((taken = mToolLayout->takeAt(0)) != nullptr)
+    {
+        delete taken;
+    }
+
+    for (const sToolItem& item : mToolItems)
+    {
+        item.widget->setParent(mToolbar);
+        mToolLayout->addWidget(item.widget);
+    }
+
+    mToolLayout->addStretch(1);
+    mToolLayout->addWidget(mToolOverflow);
+    updateToolOverflow();
+}
+
+bool NaviToolbarWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if ((watched == mOverflowRow) && (event->type() == QEvent::Type::Hide))
+    {
+        closeToolOverflow();
+    }
+
+    return NavigationWindow::eventFilter(watched, event);
+}
+
+void NaviToolbarWindow::_hideDanglingSeparators(void)
+{
+    // A separator with nothing visible after it draws a line at the end of the row.
+    bool seen{ false };
+    for (int pos = mToolItems.size() - 1; pos >= 0; --pos)
+    {
+        const sToolItem& item = mToolItems[pos];
+        if (item.divider)
+        {
+            item.widget->setVisible(seen);
+        }
+        else if (item.widget->isVisible())
+        {
+            seen = true;
+        }
     }
 }

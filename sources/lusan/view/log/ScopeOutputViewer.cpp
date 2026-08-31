@@ -20,20 +20,35 @@
 #include "ui/ui_ScopeOutputViewer.h"
 
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/view/log/ScopeOutputDelegate.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/common/OutputDock.hpp"
 #include "lusan/view/log/LogViewerBase.hpp"
 
 #include "areg/logging/areg_log.h"
 
+#include <QActionGroup>
+#include <QMenu>
+
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
     , ui            (new Ui::ScopeOutputViewer)
     , mFilter       (new ScopeLogViewerFilter())
     , mLogModel     (nullptr)
+    , mStructure    (new ScopeOutputDelegate(this))
+    , mToolFold     (nullptr)
+    , mToolPick     (nullptr)
+    , mToolClock    (nullptr)
+    , mSlowMenu     (nullptr)
+    , mSlowUs       (ScopeOutputViewer::SlowCallUs)
 {
-    ui->setupUi(this);    
+    ui->setupUi(this);
+    setupCallControls();
     ctrlTable()->setModel(nullptr);
+    ctrlTable()->setItemDelegate(mStructure);
+    LogViewerBase::applyRowHeight(ctrlTable());
     QItemSelectionModel *selModel = ctrlTable()->selectionModel();
     Q_ASSERT(selModel != nullptr);
     connect(ctrlLogShow()       , &QToolButton::clicked     , this, [this]()              { onShowLog(getSelectedIndex());              });
@@ -56,6 +71,10 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     connect(mFilter, &QAbstractItemModel::modelReset, this, [this]() {
         ctrlDuration()->setText(QString("N/A"));
     });
+    connect(mFilter, &QAbstractItemModel::columnsInserted, this
+            , [this](const QModelIndex&, int, int) { NELusanCommon::refitRowSelection(ctrlTable()); });
+    connect(mFilter, &QAbstractItemModel::columnsRemoved, this
+            , [this](const QModelIndex&, int, int) { NELusanCommon::refitRowSelection(ctrlTable()); });
     connect(selModel            , &QItemSelectionModel::currentRowChanged, this
             , [this](const QModelIndex &current, const QModelIndex &previous){
                 updateToolbuttons(mFilter->rowCount(), current);
@@ -66,6 +85,7 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 
 ScopeOutputViewer::~ScopeOutputViewer()
 {
+    ctrlTable()->setItemDelegate(nullptr);
     ctrlTable()->setModel(nullptr);
     if (mFilter != nullptr)
     {
@@ -164,6 +184,122 @@ void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
     }
 }
 
+void ScopeOutputViewer::setupCallControls(void)
+{
+    QLayout* row{ ui->horizontalLayout };
+    Q_ASSERT(row != nullptr);
+
+    auto build = [this, row](const QIcon& icon, const QString& text, const QString& tip) -> QToolButton*
+    {
+        QToolButton* button = new QToolButton(this);
+        button->setIcon(icon);
+        button->setText(text);
+        button->setToolTip(tip);
+        button->setStatusTip(tip);
+        button->setAccessibleName(text);
+        button->setCheckable(true);
+        button->setAutoRaise(true);
+        button->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonIconOnly);
+        row->addWidget(button);
+        return button;
+    };
+
+    mToolFold = build( NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig)
+                     , tr("Fold the quiet calls")
+                     , tr("Folds every call that carries nothing above Information. A folded call shows only the line that opened it, with the time it took."));
+
+    mToolPick = build( NELusanCommon::iconFilter(NELusanCommon::SizeBig)
+                     , tr("Only what is worth reading")
+                     , QString());
+
+    mSlowMenu = new QMenu(mToolPick);
+    QActionGroup* steps = new QActionGroup(mSlowMenu);
+    steps->setExclusive(true);
+    for (uint32_t step : ScopeOutputViewer::SlowCallSteps)
+    {
+        QAction* entry = mSlowMenu->addAction(step == 0u
+                                                ? tr("Warnings and worse only")
+                                                : tr("Also calls slower than %1").arg(NETimeUnits::duration(step)));
+        entry->setCheckable(true);
+        entry->setChecked(step == mSlowUs);
+        entry->setData(step);
+        steps->addAction(entry);
+    }
+
+    connect(steps, &QActionGroup::triggered, this, [this](QAction* entry) {
+        onSlowStepChosen(entry != nullptr ? entry->data().toUInt() : ScopeOutputViewer::SlowCallUs);
+    });
+
+    NELusanCommon::decorateToolButton(mToolPick, mSlowMenu);
+    refreshSlowTip();
+
+    mToolClock = build( NELusanCommon::iconTimer(NELusanCommon::SizeBig)
+                      , tr("Time since the call started")
+                      , tr("The time column counts from the moment the call the row belongs to was entered, instead of showing the time of day."));
+
+    connect(mToolFold , &QToolButton::toggled, this, [this](bool checked) { onAutoFoldToggled(checked);      });
+    connect(mToolPick , &QToolButton::toggled, this, [this](bool checked) { onInterestingToggled(checked);   });
+    connect(mToolClock, &QToolButton::toggled, this, [this](bool checked) { onRelativeTimeToggled(checked);  });
+}
+
+void ScopeOutputViewer::onSlowStepChosen(uint32_t slowUs)
+{
+    if (mSlowUs == slowUs)
+        return;
+
+    mSlowUs = slowUs;
+    refreshSlowTip();
+    if ((mFilter != nullptr) && mToolPick->isChecked())
+    {
+        mFilter->setInterestingOnly(true, mSlowUs);
+        refreshCallControls();
+    }
+}
+
+void ScopeOutputViewer::refreshSlowTip(void)
+{
+    const QString tip{ mSlowUs == 0u
+                        ? tr("Keeps the entries of Warning priority or worse, and the calls that carry one.")
+                        : tr("Keeps the entries of Warning priority or worse, and the calls that carry one or ran longer than %1.")
+                            .arg(NETimeUnits::duration(mSlowUs)) };
+    mToolPick->setToolTip(tip);
+    mToolPick->setStatusTip(tip);
+}
+
+void ScopeOutputViewer::refreshCallControls(void)
+{
+    const bool hasRows{ (mFilter != nullptr) && (mFilter->rowCount() != 0) };
+    mToolFold->setEnabled(hasRows);
+    mToolPick->setEnabled(hasRows);
+    mToolClock->setEnabled(hasRows);
+}
+
+void ScopeOutputViewer::onAutoFoldToggled(bool checked)
+{
+    if (mFilter != nullptr)
+    {
+        mFilter->setAutoFold(checked);
+        refreshCallControls();
+    }
+}
+
+void ScopeOutputViewer::onInterestingToggled(bool checked)
+{
+    if (mFilter != nullptr)
+    {
+        mFilter->setInterestingOnly(checked, mSlowUs);
+        refreshCallControls();
+    }
+}
+
+void ScopeOutputViewer::onRelativeTimeToggled(bool checked)
+{
+    if (mFilter != nullptr)
+    {
+        mFilter->setRelativeTime(checked);
+    }
+}
+
 void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QModelIndex& indexEnd)
 {
     ctrlDuration()->setText(QString("N/A"));
@@ -172,8 +308,7 @@ void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QM
         const areg::LogEntry * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>() : nullptr;
         if (log != nullptr)
         {
-            float duration = static_cast<float>(static_cast<double>(log->logDuration) / 1000.0f);
-            ctrlDuration()->setText(QString::number(duration));
+            ctrlDuration()->setText(NETimeUnits::duration(log->logDuration));
         }
     }
 }
@@ -275,7 +410,8 @@ inline void ScopeOutputViewer::updateControls(bool selectSession)
     ctrlRadioProcess()->setEnabled(hasEntries);
 
     updateToolbuttons(count, getSelectedIndex());
-    
+    refreshCallControls();
+
     blockSignals(false);
 }
 

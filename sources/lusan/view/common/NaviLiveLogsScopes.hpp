@@ -40,9 +40,11 @@ class LiveLogsModel;
 class LiveLogViewer;
 class MdiMainWindow;
 class MdiChild;
+class QAction;
+class QLabel;
+class QTimer;
 class QToolButton;
 class QTreeView;
-class QAction;
 
 //////////////////////////////////////////////////////////////////////////
 // NaviLiveLogsScopes class declaration
@@ -61,6 +63,7 @@ private:
     {
           LoggingUndefined      = 0 //!< Undefined logging state
         , LoggingConfigured         //!< Logging is initialized, but not connected
+        , LoggingConnecting         //!< Logging is waiting for the log collector service to answer
         , LoggingConnected          //!< Logging is connected to the log collector service
         , LoggingStopped            //!< Logging is stopped, but can be restarted
         , LoggingPaused             //!< Logging is paused, but can be resumed
@@ -131,6 +134,9 @@ public:
     //!< Returns true if connected to log observer service.
     inline bool isConnected() const;
 
+    //!< Returns true while waiting for the log collector service to answer.
+    inline bool isConnecting() const;
+
     //!< Returns true if connected to log observer service and receives messages.
     inline bool isRunning() const;
 
@@ -169,12 +175,9 @@ protected:
     /**
      * \brief   Adds the connect, settings and save settings tool buttons.
      **/
-    void addSpecificTools(void) override;
+    QToolButton* addSourceTool(void) override;
 
-    /**
-     * \brief   Adds the move to bottom tool button.
-     **/
-    void addMoveTools(void) override;
+    void addExtraTools(void) override;
 
     /**
      * \brief   Returns true, the live explorer can save priorities on the logging targets.
@@ -185,6 +188,12 @@ protected:
      * \brief   Returns true if the log collector service is connected.
      **/
     bool canSavePrio(void) const override;
+
+    /**
+     * \brief   Draws the target sending button for the state the given tree entry reports.
+     * \param   selection   The current tree entry, invalid when there is none.
+     **/
+    void refreshTargetControls(const QModelIndex& selection) override;
 
 private:
 
@@ -197,9 +206,6 @@ private:
     //!< Returns the control object to save current settings.
     inline QToolButton* ctrlSaveSettings(void) const;
 
-    //!< Returns the control object to move to the bottom of log window.
-    inline QToolButton* ctrlMoveBottom(void) const;
-
     /**
      * \brief   Initializes the widgets.
      **/
@@ -209,6 +215,43 @@ private:
      * \brief   Initializes the signals.
      **/
     void setupSignals();
+
+    /**
+     * \brief   Builds the row that says the panel is waiting for the log collector service.
+     *          The row stays hidden until a connection is asked for.
+     **/
+    void setupConnectStatus();
+
+    /**
+     * \brief   Enters the waiting state: the panel keeps asking for the log collector service
+     *          until it answers, and the row says so.
+     **/
+    void beginConnecting();
+
+    /**
+     * \brief   Leaves the waiting state and hides the row.
+     **/
+    void stopConnecting();
+
+    /**
+     * \brief   Counts one refused attempt and writes it into the row.
+     **/
+    void countAttempt();
+
+    /**
+     * \brief   Writes the current attempt into the row and shows it.
+     **/
+    void updateConnectStatus();
+
+    /**
+     * \brief   Asks for the log collector service again while the panel is waiting.
+     **/
+    void retryConnect();
+
+    /**
+     * \brief   Returns the absolute path of the database the live session writes into.
+     **/
+    QString databasePath() const;
 
     /**
      * \brief   Blocks the basic signals.
@@ -276,11 +319,6 @@ private slots:
      **/
     void onConnectClicked(bool checked);
 
-    /**
-     * \brief   The slot is triggered when the move to bottom tool button is clicked.
-     **/
-    void onMoveBottomClicked();
-
     // Slot for saving log priority changes on the target configuration.
     void onSaveSettingsClicked(bool checked);
 
@@ -313,12 +351,6 @@ private slots:
      **/
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
-    /**
-     * \brief   The slot is triggered when the application is about to exit.
-     * \param   mdiChild    The MDI child window that is about to be closed.
-     **/
-    void onWindowCreated(MdiChild* mdiChild);
-    
 //////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
@@ -333,7 +365,10 @@ private:
     QToolButton*            mToolConnect;   //!< The tool button to connect or disconnect the log collector.
     QToolButton*            mToolSettings;  //!< The tool button to open the logging options.
     QToolButton*            mToolSave;      //!< The tool button to save the log settings.
-    QToolButton*            mToolMoveBottom;//!< The tool button to move to the bottom of the log window.
+    QToolButton*            mToolTargetStop;   //!< The tool button that stops the selected target producing any log.
+    QToolButton*            mToolTargetPause;  //!< The tool button that holds what the selected target sends.
+    QToolButton*            mToolTargetResume; //!< The tool button that lets the selected target log and send again.
+    QToolButton*            mToolTargetRestore;//!< The tool button that applies the priorities the target has saved.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
@@ -341,6 +376,10 @@ private:
     QString                 mLogLocation;   //!< The location of log files.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
+    QWidget*                mConnectBar;    //!< The row that says the panel is waiting for the log collector, hidden when it is not.
+    QLabel*                 mConnectText;   //!< What the panel is waiting for and how many attempts it took.
+    QTimer*                 mRetryTimer;    //!< Asks for the log collector service again while the panel is waiting.
+    int                     mAttempts;      //!< How many times the log collector service refused the connection.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -362,15 +401,12 @@ inline QToolButton* NaviLiveLogsScopes::ctrlSaveSettings(void) const
     return mToolSave;
 }
 
-inline QToolButton* NaviLiveLogsScopes::ctrlMoveBottom(void) const
-{
-    return mToolMoveBottom;
-}
 inline bool NaviLiveLogsScopes::isConfigured() const
 {
     switch (mState)
     {
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingConnected:
     case eLoggingStates::LoggingPaused:
     case eLoggingStates::LoggingRunning:
@@ -393,6 +429,7 @@ inline bool NaviLiveLogsScopes::isDisconnected() const
     {
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingPaused:
@@ -418,6 +455,7 @@ inline bool NaviLiveLogsScopes::isConnected() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingPaused:
@@ -429,6 +467,11 @@ inline bool NaviLiveLogsScopes::isConnected() const
     }
 }
 
+inline bool NaviLiveLogsScopes::isConnecting() const
+{
+    return mState == eLoggingStates::LoggingConnecting;
+}
+
 inline bool NaviLiveLogsScopes::isRunning() const
 {
     switch (mState)
@@ -438,6 +481,7 @@ inline bool NaviLiveLogsScopes::isRunning() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingPaused:
@@ -459,6 +503,7 @@ inline bool NaviLiveLogsScopes::isPaused() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingStopped:
     case eLoggingStates::LoggingConnected:
@@ -480,6 +525,7 @@ inline bool NaviLiveLogsScopes::isStopped() const
 
     case eLoggingStates::LoggingUndefined:
     case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnecting:
     case eLoggingStates::LoggingDisconnected:
     case eLoggingStates::LoggingConnected:
     case eLoggingStates::LoggingRunning:

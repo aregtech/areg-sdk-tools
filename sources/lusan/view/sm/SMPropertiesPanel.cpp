@@ -67,6 +67,7 @@
 #include <QRegularExpressionValidator>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QScrollArea>
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QTimer>
@@ -191,6 +192,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     : QWidget       (parent)
     , mModel        (model)
     , mStack        (new QStackedWidget(this))
+    , mScroll       (nullptr)
     , mPage         (PageEmpty)
     , mCurrentId    (0u)
     , mUpdating     (false)
@@ -230,7 +232,21 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     // The panel states its own minimum (minimumSizeHint below); the layout must not overwrite it
     // with the sum of everything the pages contain, or the dock is back to being content-driven.
     layout->setSizeConstraint(QLayout::SetNoConstraint);
-    layout->addWidget(mStack);
+
+    // The pages scroll inside the panel. Without this the tallest page becomes the panel's
+    // minimum height, and through the dock it becomes the whole editor window's minimum.
+    mScroll = new QScrollArea(this);
+    mScroll->setWidgetResizable(true);
+    // A plain container, never a tab stop. A focusable scroll area holds the keyboard focus
+    // inside the panel, and the panel reads a focused descendant as an edit in progress.
+    mScroll->setFocusPolicy(Qt::NoFocus);
+    mScroll->setFrameShape(QFrame::NoFrame);
+    // The panel scrolls down, never sideways: the pages are squeezed into whatever width the
+    // dock has, the way they were before the scroll area, and the filter below keeps them there.
+    mScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    mScroll->viewport()->installEventFilter(this);
+    mScroll->setWidget(mStack);
+    layout->addWidget(mScroll);
 
     QLabel* empty = new QLabel(tr("No selection"), this);
     empty->setAlignment(Qt::AlignCenter);
@@ -290,7 +306,7 @@ SMPropertiesPanel::~SMPropertiesPanel()
 QSize SMPropertiesPanel::minimumSizeHint() const
 {
     const QSize base = QWidget::minimumSizeHint();
-    return QSize(qMin(base.width(), NESMDesign::PanelMinWidth), base.height());
+    return QSize(qMin(base.width(), NESMDesign::PanelMinWidth), qMin(base.height(), NESMDesign::PanelMinHeight));
 }
 
 void SMPropertiesPanel::buildStatePage()
@@ -585,6 +601,13 @@ bool SMPropertiesPanel::eventFilter(QObject* watched, QEvent* event)
         {
             commitPendingEdits();
         }
+    }
+    else if ((event->type() == QEvent::Resize) && (mScroll != nullptr) && (watched == mScroll->viewport()))
+    {
+        // A scroll area gives its widget at least the width the widget asks for. Capping the
+        // pages at the visible width keeps them inside the dock, so a control never lands
+        // outside the panel and a popup anchored on it opens on the right side.
+        mStack->setMaximumWidth(mScroll->viewport()->width());
     }
 
     return QWidget::eventFilter(watched, event);

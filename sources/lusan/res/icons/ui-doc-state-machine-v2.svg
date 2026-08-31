@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: state machine document, a sheet carrying a transition between two states -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M14.6 2.9H6.7A2.1 2.1 0 0 0 4.6 5v14a2.1 2.1 0 0 0 2.1 2.1h10.6a2.1 2.1 0 0 0 2.1-2.1V7.9z"/>
+<path d="M14.6 2.9v3.1a1.9 1.9 0 0 0 1.9 1.9h2.8"/>
+<circle cx="8.3" cy="11.8" r="1.7" fill="#000000" stroke="none"/>
+<circle cx="15.7" cy="16.8" r="1.7" fill="#000000" stroke="none"/>
+<path d="M8.3 11.8L13.38 15.23"/>
+<path d="M11.91 15.51L13.38 15.23 13.1 13.76"/>
+</g>
+</svg>

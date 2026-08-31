@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -23,6 +23,29 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "areg/component/ServiceDefs.hpp"
+
+#include <algorithm>
+
+namespace
+{
+    //! Folds one child roll-up into the roll-up of its parent. The first child sets it.
+    inline void _mergeRollup(ScopeNodeBase::sPrioRollup & into, const ScopeNodeBase::sPrioRollup & from, bool & empty)
+    {
+        if (empty)
+        {
+            into  = from;
+            empty = false;
+        }
+        else
+        {
+            into.levelLow  = std::min(into.levelLow , from.levelLow );
+            into.levelHigh = std::max(into.levelHigh, from.levelHigh);
+            into.linesSome = into.linesSome || from.linesSome;
+            into.linesAll  = into.linesAll  && from.linesAll;
+            into.prioSome  = into.prioSome  || from.prioSome;
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // ScopeLeaf class implementation
@@ -95,6 +118,8 @@ ScopeNode::ScopeNode(ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, parent)
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -102,6 +127,8 @@ ScopeNode::ScopeNode(const QString& nodeName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, nodeName, prio, parent)
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -109,6 +136,8 @@ ScopeNode::ScopeNode(const ScopeNodeBase& base)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, base.getNodeName(), base.getPriority(), base.getParent())
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -116,6 +145,8 @@ ScopeNode::ScopeNode(const ScopeNode& src)
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
     , mChildNodes   ( src.mChildNodes )
     , mChildLeafs   ( src.mChildLeafs )
+    , mShownState   ( src.mShownState )
+    , mPrioRollup   ( src.mPrioRollup )
 {
 }
 
@@ -123,6 +154,8 @@ ScopeNode::ScopeNode( ScopeNode && src ) noexcept
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
     , mChildNodes   ( std::move(src.mChildNodes) )
     , mChildLeafs   ( std::move(src.mChildLeafs) )
+    , mShownState   ( src.mShownState )
+    , mPrioRollup   ( src.mPrioRollup )
 {
 }
 
@@ -130,6 +163,8 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsig
     : ScopeNodeBase ( nodeType, name, prio, parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -137,6 +172,8 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, Scope
     : ScopeNodeBase ( nodeType, name, static_cast<uint32_t>(areg::LogPriority::PrioNotset), parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -144,6 +181,8 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent /*= null
     : ScopeNodeBase ( nodeType, parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
+    , mShownState   ( Qt::CheckState::Checked )
+    , mPrioRollup   ( ScopeNodeBase::priorityRollup() )
 {
 }
 
@@ -165,6 +204,94 @@ ScopeNode::~ScopeNode()
     mChildNodes.clear();
 }
 
+void ScopeNode::setShownRecursive(bool shown)
+{
+    ScopeNodeBase::setShownRecursive(shown);
+    mShownState = shown ? Qt::CheckState::Checked : Qt::CheckState::Unchecked;
+    for (const auto & leaf : mChildLeafs)
+    {
+        leaf.second->setShownRecursive(shown);
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        node.second->setShownRecursive(shown);
+    }
+}
+
+Qt::CheckState ScopeNode::shownState() const
+{
+    return (childNodeCount() == 0) ? ScopeNodeBase::shownState() : mShownState;
+}
+
+void ScopeNode::refreshShownState()
+{
+    if (childNodeCount() == 0)
+    {
+        mShownState = ScopeNodeBase::shownState();
+        return;
+    }
+
+    int shown{ 0 };
+    int total{ 0 };
+    for (const auto & leaf : mChildLeafs)
+    {
+        ++total;
+        shown += (leaf.second->shownState() == Qt::CheckState::Checked) ? 1 : 0;
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        const Qt::CheckState state{ node.second->shownState() };
+        if (state == Qt::CheckState::PartiallyChecked)
+        {
+            mShownState = Qt::CheckState::PartiallyChecked;
+            return;
+        }
+
+        ++total;
+        shown += (state == Qt::CheckState::Checked) ? 1 : 0;
+    }
+
+    if (shown == 0)
+        mShownState = Qt::CheckState::Unchecked;
+    else
+        mShownState = (shown == total) ? Qt::CheckState::Checked : Qt::CheckState::PartiallyChecked;
+}
+
+int ScopeNode::collectHiddenScopes(QSet<uint32_t> & scopeIds) const
+{
+    int result{ 0 };
+    for (const auto & leaf : mChildLeafs)
+    {
+        result += leaf.second->collectHiddenScopes(scopeIds);
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        result += node.second->collectHiddenScopes(scopeIds);
+    }
+
+    return result;
+}
+
+void ScopeNode::removeChildren(void)
+{
+    for (const auto & leaf : mChildLeafs)
+    {
+        delete leaf.second;
+    }
+
+    for (const auto & node : mChildNodes)
+    {
+        delete node.second;
+    }
+
+    mChildLeafs.clear();
+    mChildNodes.clear();
+}
+
+
 ScopeNode & ScopeNode::operator = ( const ScopeNode & src )
 {
     ScopeNodeBase::operator = ( static_cast<const ScopeNodeBase &>(src) );
@@ -172,6 +299,8 @@ ScopeNode & ScopeNode::operator = ( const ScopeNode & src )
     {
         mChildNodes = src.mChildNodes;
         mChildLeafs = src.mChildLeafs;
+        mShownState = src.mShownState;
+        mPrioRollup = src.mPrioRollup;
     }
 
     return (*this);
@@ -184,6 +313,8 @@ ScopeNode & ScopeNode::operator = ( ScopeNode && src ) noexcept
     {
         mChildNodes = std::move(src.mChildNodes);
         mChildLeafs = std::move(src.mChildLeafs);
+        mShownState = src.mShownState;
+        mPrioRollup = src.mPrioRollup;
     }
 
     return (*this);
@@ -452,17 +583,41 @@ void ScopeNode::resetPrioritiesRecursive(bool skipLeafs /*= false*/)
 
 void ScopeNode::refreshPrioritiesRecursive()
 {
+    uint32_t states{ static_cast<uint32_t>(areg::LogPriority::PrioInvalid) };
+    ScopeNodeBase::sPrioRollup rollup{ };
+    bool empty{ true };
+
     for (const auto& node : mChildNodes)
     {
-        node.second->refreshPrioritiesRecursive();
+        ScopeNode* child = node.second;
+        Q_ASSERT(child != nullptr);
+        child->refreshPrioritiesRecursive();
+        states |= child->getPriority();
+        _mergeRollup(rollup, child->priorityRollup(), empty);
     }
 
     for (const auto& leaf : mChildLeafs)
     {
-        ScopeNodeBase* node = leaf.second;
-        Q_ASSERT(node != nullptr);
-        node->updateParentPrio(node->getPriority(), true);
+        ScopeNodeBase* child = leaf.second;
+        Q_ASSERT(child != nullptr);
+        states |= child->getPriority();
+        _mergeRollup(rollup, child->priorityRollup(), empty);
     }
+
+    if (empty == false)
+    {
+        mPrioStates = states;
+        mPrioRollup = rollup;
+    }
+    else
+    {
+        mPrioRollup = ScopeNodeBase::priorityRollup();
+    }
+}
+
+ScopeNodeBase::sPrioRollup ScopeNode::priorityRollup() const
+{
+    return (childNodeCount() == 0) ? ScopeNodeBase::priorityRollup() : mPrioRollup;
 }
 
 QList<ScopeNodeBase*> ScopeNode::getNodesWithPriority() const
@@ -552,50 +707,154 @@ uint32_t ScopeNode::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
 ScopeRoot::ScopeRoot()
     : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (areg::COOKIE_LOCAL)
+    , mInstance ()
+    , mLocation ()
+    , mConnected(true)
+    , mSavedPrio()
+    , mBasePrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId)
     : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (rootId)
+    , mInstance ()
+    , mLocation ()
+    , mConnected(true)
+    , mSavedPrio()
+    , mBasePrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
 ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
     : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (instance.ciCookie)
+    , mInstance (QString::fromStdString(instance.ciInstance))
+    , mLocation (QString::fromStdString(instance.ciLocation))
+    , mConnected(true)
+    , mSavedPrio()
+    , mBasePrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString& rootName)
     : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (rootId)
+    , mInstance (rootName)
+    , mLocation ()
+    , mConnected(true)
+    , mSavedPrio()
+    , mBasePrio()
+    , mTargetState(ScopeRoot::eTargetState::TargetApplied)
+    , mTargetAge  (0)
+    , mTargetFade (0.0)
+    , mSourceState  (areg::LogSourceState::Active)
+    , mSourceWanted (areg::LogSourceState::Undefined)
+    , mSourceWaiting(false)
+    , mSourceAge    (0)
+    , mPausedBy     (areg::COOKIE_ANY)
 {
 }
 
 ScopeRoot::ScopeRoot(const ScopeRoot& src)
     : ScopeNode ( static_cast<const ScopeNode &>(src) )
     , mRootId   ( src.mRootId )
+    , mInstance ( src.mInstance )
+    , mLocation ( src.mLocation )
+    , mConnected( src.mConnected )
+    , mSavedPrio( src.mSavedPrio )
+    , mBasePrio( src.mBasePrio )
+    , mTargetState( src.mTargetState )
+    , mTargetAge  ( src.mTargetAge )
+    , mTargetFade ( src.mTargetFade )
+    , mSourceState  ( src.mSourceState )
+    , mSourceWanted ( src.mSourceWanted )
+    , mSourceWaiting( src.mSourceWaiting )
+    , mSourceAge    ( src.mSourceAge )
+    , mPausedBy     ( src.mPausedBy )
 {
 }
 
 ScopeRoot::ScopeRoot(ScopeRoot&& src) noexcept
     : ScopeNode ( std::move(static_cast<ScopeNode &&>(src)) )
     , mRootId   ( src.mRootId )
+    , mInstance ( std::move(src.mInstance) )
+    , mLocation ( std::move(src.mLocation) )
+    , mConnected( src.mConnected )
+    , mSavedPrio( std::move(src.mSavedPrio) )
+    , mBasePrio( std::move(src.mBasePrio) )
+    , mTargetState( src.mTargetState )
+    , mTargetAge  ( src.mTargetAge )
+    , mTargetFade ( src.mTargetFade )
+    , mSourceState  ( src.mSourceState )
+    , mSourceWanted ( src.mSourceWanted )
+    , mSourceWaiting( src.mSourceWaiting )
+    , mSourceAge    ( src.mSourceAge )
+    , mPausedBy     ( src.mPausedBy )
 {
 }
 
 ScopeRoot& ScopeRoot::operator = (const ScopeRoot& src)
 {
     ScopeNode::operator = (static_cast<const ScopeNode&>(src));
-    mRootId = src.mRootId;
+    mRootId    = src.mRootId;
+    mInstance  = src.mInstance;
+    mLocation  = src.mLocation;
+    mConnected = src.mConnected;
+    mSavedPrio = src.mSavedPrio;
+    mBasePrio = src.mBasePrio;
+    mTargetState = src.mTargetState;
+    mTargetAge = src.mTargetAge;
+    mTargetFade = src.mTargetFade;
+    mSourceState = src.mSourceState;
+    mSourceWanted = src.mSourceWanted;
+    mSourceWaiting = src.mSourceWaiting;
+    mSourceAge = src.mSourceAge;
+    mPausedBy = src.mPausedBy;
     return (*this);
 }
 
 ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
 {
     ScopeNode::operator = (std::move(static_cast<ScopeNode&&>(src)));
-    mRootId = src.mRootId;
+    mRootId    = src.mRootId;
+    mInstance  = std::move(src.mInstance);
+    mLocation  = std::move(src.mLocation);
+    mConnected = src.mConnected;
+    mSavedPrio = std::move(src.mSavedPrio);
+    mBasePrio = std::move(src.mBasePrio);
+    mTargetState = src.mTargetState;
+    mTargetAge = src.mTargetAge;
+    mTargetFade = src.mTargetFade;
+    mSourceState = src.mSourceState;
+    mSourceWanted = src.mSourceWanted;
+    mSourceWaiting = src.mSourceWaiting;
+    mSourceAge = src.mSourceAge;
+    mPausedBy = src.mPausedBy;
     return (*this);
 }
 
@@ -607,5 +866,148 @@ QString ScopeRoot::getPathString() const
 QString ScopeRoot::getDisplayName() const
 {
     QString result {getNodeName() + " (" + QString::number(mRootId) + ")"};
+    return result;
+}
+
+bool ScopeRoot::isSameInstance(const areg::ConnectedInstance & instance) const
+{
+    return ( (mInstance == QString::fromStdString(instance.ciInstance))
+          && (mLocation == QString::fromStdString(instance.ciLocation)) );
+}
+
+void ScopeRoot::setTargetState(ScopeRoot::eTargetState state)
+{
+    mTargetState = state;
+    mTargetAge = 0;
+    mTargetFade = (state == ScopeRoot::eTargetState::TargetApplied) ? 0.0 : 1.0;
+}
+
+void ScopeRoot::markSourceRequest(areg::LogSourceState wanted)
+{
+    mSourceWanted = wanted;
+    mSourceWaiting = true;
+    mSourceAge = 0;
+}
+
+void ScopeRoot::setSourceState(areg::LogSourceState state, ITEM_ID byObserver)
+{
+    mSourceState = state;
+    mSourceWanted = areg::LogSourceState::Undefined;
+    mSourceWaiting = false;
+    mSourceAge = 0;
+    mPausedBy = (state == areg::LogSourceState::Active) ? areg::COOKIE_ANY : byObserver;
+}
+
+bool ScopeRoot::ageTargetState(int elapsedMs)
+{
+    bool changed{ false };
+
+    if (mSourceWaiting)
+    {
+        mSourceAge += elapsedMs;
+        if (mSourceAge >= ScopeRoot::TargetWaitMs)
+        {
+            mSourceWanted = areg::LogSourceState::Undefined;
+            mSourceWaiting = false;
+            mSourceAge = 0;
+            changed = true;
+        }
+    }
+
+    if (mTargetState == ScopeRoot::eTargetState::TargetSent)
+    {
+        mTargetAge += elapsedMs;
+        if (mTargetAge >= ScopeRoot::TargetWaitMs)
+        {
+            setTargetState(ScopeRoot::eTargetState::TargetPending);
+            changed = true;
+        }
+    }
+    else if (mTargetState == ScopeRoot::eTargetState::TargetSaved)
+    {
+        mTargetAge += elapsedMs;
+        mTargetFade = 1.0 - (static_cast<qreal>(mTargetAge) / static_cast<qreal>(ScopeRoot::TargetFadeMs));
+        if (mTargetFade <= 0.0)
+        {
+            setTargetState(ScopeRoot::eTargetState::TargetApplied);
+        }
+
+        changed = true;
+    }
+
+    return changed;
+}
+
+void ScopeRoot::savePriorities(void)
+{
+    mSavedPrio.clear();
+    QList<ScopeNodeBase *> nodes;
+    extractChildNodesWithPriority(nodes);
+    for (const ScopeNodeBase * node : nodes)
+    {
+        Q_ASSERT(node != nullptr);
+        mSavedPrio.insert(node->makePath(), node->getPriority());
+    }
+}
+
+void ScopeRoot::captureBaseline(void)
+{
+    if (mBasePrio.isEmpty() == false)
+        return;
+
+    QList<ScopeNodeBase *> nodes;
+    extractChildNodesWithPriority(nodes);
+    for (const ScopeNodeBase * node : nodes)
+    {
+        Q_ASSERT(node != nullptr);
+        mBasePrio.insert(node->makePath(), node->getPriority());
+    }
+}
+
+void ScopeRoot::clearBaseline(void)
+{
+    mBasePrio.clear();
+}
+
+int ScopeRoot::quietedScopes(QStringList& names) const
+{
+    int result{ 0 };
+    for (auto it = mBasePrio.constBegin(); it != mBasePrio.constEnd(); ++it)
+    {
+        const ScopeNodeBase * node = findChildByPath(it.key());
+        if (node == nullptr)
+            continue;
+
+        // A bit that the target reported and no longer carries is a priority it has stopped
+        // generating. A bit gained is a raise and is not counted.
+        if ((it.value() & ~node->getPriority()) != 0)
+        {
+            names.append(it.key());
+            ++result;
+        }
+    }
+
+    return result;
+}
+
+int ScopeRoot::restorePriorities(void)
+{
+    int result{ 0 };
+    for (auto it = mSavedPrio.constBegin(); it != mSavedPrio.constEnd(); ++it)
+    {
+        ScopeNodeBase * node = findChildByPath(it.key());
+        if (node != nullptr)
+        {
+            node->setPriority(it.value());
+            ++result;
+        }
+    }
+
+    if (result != 0)
+    {
+        resetPrioritiesRecursive(true);
+        refreshPrioritiesRecursive();
+    }
+
     return result;
 }

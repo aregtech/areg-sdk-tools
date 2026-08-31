@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 
 #include "areg/logging/areg_log.h"
@@ -39,6 +40,14 @@ ScopeLogViewerFilter::ScopeLogViewerFilter(uint32_t scopeId /*= 0u*/, LoggingMod
     , mActiveFilter     (eDataFilter::NoFilter)
     , mIndexStart       ( )
     , mIndexEnd         ( )
+    , mCalls            ( )
+    , mStacks           ( )
+    , mFolded           ( )
+    , mCallsRead        (0)
+    , mAutoFold         (false)
+    , mInteresting      (false)
+    , mSlowUs           (0)
+    , mRelativeTime     (false)
 {
 }
 
@@ -173,11 +182,13 @@ void ScopeLogViewerFilter::setSourceModel(QAbstractItemModel *sourceModel)
     }
     
     LogViewerFilter::setSourceModel(sourceModel);
+    _resetCalls();
 }
 
 void ScopeLogViewerFilter::clearFilters()
 {
     _clearData();
+    _resetCalls();
     LogViewerFilter::clearFilters();
 }
 
@@ -189,7 +200,268 @@ bool ScopeLogViewerFilter::filterExactMatch(const QModelIndex& index) const
 bool ScopeLogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
     QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
-    return ((matchesScopeFilter(index) != NELusanCommon::eMatchType::NoMatch) && LogViewerFilter::filterAcceptsRow(row, parent));
+    if ((matchesScopeFilter(index) == NELusanCommon::eMatchType::NoMatch) || (LogViewerFilter::filterAcceptsRow(row, parent) == false))
+        return false;
+
+    if (_isHiddenByFold(row))
+        return false;
+
+    return (mInteresting == false) || _isInteresting(row);
+}
+
+QVariant ScopeLogViewerFilter::data(const QModelIndex& index, int role) const
+{
+    if (index.isValid() == false)
+        return QVariant();
+
+    if ((role < ScopeLogViewerFilter::RoleCallDepth) || (role > ScopeLogViewerFilter::RoleCallElapsed))
+    {
+        if ((mRelativeTime == false) || (role != Qt::ItemDataRole::DisplayRole))
+            return LogViewerFilter::data(index, role);
+
+        const LoggingModelBase* model{ static_cast<const LoggingModelBase *>(sourceModel()) };
+        if (model == nullptr)
+            return LogViewerFilter::data(index, role);
+
+        const LoggingModelBase::eColumn column{ model->fromIndexToColumn(index.column()) };
+        if (column != LoggingModelBase::eColumn::LogColumnTimestamp)
+            return LogViewerFilter::data(index, role);
+
+        const_cast<ScopeLogViewerFilter *>(this)->_readCalls();
+        const int srcRow{ mapToSource(index).row() };
+        const ScopeLogViewerFilter::sCallRow& call{ _callOf(srcRow) };
+        const areg::LogEntry* entry{ model->getLogData(srcRow) };
+        const areg::LogEntry* opener{ call.opener >= 0 ? model->getLogData(call.opener) : nullptr };
+        if ((entry == nullptr) || (opener == nullptr))
+            return LogViewerFilter::data(index, role);
+
+        const qint64 sinceUs{ static_cast<qint64>(entry->logTimestamp) - static_cast<qint64>(opener->logTimestamp) };
+        return QVariant(NETimeUnits::offset(sinceUs));
+    }
+
+    const_cast<ScopeLogViewerFilter *>(this)->_readCalls();
+    const int srcRow{ mapToSource(index).row() };
+    const ScopeLogViewerFilter::sCallRow& call{ _callOf(srcRow) };
+
+    switch (role)
+    {
+    case ScopeLogViewerFilter::RoleCallDepth:
+        return QVariant(call.depth);
+
+    case ScopeLogViewerFilter::RoleCallFold:
+        return QVariant(static_cast<int>( call.closer < 0
+                                            ? ScopeLogViewerFilter::eCallFold::FoldNone
+                                            : mFolded.contains(srcRow) ? ScopeLogViewerFilter::eCallFold::FoldClosed
+                                                                       : ScopeLogViewerFilter::eCallFold::FoldOpen));
+
+    case ScopeLogViewerFilter::RoleCallBracket:
+    {
+        const LoggingModelBase* model{ static_cast<const LoggingModelBase *>(sourceModel()) };
+        const areg::LogEntry* entry{ model != nullptr ? model->getLogData(srcRow) : nullptr };
+        if (entry == nullptr)
+            return QVariant(static_cast<int>(ScopeLogViewerFilter::eCallBracket::BracketNone));
+        else if (entry->logMsgType == areg::LogMessageType::ScopeEnter)
+            return QVariant(static_cast<int>(ScopeLogViewerFilter::eCallBracket::BracketOpen));
+        else if (entry->logMsgType == areg::LogMessageType::ScopeExit)
+            return QVariant(static_cast<int>(ScopeLogViewerFilter::eCallBracket::BracketClose));
+
+        return QVariant(static_cast<int>( call.opener >= 0 ? ScopeLogViewerFilter::eCallBracket::BracketInside
+                                                           : ScopeLogViewerFilter::eCallBracket::BracketNone));
+    }
+
+    case ScopeLogViewerFilter::RoleCallElapsed:
+        return QVariant(call.elapsed);
+
+    default:
+        break;
+    }
+
+    return QVariant();
+}
+
+bool ScopeLogViewerFilter::toggleFold(const QModelIndex& index)
+{
+    const int srcRow{ mapToSource(index).row() };
+    if ((srcRow < 0) || (srcRow >= mCalls.size()) || (mCalls.at(srcRow).closer < 0))
+        return false;
+
+    if (mFolded.remove(srcRow) == false)
+    {
+        mFolded.insert(srcRow);
+    }
+
+    invalidateRowsFilter();
+    return true;
+}
+
+void ScopeLogViewerFilter::setAutoFold(bool enable)
+{
+    mAutoFold = enable;
+    mFolded.clear();
+    if (enable)
+    {
+        _readCalls();
+        for (int row = 0; row < mCalls.size(); ++row)
+        {
+            const ScopeLogViewerFilter::sCallRow& call{ mCalls.at(row) };
+            if ((call.closer >= 0) && (call.problem == false))
+            {
+                mFolded.insert(row);
+            }
+        }
+    }
+
+    invalidateRowsFilter();
+}
+
+void ScopeLogViewerFilter::setInterestingOnly(bool enable, uint32_t slowUs)
+{
+    mInteresting = enable;
+    mSlowUs = slowUs;
+    invalidateRowsFilter();
+}
+
+void ScopeLogViewerFilter::setRelativeTime(bool enable)
+{
+    if (mRelativeTime == enable)
+        return;
+
+    mRelativeTime = enable;
+    const int rows{ rowCount() };
+    const int cols{ columnCount() };
+    if ((rows > 0) && (cols > 0))
+    {
+        emit dataChanged(index(0, 0), index(rows - 1, cols - 1), QList<int>{ Qt::ItemDataRole::DisplayRole });
+    }
+}
+
+void ScopeLogViewerFilter::_resetCalls(void)
+{
+    mCalls.clear();
+    mStacks.clear();
+    mFolded.clear();
+    mCallsRead = 0;
+}
+
+void ScopeLogViewerFilter::_readCalls(void)
+{
+    const LoggingModelBase* model{ static_cast<const LoggingModelBase *>(sourceModel()) };
+    if (model == nullptr)
+    {
+        _resetCalls();
+        return;
+    }
+
+    const int rows{ model->rowCount() };
+    if (rows < mCallsRead)
+    {
+        // Rows were dropped under the walk, so the recorded positions no longer point at
+        // the entries they were read from.
+        _resetCalls();
+    }
+
+    if (rows == mCallsRead)
+        return;
+
+    mCalls.resize(rows);
+    for (int row = mCallsRead; row < rows; ++row)
+    {
+        const areg::LogEntry* entry{ model->getLogData(row) };
+        ScopeLogViewerFilter::sCallRow& rec{ mCalls[row] };
+        rec = ScopeLogViewerFilter::sCallRow{ };
+        if (entry == nullptr)
+            continue;
+
+        const quint64 key{ (static_cast<quint64>(entry->logCookie) << 32) | static_cast<quint64>(entry->logThreadId & 0xFFFFFFFFu) };
+        QVector<int32_t>& stack{ mStacks[key] };
+
+        if (entry->logMsgType == areg::LogMessageType::ScopeExit)
+        {
+            if (stack.isEmpty() == false)
+            {
+                const int32_t opened{ stack.takeLast() };
+                ScopeLogViewerFilter::sCallRow& call{ mCalls[opened] };
+                call.closer = row;
+                call.elapsed = entry->logDuration;
+                rec.depth = call.depth;
+                // The exit belongs to the call it closes, so folding that call takes the
+                // closing line with it and leaves the opening line alone on screen.
+                rec.opener = opened;
+            }
+            else
+            {
+                rec.opener = -1;
+            }
+        }
+        else
+        {
+            rec.depth = static_cast<int32_t>(stack.size());
+            rec.opener = stack.isEmpty() ? -1 : stack.last();
+            if (entry->logMsgType == areg::LogMessageType::ScopeEnter)
+            {
+                stack.append(row);
+            }
+        }
+
+        if (LoggingModelBase::isProblemEntry(entry))
+        {
+            // A call is worth opening when anything it holds, at any depth, went wrong.
+            for (int32_t open : stack)
+            {
+                mCalls[open].problem = true;
+            }
+        }
+    }
+
+    mCallsRead = rows;
+}
+
+bool ScopeLogViewerFilter::_isHiddenByFold(int srcRow) const
+{
+    if (mFolded.isEmpty())
+        return false;
+
+    const_cast<ScopeLogViewerFilter *>(this)->_readCalls();
+    int32_t at{ _callOf(srcRow).opener };
+    while (at >= 0)
+    {
+        if (mFolded.contains(at))
+            return true;
+
+        at = _callOf(at).opener;
+    }
+
+    return false;
+}
+
+bool ScopeLogViewerFilter::_isInteresting(int srcRow) const
+{
+    const LoggingModelBase* model{ static_cast<const LoggingModelBase *>(sourceModel()) };
+    const areg::LogEntry* entry{ model != nullptr ? model->getLogData(srcRow) : nullptr };
+    if (entry == nullptr)
+        return false;
+    else if (LoggingModelBase::isProblemEntry(entry))
+        return true;
+
+    const_cast<ScopeLogViewerFilter *>(this)->_readCalls();
+
+    // The pair that opens and closes a call worth reading stays, so the rows kept still
+    // sit in the calls they came from.
+    int32_t owner{ -1 };
+    if (entry->logMsgType == areg::LogMessageType::ScopeEnter)
+    {
+        owner = srcRow;
+    }
+    else if (entry->logMsgType == areg::LogMessageType::ScopeExit)
+    {
+        owner = _callOf(srcRow).opener;
+    }
+
+    if (owner < 0)
+        return false;
+
+    const ScopeLogViewerFilter::sCallRow& call{ _callOf(owner) };
+    return (call.problem || ((mSlowUs != 0) && (call.elapsed >= mSlowUs)));
 }
 
 NELusanCommon::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelIndex& index) const

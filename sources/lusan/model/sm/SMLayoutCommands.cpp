@@ -410,9 +410,10 @@ void SMAutoPlaceNodesCommand::undo()
 // SMRemoveLayoutCommand
 //////////////////////////////////////////////////////////////////////////
 
-SMRemoveLayoutCommand::SMRemoveLayoutCommand(StateMachineData& data, DocModelNotifier& notifier, const QList<uint32_t>& ownerIds, const QString& text, QUndoCommand* parent)
+SMRemoveLayoutCommand::SMRemoveLayoutCommand(StateMachineData& data, DocModelNotifier& notifier, const QList<uint32_t>& ownerIds, const QString& text, QUndoCommand* parent, const QList<uint32_t>& levelIds)
     : SMCommand (data, notifier, text, parent)
     , mIds      (ownerIds)
+    , mLevels   (levelIds)
 {
 }
 
@@ -424,10 +425,12 @@ void SMRemoveLayoutCommand::redo()
         // Deleting a large composite matches every removed id against every layout entry, so the
         // ids are hashed once instead of scanned per entry.
         const QSet<uint32_t> ids(mIds.constBegin(), mIds.constEnd());
+        // A level that stops existing keeps no viewport, even when the state hosting it stays.
+        const QSet<uint32_t> levels(mLevels.constBegin(), mLevels.constEnd());
 
         for (const SMLayoutView& view : layout.getViews())
         {
-            if (ids.contains(view.owner))
+            if (ids.contains(view.owner) || levels.contains(view.owner))
             {
                 mViews.append(view);
             }
@@ -453,7 +456,7 @@ void SMRemoveLayoutCommand::redo()
         // A note bound to a deleted state/transition (its owner) goes with it too.
         for (const SMLayoutNote& note : layout.getNotes())
         {
-            if (ids.contains(note.level) || ((note.owner != 0) && ids.contains(note.owner)))
+            if (ids.contains(note.level) || levels.contains(note.level) || ((note.owner != 0) && ids.contains(note.owner)))
             {
                 mNotes.append(note);
             }
@@ -463,12 +466,17 @@ void SMRemoveLayoutCommand::redo()
     }
 
     layout.removeOwned(mIds);
+    for (const uint32_t level : mLevels)
+    {
+        layout.removeView(level);
+    }
+
     for (const SMLayoutNote& note : mNotes)
     {
         layout.removeNote(note.id);
     }
 
-    notifier().notifyLayoutChanged(mIds);
+    notifier().notifyLayoutChanged(mIds + mLevels);
     for (const SMLayoutNote& note : mNotes)
     {
         notifier().notifyElementRemoved(note.id, eDocElementKind::Note);
@@ -498,7 +506,7 @@ void SMRemoveLayoutCommand::undo()
         layout.restoreNote(note);
     }
 
-    notifier().notifyLayoutChanged(mIds);
+    notifier().notifyLayoutChanged(mIds + mLevels);
     for (const SMLayoutNote& note : mNotes)
     {
         notifier().notifyElementAdded(note.id, eDocElementKind::Note);

@@ -43,9 +43,6 @@ namespace
     //!< The longest description kept before the popup measures the text.
     constexpr int MaxDescriptionLength{ 160 };
 
-    //!< The frame and padding added to the text line to get the height of the closed selector.
-    constexpr int SelectorHeightPadding{ 3 };
-
     //!< The height of the line drawn between the workspaces and the commands.
     constexpr int SeparatorHeight{ 7 };
 
@@ -201,11 +198,13 @@ void NaviFileSystem::setupWorkspaceSelector()
     // The closed selector is one text line high, the popup rows keep their own height.
     const int lineHeight{ QFontMetrics(mWorkspaces->font()).height() };
     mWorkspaces->setIconSize(QSize(lineHeight - 2, lineHeight - 2));
-    mWorkspaces->setFixedHeight(lineHeight + SelectorHeightPadding);
+    mWorkspaces->setFixedHeight(NaviToolbarWindow::naviInputHeight(*mWorkspaces));
     // The root directory is elided to the width there is, so a sideways scrollbar would only
     // take the height the last entries need.
     mWorkspaces->view()->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
-    setNaviHeader(mWorkspaces);
+    // Under the tool row, not above it: the tool row is the first line of every navigation
+    // panel, so it does not move when the user switches from one panel to another.
+    addNaviBar(mWorkspaces);
     populateWorkspaces();
 }
 
@@ -705,8 +704,12 @@ WorkspaceElem NaviFileSystem::setupRootPaths(const WorkspaceEntry& workspace)
     QString delivery{ NELusanCommon::fixPath(workspace.getDirDelivery()) };
     QString logs    { NELusanCommon::fixPath(workspace.getDirLogs()) };
 
-    Q_ASSERT(root.isEmpty() == false);
-    result[eWorkspaceElem::WorkspaceRoot] = {root, "[Project: " + root + "]"};
+    // Without an active workspace there is no root to show. The tree stays empty then,
+    // instead of drawing a workspace node that names no folder.
+    if (root.isEmpty())
+        return result;
+
+    result[eWorkspaceElem::WorkspaceRoot] = {root, "[Workspace: " + root + "]"};
     if (!sources.isEmpty())
     {
         result[eWorkspaceElem::WorkspaceSources]    = {sources, "[Sources: " + sources + "]"};

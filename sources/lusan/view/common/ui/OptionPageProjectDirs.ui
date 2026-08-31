@@ -64,7 +64,7 @@
     <item row="1" column="2">
      <widget class="QLineEdit" name="sourceDirEdit">
       <property name="placeholderText">
-       <string>Set project sources</string>
+       <string>Set the sources directory</string>
       </property>
       <property name="clearButtonEnabled">
        <bool>false</bool>
@@ -91,21 +91,21 @@
     <item row="3" column="0" colspan="2">
      <widget class="QLabel" name="deliveryDirLabel">
       <property name="text">
-       <string>Project Delivery Directory:</string>
+       <string>Delivery Directory:</string>
       </property>
      </widget>
     </item>
     <item row="1" column="0" colspan="2">
      <widget class="QLabel" name="sourceDirLabel">
       <property name="text">
-       <string>Project Source Directory:</string>
+       <string>Sources Directory:</string>
       </property>
      </widget>
     </item>
     <item row="2" column="2">
      <widget class="QLineEdit" name="includeDirEdit">
       <property name="placeholderText">
-       <string>Set additional includes</string>
+       <string>Set the includes directory</string>
       </property>
       <property name="clearButtonEnabled">
        <bool>false</bool>
@@ -125,7 +125,7 @@
     <item row="0" column="0" colspan="2">
      <widget class="QLabel" name="rootDirLabel">
       <property name="text">
-       <string>Project Root Directory:</string>
+       <string>Workspace Directory:</string>
       </property>
      </widget>
     </item>
@@ -139,14 +139,14 @@
     <item row="2" column="0" colspan="2">
      <widget class="QLabel" name="includeDirLabel">
       <property name="text">
-       <string>Project Include Directory:</string>
+       <string>Includes Directory:</string>
       </property>
      </widget>
     </item>
     <item row="5" column="0" colspan="2">
      <widget class="QLabel" name="workspaceDescriptionLabel">
       <property name="text">
-       <string>Project Workspace Description:</string>
+       <string>Workspace Description:</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
@@ -156,14 +156,14 @@
     <item row="3" column="2">
      <widget class="QLineEdit" name="deliveryDirEdit">
       <property name="placeholderText">
-       <string>Set thirdparty delivery</string>
+       <string>Set the delivery directory</string>
       </property>
      </widget>
     </item>
     <item row="4" column="2">
      <widget class="QLineEdit" name="logDirEdit">
       <property name="placeholderText">
-       <string>Set log files directory</string>
+       <string>Set the logs directory</string>
       </property>
      </widget>
     </item>
@@ -177,7 +177,7 @@
     <item row="4" column="0" colspan="2">
      <widget class="QLabel" name="logDirLabel">
       <property name="text">
-       <string>Project Log Directory:</string>
+       <string>Logs Directory:</string>
       </property>
      </widget>
     </item>

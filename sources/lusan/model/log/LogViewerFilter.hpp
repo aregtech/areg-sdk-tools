@@ -28,6 +28,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "areg/logging/areg_log.h"
 #include <QMap>
+#include <QSet>
 #include <QString>
 #include <QRegularExpression>
 
@@ -42,7 +43,52 @@ class LoggingModelBase;
 class LogViewerFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   One filter the window has on, in the form a chip draws it.
+     **/
+    struct sActiveFilter
+    {
+        int                         column  { -1 };     //!< The column it acts on, as a LoggingModelBase::eColumn value.
+        bool                        isText  { false };  //!< True when a phrase was typed, false when entries were picked.
+        QString                     text    { };        //!< The phrase, or the picked entries joined.
+        NELusanCommon::FilterString phrase  { };        //!< The phrase and its match options. Text filters only.
+    };
+
+    using ListActiveFilters = QList<LogViewerFilter::sActiveFilter>;
+
+    /**
+     * \brief   What a row was picked out by, when the reader isolated one.
+     **/
+    enum class eIsolation : int
+    {
+          IsolationNone = 0 //!< Nothing is isolated.
+        , IsolationCall     //!< One run of one scope: one process, one scope, one session.
+        , IsolationThread   //!< One thread of one process.
+        , IsolationProcess  //!< One process.
+        , IsolationScope    //!< One scope of one process, every run of it.
+    };
+
+    /**
+     * \brief   The row the reader isolated, in the fields it is recognised by.
+     **/
+    struct sIsolation
+    {
+        LogViewerFilter::eIsolation kind        { LogViewerFilter::eIsolation::IsolationNone };
+        ITEM_ID                     cookie      { 0 };  //!< The process the row came from.
+        ITEM_ID                     thread      { 0 };  //!< The thread the row came from.
+        uint32_t                    scopeId     { 0 };  //!< The scope that wrote the row.
+        uint32_t                    sessionId   { 0 };  //!< The run of that scope.
+    };
+
+    //!< The role that answers whether the row is only in the table because the search
+    //!< asked for it. A delegate reads it to mark the row apart.
+    static constexpr int    RevealedRole    { Qt::ItemDataRole::UserRole + 1 };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -73,6 +119,78 @@ public slots:
      **/
     void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
     void setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns true if a column filter is set, in a combo box or in a text box.
+     *          It does not answer for the scopes the tree refuses, which the model holds.
+     **/
+    bool hasColumnFilters(void) const;
+
+    /**
+     * \brief   Returns every column filter that is on, one entry per column. The scopes the
+     *          tree refuses are not among them, they belong to the model.
+     **/
+    LogViewerFilter::ListActiveFilters activeFilters(void) const;
+
+    /**
+     * \brief   Returns true if any row is in the table only because the search asked for it.
+     **/
+    inline bool hasRevealedRows(void) const;
+
+    /**
+     * \brief   Returns true if any filter this window owns is on: a column filter, an
+     *          isolated row or a priority the bar narrowed to.
+     **/
+    bool hasWindowFilters(void) const;
+
+    //!< Returns the row the reader isolated, if any.
+    inline const LogViewerFilter::sIsolation& isolation(void) const;
+
+    //!< Returns true if the table is narrowed to one process, thread, scope or scope call.
+    inline bool hasIsolation(void) const;
+
+    //!< Returns the priorities the table draws, or zero when it draws every priority.
+    inline uint16_t viewPriority(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Lets one row of the source model through the filters that hide it, so a
+     *          search hit is never reported on a row the table does not draw.
+     * \param   sourceRow   The row of the source model to let through.
+     **/
+    void revealRow(int sourceRow);
+
+    /**
+     * \brief   Takes back every row the search let through.
+     **/
+    void clearRevealedRows(void);
+
+    /**
+     * \brief   Keeps only the rows that belong to the given process, thread, scope or
+     *          scope call.
+     * \param   isolation   What to keep. A kind of IsolationNone lets every row through.
+     **/
+    void setIsolation(const LogViewerFilter::sIsolation& isolation);
+
+    /**
+     * \brief   Lets the rows of every process, thread and scope back in.
+     **/
+    void clearIsolation(void);
+
+    /**
+     * \brief   Keeps only the rows whose priority is in the given set.
+     * \param   mask    The priorities to draw, as a bit mask of areg::LogPriority values.
+     *                  Zero lets every priority through.
+     **/
+    void setViewPriority(uint16_t mask);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -118,6 +236,14 @@ protected:
      * \return  True if the row should be included, false otherwise.
      **/
     bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+
+    /**
+     * \brief   Answers RevealedRole from the set of rows the search let through, and hands
+     *          every other role to the source model.
+     * \param   index   The index in this proxy.
+     * \param   role    The role asked for.
+     **/
+    QVariant data(const QModelIndex& index, int role) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -190,6 +316,14 @@ private:
     inline bool matchMessage(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const;
 
     /**
+     * \brief   Checks if the log message belongs to the isolated process, thread, scope or
+     *          scope call. Every message passes while nothing is isolated.
+     * \param   msg     The log message to check.
+     * \return  True if the message belongs to what the reader isolated.
+     **/
+    inline bool matchIsolation(const areg::LogEntry* msg) const;
+
+    /**
      * \brief   Prepares the regular expression for wildcard matching.
      * \param   wildcardPattern The wildcard pattern to convert to a regular expression.
      * \param   isCaseSensitive Flag indicating if the match is case-sensitive.
@@ -209,6 +343,9 @@ protected:
     QMap<int, NELusanCommon::FilterList>    mTextFilters;   //!< Map of column index to filter text
     QString                                 mRePattern;     //!< Regular expression pattern for wildcard matching
     QRegularExpression                      mReExpression;  //!< Regular expression for wildcard matching
+    QSet<int>                               mRevealed;      //!< Source rows the search let through the filters
+    LogViewerFilter::sIsolation             mIsolation;     //!< The process, thread, scope or scope call the table is narrowed to
+    uint16_t                                mViewPriority;  //!< The priorities the table draws, zero for every one of them
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call
@@ -217,5 +354,29 @@ private:
     LogViewerFilter() = delete;
     AREG_NOCOPY_NOMOVE(LogViewerFilter);
 };
+
+//////////////////////////////////////////////////////////////////////////
+// LogViewerFilter class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool LogViewerFilter::hasRevealedRows(void) const
+{
+    return (mRevealed.isEmpty() == false);
+}
+
+inline const LogViewerFilter::sIsolation& LogViewerFilter::isolation(void) const
+{
+    return mIsolation;
+}
+
+inline bool LogViewerFilter::hasIsolation(void) const
+{
+    return (mIsolation.kind != LogViewerFilter::eIsolation::IsolationNone);
+}
+
+inline uint16_t LogViewerFilter::viewPriority(void) const
+{
+    return mViewPriority;
+}
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP

@@ -104,6 +104,12 @@ public:
     void setDocuments(const QList<MdiChild*>& docs);
 
     /**
+     * \brief   Brings the scope analyzes tab forward. Called when a logging session starts,
+     *          where the scope output is what the user follows.
+     **/
+    void showLogging();
+
+    /**
      * \brief   Brings the Validation tab forward and, when \p step is non-zero, moves to the
      *          next (+1) or previous (-1) finding.
      **/

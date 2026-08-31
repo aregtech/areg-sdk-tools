@@ -37,6 +37,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/NaviOfflineLogsScopes.cpp
     ${LUSAN}/view/common/NaviTabRail.cpp
     ${LUSAN}/view/common/OptionPageBase.cpp
+    ${LUSAN}/view/common/LogRowsPreview.cpp
+    ${LUSAN}/view/common/OptionPageDisplay.cpp
     ${LUSAN}/view/common/OptionPageLogging.cpp
     ${LUSAN}/view/common/OptionPageProjectDirs.cpp
     ${LUSAN}/view/common/OptionPageWorkspace.cpp
@@ -45,6 +47,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/OutputWindow.cpp
     ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/common/ProjectSettings.cpp
+    ${LUSAN}/view/common/ScopeNameDelegate.cpp
     ${LUSAN}/view/common/SearchLineEdit.cpp
     ${LUSAN}/view/common/SourceViewer.cpp
     ${LUSAN}/view/common/TableCell.cpp
@@ -92,6 +95,8 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/NaviOfflineLogsScopes.hpp
     ${LUSAN}/view/common/NaviTabRail.hpp
     ${LUSAN}/view/common/OptionPageBase.hpp
+    ${LUSAN}/view/common/LogRowsPreview.hpp
+    ${LUSAN}/view/common/OptionPageDisplay.hpp
     ${LUSAN}/view/common/OptionPageLogging.hpp
     ${LUSAN}/view/common/OptionPageProjectDirs.hpp
     ${LUSAN}/view/common/OptionPageWorkspace.hpp
@@ -100,6 +105,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/OutputWindow.hpp
     ${LUSAN}/view/common/PendingEditWatcher.hpp
     ${LUSAN}/view/common/ProjectSettings.hpp
+    ${LUSAN}/view/common/ScopeNameDelegate.hpp
     ${LUSAN}/view/common/SearchLineEdit.hpp
     ${LUSAN}/view/common/SourceViewer.hpp
     ${LUSAN}/view/common/TableCell.hpp

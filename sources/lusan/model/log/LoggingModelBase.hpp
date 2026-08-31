@@ -35,7 +35,9 @@
 #include "aregextend/db/LogSqliteDatabase.hpp"
 #include "aregextend/db/SqliteStatement.hpp"
 
+#include <QHash>
 #include <QList>
+#include <QSet>
 #include <QString>
 #include <QVariant>
 
@@ -66,6 +68,10 @@ class LoggingModelBase  : public    TableModelBase
 public:
 
     //!< The index of columns (reusing LoggingModelBase columns for compatibility)
+    //!< The role that answers whether the row belongs to the call the Scope Analyzer holds.
+    //!< A delegate reads it to mark the row apart without taking any width from the cell.
+    static constexpr int    AnalyzedRole    { Qt::ItemDataRole::UserRole + 2 };
+
     enum class eColumn : int
     {
           LogColumnInvalid  = -1    //!< Invalid column index, used for error checking
@@ -95,6 +101,20 @@ public:
     //!< Number of entries the reading thread pulls from the database in one step.
     //!< Used when the caller did not ask for an explicit step size.
     static constexpr int32_t    READ_CHUNK_SIZE { 1000 };
+
+    /**
+     * \brief   One stretch of time during which a scope is kept out of the view. A span with
+     *          no end is still open, and a span that starts at zero covers the whole session.
+     **/
+    struct sRefusedSpan
+    {
+        TIME64  from    { 0 };  //!< The moment the scope stopped being shown.
+        TIME64  to      { 0 };  //!< The moment it started being shown again, 0 while still refused.
+    };
+
+    using   ListSpans       = QList<LoggingModelBase::sRefusedSpan>;
+    using   MapScopeSpans   = QHash<uint32_t, LoggingModelBase::ListSpans>;
+    using   MapRefused      = QHash<ITEM_ID, LoggingModelBase::MapScopeSpans>;
 
     using   ListColumns     = QList<LoggingModelBase::eColumn>;
     using   ListLogs        = std::vector<areg::SharedBuffer>;
@@ -129,6 +149,22 @@ public:
      * \brief   Returns the default list of header names.
      **/
     static const QList<LoggingModelBase::eColumn>& getDefaultColumns();
+
+    /**
+     * \brief   Returns the stored name of the given column.
+     * \param   column  The column to name.
+     * \return  A short name, empty for an unknown column.
+     * \note    This is what a saved setting is keyed by, so it never changes and is never
+     *          translated. The header name the reader sees is `getHeaderName`.
+     **/
+    static QString getColumnKey(LoggingModelBase::eColumn column);
+
+    /**
+     * \brief   Returns the column of the given stored name.
+     * \param   key     The name written by `getColumnKey`.
+     * \return  The column, or LogColumnInvalid when the name is not known.
+     **/
+    static LoggingModelBase::eColumn getColumnByKey(const QString& key);
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -166,6 +202,14 @@ public:
      * \param   colIndex The zero-based index of the column.
      **/
     QString getHeaderName(int colIndex) const;
+
+    /**
+     * \brief   Returns the name of the given scope of the given target.
+     * \param   target  The ID of the target the scope belongs to.
+     * \param   scopeId The ID of the scope.
+     * \return  The scope name, or an empty string when the target never announced it.
+     **/
+    QString getScopeName(ITEM_ID target, uint32_t scopeId) const;
 
     /**
      * \brief   Finds the index of the specified column.
@@ -322,6 +366,13 @@ public:
     inline const areg::LogEntry* getLogData(int row) const;
 
     /**
+     * \brief   Returns true if the entry is a problem row, meaning warning priority or worse.
+     *          The scrollbar marks and the step to the next problem read the same answer here.
+     * \param   entry   The entry to weigh, may be nullptr.
+     **/
+    static inline bool isProblemEntry(const areg::LogEntry* entry);
+
+    /**
      * \brief   Return the logging message entry of specified row and column.
      **/
     inline QString getLogEntry(int row, int col) const;
@@ -337,7 +388,55 @@ public:
 /************************************************************************
  * Signals
  ************************************************************************/
+public:
+
+    /**
+     * \brief   Keeps the given scopes of one target out of the view, or lets them back in.
+     *          A refusal acts from the given moment on, so the rows already collected stay.
+     *          Pass zero to cover the whole session, which is what an archive does.
+     * \param   target      The ID of the target the scopes belong to.
+     * \param   scopeIds    The scopes to refuse or to let back in.
+     * \param   refuse      True to keep them out, false to let them back in.
+     * \param   since       The moment the change acts from, or zero for the whole session.
+     **/
+    void setScopesRefused(ITEM_ID target, const QSet<uint32_t>& scopeIds, bool refuse, TIME64 since);
+
+    /**
+     * \brief   Returns true if the entry falls in a stretch of time its scope is refused.
+     * \param   entry   The log entry to check. A null entry is never refused.
+     **/
+    bool isEntryRefused(const areg::LogEntry* entry) const;
+
+    /**
+     * \brief   Returns true if any scope is currently kept out of the view.
+     **/
+    bool hasRefusedScopes(void) const;
+
+    /**
+     * \brief   Lets every refused scope back in.
+     **/
+    void clearRefusedScopes(void);
+
+    /**
+     * \brief   Asks the panel that owns the scope tree to show every scope again. A log window
+     *          cannot reach the tree, and the tree is the only place that can put its
+     *          checkboxes back, so the request travels through the model both surfaces share.
+     **/
+    void requestShowAllScopes(void);
+
 signals:
+
+    /**
+     * \brief   Signal emitted when the set of refused scopes changed, so that the views
+     *          filtering on it can run their predicate again.
+     **/
+    void signalRefusedScopesChanged(void);
+
+    /**
+     * \brief   Signal emitted when a log window asks for every scope to be shown again.
+     *          The panel that owns the scope tree answers it.
+     **/
+    void signalShowAllScopesRequested(void);
 
     /**
      * \brief   Signal emitted when connected to the logging service.
@@ -661,6 +760,12 @@ protected:
     /**
      * \brief   Helper to get background color data for a log message and column.
      **/
+    /**
+     * brief   Returns the tooltip of the given cell. The message column reports the
+     *          full text, and how much of it was cut when the entry did not hold it all.
+     **/
+    QString getTooltipData(const areg::LogEntry* logMessage, eColumn column) const;
+
     QBrush getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
@@ -729,6 +834,7 @@ protected:
     areg::Thread            mReadThread;    //!< The thread to run the model operations.
     areg::Mutex             mQuitThread;    //!< The event to notify when data is ready.
     ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.
+    MapRefused              mRefused;       //!< The stretches of time each scope is kept out of the view.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -858,6 +964,15 @@ inline void LoggingModelBase::selectTop()
 inline const areg::LogEntry* LoggingModelBase::getLogData(int row) const
 {
     return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? reinterpret_cast<const areg::LogEntry*>(mLogs[row].buffer()) : nullptr);
+}
+
+inline bool LoggingModelBase::isProblemEntry(const areg::LogEntry* entry)
+{
+    constexpr uint16_t problems{ static_cast<uint16_t>(areg::LogPriority::PrioWarning)
+                               | static_cast<uint16_t>(areg::LogPriority::PrioError)
+                               | static_cast<uint16_t>(areg::LogPriority::PrioFatal) };
+
+    return (entry != nullptr) && ((static_cast<uint16_t>(entry->logMessagePrio) & problems) != 0);
 }
 
 inline QString LoggingModelBase::getLogEntry(int row, int col) const

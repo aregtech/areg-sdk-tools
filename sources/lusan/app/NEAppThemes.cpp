@@ -190,6 +190,13 @@ namespace
         static const QString _styleName{ QApplication::style() != nullptr ? QApplication::style()->objectName() : QString() };
         return _styleName;
     }
+
+    //!< The style this namespace installed last. Empty until the first theme is applied.
+    QString& appliedStyleName()
+    {
+        static QString _applied;
+        return _applied;
+    }
 }
 
 QList<OptionsManager::eAppTheme> NEAppThemes::allThemes()
@@ -229,16 +236,31 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
     if (app == nullptr)
         return;
 
+    // Read unconditionally: it latches the style the desktop started the application with,
+    // and it has to latch before the first theme replaces that style.
     const QString& systemStyle = defaultStyleName();
-    if (theme == OptionsManager::eAppTheme::SystemDefault)
+    const bool system{ theme == OptionsManager::eAppTheme::SystemDefault };
+    const QString wanted{ system ? systemStyle : QStringLiteral("Fusion") };
+
+    // Installing a style walks and repolishes every widget of the application through the
+    // style sheet that is still on, which costs about as much as the sheet itself. The four
+    // built-in themes all run on Fusion, so the style is only swapped when it really changes.
+    if (wanted != appliedStyleName())
     {
-        NELusanCommon::setIconsForDarkTheme(false);
+        QApplication::setStyle(QStyleFactory::create(wanted));
+        appliedStyleName() = wanted;
+    }
+
+    if (system)
+    {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
 #endif
-        QApplication::setStyle(QStyleFactory::create(systemStyle));
         QApplication::setPalette(QApplication::style()->standardPalette());
         app->setStyleSheet(baseStyleSheet());
+        // The system theme takes its colours from the desktop, so the ink of the icons is
+        // read back from the palette that was just installed.
+        NELusanCommon::setIconsForDarkTheme(QApplication::palette().color(QPalette::ColorRole::Window).lightness() < 128);
     }
     else
     {
@@ -247,7 +269,6 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(colors.isDark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light);
 #endif
-        QApplication::setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
         QApplication::setPalette(themePalette(colors));
         app->setStyleSheet(themeStyleSheet(colors));
     }

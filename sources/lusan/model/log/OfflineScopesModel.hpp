@@ -117,7 +117,7 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
+    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) override;
 
     /**
      * \brief   Sets the logging model object used to retrieve logging scopes data.

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: stop a target producing, the module and its stream struck together -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="2.75" y="5.5" width="8.25" height="13" rx="1.9"/>
+<path d="M13.2 12H20.5"/>
+<path d="M17.6 8.6L21.25 12L17.6 15.4"/>
+<path d="M3.4 20.1L21.1 4.5"/>
+</g>
+</svg>

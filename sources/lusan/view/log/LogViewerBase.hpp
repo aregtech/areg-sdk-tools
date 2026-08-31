@@ -19,23 +19,33 @@
  *
  ************************************************************************/
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/model/log/LogClockSkew.hpp"
+#include "lusan/view/log/LogEmptyState.hpp"
+#include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
+#include "lusan/view/log/LogTextHighlight.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "areg/base/areg_global.h"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class LoggingModelBase;
+class LogEmptyState;
+class LogHitMap;
+class NaviLogScopeBase;
+class LogSessionBar;
 class LogTableHeader;
 class LogViewerFilter;
 class SearchLineEdit;
-class LogTextHighlight;
+
 
 class QHeaderView;
 class QModelIndex;
 class QPoint;
 class QString;
 class QTableView;
+class QTimer;
 class QToolButton;
 class QWidget;
 
@@ -51,10 +61,36 @@ class LogViewerBase : public MdiChild
     Q_OBJECT
 
 public:
+    //!< The rows keep arriving faster than a counter can be read. The changes are
+    //!< collected for this many milliseconds and drawn once.
+    static constexpr int    COUNTER_DELAY_MS    { 200 };
+
+    //!< The most matches the hit list draws before it says how many are left.
+    static constexpr int    HitListMax          { 300 };
+
+    //!< The longest a message stays in a hit list entry.
+    static constexpr int    HitListChars        { 110 };
+
+    //!< Set on every log table, so a change of the row height finds them all again.
+    static constexpr const char* PropertyLogTable { "lusanLogTable" };
+
     /**
      * \brief   Returns the file extension of the offline log files.
      **/
     static const QString& fileExtension();
+
+    /**
+     * \brief   Gives the rows of the given log table the height chosen in the options and
+     *          marks the table, so a later change of the setting finds it again.
+     * \param   table   The table to apply the height to.
+     **/
+    static void applyRowHeight(QTableView* table);
+
+    /**
+     * \brief   Gives every marked log table the height chosen in the options. Called when
+     *          the setting changes.
+     **/
+    static void refreshRowHeights(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor
@@ -88,9 +124,20 @@ public:
     inline QTableView* getLoggingTable() const;
 
     /**
+     * \brief   Returns the session bar of this log window.
+     **/
+    inline LogSessionBar* getSessionBar() const;
+
+    /**
      * \brief   Returns true if the offline log database is successfully opened.
      **/
     bool isDatabaseOpen() const;
+
+    /**
+     * \brief   Returns true if the window has a source that can produce rows: an open
+     *          archive, or a connected log collector.
+     **/
+    virtual bool isSourceReady() const;
 
     /**
      * \brief   Opens the offline log database file.
@@ -189,6 +236,17 @@ protected:
     virtual void onSearchClicked(bool newSearch);
 
     /**
+     * \brief   Copies the message text of the selected rows to the clipboard, one row per line.
+     **/
+    void onCopyMessage();
+
+    /**
+     * \brief   Copies the selected rows to the clipboard in the layout that the target writes
+     *          into its own log file, one row per line.
+     **/
+    void onCopyRow();
+
+    /**
      * \brief   Slot, triggered when mouse button is clicked on the log table.
      * \param   index   The index of the cell that was clicked.
      **/
@@ -204,6 +262,22 @@ protected:
      * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
      **/
     virtual void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous);
+
+    /**
+     * \brief   Keeps the empty-state panel over the table viewport.
+     * \param   watched The object the event came from.
+     * \param   event   The event.
+     **/
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+    /**
+     * \brief   Slot, triggered when rows are appended to the logging model. It measures the
+     *          clocks of the sources and raises the notice when two of them disagree.
+     * \param   parent  The parent index of the inserted rows.
+     * \param   first   The first inserted row.
+     * \param   last    The last inserted row.
+     **/
+    void onSourceRowsInserted(const QModelIndex& parent, int first, int last);
     
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -216,6 +290,27 @@ protected:
      * \brief   Resets filters.
      **/
     void resetFilters();
+
+    /**
+     * \brief   Drops every filter that keeps a row out of this window: the column filters and
+     *          the scopes the navigation tree refuses.
+     **/
+    void clearEveryFilter();
+
+    /**
+     * \brief   Sets the message column filter from the given phrase and match options, so
+     *          the table keeps only the rows that carry it.
+     * \param   phrase  The phrase and the options to match it with. An empty phrase drops
+     *                  the filter.
+     **/
+    void filterToPhrase(const NELusanCommon::FilterString& phrase);
+
+    /**
+     * \brief   Moves the table to its last row without turning the follow toggle off.
+     *          Every scroll the application makes itself goes through this method; a scroll
+     *          the user makes is what switches following off.
+     **/
+    void scrollFollowing();
 
 //////////////////////////////////////////////////////////////////////////
 // attributes
@@ -230,9 +325,6 @@ protected:
 
     //!< Returns the pointer to the search line edit control.
     SearchLineEdit* ctrlSearchText();
-
-    //!< Returns the pointer to the search next button of the search line edit control.
-    QToolButton* ctrlButtonSearch();
 
     //!< Returns the pointer to the search case sensitive button of the search line edit control.
     QToolButton* ctrlButtonCaseSensitive();
@@ -260,9 +352,127 @@ private:
     void _populateColumnsMenu(QMenu* menu, int curRow);
 
     /**
+     * \brief   Returns the rows currently selected in the log table, in view order.
+     *          Falls back to the current row when there is no selection.
+     **/
+    QList<int> _selectedRows() const;
+
+    /**
+     * \brief   Builds the clipboard text of the given rows.
+     * \param   rows        The rows to format.
+     * \param   fullLayout  If true, uses the target's own log file layout; otherwise
+     *                      returns the message text alone.
+     **/
+    QString _rowsToText(const QList<int>& rows, bool fullLayout) const;
+
+    /**
      * \brief   Updates the current logical index of the "Message" column.
      **/
     void _updateHighlightColumn();
+
+    /**
+     * \brief   Widens every selected range back to the full row. Inserting or removing
+     *          a column cuts the selected rows at that column, which would leave the
+     *          moved cells out of a selection the user made by row.
+     **/
+    void _refitRowSelection();
+
+    /**
+     * \brief   Listens to the table's selection, so that a row the user picks releases the
+     *          follow toggle. Setting a model on a view builds a new selection model, so
+     *          this runs again after every such call.
+     **/
+    void _bindSelection();
+
+    /**
+     * \brief   Draws the row counters of the session bar.
+     **/
+    void _updateCounters();
+
+    /**
+     * \brief   Draws, or hides, the panel that says why the table has no row.
+     **/
+    void _updateEmptyState();
+
+    /**
+     * \brief   Draws one chip for every filter the window has on.
+     **/
+    void _updateChips();
+
+    /**
+     * \brief   Switches off the filter the given chip stands for.
+     * \param   chip    The chip the reader dropped.
+     **/
+    void _dropChip(const LogFilterChips::sChip& chip);
+
+    /**
+     * \brief   Brings the hit the search just found into the table: reveals it when a filter
+     *          hides it, moves to it and draws what the counter and the notice say about it.
+     * \param   allLogs True when the search walks every row the window holds.
+     **/
+    void _showSearchHit(bool allLogs);
+
+    /**
+     * \brief   Draws the counter inside the search field, and the line that names the filters
+     *          a revealed row came back from.
+     * \param   allLogs True when the search walks every row the window holds.
+     **/
+    void _drawSearchState(bool allLogs);
+
+    /**
+     * \brief   Opens the rows the phrase matches as a list under the search field. Choosing
+     *          one moves the table to it.
+     **/
+    void _showHitList(void);
+
+    /**
+     * \brief   Moves the table to the next row of warning priority or worse.
+     * \param   forward True to walk down the table, false to walk up.
+     **/
+    void _stepToProblem(bool forward);
+
+    /**
+     * \brief   Returns the scope panel that belongs to this window, live or offline.
+     *          Null when the main window is not known.
+     **/
+    NaviLogScopeBase* _scopePanel(void) const;
+
+    /**
+     * \brief   Writes the columns of the table and the open database into the workspace.
+     **/
+    void _saveLayout(void) const;
+
+    /**
+     * \brief   Applies the columns the workspace remembers. Does nothing when it holds none.
+     **/
+    void _restoreLayout(void);
+
+    //!< Returns which column record this window reads and writes.
+    WorkspaceEntry::eLogMode _columnMode(void) const;
+
+    /**
+     * \brief   Drops the remembered columns, so the defaults come back on the next run.
+     **/
+    void _forgetLayout(void) const;
+
+    /**
+     * \brief   Returns the filters that are on, named in one line.
+     **/
+    QString _filterSummary() const;
+
+    /**
+     * \brief   Appends the entries that narrow the table to one process, thread, scope or
+     *          scope call, taken from the given row.
+     * \param   menu    The menu to fill.
+     * \param   row     The row of the table the menu was opened on, or -1.
+     **/
+    void _populateIsolateMenu(QMenu* menu, int row);
+
+    /**
+     * \brief   Returns the given number of microseconds as a phrase, in the largest unit
+     *          that keeps the value readable.
+     **/
+    static QString _formatOffset(qint64 offsetUs);
 
     /**
      * \brief   Resets the search result in the log viewer.
@@ -295,8 +505,20 @@ protected:
     LogTableHeader*             mHeader;    //!< Log table header object, used for managing the header of the log table.
     LogSearchModel              mSearch;    //!< The search model, used for searching logs in the log viewer.
     LogSearchModel::sFoundPos   mFoundPos;  //!< The found position of the search in the log viewer.
+    uint32_t                    mFoundRow;  //!< The hit in the rows of the model the search walks.
+    QList<uint32_t>             mHits;      //!< Every row the current phrase matches, ascending.
+    int                         mHiddenHits;//!< How many of those rows the filters keep out.
     LogTextHighlight*           mHighlight; //!< The text highlight object, used for highlighting the search results in the log viewer.
     int                         mHighlightColumn; //!< The current logical column index where highlight delegate is installed.
+    LogSessionBar*              mSessionBar;//!< The bar above the table, carrying the state, the counters and the controls of the window.
+    QString                     mIsolationText; //!< What the chip of the isolated row says.
+    QTimer*                     mCountTimer;//!< Collects the row changes so the counters are drawn once instead of once per row.
+    LogEmptyState*              mEmptyState;//!< What the table says when it has no row to draw.
+    LogHitMap*                  mHitMap;    //!< The marks on the scrollbar naming the hits and the rows above a severity.
+    LogClockSkew                mSkew;      //!< Watches the sources for a clock that disagrees with the collector.
+    bool                        mSkewShown; //!< True once the clock notice was raised, so it is raised once per session.
+    bool                        mFollowScroll; //!< True while the application scrolls the table itself.
+    bool                        mFollowSelect; //!< True while the application selects a row itself.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls.
@@ -317,6 +539,11 @@ inline LoggingModelBase* LogViewerBase::getLoggingModel() const
 inline QTableView* LogViewerBase::getLoggingTable() const
 {
     return mLogTable;
+}
+
+inline LogSessionBar* LogViewerBase::getSessionBar() const
+{
+    return mSessionBar;
 }
 
 #endif  // LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP

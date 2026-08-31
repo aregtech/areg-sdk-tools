@@ -54,6 +54,7 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
 
     ITEM_ID instId{ static_cast<ScopeRoot*>(root)->getRootId() };
     node->setPriority(prio == 0u ? static_cast<uint32_t>(areg::LogPriority::PrioNotset) : prio);
+    root->refreshPrioritiesRecursive();
     if ((node == root) && (prio == static_cast<uint32_t>(areg::LogPriority::PrioNotset)))
     {
         // Remove log priority
@@ -130,6 +131,7 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
         return false;
 
     node->addPriority(prio);
+    root->refreshPrioritiesRecursive();
     bool hasUpdates{ false };
     for (const auto& leaf : leafs)
     {
@@ -174,6 +176,7 @@ bool OfflineScopesModel::removLogPriority(const QModelIndex& index, uint32_t pri
     
     uint32_t prioRemove = ~prio;
     node->removePriority(prio);
+    root->refreshPrioritiesRecursive();
     bool hasUpdates{ false };
     for (const auto& leaf : leafs)
     {
@@ -198,7 +201,7 @@ bool OfflineScopesModel::removLogPriority(const QModelIndex& index, uint32_t pri
     return true;
 }
 
-bool OfflineScopesModel::saveLogScopePriority(const QModelIndex& target) const
+bool OfflineScopesModel::saveLogScopePriority(const QModelIndex& target)
 {
     return false;
 }

@@ -24,6 +24,10 @@
  ************************************************************************/
 #include "lusan/model/log/LogViewerFilter.hpp"
 
+#include <QHash>
+#include <QSet>
+#include <QVector>
+
 /**
  * \brief   The scope logs filter proxy model to filter logging messages by scope ID, session IDs and log priority.
  *          The log messages are displayed in the Log Viewer ot output window for further analyzes.
@@ -74,6 +78,49 @@ public:
         , FilterProcess     = 4     //!< Filter logs by process
     };
 
+    /**
+     * \brief   Where a row sits in the calls of its own thread. The nesting is read from the
+     *          scope enter and exit entries of one thread of one process, so rows of other
+     *          threads standing between an enter and its exit do not disturb it.
+     **/
+    struct sCallRow
+    {
+        int32_t     depth   { 0 };      //!< How many calls of the thread enclose the row
+        int32_t     opener  { -1 };     //!< The row of the scope enter that encloses this row
+        int32_t     closer  { -1 };     //!< On a scope enter, the row of its scope exit
+        uint32_t    elapsed { 0 };      //!< On a scope enter, how long the call took, in microseconds
+        bool        problem { false };  //!< On a scope enter, true when the call carries a warning or worse
+    };
+
+    //!< What the gutter draws beside a row.
+    enum eCallBracket : int
+    {
+          BracketNone   = 0 //!< The row is not inside a call
+        , BracketOpen       //!< The row opens a call
+        , BracketInside     //!< The row sits inside a call
+        , BracketClose      //!< The row closes a call
+    };
+
+    //!< How a call is drawn: it cannot be folded, it is open, or it is folded.
+    enum eCallFold : int
+    {
+          FoldNone      = 0 //!< The row does not open a closed call
+        , FoldOpen          //!< The call is open
+        , FoldClosed        //!< The call is folded and its rows are out of the view
+    };
+
+    //!< The role that carries how deep a row sits in the calls of its thread.
+    static constexpr int    RoleCallDepth   { Qt::ItemDataRole::UserRole + 20 };
+
+    //!< The role that carries whether the row opens a call, and whether that call is folded.
+    static constexpr int    RoleCallFold    { Qt::ItemDataRole::UserRole + 21 };
+
+    //!< The role that carries what the gutter draws beside the row.
+    static constexpr int    RoleCallBracket { Qt::ItemDataRole::UserRole + 22 };
+
+    //!< The role that carries how long the call of a scope enter row took, in microseconds.
+    static constexpr int    RoleCallElapsed { Qt::ItemDataRole::UserRole + 23 };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / destructor
 //////////////////////////////////////////////////////////////////////////
@@ -115,6 +162,47 @@ public:
      * \param   dataFilter  The data to filter.
      **/
     void filterData(ScopeLogViewerFilter::eDataFilter dataFilter);
+
+    /**
+     * \brief   Folds or unfolds the call the given row opens.
+     * \param   index   The row of a scope enter, in the coordinates of this filter.
+     * \return  True if the row opens a call and its state changed.
+     **/
+    bool toggleFold(const QModelIndex& index);
+
+    /**
+     * \brief   Folds every call that carries nothing above information, and unfolds the rest.
+     * \param   enable  True to fold the quiet calls, false to open every call again.
+     **/
+    void setAutoFold(bool enable);
+
+    //!< Returns true if the quiet calls are folded.
+    inline bool isAutoFold(void) const;
+
+    /**
+     * \brief   Keeps only the rows worth reading: the entries of warning priority or worse, and
+     *          the calls that carry one or that ran longer than the given time.
+     * \param   enable  True to narrow the view to those rows.
+     * \param   slowUs  How long a call must run to count as slow, in microseconds. Zero drops
+     *                  the duration from the question and leaves only the priorities.
+     **/
+    void setInterestingOnly(bool enable, uint32_t slowUs);
+
+    //!< Returns true if the view is narrowed to the rows worth reading.
+    inline bool isInterestingOnly(void) const;
+
+    //!< Returns how long a call must run to count as slow, in microseconds.
+    inline uint32_t slowCallUs(void) const;
+
+    /**
+     * \brief   Switches the timestamp column between the time of day and the time since the
+     *          call the row belongs to was entered.
+     * \param   enable  True to show the time since the call was entered.
+     **/
+    void setRelativeTime(bool enable);
+
+    //!< Returns true if the timestamp column counts from the entry of the call.
+    inline bool isRelativeTime(void) const;
 
     /**
      * \brief   Returns the starting index of the logs of the selected session.
@@ -206,6 +294,14 @@ protected:
      **/
     bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
+    /**
+     * \brief   Adds the call structure of a row to what the base filter reports.
+     * \param   index   The row to read.
+     * \param   role    The role to read.
+     * \return  The data of the role.
+     **/
+    QVariant data(const QModelIndex& index, int role) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -224,6 +320,24 @@ private:
      **/
     inline void _clearData();
 
+    /**
+     * \brief   Reads the calls of the source rows that are not walked yet. The walk is picked
+     *          up where it stopped, so a stream of arriving rows costs one step each.
+     **/
+    void _readCalls(void);
+
+    //!< Drops the call structure so the next read starts from the first source row.
+    void _resetCalls(void);
+
+    //!< Returns true if a call that encloses the given source row is folded.
+    bool _isHiddenByFold(int srcRow) const;
+
+    //!< Returns true if the given source row is worth reading while the view is narrowed.
+    bool _isInteresting(int srcRow) const;
+
+    //!< Returns the call structure of the given source row, an empty record when there is none.
+    inline const ScopeLogViewerFilter::sCallRow& _callOf(int srcRow) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -241,6 +355,14 @@ private:
     eDataFilter     mActiveFilter;      //!< Active filter type
     mutable QModelIndex mIndexStart;    //!< The first selected index of filtered data, index is based on the source model
     mutable QModelIndex mIndexEnd;      //<! The last selected index of filtered data, index is based on the source model
+    QVector<sCallRow>   mCalls;         //!< Where every source row sits in the calls of its thread
+    QHash<quint64, QVector<int32_t>> mStacks;   //!< The calls still open on each thread of each process
+    QSet<int32_t>       mFolded;        //!< The scope enter rows whose calls are out of the view
+    int                 mCallsRead;     //!< How many source rows the call walk has already read
+    bool                mAutoFold;      //!< True while the calls that carry nothing above information are folded
+    bool                mInteresting;   //!< True while only the rows worth reading are shown
+    uint32_t            mSlowUs;        //!< How long a call must run to count as slow, in microseconds
+    bool                mRelativeTime;  //!< True while the timestamp column counts from the entry of the call
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -252,6 +374,32 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // ScopeLogViewerFilter inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline bool ScopeLogViewerFilter::isAutoFold(void) const
+{
+    return mAutoFold;
+}
+
+inline bool ScopeLogViewerFilter::isInterestingOnly(void) const
+{
+    return mInteresting;
+}
+
+inline uint32_t ScopeLogViewerFilter::slowCallUs(void) const
+{
+    return mSlowUs;
+}
+
+inline bool ScopeLogViewerFilter::isRelativeTime(void) const
+{
+    return mRelativeTime;
+}
+
+inline const ScopeLogViewerFilter::sCallRow& ScopeLogViewerFilter::_callOf(int srcRow) const
+{
+    static const ScopeLogViewerFilter::sCallRow _empty{ };
+    return ((srcRow >= 0) && (srcRow < mCalls.size())) ? mCalls.at(srcRow) : _empty;
+}
 
 inline QModelIndex ScopeLogViewerFilter::getIndexStart(bool asSource) const
 {

@@ -24,6 +24,7 @@
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/model/log/OfflineScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/log/LogPriorityBar.hpp"
 
 #include <QIcon>
 #include <QMessageBox>
@@ -38,13 +39,8 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     , mToolDbOpen       (nullptr)
     , mToolDbClose      (nullptr)
     , mToolRefresh      (nullptr)
-    , mToolMoveBottom   (nullptr)
-    , mToolMoveTop      (nullptr)
 {
     setupScopeToolbar();
-    setBaseSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    setMinimumSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-
     setupModel(new OfflineScopesModel(this));
     setupScopeControls();
     setupSignals();
@@ -58,34 +54,23 @@ NaviOfflineLogsScopes::~NaviOfflineLogsScopes()
     delete mScopesModel;
 }
 
-void NaviOfflineLogsScopes::addSpecificTools(void)
+QToolButton* NaviOfflineLogsScopes::addSourceTool(void)
 {
     mToolDbOpen = addToolButton( NELusanCommon::iconOpenFile(NELusanCommon::SizeBig)
                                , tr("Open log file")
                                , tr("Opens log file"));
+    return mToolDbOpen;
+}
 
+void NaviOfflineLogsScopes::addExtraTools(void)
+{
     mToolDbClose = addToolButton( NELusanCommon::iconClose(NELusanCommon::SizeBig)
                                 , tr("Close log file")
                                 , tr("Close log file"));
 
     mToolRefresh = addToolButton( NELusanCommon::iconRefresh(NELusanCommon::SizeBig)
-                                , tr("Refresh Navigator")
-                                , tr("Refresh Navigator and reset filters"));
-}
-
-void NaviOfflineLogsScopes::addMoveTools(void)
-{
-    mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
-                                   , tr("Move at bottom of logs")
-                                   , tr("Move at bottom of logs"));
-    mToolMoveBottom->setArrowType(Qt::ArrowType::DownArrow);
-    mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
-
-    mToolMoveTop = addToolButton( NELusanCommon::iconScrollTop(NELusanCommon::SizeBig)
-                                , tr("Move at top of logs")
-                                , tr("Move at top of logs"));
-    mToolMoveTop->setArrowType(Qt::ArrowType::UpArrow);
-    mToolMoveTop->setWhatsThis(tr("Click to move to top of the logs"));
+                                , tr("Refresh and reset filters")
+                                , tr("Reloads the scopes and clears every filter."));
 }
 
 bool NaviOfflineLogsScopes::hasSelectAllPrioMenu(void) const
@@ -134,11 +119,8 @@ bool NaviOfflineLogsScopes::isDatabaseOpen() const
 
 void NaviOfflineLogsScopes::setLoggingModel(LoggingModelBase * model)
 {
-    ctrlLogDebug()->setChecked(model != nullptr);
-    ctrlLogError()->setChecked(model != nullptr);
-    ctrlLogInfo()->setChecked(model != nullptr);
-    ctrlLogScopes()->setChecked(model != nullptr);
-    ctrlLogWarning()->setChecked(model != nullptr);
+    ctrlPriorityBar()->setEnabled(model != nullptr);
+    ctrlPriorityBar()->setIdle(model == nullptr);
 
     NaviLogScopeBase::setLoggingModel(model);
     updateControls();
@@ -296,7 +278,7 @@ void NaviOfflineLogsScopes::onRefreshDatabaseClicked()
 void NaviOfflineLogsScopes::onRootUpdated(const QModelIndex& root)
 {
     Q_ASSERT(mScopesModel != nullptr);
-    enableButtons(root);
+    refreshButtons();
     expandNodeAndChildren(root, false);
 }
 

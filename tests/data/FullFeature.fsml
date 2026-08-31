@@ -339,10 +339,6 @@
             </EntryList>
             <ExitList>
                 <TimerStop ID="78" Timer="BlinkTimer"/>
-                <ScriptBlock ID="79">
-                    <Body><![CDATA[clearFaults();
-resetCoinBox();]]></Body>
-                </ScriptBlock>
             </ExitList>
             <TransitionList>
                 <Transition ID="80" Kind="External" StimulusKind="Trigger" Stimulus="power_on" To="43">

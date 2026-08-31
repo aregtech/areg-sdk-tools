@@ -17,6 +17,8 @@
  *
  ************************************************************************/
 #include "lusan/model/log/LogViewerFilter.hpp"
+
+#include "areg/logging/LoggingDefs.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include <QModelIndex>
 
@@ -26,8 +28,15 @@ LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
     , mTextFilters          ( )
     , mRePattern            ( )
     , mReExpression         ( )
+    , mRevealed             ( )
+    , mIsolation            ( )
+    , mViewPriority         (0)
 {
     setSourceModel(model);
+    if (model != nullptr)
+    {
+        connect(model, &LoggingModelBase::signalRefusedScopesChanged, this, [this]() { invalidateRowsFilter(); });
+    }
 }
 
 LogViewerFilter::~LogViewerFilter()
@@ -131,6 +140,121 @@ void LogViewerFilter::clearFilters()
     invalidateRowFilter();
 }
 
+bool LogViewerFilter::hasColumnFilters(void) const
+{
+    for (auto it = mComboFilters.cbegin(); it != mComboFilters.cend(); ++it)
+    {
+        if (it.value().isEmpty() == false)
+            return true;
+    }
+
+    for (auto it = mTextFilters.cbegin(); it != mTextFilters.cend(); ++it)
+    {
+        if (it.value().isEmpty() == false)
+            return true;
+    }
+
+    return false;
+}
+
+void LogViewerFilter::setIsolation(const LogViewerFilter::sIsolation& isolation)
+{
+    mIsolation = isolation;
+    mRevealed.clear();
+    invalidateRowFilter();
+}
+
+void LogViewerFilter::clearIsolation(void)
+{
+    if (mIsolation.kind == LogViewerFilter::eIsolation::IsolationNone)
+        return;
+
+    mIsolation = LogViewerFilter::sIsolation{ };
+    invalidateRowFilter();
+}
+
+void LogViewerFilter::setViewPriority(uint16_t mask)
+{
+    if (mViewPriority == mask)
+        return;
+
+    mViewPriority = mask;
+    invalidateRowFilter();
+}
+
+bool LogViewerFilter::hasWindowFilters(void) const
+{
+    return hasColumnFilters() || hasIsolation() || (mViewPriority != 0);
+}
+
+void LogViewerFilter::revealRow(int sourceRow)
+{
+    if ((sourceRow < 0) || mRevealed.contains(sourceRow))
+        return;
+
+    mRevealed.insert(sourceRow);
+    invalidateRowFilter();
+}
+
+void LogViewerFilter::clearRevealedRows(void)
+{
+    if (mRevealed.isEmpty())
+        return;
+
+    mRevealed.clear();
+    invalidateRowFilter();
+}
+
+QVariant LogViewerFilter::data(const QModelIndex& index, int role) const
+{
+    if (role == LogViewerFilter::RevealedRole)
+    {
+        const QModelIndex source{ mapToSource(index) };
+        return QVariant(source.isValid() && mRevealed.contains(source.row()));
+    }
+
+    return QSortFilterProxyModel::data(index, role);
+}
+
+LogViewerFilter::ListActiveFilters LogViewerFilter::activeFilters(void) const
+{
+    LogViewerFilter::ListActiveFilters result;
+
+    for (auto it = mComboFilters.cbegin(); it != mComboFilters.cend(); ++it)
+    {
+        const NELusanCommon::FilterList& filters{ it.value() };
+        if (filters.isEmpty())
+            continue;
+
+        QStringList names;
+        names.reserve(filters.size());
+        for (const NELusanCommon::FilterData& entry : filters)
+        {
+            names.append(entry.text);
+        }
+
+        result.append(LogViewerFilter::sActiveFilter{ it.key(), false, names.join(QStringLiteral(", ")), { } });
+    }
+
+    for (auto it = mTextFilters.cbegin(); it != mTextFilters.cend(); ++it)
+    {
+        const NELusanCommon::FilterList& filters{ it.value() };
+        if (filters.isEmpty())
+            continue;
+
+        const NELusanCommon::FilterData& entry{ filters.first() };
+        NELusanCommon::FilterString phrase{ entry.text, false, false, false };
+        if (entry.data.has_value() && (entry.data.type() == typeid(NELusanCommon::FilterString)))
+        {
+            phrase = std::any_cast<NELusanCommon::FilterString>(entry.data);
+        }
+
+        result.append(LogViewerFilter::sActiveFilter{ it.key(), true, entry.text, phrase });
+    }
+
+    return result;
+}
+
 bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
     LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
@@ -160,7 +284,23 @@ bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
     else if (model == nullptr)
         return true;
 
+    // A row the search asked for is drawn whatever the filters say, and marked apart.
+    if (mRevealed.contains(row))
+        return true;
+
     const areg::LogEntry* msg = model->getLogData(index.row());
+    // The scope tree refuses rows from the moment it was unchecked, so this is asked first:
+    // it is a lookup, while the column filters walk their lists.
+    if (model->isEntryRefused(msg))
+        return false;
+
+    if (matchIsolation(msg) == false)
+        return false;
+
+    if ((mViewPriority != 0) && (msg != nullptr)
+        && ((mViewPriority & static_cast<uint16_t>(msg->logMessagePrio)) == 0))
+        return false;
+
     // Check if row matches all active filters
     return  (matchesComboFilters(model, msg) != NELusanCommon::eMatchType::NoMatch) &&
             (matchesTextFilters(model, msg)  != NELusanCommon::eMatchType::NoMatch);
@@ -302,16 +442,19 @@ inline bool LogViewerFilter::matchMessage(const areg::LogEntry* msg, const NELus
     if (filterText == nullptr)
         return false;
 
+    // logMessageLen is the length before the message was cut and can exceed the buffer,
+    // so the stored length is what may be read.
+    const QString message{ QString::fromUtf8(msg->logMessage, static_cast<int>(areg::log_message_size(*msg))) };
+
     // Check if the cell data contains the filter text (case-insensitive)
     if (filterText->isWildCard || filterText->isWholeWord)
     {
-        // return wildcardMatch(QString::fromUtf8(msg->logMessage, msg->logMessageLen), filterText.text, filterText.isCaseSensitive, filterText.isWholeWord);
         Q_ASSERT(mRePattern.isEmpty() == false);
-        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(mReExpression);
+        return message.contains(mReExpression);
     }
     else
     {
-        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(filterText->text, filterText->isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
+        return message.contains(filterText->text, filterText->isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
     }
 }
 
@@ -342,8 +485,37 @@ inline void LogViewerFilter::prepareReExpression(const QString& wildcardPattern,
     }
 }
 
+inline bool LogViewerFilter::matchIsolation(const areg::LogEntry* msg) const
+{
+    if (mIsolation.kind == LogViewerFilter::eIsolation::IsolationNone)
+        return true;
+    else if (msg == nullptr)
+        return false;
+    else if (msg->logCookie != mIsolation.cookie)
+        return false;
+
+    switch (mIsolation.kind)
+    {
+    case LogViewerFilter::eIsolation::IsolationThread:
+        return (msg->logThreadId == mIsolation.thread);
+
+    case LogViewerFilter::eIsolation::IsolationScope:
+        return (msg->logScopeId == mIsolation.scopeId);
+
+    case LogViewerFilter::eIsolation::IsolationCall:
+        return (msg->logScopeId == mIsolation.scopeId) && (msg->logSessionId == mIsolation.sessionId);
+
+    case LogViewerFilter::eIsolation::IsolationProcess:
+    default:
+        return true;
+    }
+}
+
 inline void LogViewerFilter::_clearData()
 {
     mComboFilters.clear();
     mTextFilters.clear();
+    mRevealed.clear();
+    mIsolation    = LogViewerFilter::sIsolation{ };
+    mViewPriority = 0;
 }

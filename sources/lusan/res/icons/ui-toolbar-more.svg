@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: the tools that do not fit the row, three dots on the middle column. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="12" height="22" viewBox="0 0 12 22" color="#000000">
+<g fill="currentColor" stroke="none">
+<circle cx="6" cy="4" r="2"/>
+<circle cx="6" cy="11" r="2"/>
+<circle cx="6" cy="18" r="2"/>
+</g>
+</svg>

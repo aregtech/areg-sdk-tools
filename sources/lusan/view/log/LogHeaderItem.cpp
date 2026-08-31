@@ -149,6 +149,14 @@ void LogHeaderItem::setFilterData(const QString& data)
     }
 }
 
+void LogHeaderItem::setFilterData(const NELusanCommon::FilterString& filter)
+{
+    if ((mType == eType::Text) && (mWidget != nullptr))
+    {
+        mWidget->setDataFilter(filter);
+    }
+}
+
 void LogHeaderItem::setFilterData(const std::vector<QString>& data, const NELusanCommon::AnyList& list)
 {
     if ((mType == eType::Combo) && (mWidget != nullptr))

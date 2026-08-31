@@ -101,3 +101,13 @@ void LogCollectorClient::on_log_message(const areg::MessageEnvelope& logMessage)
 {
     emit signalLogMessage(logMessage);
 }
+
+void LogCollectorClient::on_log_source_state(ITEM_ID cookie, areg::LogSourceState state, ITEM_ID byObserver)
+{
+    emit signalLogSourceState(cookie, static_cast<uint8_t>(state), byObserver);
+}
+
+void LogCollectorClient::on_log_configuration_restored(ITEM_ID cookie)
+{
+    emit signalLogConfigRestored(cookie);
+}

@@ -1037,7 +1037,7 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
         return;
     }
 
-    const QPalette palette{ (widget != nullptr) ? widget->palette() : QPalette() };
+    const QPalette palette{ NESMDesign::canvasPalette() };
     const QColor   color = strokeColor(palette);
 
     painter->setRenderHint(QPainter::Antialiasing, true);

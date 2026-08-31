@@ -69,10 +69,10 @@ void DataTypeListView::buildUi()
 
     // The Add split button: a plain click creates the default (a structure), the drop-down
     // offers the four data type categories explicitly.
-    mActNewStruct    = new QAction(QIcon(QStringLiteral(":/icons/data type structure")), tr("Structure")  , this);
-    mActNewEnum      = new QAction(QIcon(QStringLiteral(":/icons/data type enum"))     , tr("Enumeration"), this);
-    mActNewImport    = new QAction(QIcon(QStringLiteral(":/icons/data type import"))   , tr("Imported")   , this);
-    mActNewContainer = new QAction(QIcon(QStringLiteral(":/icons/data type container")), tr("Container")  , this);
+    mActNewStruct    = new QAction(NELusanCommon::loadIcon(QStringLiteral(":/icons/data type structure"), NELusanCommon::SizeSmall), tr("Structure")  , this);
+    mActNewEnum      = new QAction(NELusanCommon::loadIcon(QStringLiteral(":/icons/data type enum"), NELusanCommon::SizeSmall)     , tr("Enumeration"), this);
+    mActNewImport    = new QAction(NELusanCommon::loadIcon(QStringLiteral(":/icons/data type import"), NELusanCommon::SizeSmall)   , tr("Imported")   , this);
+    mActNewContainer = new QAction(NELusanCommon::loadIcon(QStringLiteral(":/icons/data type container"), NELusanCommon::SizeSmall), tr("Container")  , this);
     QMenu* addMenu = new QMenu(mButtonAdd);
     addMenu->addAction(mActNewStruct);
     addMenu->addAction(mActNewEnum);

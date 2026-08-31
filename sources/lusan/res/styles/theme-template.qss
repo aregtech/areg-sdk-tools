@@ -182,12 +182,10 @@ QComboBox::drop-down
     subcontrol-position: center right;
 }
 
-/* The workspace selector is fixed to one text line, so the shared padding above would eat the
-   line it has to show. It carries the frame only. */
+/* The workspace selector sits in a navigation panel, where the corners are drawn tighter
+   than in a dialog. It takes the padding of every other drop-down. */
 QComboBox#naviWorkspaceSelector
 {
-    padding: 0px 6px;
-    min-height: 0px;
     border-radius: 4px;
 }
 
@@ -395,6 +393,15 @@ QMenuBar::item
 QMenuBar::item:selected
 {
     background: ${hover};
+}
+
+/* The row the chevron of a navigation toolbar opens carries the tools the row could not
+   fit. It is that row carried on, so it takes the ground and the frame of a menu and
+   leaves its buttons the size they have in the row. */
+QFrame#naviToolOverflow
+{
+    background-color: ${base};
+    border: 1px solid ${border};
 }
 
 QMenu

@@ -148,6 +148,12 @@ public:
     inline const QList<SMLayoutEdge>& getEdges() const;
     inline const QList<SMLayoutNote>& getNotes() const;
 
+    /**
+     * \brief   Adds a layout entry for the given owner and returns a reference to it.
+     * \note    Every reference and pointer this class hands out points into a list that the
+     *          next add or remove of the same kind moves. Read what is needed into locals
+     *          before calling one of them.
+     **/
     SMLayoutView& addView(uint32_t owner);
     SMLayoutNode& addNode(uint32_t owner);
     SMLayoutEdge& addEdge(uint32_t owner);

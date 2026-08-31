@@ -53,6 +53,7 @@
 #include "lusan/view/sm/SMInternalEditor.hpp"
 #include "lusan/view/sm/SMSectionChrome.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
@@ -1164,6 +1165,33 @@ int main(int argc, char* argv[])
     CHECK(data.findStateById(deepStartId) != nullptr);
     CHECK(data.getLayout().findNode(standbyStartId) != nullptr);
     grab(design, "g12-root-after-levels");
+
+    std::printf("sect: deleting a nested level's Start deletes that submachine\n");
+    // --- A Start marks where its own level begins, so on a nested level Del takes the whole
+    //     submachine and the canvas steps out. A level holding nothing but its Start asks
+    //     nothing, which is what makes this reachable without a dialog.
+    CHECK(manager.navigateTo(deepId));
+    const uint32_t nestedStartId = deepStart->getId();
+    const int undoBeforeStartDelete = model.getUndoStack().index();
+    design.getScene().clearSelection();
+    SMStateItem* nestedStartItem = design.getScene().stateItem(nestedStartId);
+    CHECK(nestedStartItem != nullptr);
+    if (nestedStartItem != nullptr)
+    {
+        nestedStartItem->setSelected(true);
+        design.deleteSelection();
+        CHECK(model.getUndoStack().index() == undoBeforeStartDelete + 1);    // one undo step
+        CHECK(deep->hasNestedStates() == false);                             // the submachine is gone
+        CHECK(data.findStateById(nestedStartId) == nullptr);
+        CHECK(data.getLayout().findNode(nestedStartId) == nullptr);          // its layout too
+        CHECK(manager.getCurrentLevel() == standby->getId());                // one level up
+        model.getUndoStack().undo();
+        CHECK(deep->hasNestedStates());
+        CHECK(data.findStateById(nestedStartId) != nullptr);                 // same ID replayed
+        CHECK(data.getLayout().findNode(nestedStartId) != nullptr);
+    }
+
+    CHECK(manager.navigateTo(rootLevel));
 
     const QString sourcePath{ QString::fromLocal8Bit(argv[1]) };
 
@@ -2609,8 +2637,8 @@ int main(int argc, char* argv[])
         QApplication::processEvents();
 
         StateMachineData& d = doc.getData();
-        QLineEdit* box = page.findChild<QLineEdit*>(QStringLiteral("smCanvasSearch"));
-        QLabel* status = page.findChild<QLabel*>(QStringLiteral("smCanvasSearchStatus"));
+        SearchLineEdit* box = page.findChild<SearchLineEdit*>(QStringLiteral("smCanvasSearch"));
+        QLabel* status = (box != nullptr ? box->findChild<QLabel*>(QStringLiteral("searchCounter")) : nullptr);
         CHECK(box != nullptr);
         CHECK(status != nullptr);
 
@@ -2677,11 +2705,11 @@ int main(int argc, char* argv[])
         QApplication::processEvents();
 
         StateMachineData& d = doc.getData();
-        QLineEdit* box       = page.findChild<QLineEdit*>(QStringLiteral("smCanvasSearch"));
-        QLabel* status       = page.findChild<QLabel*>(QStringLiteral("smCanvasSearchStatus"));
-        QToolButton* opCase  = page.findChild<QToolButton*>(QStringLiteral("smCanvasSearchCase"));
-        QToolButton* opWord  = page.findChild<QToolButton*>(QStringLiteral("smCanvasSearchWord"));
-        QToolButton* opRegex = page.findChild<QToolButton*>(QStringLiteral("smCanvasSearchRegex"));
+        SearchLineEdit* box  = page.findChild<SearchLineEdit*>(QStringLiteral("smCanvasSearch"));
+        QLabel* status       = (box != nullptr ? box->findChild<QLabel*>(QStringLiteral("searchCounter")) : nullptr);
+        QToolButton* opCase  = (box != nullptr ? box->buttonMatchCase() : nullptr);
+        QToolButton* opWord  = (box != nullptr ? box->buttonMatchWord() : nullptr);
+        QToolButton* opRegex = (box != nullptr ? box->buttonWildCard()  : nullptr);
         SMStateEntry* off = d.findState("LightOff");
         CHECK((box != nullptr) && (status != nullptr));
         CHECK((opCase != nullptr) && (opWord != nullptr) && (opRegex != nullptr));
@@ -4320,6 +4348,48 @@ int main(int argc, char* argv[])
         const QRect broughtBackRect = revealView.mapFromScene(targetItem->sceneBoundingRect()).boundingRect();
         CHECK(revealView.hasFocus());
         CHECK(revealView.viewport()->rect().intersects(broughtBackRect));
+    }
+
+    std::printf("sect: the zoom box keeps room for its own text under every style\n");
+    {
+        StateMachineModel zoomModel;
+        CHECK(zoomModel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign zoomDesign(zoomModel);
+        zoomDesign.resize(1000, 700);
+        zoomDesign.show();
+        QApplication::processEvents();
+
+        QComboBox* zoomBox = zoomDesign.findChild<QComboBox *>(QStringLiteral("smCanvasZoom"));
+        CHECK(zoomBox != nullptr);
+
+        // Every style the platform offers, applied the way the theme switch applies one. The
+        // box must never end up shorter than the height that style needs for a line of text.
+        const QStringList styles{ QStyleFactory::keys() };
+        CHECK(styles.isEmpty() == false);
+        const QString worn{ QApplication::style() != nullptr ? QApplication::style()->objectName() : QString() };
+        for (const QString& name : styles)
+        {
+            QStyle* style = QStyleFactory::create(name);
+            if (style == nullptr)
+                continue;
+
+            QApplication::setStyle(style);
+            QApplication::processEvents();
+            const int needed{ zoomBox->minimumSizeHint().height() };
+            if (zoomBox->height() < needed)
+            {
+                std::printf("  style '%s': box %d px, needs %d px\n", name.toLatin1().constData(), zoomBox->height(), needed);
+            }
+
+            CHECK(zoomBox->height() >= needed);
+            CHECK(zoomBox->parentWidget()->height() >= needed);
+        }
+
+        if (worn.isEmpty() == false)
+        {
+            QApplication::setStyle(QStyleFactory::create(worn));
+            QApplication::processEvents();
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

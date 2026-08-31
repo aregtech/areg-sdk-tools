@@ -65,6 +65,8 @@
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
+#include "lusan/view/common/SearchLineEdit.hpp"
+
 #include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
@@ -115,7 +117,7 @@ namespace
 
         void paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/, QWidget* widget) override
         {
-            const QPalette palette{ (widget != nullptr) ? widget->palette() : QPalette() };
+            const QPalette palette{ NESMDesign::canvasPalette() };
             const QRectF   body{ 0.0, 0.0, 120.0, 60.0 };
 
             painter->setRenderHint(QPainter::Antialiasing, true);
@@ -211,7 +213,6 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mSearchCase   (nullptr)
     , mSearchWord   (nullptr)
     , mSearchRegex  (nullptr)
-    , mSearchStatus (nullptr)
     , mZoomBox      (nullptr)
     , mHScroll      (nullptr)
     , mVScroll      (nullptr)
@@ -302,36 +303,27 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     topLayout->setSpacing(4);
     topLayout->addWidget(mBreadcrumb, 1);
 
-    mSearchEdit = new QLineEdit(topBar);
+    // The canvas searches with the same control as the log windows and the scope panels: the
+    // mark, the option toggles, the match counter and the clear button all live inside the field.
+    const QList<SearchLineEdit::eToolButton> searchTools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
+                                                        , SearchLineEdit::eToolButton::ToolButtonMatchWord
+                                                        , SearchLineEdit::eToolButton::ToolButtonWildCard };
+
+    mSearchEdit = new SearchLineEdit(searchTools, topBar);
     mSearchEdit->setObjectName(QStringLiteral("smCanvasSearch"));
     mSearchEdit->setPlaceholderText(tr("Find state / transition (Ctrl+F)"));
-    mSearchEdit->setClearButtonEnabled(true);
-    mSearchEdit->setMaximumWidth(240);
+    mSearchEdit->setMaximumWidth(320);
     mSearchEdit->installEventFilter(this);
     topLayout->addWidget(mSearchEdit);
 
-    // Search option toggles (match case, whole word, regular expression). Re-running the
-    // search on toggle keeps the result live as the user tunes the query.
-    auto makeSearchOption = [this, topBar, topLayout](const QIcon& icon, const QString& tip, const QString& name) -> QToolButton*
-    {
-        QToolButton* button = new QToolButton(topBar);
-        button->setObjectName(name);
-        button->setIcon(icon);
-        button->setToolTip(tip);
-        button->setCheckable(true);
-        button->setAutoRaise(true);
-        connect(button, &QToolButton::toggled, this, [this](bool) { onSearchTextChanged(); });
-        topLayout->addWidget(button);
-        return button;
-    };
-    mSearchCase  = makeSearchOption(NELusanCommon::iconSearchMatchCase(), tr("Match case"), QStringLiteral("smCanvasSearchCase"));
-    mSearchWord  = makeSearchOption(NELusanCommon::iconSearchMatchWord(), tr("Match whole word"), QStringLiteral("smCanvasSearchWord"));
-    mSearchRegex = makeSearchOption(NELusanCommon::iconSearchWildCard(), tr("Regular expression"), QStringLiteral("smCanvasSearchRegex"));
+    mSearchCase  = mSearchEdit->buttonMatchCase();
+    mSearchWord  = mSearchEdit->buttonMatchWord();
+    mSearchRegex = mSearchEdit->buttonWildCard();
 
-    mSearchStatus = new QLabel(topBar);
-    mSearchStatus->setObjectName(QStringLiteral("smCanvasSearchStatus"));
-    mSearchStatus->setMinimumWidth(72);
-    topLayout->addWidget(mSearchStatus);
+    // Re-running the search on a toggle keeps the result live as the query is tuned.
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchMatchCaseClicked, this, [this](bool) { onSearchTextChanged(); });
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchMatchWordClicked, this, [this](bool) { onSearchTextChanged(); });
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchWildCardClicked , this, [this](bool) { onSearchTextChanged(); });
 
     // The Design page is a QMainWindow: the canvas is its central widget, and the drawing toolbar,
     // Properties and Outline panels dock to its edges and can move to the Navigation Window.
@@ -353,7 +345,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     setCentralWidget(central);
 
     connect(mSearchEdit, &QLineEdit::textChanged, this, &SMDesign::onSearchTextChanged);
-    connect(mSearchEdit, &QLineEdit::returnPressed, this, &SMDesign::advanceSearch);
+    connect(mSearchEdit, &SearchLineEdit::signalButtonSearchClicked, this, [this](bool) { advanceSearch(); });
     // No local Ctrl+F shortcut here: the main window's Edit > Find owns Ctrl+F and calls
     // beginSearch(), so the two never collide into an ambiguous-shortcut no-op (issue #538).
 
@@ -873,8 +865,8 @@ void SMDesign::setupActions()
     mActGridSize->setIcon(SMToolIcons::icon(eIcon::GridSize));
     mActEnterSubmachine->setIcon(SMToolIcons::icon(eIcon::EnterSubmachine));
     mActGoToParent->setIcon(SMToolIcons::icon(eIcon::GoToParent));
-    mActAddSubmachine->setIcon(QIcon(QStringLiteral(":/icons/entry add")));
-    mActRemoveSubmachine->setIcon(QIcon(QStringLiteral(":/icons/entry delete")));
+    mActAddSubmachine->setIcon(NELusanCommon::loadIcon(QStringLiteral(":/icons/entry add"), NELusanCommon::SizeSmall));
+    mActRemoveSubmachine->setIcon(NELusanCommon::loadIcon(QStringLiteral(":/icons/entry delete"), NELusanCommon::SizeSmall));
     mActCenterMachine->setIcon(SMToolIcons::icon(eIcon::CenterMachine));
     mActZoomIn->setIcon(SMToolIcons::icon(eIcon::ZoomIn));
     mActZoomOut->setIcon(SMToolIcons::icon(eIcon::ZoomOut));
@@ -1069,6 +1061,10 @@ void SMDesign::buildDesignPanels()
 
     QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
+    // Every MDI child shares one window, so these answer only while the focus is inside this
+    // one. A window wide binding would reach the key from any other open document.
+    nextIssue->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    prevIssue->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     connect(nextIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(1); });
     connect(prevIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(-1); });
 }
@@ -1505,7 +1501,6 @@ QWidget* SMDesign::buildBottomBar()
 {
     const int extent = scrollExtent();
     QWidget* bar = new QWidget(this);
-    bar->setFixedHeight(extent);
     QHBoxLayout* barLayout = new QHBoxLayout(bar);
     // The box starts clear of the canvas corner, which the frame rounds off.
     barLayout->setContentsMargins(NESMDesign::ZoomBoxIndent, 0, 0, 0);
@@ -1536,13 +1531,13 @@ QWidget* SMDesign::buildBottomBar()
     mView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     mHScroll->setFixedHeight(extent);
-    mZoomBox->setFixedHeight(extent);
 
     QFont boxFont{ mZoomBox->font() };
     boxFont.setPixelSize(NESMDesign::ZoomTextSize);
     mZoomBox->setFont(boxFont);
     zoomEdit->setFont(boxFont);
     mZoomBox->view()->setFont(boxFont);
+    applyZoomBoxMetrics();
 
     barLayout->addWidget(mZoomBox);
     barLayout->addWidget(createScrollStep(mHScroll, Qt::LeftArrow , QStringLiteral("smCanvasStepLeft") , tr("Scroll left") , QAbstractSlider::SliderSingleStepSub));
@@ -1562,6 +1557,30 @@ QWidget* SMDesign::buildBottomBar()
 
     applyZoom(mView->getZoom());
     return bar;
+}
+
+void SMDesign::applyZoomBoxMetrics(void)
+{
+    QWidget* bar{ mZoomBox != nullptr ? mZoomBox->parentWidget() : nullptr };
+    if (bar == nullptr)
+        return;
+
+    // The styles do not agree on how tall a combo box has to be. Taking the scrollbar extent
+    // as a floor rather than as the answer keeps the percentage off the bottom edge.
+    const int boxHeight{ qMax(scrollExtent(), mZoomBox->minimumSizeHint().height()) };
+    mZoomBox->setFixedHeight(boxHeight);
+    bar->setFixedHeight(boxHeight);
+}
+
+void SMDesign::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+    if ((event != nullptr) && (event->type() == QEvent::Type::StyleChange))
+    {
+        // The box takes the new style in the same pass as this page, so it is measured
+        // once that pass is over and its own size hint has been dropped.
+        QMetaObject::invokeMethod(this, [this]() { applyZoomBoxMetrics(); }, Qt::ConnectionType::QueuedConnection);
+    }
 }
 
 void SMDesign::applyZoom(int percent)
@@ -1668,13 +1687,33 @@ void SMDesign::deleteSelection()
 
     StateMachineModel& model = mModel;
     StateMachineData&  data  = model.getData();
-    SMStateData* level = data.findLevel(scene.getLevelId());
+    const uint32_t levelId = scene.getLevelId();
+    SMStateData* level = data.findLevel(levelId);
     if (level == nullptr)
     {
         return;
     }
 
-    // The Start state is auto-created with its level and cannot be recreated by a tool.
+    bool startSelected{ false };
+    for (const SMStateItem* item : selection)
+    {
+        const SMStateEntry* state = data.findStateById(item->getElementId());
+        if ((state != nullptr) && (state->getKind() == SMStateEntry::eStateKind::Start))
+        {
+            startSelected = true;
+            break;
+        }
+    }
+
+    // A Start exists only as the entry marker of its own level, so inside a submachine deleting
+    // it means deleting that submachine. Anything else selected here is part of it anyway.
+    if (startSelected && (levelId != mSceneManager->getRootLevel()))
+    {
+        deleteDisplayedSubmachine();
+        return;
+    }
+
+    // The machine's own Start is created with the document and cannot be recreated by a tool.
     QStringList names;
     QList<uint32_t> deletable;
     bool skippedStart{ false };
@@ -1704,7 +1743,7 @@ void SMDesign::deleteSelection()
     if (deletable.isEmpty())
     {
         QMessageBox::information(this, tr("Delete States")
-                                 , tr("The Start state cannot be deleted - every machine level needs exactly one."));
+                                 , tr("The Start state of the machine cannot be deleted - the top level always needs one."));
         return;
     }
 
@@ -1719,7 +1758,7 @@ void SMDesign::deleteSelection()
     message += QStringLiteral("\n") + tr("Transitions from and to the deleted state(s) are deleted too.");
     if (skippedStart)
     {
-        message += QStringLiteral("\n") + tr("The selected Start state is kept - every level needs one.");
+        message += QStringLiteral("\n") + tr("The selected Start state is kept - the top level always needs one.");
     }
 
     const QMessageBox::StandardButton answer =
@@ -1746,6 +1785,48 @@ void SMDesign::deleteSelection()
 
         model.getUndoStack().push(composite);
     }
+}
+
+void SMDesign::deleteDisplayedSubmachine()
+{
+    StateMachineData& data = mModel.getData();
+    const uint32_t ownerId = getScene().getLevelId();
+    const SMStateEntry* owner = data.findStateById(ownerId);
+    if (owner == nullptr)
+    {
+        return;
+    }
+
+    SMRemoveCompositeCommand* command = new SMRemoveCompositeCommand(data, mModel.getNotifier(), ownerId
+                                                                    , tr("Delete submachine of %1").arg(owner->getName()));
+    if (command->isEffective() == false)
+    {
+        delete command;
+        return;
+    }
+
+    // A level holding nothing but its own Start has nothing the user built, so it goes silently.
+    const int states = command->removedStateCount();
+    if (states > 1)
+    {
+        const int edges = command->removedTransitionCount();
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Delete Submachine")
+                            , tr("Deleting the Start state deletes the whole submachine of '%1': %2 states and %3 transition%4 that point into them, with every submachine nested deeper. This can be undone.")
+                              .arg(owner->getName())
+                              .arg(states)
+                              .arg(edges).arg(edges == 1 ? QString() : QStringLiteral("s"))
+                            , QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (choice != QMessageBox::Ok)
+        {
+            delete command;
+            return;
+        }
+    }
+
+    // Standing inside the level that is about to disappear leaves the canvas on a scene with no
+    // owner, so step out to the host's own level first.
+    mSceneManager->goToParent();
+    mModel.getUndoStack().push(command);
 }
 
 void SMDesign::deleteSelectedEdges()
@@ -2865,7 +2946,7 @@ void SMDesign::onSearchTextChanged()
     if (query.isEmpty())
     {
         mSeedActive = false;
-        mSearchStatus->clear();
+        mSearchEdit->setCounter(QString());
         return;
     }
 
@@ -2889,7 +2970,7 @@ void SMDesign::onSearchTextChanged()
     if (mSearchHits.isEmpty())
     {
         // No match: leave the canvas untouched, show a clear affordance.
-        mSearchStatus->setText(tr("No match"));
+        mSearchEdit->setCounter(tr("No match"));
         return;
     }
 
@@ -2902,7 +2983,7 @@ void SMDesign::advanceSearch()
 {
     if (mSearchEdit->text().trimmed().isEmpty())
     {
-        mSearchStatus->clear();
+        mSearchEdit->setCounter(QString());
         return;
     }
 
@@ -3079,7 +3160,7 @@ void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind, int rul
 
 void SMDesign::updateSearchStatus()
 {
-    mSearchStatus->setText(tr("%1 / %2").arg(mSearchIndex + 1).arg(mSearchHits.size()));
+    mSearchEdit->setCounter(tr("%1 / %2").arg(mSearchIndex + 1).arg(mSearchHits.size()));
 }
 
 void SMDesign::collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const

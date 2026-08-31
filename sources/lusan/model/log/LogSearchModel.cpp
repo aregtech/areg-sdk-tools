@@ -211,7 +211,35 @@ bool LogSearchModel::wildcardMatch(const QString& text, const QRegularExpression
     }
 }
 
-QRegularExpression LogSearchModel::createRegex()
+QList<uint32_t> LogSearchModel::collectMatches(void) const
+{
+    QList<uint32_t> result;
+    if (mSearchPhrase.isEmpty() || (mLogModel == nullptr))
+        return result;
+
+    const bool byPattern{ mIsWildcard || mIsMatchWord };
+    const QRegularExpression regex{ createRegex() };
+    const Qt::CaseSensitivity sensitivity{ mIsMatchCase ? Qt::CaseSensitivity::CaseSensitive : Qt::CaseSensitivity::CaseInsensitive };
+    const int rows{ mLogModel->rowCount(QModelIndex()) };
+
+    for (int row = 0; row < rows; ++row)
+    {
+        const QModelIndex index{ mLogModel->index(row, 0) };
+        const areg::LogEntry* log{ mLogModel->data(index, static_cast<int>(Qt::ItemDataRole::UserRole)).value<const areg::LogEntry*>() };
+        if (log == nullptr)
+            continue;
+
+        const QString text{ QString::fromUtf8(log->logMessage) };
+        if (byPattern ? regex.match(text).hasMatch() : text.contains(mSearchPhrase, sensitivity))
+        {
+            result.append(static_cast<uint32_t>(row));
+        }
+    }
+
+    return result;
+}
+
+QRegularExpression LogSearchModel::createRegex() const
 {
     // Escape regex special characters except * and ?
     QString regexPattern = QRegularExpression::escape(mSearchPhrase);

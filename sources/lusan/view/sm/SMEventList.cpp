@@ -67,8 +67,8 @@ void SMEventList::buildUi()
 
     // The Add button always opens a menu (no default kind): an event and a timer are unrelated
     // stimuli, so the user always chooses. Adding a parameter is a separate toolbar button.
-    mActNewEvent = new QAction(QIcon(QStringLiteral(":/icons/sm-event")), tr("New Event"), this);
-    mActNewTimer = new QAction(QIcon(QStringLiteral(":/icons/sm-timer")), tr("New Timer"), this);
+    mActNewEvent = new QAction(NELusanCommon::loadIcon(QStringLiteral(":/icons/sm-event"), NELusanCommon::SizeSmall), tr("New Event"), this);
+    mActNewTimer = new QAction(NELusanCommon::loadIcon(QStringLiteral(":/icons/sm-timer"), NELusanCommon::SizeSmall), tr("New Timer"), this);
     QMenu* addMenu = new QMenu(mButtonAdd);
     addMenu->addAction(mActNewEvent);
     addMenu->addAction(mActNewTimer);
@@ -121,13 +121,13 @@ void SMEventList::buildUi()
 
     mGroupEvents = new QTreeWidgetItem(mTable);
     mGroupEvents->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    mGroupEvents->setIcon(0, QIcon(QStringLiteral(":/icons/sm-event")));
+    mGroupEvents->setIcon(0, NELusanCommon::loadIcon(QStringLiteral(":/icons/sm-event"), NELusanCommon::SizeSmall));
     // Always show the expand/collapse indicator on the group rows, even while empty, so they
     // read as expandable containers rather than leaf rows.
     mGroupEvents->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
     mGroupTimers = new QTreeWidgetItem(mTable);
     mGroupTimers->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    mGroupTimers->setIcon(0, QIcon(QStringLiteral(":/icons/sm-timer")));
+    mGroupTimers->setIcon(0, NELusanCommon::loadIcon(QStringLiteral(":/icons/sm-timer"), NELusanCommon::SizeSmall));
     mGroupTimers->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
     updateGroups(0, 0);
     mGroupEvents->setExpanded(true);

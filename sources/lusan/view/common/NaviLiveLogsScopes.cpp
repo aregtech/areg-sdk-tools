@@ -29,13 +29,23 @@
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
+#include "lusan/view/log/LogPriorityBar.hpp"
 
 #include "areg/base/SocketDefs.hpp"
 
+#include <QHBoxLayout>
 #include <QIcon>
+#include <QLabel>
+#include <QTimer>
 #include <QToolButton>
 #include <QTreeView>
 #include <filesystem>
+
+namespace
+{
+    //!< How long the panel waits before it asks the log collector service again.
+    constexpr int   RetryMs { 3000 };
+}
 
 NaviLiveLogsScopes* _explorer{ nullptr };
 void NaviLiveLogsScopes::_logObserverStarted()
@@ -52,7 +62,10 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mToolConnect      (nullptr)
     , mToolSettings     (nullptr)
     , mToolSave         (nullptr)
-    , mToolMoveBottom   (nullptr)
+    , mToolTargetStop   (nullptr)
+    , mToolTargetPause  (nullptr)
+    , mToolTargetResume (nullptr)
+    , mToolTargetRestore(nullptr)
     , mAddress          ()
     , mPort             (areg::InvalidPort)
     , mInitLogFile      ( )
@@ -60,6 +73,10 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mLogLocation      ( )
     , mSignalsActive    (false)
     , mState            (eLoggingStates::LoggingUndefined)
+    , mConnectBar       (nullptr)
+    , mConnectText      (nullptr)
+    , mRetryTimer       (nullptr)
+    , mAttempts         (0)
 {
     _explorer = this;
 
@@ -75,30 +92,64 @@ NaviLiveLogsScopes::~NaviLiveLogsScopes()
     _explorer = nullptr;
 }
 
-void NaviLiveLogsScopes::addSpecificTools(void)
+QToolButton* NaviLiveLogsScopes::addSourceTool(void)
 {
     mToolConnect = addToolButton( NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig)
                                 , tr("Connect to log collector")
                                 , tr("Connect or disconnect log collector service.")
                                 , true);
     mToolConnect->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    return mToolConnect;
+}
 
+void NaviLiveLogsScopes::addExtraTools(void)
+{
     mToolSettings = addToolButton( NELusanCommon::iconSettings(NELusanCommon::SizeBig)
                                  , tr("Change log collector connection settings")
                                  , tr("Change log collector service connection settings"));
 
     mToolSave = addToolButton( NELusanCommon::iconSaveAsDocument(NELusanCommon::SizeBig)
-                             , tr("Save log settings")
-                             , tr("Save log settings"));
-}
+                             , tr("Save log priorities on every connected target")
+                             , tr("Writes the current log priorities into the configuration file of every connected target."));
 
-void NaviLiveLogsScopes::addMoveTools(void)
-{
-    mToolMoveBottom = addToolButton( NELusanCommon::iconScrollBottom(NELusanCommon::SizeBig)
-                                   , tr("Move at bottom of logs")
-                                   , tr("Move at bottom of logs"));
-    mToolMoveBottom->setArrowType(Qt::ArrowType::DownArrow);
-    mToolMoveBottom->setWhatsThis(tr("Click to move to bottom of the logs"));
+    mToolTargetStop = addToolButton( NELusanCommon::iconTargetStop(NELusanCommon::SizeBig)
+                                   , tr("Stop this target logging")
+                                   , tr("The target produces no log at all. Every scope priority is turned off and put back when it logs again."));
+    mToolTargetStop->setEnabled(false);
+
+    mToolTargetPause = addToolButton( NELusanCommon::iconTargetPause(NELusanCommon::SizeBig)
+                                    , tr("Hold what this target sends")
+                                    , tr("The target keeps producing its logs and stops sending them here. Its priorities are not changed."));
+    mToolTargetPause->setEnabled(false);
+
+    mToolTargetResume = addToolButton( NELusanCommon::iconTargetResume(NELusanCommon::SizeBig)
+                                     , tr("Let this target log and send again")
+                                     , tr("The target produces and sends its logs again, with the priorities it had before."));
+    mToolTargetResume->setEnabled(false);
+
+    mToolTargetRestore = addToolButton( NELusanCommon::iconScopeRestoreAll(NELusanCommon::SizeBig)
+                                      , tr("Restore the saved priorities of this target")
+                                      , tr("The target applies the priorities it has saved. One that was never configured applies its built-in defaults."));
+    mToolTargetRestore->setEnabled(false);
+
+    connect(mToolTargetStop, &QToolButton::clicked, this, [this]() {
+        applyTargetState(ctrlTable()->currentIndex(), areg::LogSourceState::Stopped);
+    });
+
+    connect(mToolTargetPause, &QToolButton::clicked, this, [this]() {
+        applyTargetState(ctrlTable()->currentIndex(), areg::LogSourceState::Paused);
+    });
+
+    connect(mToolTargetResume, &QToolButton::clicked, this, [this]() {
+        applyTargetState(ctrlTable()->currentIndex(), areg::LogSourceState::Active);
+    });
+
+    connect(mToolTargetRestore, &QToolButton::clicked, this, [this]() {
+        if (mScopesModel != nullptr)
+        {
+            mScopesModel->restoreConfiguration(ctrlTable()->currentIndex());
+        }
+    });
 }
 
 bool NaviLiveLogsScopes::hasSavePrioMenu(void) const
@@ -109,6 +160,49 @@ bool NaviLiveLogsScopes::hasSavePrioMenu(void) const
 bool NaviLiveLogsScopes::canSavePrio(void) const
 {
     return LogObserver::isConnected();
+}
+
+void NaviLiveLogsScopes::refreshTargetControls(const QModelIndex& selection)
+{
+    if (mToolTargetStop == nullptr)
+        return;
+
+    const bool waiting{ selection.isValid() && selection.data(LoggingScopesModelBase::RoleSourceWait).toBool() };
+    const bool live   { selection.isValid() && (waiting == false) && canSavePrio() };
+    const areg::LogSourceState state
+        { selection.isValid()
+            ? static_cast<areg::LogSourceState>(selection.data(LoggingScopesModelBase::RoleSourceState).toInt())
+            : areg::LogSourceState::Undefined };
+
+    // A control the target is already in the state of stays visible and goes dead, so the row
+    // never moves under the pointer and the enabled set alone reports where the target stands.
+    mToolTargetStop->setEnabled(live && (state != areg::LogSourceState::Stopped));
+    mToolTargetPause->setEnabled(live && (state != areg::LogSourceState::Paused));
+    mToolTargetResume->setEnabled(live && (state != areg::LogSourceState::Active));
+    mToolTargetRestore->setEnabled(live);
+
+    if (waiting)
+    {
+        const QString wait{ tr("Waiting for the target to answer.") };
+        mToolTargetStop->setToolTip(wait);
+        mToolTargetPause->setToolTip(wait);
+        mToolTargetResume->setToolTip(wait);
+        mToolTargetRestore->setToolTip(wait);
+    }
+    else
+    {
+        mToolTargetStop->setToolTip(tr("The target produces no log at all. Every scope priority is turned off and put back when it logs again."));
+        mToolTargetPause->setToolTip(tr("The target keeps producing its logs and stops sending them here. Its priorities are not changed."));
+        mToolTargetResume->setToolTip(state == areg::LogSourceState::Stopped
+                                        ? tr("The target produces and sends its logs again, with the priorities it had before it was stopped.")
+                                        : tr("The target sends the logs it produces again."));
+        mToolTargetRestore->setToolTip(tr("The target applies the priorities it has saved. One that was never configured applies its built-in defaults."));
+    }
+
+    for (QToolButton* button : { mToolTargetStop, mToolTargetPause, mToolTargetResume, mToolTargetRestore })
+    {
+        button->setStatusTip(button->toolTip());
+    }
 }
 
 const QString& NaviLiveLogsScopes::getLogCollectorAddress() const
@@ -147,25 +241,117 @@ void NaviLiveLogsScopes::disconnectLogging(void)
 
 void NaviLiveLogsScopes::setupWidgets()
 {
+    setupConnectStatus();
     ctrlCollapse()->setEnabled(true);
     ctrlConnect()->setEnabled(true);
     ctrlSettings()->setEnabled(true);
     ctrlSaveSettings()->setEnabled(true);
-    ctrlFind()->setEnabled(false);
-    ctrlLogError()->setEnabled(false);
-    ctrlLogWarning()->setEnabled(false);
-    ctrlLogInfo()->setEnabled(false);
-    ctrlLogDebug()->setEnabled(false);
-    ctrlLogScopes()->setEnabled(false);
+    ctrlFind()->setEnabled(true);
+    ctrlPriorityBar()->setEnabled(false);
+    ctrlPriorityBar()->setIdle(true);
+    ctrlShowOnly()->setEnabled(false);
+    ctrlHide()->setEnabled(false);
+    ctrlShowAll()->setEnabled(false);
+}
+
+void NaviLiveLogsScopes::setupConnectStatus()
+{
+    mConnectBar = new QWidget(this);
+    QHBoxLayout* row = new QHBoxLayout(mConnectBar);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(4);
+
+    QLabel* icon = new QLabel(mConnectBar);
+    icon->setPixmap(NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeSmall).pixmap(NELusanCommon::SizeSmall));
+
+    mConnectText = new QLabel(mConnectBar);
+    mConnectText->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Preferred);
+
+    QToolButton* stop = new QToolButton(mConnectBar);
+    stop->setText(tr("Stop"));
+    stop->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    stop->setAutoRaise(true);
+    stop->setToolTip(tr("Stop waiting for the log collector service."));
+    stop->setAccessibleName(stop->toolTip());
+
+    row->addWidget(icon, 0);
+    row->addWidget(mConnectText, 1);
+    row->addWidget(stop, 0);
+
+    addNaviBar(mConnectBar);
+    mConnectBar->setVisible(false);
+
+    mRetryTimer = new QTimer(this);
+    mRetryTimer->setInterval(RetryMs);
+
+    connect(stop        , &QToolButton::clicked, this, [this]() { onConnectClicked(false); });
+    connect(mRetryTimer , &QTimer::timeout     , this, [this]() { retryConnect(); });
+}
+
+void NaviLiveLogsScopes::beginConnecting()
+{
+    mState = eLoggingStates::LoggingConnecting;
+    mAttempts = 0;
+    updateConnectStatus();
+    mRetryTimer->start();
+}
+
+void NaviLiveLogsScopes::stopConnecting()
+{
+    mRetryTimer->stop();
+    mAttempts = 0;
+    if (mConnectBar != nullptr)
+    {
+        mConnectBar->setVisible(false);
+    }
+}
+
+void NaviLiveLogsScopes::countAttempt()
+{
+    ++mAttempts;
+    updateConnectStatus();
+}
+
+void NaviLiveLogsScopes::updateConnectStatus()
+{
+    if (mConnectBar == nullptr)
+        return;
+
+    const QString target{ QString("%1:%2").arg(mAddress).arg(mPort) };
+    mConnectText->setText(mAttempts == 0
+                            ? tr("Connecting to %1...").arg(target)
+                            : tr("Retrying to connect to %1, attempt %2").arg(target).arg(mAttempts));
+    mConnectText->setToolTip(tr("The scopes appear here as soon as the log collector service answers."));
+    mConnectBar->setVisible(true);
+}
+
+void NaviLiveLogsScopes::retryConnect()
+{
+    if (isConnecting() == false)
+    {
+        mRetryTimer->stop();
+        return;
+    }
+
+    if (LogObserver::isConnected())
+        return;
+
+    LogObserver::connect(mAddress, mPort, databasePath());
+}
+
+QString NaviLiveLogsScopes::databasePath() const
+{
+    std::error_code err;
+    std::filesystem::path dbPath(mLogLocation.toStdString());
+    dbPath /= mInitLogFile.toStdString();
+    return QString(std::filesystem::absolute(dbPath, err).c_str());
 }
 
 void NaviLiveLogsScopes::setupSignals()
 {
     connect(ctrlConnect()       , &QToolButton::clicked, this, &NaviLiveLogsScopes::onConnectClicked);
-    connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &NaviLiveLogsScopes::onMoveBottomClicked);
     connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &NaviLiveLogsScopes::onSaveSettingsClicked);
     connect(ctrlSettings()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onOptionsClicked);
-    connect(mMainWindow         , &MdiMainWindow::signalMdiWindowCreated, this  , &NaviLiveLogsScopes::onWindowCreated);
     connect(mMainWindow         , &MdiMainWindow::signalNewLiveLog      , this  , [this](){onConnectClicked(true);});
 
     setupLogSignals(true);
@@ -238,7 +424,14 @@ void NaviLiveLogsScopes::onLogObserverConfigured(bool isEnabled, const QString& 
 
     mAddress= address;
     mPort   = port;
-    mState  = eLoggingStates::LoggingConfigured;
+    if (isConnecting() == false)
+    {
+        mState = eLoggingStates::LoggingConfigured;
+    }
+    else
+    {
+        updateConnectStatus();
+    }
 }
 
 void NaviLiveLogsScopes::onLogDbConfigured(bool isEnabled, const QString& dbName, const QString& dbLocation, const QString& dbUser)
@@ -252,6 +445,14 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
     if (isConnected)
     {
         mState = eLoggingStates::LoggingConnected;
+        stopConnecting();
+    }
+    else if (isConnecting())
+    {
+        // The log collector service is not answering yet. The panel keeps the session and
+        // the button as they are, so the user stays where the live scopes will appear.
+        countAttempt();
+        return;
     }
 
     enableButtons(QModelIndex());
@@ -259,14 +460,18 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
     LogObserver* log = LogObserver::getComponent();
     ctrlConnect()->setChecked(isConnected);
     ctrlConnect()->setIcon(isConnected ? NELusanCommon::iconLiveLogConnected(NELusanCommon::SizeBig) : NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig));
-    ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
+    // Connected, the button disconnects. The tooltip names the action as well as the
+    // address, so the hover text never describes a different button.
+    ctrlConnect()->setToolTip(isConnected
+                                ? tr("Disconnect from %1:%2").arg(address).arg(port)
+                                : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
 }
 
 void NaviLiveLogsScopes::onLogObserverStarted(bool isStarted)
 {
-    if (isStarted == false)
+    if ((isStarted == false) && (isConnecting() == false))
     {
         onConnectClicked(false);
     }
@@ -287,15 +492,11 @@ void NaviLiveLogsScopes::onLogObserverInstance(bool isStarted, const QString& ad
     if (isStarted)
     {
         mScopesModel->setupModel();
-        std::error_code err;
-        std::filesystem::path dbPath(mLogLocation.toStdString());
-        dbPath /= mInitLogFile.toStdString();
-        QString logPath(std::filesystem::absolute(dbPath, err).c_str());
-        LogObserver::connect(mAddress, mPort, logPath);
+        LogObserver::connect(mAddress, mPort, databasePath());
         setupLogSignals(true);
         enableButtons(QModelIndex());
     }
-    else
+    else if (isConnecting() == false)
     {
         onConnectClicked(false);
     }
@@ -309,6 +510,7 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
         if (LogObserver::isConnected() == false)
         {
             Q_ASSERT(mMainWindow != nullptr);
+            beginConnecting();
             LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
             mScopesModel->setLoggingModel(logModel);
             LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
@@ -320,6 +522,7 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
         uint16_t port{ LogObserver::getConnectedPort() };
         QString logFile{ mActiveLogFile.isEmpty() == false ? mActiveLogFile : LogObserver::getActiveDatabase() };
 
+        stopConnecting();
         setupLogSignals(false);
 
         ctrlConnect()->setChecked(false);
@@ -336,16 +539,6 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
     }
 
     enableButtons(QModelIndex());
-}
-
-void NaviLiveLogsScopes::onMoveBottomClicked()
-{
-    Q_ASSERT(mMainWindow != nullptr);
-    MdiChild* wndActive = mMainWindow->getActiveWindow();
-    if ((wndActive != nullptr) && wndActive->isLogViewerWindow())
-    {
-        qobject_cast<LiveLogViewer*>(wndActive)->moveToBottom(true);
-    }
 }
 
 void NaviLiveLogsScopes::onSaveSettingsClicked(bool checked)
@@ -394,7 +587,7 @@ void NaviLiveLogsScopes::onScopesInserted(const QModelIndex & parent)
     Q_ASSERT(mScopesModel != nullptr);
     if (parent.isValid())
     {
-        enableButtons(parent);
+        refreshButtons();
         expandNode(parent, true);
     }
 }
@@ -403,19 +596,20 @@ void NaviLiveLogsScopes::onScopesUpdated(const QModelIndex & parent)
 {
     if (parent.isValid())
     {
-        enableButtons(parent);
+        refreshButtons();
         ctrlTable()->update(parent);
     }
 }
 
 void NaviLiveLogsScopes::onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles /*= QList<int>()*/)
 {
-    enableButtons(ctrlTable()->currentIndex());
+    refreshButtons();
     updateExpanded(ctrlTable()->rootIndex());
 }
 
 void NaviLiveLogsScopes::optionOpenning()
 {
+    stopConnecting();
     if (isConnected())
     {
         QString address{ LogObserver::getConnectedAddress() };
@@ -448,6 +642,7 @@ void NaviLiveLogsScopes::optionClosed(bool OKpressed)
     {
         ctrlConnect()->setChecked(true);
         Q_ASSERT(mMainWindow != nullptr);
+        beginConnecting();
         LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
         mScopesModel->setLoggingModel(logModel);
         LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
@@ -458,7 +653,3 @@ void NaviLiveLogsScopes::optionClosed(bool OKpressed)
     }
 }
 
-void NaviLiveLogsScopes::onWindowCreated(MdiChild* mdiChild)
-{
-    ctrlMoveBottom()->setEnabled((mdiChild != nullptr) && (mdiChild->isLogViewerWindow()));
-}

@@ -25,6 +25,10 @@
 #include <QAbstractItemModel>
 #include <QList>
 #include <QMap>
+#include <QSet>
+#include <QStringList>
+
+#include "lusan/data/log/ScopeNodes.hpp"
 
 #include "areg/component/ServiceDefs.hpp"
 #include "areg/logging/areg_log.h"
@@ -35,7 +39,7 @@
 class TableModelBase;
 class LoggingModelBase;
 class ScopeNodeBase;
-class ScopeRoot;
+class QTimer;
 
 /**
  * \brief   Base class for log scope models (live and offline).
@@ -44,6 +48,34 @@ class ScopeRoot;
 class LoggingScopesModelBase : public QAbstractItemModel
 {
     Q_OBJECT
+
+//////////////////////////////////////////////////////////////////////////
+// Constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< The leading column, which carries the show and hide box of the scope.
+    static constexpr int    ColumnShow  { 0 };
+
+    //!< The column of the scope name and its charger. The tree lives in this column.
+    static constexpr int    ColumnName  { 1 };
+
+    //!< The number of columns the scope tree has.
+    static constexpr int    ColumnCount { 2 };
+
+    //!< The role that carries the scope node behind an index.
+    static constexpr int    RoleNode        { Qt::ItemDataRole::UserRole };
+
+    //!< The role that carries what the target knows about the priorities of a process.
+    static constexpr int    RoleTargetState { Qt::ItemDataRole::UserRole + 1 };
+
+    //!< The role that carries how strongly the target mark is drawn, from 1.0 down to 0.0.
+    static constexpr int    RoleTargetFade  { Qt::ItemDataRole::UserRole + 2 };
+
+    //!< The role that carries the way a process produces and sends its logs, as areg::LogSourceState.
+    static constexpr int    RoleSourceState { Qt::ItemDataRole::UserRole + 3 };
+
+    //!< The role that carries whether a request to change the source state waits for its answer.
+    static constexpr int    RoleSourceWait  { Qt::ItemDataRole::UserRole + 4 };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -62,9 +94,11 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Checks if the given index is valid.
+     * \brief   Checks if the given index belongs to this model and addresses an existing cell.
      * \param   index   The index to check.
      * \return  True if the index is valid, false otherwise.
+     * \note    It accepts every column of the model. A caller that serves one column has to
+     *          test the column itself.
      **/
     inline bool isValidIndex(const QModelIndex& index) const;
 
@@ -130,6 +164,12 @@ signals:
      * \param   parent  The index of the parent instance item that is updated.
      **/
     void signalScopesUpdated(const QModelIndex& parent);
+
+    /**
+     * \brief   Signal emitted when the number of scopes below their default, or the number
+     *          of raises that go back on their own, has changed.
+     **/
+    void signalSafeguardsChanged();
     
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase overrides
@@ -138,6 +178,30 @@ public:
 /************************************************************************
  * LoggingScopesModelBase overrides
  ************************************************************************/
+
+    /**
+     * \brief   Draws or stops drawing the rows of the given node and of everything under it.
+     * \param   index   The index of the node.
+     * \param   shown   True to draw the rows, false to leave them out.
+     **/
+    void setScopeShown(const QModelIndex& index, bool shown);
+
+    /**
+     * \brief   Draws the rows of the given node and of everything under it, and of nothing
+     *          else in any process.
+     * \param   index   The index of the node to keep.
+     **/
+    void showScopeAlone(const QModelIndex& index);
+
+    /**
+     * \brief   Draws the rows of every scope of every process again.
+     **/
+    void showAllScopes(void);
+
+    /**
+     * \brief   Returns true if at least one scope of any process is hidden.
+     **/
+    bool hasHiddenScopes(void) const;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -175,7 +239,70 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const = 0;
+    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) = 0;
+
+    /**
+     * \brief   Asks the target of the given tree entry to send the logs it produces, or to keep
+     *          producing them and drop them. The scope priorities are not touched.
+     * \param   node    Any entry of the target. An invalid index reaches every target.
+     * \param   active  True to make the target send its logs, false to make it drop them.
+     * \return  True if the request was sent.
+     * \note    The controls redraw when the answer arrives, never on the call.
+     **/
+    virtual bool setSourceState(const QModelIndex& node, areg::LogSourceState state);
+
+    /**
+     * \brief   Asks the target of the given tree entry to read its log configuration file again,
+     *          so its scope priorities go back to what the file holds.
+     * \param   node    Any entry of the target. An invalid index reaches every target.
+     * \return  True if the request was sent.
+     **/
+    virtual bool restoreConfiguration(const QModelIndex& node);
+
+    /**
+     * \brief   Returns the names of the targets that are not sending the logs they produce.
+     **/
+    QStringList pausedTargetNames(void) const;
+
+    /**
+     * \brief   Returns the tree entry of the target with the given ID, invalid when there is none.
+     **/
+    QModelIndex targetIndex(ITEM_ID target) const;
+
+    /**
+     * \brief   Records what the target of the given node knows about its priorities and
+     *          repaints the row of that process. Does nothing on an archive.
+     * \param   node    Any index of the process. The state is kept on the process itself.
+     * \param   state   The state to record.
+     **/
+    void setTargetState(const QModelIndex& node, ScopeRoot::eTargetState state);
+
+    /**
+     * \brief   Puts the given scope back to the given priority after the given time, unless the
+     *          raise is kept before then. Does nothing on an archive.
+     * \param   node    The index the priority was raised on.
+     * \param   prio    The priority to go back to.
+     * \param   afterMs The time to wait, in milliseconds.
+     **/
+    void scheduleRevert(const QModelIndex& node, uint32_t prio, int afterMs);
+
+    /**
+     * \brief   Cancels every raise that would go back on its own.
+     * \return  The number of raises that were kept.
+     **/
+    int keepTempRaises(void);
+
+    //!< Returns how many raises go back on their own.
+    inline int tempRaiseCount(void) const;
+
+    /**
+     * \brief   Returns the scopes that generate less than their target reported when it first
+     *          named them, as "process / scope path" lines.
+     * \param   names   Receives the lines, appended, at most the given number of them.
+     * \param   limit   How many lines to append at most.
+     * \return  The number of quieted scopes, which may be more than the number of lines.
+     **/
+    int quietedScopes(QStringList& names, int limit) const;
     
     /**
      * \brief   Sets the logging model object used to retrieve logging scopes data.
@@ -209,6 +336,29 @@ public:
      * \brief   Releases the model.
      **/
     virtual void releaseModel();
+
+    /**
+     * \brief   Returns true if the model follows running targets. An archive returns false,
+     *          so a process that is no longer reachable is never marked gone in it.
+     **/
+    virtual bool isLiveSession() const;
+
+    /**
+     * \brief   Returns true if the node belongs to a live session process that has stopped.
+     *          An archive always returns false.
+     * \param   node    The node to check.
+     **/
+    bool isGoneTarget(const ScopeNodeBase* node) const;
+
+private:
+    /**
+     * \brief   Passes the scopes under the node to the logging model as refused or allowed.
+     * \param   node    The node whose leafs changed their shown state.
+     * \param   refuse  True when the node was just hidden.
+     **/
+    void _refuseScopesOf(ScopeNodeBase* node, bool refuse);
+
+protected:
 
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
@@ -271,6 +421,16 @@ public:
      * \return  The flags of the item.
      **/
     Qt::ItemFlags flags(const QModelIndex& index) const override;
+
+    /**
+     * \brief   Takes the click on the show and hide box of the leading column.
+     *          A node that is only partly shown becomes fully shown; a fully shown node hides.
+     * \param   index   The index that was clicked.
+     * \param   value   Ignored: the new state follows from the current one.
+     * \param   role    Only the check state role is handled.
+     * \return  True if the state changed.
+     **/
+    bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::ItemDataRole::EditRole) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Internal overrides
@@ -313,6 +473,49 @@ protected:
      * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
      **/
     int findRoot(ITEM_ID rootId) const;
+
+    /**
+     * \brief   Holds what the collector said about the sending state of a target and redraws it.
+     * \param   target      The ID of the target.
+     * \param   active      True when the target sends the logs it produces.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void _applySourceState(ITEM_ID target, areg::LogSourceState state, ITEM_ID byObserver);
+
+    /**
+     * \brief   Collects the identifiers of every scope the log window should not draw.
+     * \param   scopeIds    The set to add the identifiers to.
+     * \return  The number of identifiers added.
+     **/
+    int collectHiddenScopes(QSet<uint32_t>& scopeIds) const;
+
+
+    /**
+     * \brief   Finds a root that stands for the same program in the same place and is
+     *          currently marked gone. The cookie is not compared, because a restarted
+     *          process is handed a new one.
+     * \param   instance    The connection that has just arrived.
+     * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
+     **/
+    int findGoneRoot(const areg::ConnectedInstance & instance) const;
+
+    /**
+     * \brief   Puts a gone root back in service under its new cookie. The scopes it held
+     *          are dropped, because the target reports them again; the priorities that were
+     *          set on them are remembered and reapplied once they arrive.
+     * \param   pos         The position of the root in the list.
+     * \param   instance    The connection that has just arrived.
+     * \note    Emits no row change of its own. Call it inside a model reset.
+     **/
+    void reviveRoot(int pos, const areg::ConnectedInstance & instance);
+
+    /**
+     * \brief   Applies the priorities a revived root remembered, after its scopes arrived.
+     *          The live model additionally sends them to the target.
+     * \param   root        The root whose scopes have just been rebuilt.
+     * \return  The number of scopes the priority was applied to.
+     **/
+    virtual int applyRememberedPriorities(ScopeRoot & root);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -369,6 +572,25 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    //!< Moves the target state of every process on and repaints the rows that changed.
+    //!< Puts the scope of the given process at the given path back to the given priority.
+    void _revertTempRaise(ITEM_ID rootId, const QString& path);
+
+    //!< Returns the index of the given node, or an invalid index if it is not in the tree.
+    QModelIndex _indexOfNode(ScopeNodeBase* node) const;
+
+    void _ageTargetStates(void);
+
+    //!< Runs the target state clock while at least one process still needs it.
+    void _runTargetClock(void);
+
+    //!< Tells the view that the show and hide box of everything below the given index has changed.
+    void _notifyBranchChanged(const QModelIndex& parent);
+
+    //!< Tells the view that the show and hide box of every parent of the given index has changed.
+    void _notifyParentsChanged(const QModelIndex& child);
+
+private:
     
     /**
      * \brief   Sets up the signals for the logging model.
@@ -379,11 +601,27 @@ private:
     void _setupSignals(bool doSetup);
 
 //////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    //!< A priority raise that goes back to what it replaced on its own.
+    struct sTempRaise
+    {
+        ITEM_ID     rootId; //!< The process the scope belongs to
+        QString     path;   //!< The path of the scope inside that process
+        uint32_t    prio;   //!< The priority to go back to
+        QTimer*     timer;  //!< Fires when the raise goes back
+    };
+
+//////////////////////////////////////////////////////////////////////////
 // Protected member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
     QModelIndex             mRootIndex;             //!< The root index of the model
     LoggingModelBase*       mLoggingModel;          //!< The logging model associated with this scopes model
+    QTimer*                 mTargetClock;           //!< Ages the target state of the processes while one of them changes on its own
+    QList<sTempRaise>       mTempRaises;            //!< The raises that go back to their previous priority on their own
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -396,15 +634,25 @@ private:
     QMetaObject::Connection mConInstUnavailable;    // The connection to instances unavailable signal
     QMetaObject::Connection mConScopesAvailable;    // The connection to scopes available signal
     QMetaObject::Connection mConScopesUnavailable;  // The connection to scopes unavailable signal
+    QMetaObject::Connection mConShowAllScopes;      // The connection to the request to show every scope again
 };
 
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase class inline methods
 //////////////////////////////////////////////////////////////////////////
 
+inline int LoggingScopesModelBase::tempRaiseCount(void) const
+{
+    return static_cast<int>(mTempRaises.size());
+}
+
 inline bool LoggingScopesModelBase::isValidIndex(const QModelIndex& index) const
 {
-    return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
+    return ( index.isValid()
+          && (index.row() >= 0)
+          && (index.column() >= 0)
+          && (index.column() < LoggingScopesModelBase::ColumnCount)
+          && (index.model() == this) );
 }
 
 inline const QModelIndex& LoggingScopesModelBase::getRootIndex() const

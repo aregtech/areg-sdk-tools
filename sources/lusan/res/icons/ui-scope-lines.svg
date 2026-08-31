@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: scope enter and exit lines, a bracket pair holding the rows -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 6.7143 4.0714 H 2.75 V 19.9286 H 6.7143"/>
+<path d="M 17.2857 4.0714 H 21.25 V 19.9286 H 17.2857"/>
+<path d="M 8.6964 9.3571 H 15.3036"/>
+<path d="M 8.6964 14.6429 H 15.3036"/>
+</g>
+</svg>

@@ -30,7 +30,7 @@
 
 #include <algorithm>
 
-const QString   OutputDock::TabNameLogging{ tr("Log analyzes") };
+const QString   OutputDock::TabNameLogging{ tr("Scopes Analyzes") };
 const QString   OutputDock::TabNameValidation{ tr("Validation") };
 
 const QString& OutputDock::getTabName(OutputDock::eOutputDock wndOutput)
@@ -68,10 +68,9 @@ OutputDock::OutputDock(MdiMainWindow* parent)
     , mValidation   (nullptr)
     , mBoundDocs    ( )
 {
-    mTabs.addTab(&mScopeOutput, QIcon(), tr("Scopes Analyzes"));
-
     // The findings of the active state machine document, one per row, worst severity first. A
     // build-style diagnostic list belongs in the output window rather than a per-document panel.
+    // It leads the tabs: outside a logging session it is what the user needs to see.
     mValidationTab = new QWidget(this);
     mValidationTab->setObjectName(QStringLiteral("outputValidationTab"));
     mValidationBody = new QVBoxLayout(mValidationTab);
@@ -79,6 +78,7 @@ OutputDock::OutputDock(MdiMainWindow* parent)
     mValidationBody->setSpacing(0);
     showValidationPlaceholder();
     mTabs.addTab(mValidationTab, QIcon(), OutputDock::TabNameValidation);
+    mTabs.addTab(&mScopeOutput, QIcon(), OutputDock::TabNameLogging);
 
     mTabs.setTabPosition(QTabWidget::South);
 
@@ -94,7 +94,8 @@ OutputDock::OutputDock(MdiMainWindow* parent)
 
 OutputDock::~OutputDock()
 {
-    mTabs.removeTab(0);
+    // The scope viewer is a member: it must leave the tab widget before the tabs delete it.
+    mTabs.removeTab(mTabs.indexOf(&mScopeOutput));
     mTabs.setParent(nullptr);
 }
 
@@ -215,6 +216,11 @@ void OutputDock::setDocuments(const QList<MdiChild*>& docs)
     }
 
     updateValidationTitle(panel->pendingCount());
+}
+
+void OutputDock::showLogging()
+{
+    mTabs.setCurrentWidget(&mScopeOutput);
 }
 
 void OutputDock::showValidation(int step)

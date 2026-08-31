@@ -36,6 +36,8 @@
 #include <QString>
 #include <QMap>
 
+#include <atomic>
+
 /************************************************************************
  * Dependencies.
  ************************************************************************/
@@ -228,6 +230,25 @@ public:
      * \return  Returns true if processed with success. Otherwise, returns false.
      **/
     static bool requestSaveConfig(ITEM_ID target = areg::TARGET_ALL);
+
+    /**
+     * \brief   Requests the specified target to read its log configuration file again, so that its
+     *          scope priorities go back to what the file holds. The updated scope list follows.
+     * \param   target  The cookie ID of the target instance.
+     *                  If the target is areg::TARGET_ALL (or 0), the request is sent to all connected instances.
+     * \return  Returns true if processed with success. Otherwise, returns false.
+     **/
+    static bool requestRestoreConfig(ITEM_ID target = areg::TARGET_ALL);
+
+    /**
+     * \brief   Requests the specified target to start or stop sending the logs it produces. A stopped
+     *          target keeps generating its logs and drops them, and its priorities are not touched.
+     * \param   target  The cookie ID of the target instance.
+     *                  If the target is areg::TARGET_ALL (or 0), the request is sent to all connected instances.
+     * \param   state   The state the target should take.
+     * \return  Returns true if processed with success. Otherwise, returns false.
+     **/
+    static bool requestSourceState(ITEM_ID target, areg::LogSourceState state);
     
     /**
      * \brief   Saves the configuration of the log observer in the configuration file.
@@ -452,6 +473,20 @@ signals:
      **/
     void signalLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
 
+    /**
+     * \brief   The signal is triggered when a log source started or stopped sending the logs it produces.
+     * \param   cookie      The cookie ID of the log source.
+     * \param   state       The state of the source: it sends its logs, or it drops them.
+     * \param   byObserver  The cookie ID of the observer that asked for it, zero when the collector did.
+     **/
+    void signalLogSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver);
+
+    /**
+     * \brief   The signal is triggered when a log source read its configuration file again.
+     * \param   cookie      The cookie ID of the log source.
+     **/
+    void signalLogConfigRestored(ITEM_ID cookie);
+
 /************************************************************************/
 // IELogObserverEventConsumer overrides
 /************************************************************************/
@@ -603,12 +638,36 @@ private slots:
      **/
     void slotLogMessage(const areg::MessageEnvelope & logMessage);
 
+    /**
+     * \brief   The callback of the event triggered when a log source started or stopped sending its logs.
+     * \param   cookie      The cookie ID of the log source.
+     * \param   state       The state of the source: it sends its logs, or it drops them.
+     * \param   byObserver  The cookie ID of the observer that asked for it, zero when the collector did.
+     **/
+    void slotLogSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver);
+
+    /**
+     * \brief   The callback of the event triggered when a log source read its configuration file again.
+     * \param   cookie      The cookie ID of the log source.
+     **/
+    void slotLogConfigRestored(ITEM_ID cookie);
+
 private:
     inline LogObserver& self();
+
+    /**
+     * \brief   Passes the data of a log collector callback to the component thread.
+     *          It does nothing while the service is not running, so a callback arriving on a
+     *          socket thread during shutdown is dropped instead of reaching a dispatcher
+     *          that has already been torn down.
+     * \param   data    The data of the event to deliver.
+     **/
+    void postObserverEvent(LogObserverEventData && data);
 
 private:
     LogCollectorClient& mLogClient;     //!< Log observer client.
     areg::String        mConfigFile;    //!< The path to config file.
+    std::atomic_bool    mIsRunning;     //!< True between the startup and the shutdown of the service.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

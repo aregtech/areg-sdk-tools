@@ -31,6 +31,7 @@
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/common/DocValidationController.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
@@ -143,19 +144,19 @@ SMInternalEditor::SMInternalEditor(StateMachineModel& model, QWidget* parent /*=
     // The same toolbar every ordered list in the application wears: add, remove, a rule, then move
     // up and move down, with the same icons and the same Ctrl+Up / Ctrl+Down keys.
     mBtnAdd    = makeButton(QStringLiteral("smBtnAddInternal")
-                           , QIcon(QStringLiteral(":/icons/entry add"))
+                           , NELusanCommon::loadIcon(QStringLiteral(":/icons/entry add"), NELusanCommon::SizeSmall)
                            , tr("Add an internal transition to this state"));
     mBtnRemove = makeButton(QStringLiteral("smBtnRemoveInternal")
-                           , QIcon(QStringLiteral(":/icons/entry delete"))
+                           , NELusanCommon::loadIcon(QStringLiteral(":/icons/entry delete"), NELusanCommon::SizeSmall)
                            , tr("Remove the selected internal transition"));
 
     // Document order IS priority order -- the first transition whose guard holds is the one that
     // runs -- so raising and lowering a row is a real edit, not a cosmetic one.
     mBtnUp     = makeButton(QStringLiteral("smBtnInternalUp")
-                           , QIcon(QStringLiteral(":/icons/move up"))
+                           , NELusanCommon::loadIcon(QStringLiteral(":/icons/move up"), NELusanCommon::SizeSmall)
                            , tr("Try this transition earlier (raise its priority)"));
     mBtnDown   = makeButton(QStringLiteral("smBtnInternalDown")
-                           , QIcon(QStringLiteral(":/icons/move down"))
+                           , NELusanCommon::loadIcon(QStringLiteral(":/icons/move down"), NELusanCommon::SizeSmall)
                            , tr("Try this transition later (lower its priority)"));
     mBtnUp->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
     mBtnDown->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));

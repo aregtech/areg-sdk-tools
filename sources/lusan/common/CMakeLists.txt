@@ -4,7 +4,9 @@
     ${LUSAN}/common/DocSchemaReader.cpp
     ${LUSAN}/common/ElementBase.cpp
     ${LUSAN}/common/LogCollectorClient.cpp
+    ${LUSAN}/common/NELogPalette.cpp
     ${LUSAN}/common/NELusanCommon.cpp
+    ${LUSAN}/common/NETimeUnits.cpp
     ${LUSAN}/common/VersionNumber.cpp
     ${LUSAN}/common/XmlSI.cpp
 )
@@ -15,7 +17,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/common/DocSchemaReader.hpp
     ${LUSAN}/common/ElementBase.hpp
     ${LUSAN}/common/LogCollectorClient.hpp
+    ${LUSAN}/common/NELogPalette.hpp
     ${LUSAN}/common/NELusanCommon.hpp
+    ${LUSAN}/common/NETimeUnits.hpp
     ${LUSAN}/common/VersionNumber.hpp
     ${LUSAN}/common/XmlSI.hpp
     ${LUSAN}/common/XmlSM.hpp

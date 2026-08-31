@@ -19,14 +19,40 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include "areg/base/areg_global.h"
+
 #include <QLineEdit>
+
+// The inline option accessors ask a button whether it is checked, so the type must be complete.
 #include <QToolButton>
-#include <QSize>
+
+#include <QList>
+#include <QString>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class QLabel;
+class QWidget;
+
+//////////////////////////////////////////////////////////////////////////
+// SearchLineEdit class declaration
+//////////////////////////////////////////////////////////////////////////
 
 /**
- * \brief   The QLineEdit control for search or filter with integrated tool-buttons
- *          for match case, match word, wild card, backward search and search.
+ * \brief   The search field of the application. It draws a leading mark that names it, the
+ *          option toggles the surface asks for, an optional match counter and a clear button,
+ *          all inside the field itself.
+ *
+ *          Every surface that searches or filters uses it, so the log window, the two scope
+ *          panels, the log column filters and the state machine canvas offer one control with
+ *          one look and one set of gestures.
+ *
+ * \note    The field owns no keyboard shortcut. Ctrl+F, F3 and Escape belong to the window
+ *          that holds it, which is what keeps two surfaces from claiming the same key.
  **/
 class SearchLineEdit : public QLineEdit
 {
@@ -37,36 +63,48 @@ class SearchLineEdit : public QLineEdit
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Type of tool-buttons to add to the search line edit.
-     */
+     * \brief   The option toggles a surface can ask for, in the order they are drawn.
+     **/
     enum class eToolButton  : uint32_t
     {
-          ToolButtonNothing     = 0     //!< No tool button to add
-        , ToolButtonMatchCase   = 1     //!< Add match case checkable tool-button with icon.
-        , ToolButtonMatchWord   = 4     //!< Add match word checkable tool-button with icon.
-        , ToolButtonWildCard    = 8     //!< Add wild-cart checkable tool-button with icon.
-        , ToolButtonBackward    = 16    //!< Add search backward checkable tool-button with icon.
-        , ToolButtonSearch      = 32    //!< Add search next tool-button with icon.
+          ToolButtonNothing     = 0     //!< No toggle at all.
+        , ToolButtonMatchCase   = 1     //!< Tell an upper case letter from a lower case one.
+        , ToolButtonMatchWord   = 4     //!< Match whole words only.
+        , ToolButtonWildCard    = 8     //!< Read the text as a pattern.
+        , ToolButtonBackward    = 16    //!< Walk the matches backwards.
     };
+
+    //!< The air the field keeps between the typed text and the marks at its right end.
+    static constexpr int    SEARCH_AIR      { 4 };
+
+    //!< The smallest square an option toggle may be drawn in.
+    static constexpr int    SEARCH_BUTTON_MIN { 14 };
+
+    //!< How much smaller the icon is than the toggle that holds it.
+    static constexpr int    SEARCH_ICON_INSET { 6 };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Creates search line edit object with integrated tool-buttons.
-     *          The type of tool-buttons to add is specified in the \p addButtons parameter.
-     *          Each entry of \p addButtons is a flag of type SearchLineEdit::eToolButton indicating the tool-buttons to add
-     *          and the order of buttons is the same as in the list.
-     * \param   addButtons  Specifies the list of the type and the order of tool-buttons to add.
-     * \param   buttonSize  Specifies the size of the tool-buttons to add. By default, it is 20x20 pixels.
-     * \param   parent      The parent widget of the search line edit.
+     * \brief   Creates the field with the given option toggles.
+     * \param   addButtons  The toggles to draw, in the order given.
+     * \param   parent      The parent widget.
      **/
-    explicit SearchLineEdit(const QList<SearchLineEdit::eToolButton> & addButtons, QSize buttonSize = QSize(20, 20), QWidget* parent = nullptr);
+    explicit SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, QWidget* parent = nullptr);
 
     /**
-     * \brief   Creates search line edit object without tool-butons. Call \p initialize() method to add tool-buttons.
-     * \param   parent      The parent widget of the search line edit.
+     * \brief   Creates the field with the given option toggles and leading mark.
+     * \param   addButtons  The toggles to draw, in the order given.
+     * \param   mark        The mark drawn at the left end, which names what the field does.
+     * \param   parent      The parent widget.
+     **/
+    explicit SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, const QIcon& mark, QWidget* parent = nullptr);
+
+    /**
+     * \brief   Creates the field without toggles. Call initialize() to add them.
+     * \param   parent      The parent widget.
      **/
     explicit SearchLineEdit(QWidget* parent = nullptr);
 
@@ -75,138 +113,141 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Initializes the search line edit with the specified tool-buttons.
-     *          The type of tool-buttons to add is specified in the \p addButtons parameter.
-     *          Each entry of \p addButtons is a flag of type SearchLineEdit::eToolButton indicating the tool-buttons to add
-     *          and the order of buttons is the same as in the list.
-     *          If the search line edit is already initialized and contains tool-buttons, this method does nothing.
-     * \param   addButtons  Specifies the list of the type and the order of tool-buttons to add.
-     * \param   buttonSize  Specifies the size of the tool-buttons to add. By default, it is 20x20 pixels.
+     * \brief   Draws the leading mark, the given toggles and the clear button. Does nothing
+     *          when the field is already initialized.
+     * \param   addButtons  The toggles to draw, in the order given.
      **/
-    void initialize(const QList<SearchLineEdit::eToolButton> & addButtons, QSize buttonSize = QSize(16, 16));
+    void initialize(const QList<SearchLineEdit::eToolButton>& addButtons, const QIcon& mark = QIcon());
+
+    /**
+     * \brief   Returns the width the field spends on its own marks, at both ends. A caller
+     *          that sizes the field adds the room it wants for the text to it.
+     **/
+    inline int chromeWidth() const;
+
+    /**
+     * \brief   Shows the given text between the typed phrase and the toggles, where a surface
+     *          reports how many matches it found. An empty text hides it.
+     * \param   text    The line to show, for example "3 of 17" or "none".
+     **/
+    void setCounter(const QString& text);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    //!< Returns the tool button for match case.
+    //!< Returns the match case toggle, or nullptr when the surface did not ask for it.
     inline QToolButton* buttonMatchCase() const;
 
-    //!< Returns the tool button for match word.
+    //!< Returns the whole word toggle, or nullptr when the surface did not ask for it.
     inline QToolButton* buttonMatchWord() const;
 
-    //!< Returns the tool button for wild card.
+    //!< Returns the pattern toggle, or nullptr when the surface did not ask for it.
     inline QToolButton* buttonWildCard() const;
 
-    //!< Returns the tool button for search backward.
+    //!< Returns the backwards toggle, or nullptr when the surface did not ask for it.
     inline QToolButton* buttonSearchBackward() const;
 
-    //!< Returns the tool button for search next.
-    inline QToolButton* buttonSearch() const;
-
-    //!< Returns true if match case tool-button exists and checked.
+    //!< Returns true if the match case toggle exists and is on.
     inline bool isMatchCaseChecked() const;
 
-    //!< Returns true if match word tool-button exists and checked.
+    //!< Returns true if the whole word toggle exists and is on.
     inline bool isMatchWordChecked() const;
 
-    //!< Returns true if wild card tool-button exists and checked.
+    //!< Returns true if the pattern toggle exists and is on.
     inline bool isWildCardChecked() const;
 
-    //!< Returns true if search backward tool-button exists and checked.
+    //!< Returns true if the backwards toggle exists and is on.
     inline bool isBackwardChecked() const;
 
 //////////////////////////////////////////////////////////////////////////
-// SearchLineEdit class signals
+// Signals
 //////////////////////////////////////////////////////////////////////////
 signals:
 
-    /**
-     * \brief   Signal emitted when the search match case tool-button is checked or unchecked.
-     * \param   checked     Is set true if search match case tool-button is checked, false otherwise.
-     **/
+    //!< Emitted when the match case toggle changes.
     void signalButtonSearchMatchCaseClicked(bool checked);
 
-    /**
-     * \brief   Signal emitted when the search match word tool-button is checked or unchecked.
-     * \param   checked     Is set true if search match word tool-button is checked, false otherwise.
-     **/
+    //!< Emitted when the whole word toggle changes.
     void signalButtonSearchMatchWordClicked(bool checked);
 
-    /**
-     * \brief   Signal emitted when the search wild-card tool-button is checked or unchecked.
-     * \param   checked     Is set true if search wild-card tool-button is checked, false otherwise.
-     **/
+    //!< Emitted when the pattern toggle changes.
     void signalButtonSearchWildCardClicked(bool checked);
 
-    /**
-     * \brief   Signal emitted when the search backward tool-button is checked or unchecked.
-     * \param   checked     Is set true if search backward tool-button is checked, false otherwise.
-     **/
+    //!< Emitted when the backwards toggle changes.
     void signalButtonSearchBackwardClicked(bool checked);
 
-    /**
-     * \brief   Signal emitted when the search next button is clicked.
-     * \param   checked     Is set true if search button is checked, false otherwise.
-     **/
+    //!< Emitted when the field is asked to move to the next match.
     void signalButtonSearchClicked(bool checked);
 
     /**
-     * \brief   Signal emitted when the search text is changed.
-     * \param   newText     The new text of the search line edit.
+     * \brief   Emitted whenever the typed text changes.
+     * \param   newText     The new text of the field.
      **/
-    void signalSearchTextChanged(const QString & newText);
+    void signalSearchTextChanged(const QString& newText);
 
     /**
-     * \brief   Signal emitted when the search text is requested, i.e. when search next button is clicked.
+     * \brief   Emitted when the field is asked to move to the next match.
      * \param   text        The text to search.
-     * \param   isMatchCase If true, the search is case sensitive.
-     * \param   isWholeWord If true, the search matches whole words only.
-     * \param   isWildCard  If true, the search uses wild-card characters.
-     * \param   isBackward  If true, the search is backward.
+     * \param   isMatchCase True if the search tells the cases apart.
+     * \param   isWholeWord True if the search matches whole words only.
+     * \param   isWildCard  True if the text is a pattern.
+     * \param   isBackward  True if the search walks backwards.
      **/
     void signalSearchText(const QString& text, bool isMatchCase, bool isWholeWord, bool isWildCard, bool isBackward);
 
     /**
-     * \brief   Signal emitted when the filter text is changed, i.e. each time the text is changed.
-     * \param   text        The text to filter.
-     * \param   isMatchCase If true, the filter is case sensitive.
-     * \param   isWholeWord If true, the filter matches whole words only.
-     * \param   isWildCard  If true, the filter uses wild-card characters.
-     * \param   isBackward  If true, the filter is backward.
+     * \brief   Emitted on every change of the text or of an option, for a surface that
+     *          narrows a list while the text is typed.
+     * \param   text        The text to filter by.
+     * \param   isMatchCase True if the filter tells the cases apart.
+     * \param   isWholeWord True if the filter matches whole words only.
+     * \param   isWildCard  True if the text is a pattern.
+     * \param   isBackward  True if the search walks backwards.
      **/
     void signalFilterText(const QString& text, bool isMatchCase, bool isWholeWord, bool isWildCard, bool isBackward);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
 
-    /**
-     * \brief   QLineEdit event triggered when the search line edit is resized.
-     **/
-    void resizeEvent(QResizeEvent *event) override;
+    //!< Keeps the marks in place when the field changes width.
+    void resizeEvent(QResizeEvent* event) override;
 
-    /**
-     * \brief   Override keyPressEvent to handle search shortcuts.
-     * \param   event   The key press event.
-     **/
+    //!< Answers Enter, F3 and Escape.
     void keyPressEvent(QKeyEvent* event) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    //!< Builds one option toggle and appends it to the trailing group.
+    QToolButton* _addOption(const QIcon& icon, const QString& toolTip, const QString& name);
+
+    //!< Puts the leading mark and the trailing group where the current width wants them.
+    void _placeMarks(void);
+
+    //!< Emits the filter signal with the current text and options.
+    void _emitFilter(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    bool            mIsInitialized; //!< Indicates if the search line edit is initialized with tool-buttons.
-    QWidget*        mToolButtons;   //!< The widget that contains the tool-buttons.
-    QToolButton*    mBtnSearch;     //!< The tool button for search next.
-    QToolButton*    mBtnMatchCase;  //!< The tool button for match case.
-    QToolButton*    mBtnMatchWord;  //!< The tool button for match word.
-    QToolButton*    mBtnWildCard;   //!< The tool button for wild card.
-    QToolButton*    mBtnBackward;   //!< The tool button for search backward.
-    uint32_t        mButtonFlags;   //!< The flags indicating which tool-buttons are added.
-    QList<SearchLineEdit::eToolButton> mButtons;    //<!< The list of tool-buttons added to the search line edit.
+    bool            mIsInitialized; //!< True once the marks are built.
+    QWidget*        mTrailing;      //!< The group drawn at the right end of the field.
+    QLabel*         mCounter;       //!< What the surface reports about its matches.
+    QToolButton*    mBtnClear;      //!< Empties the field. Hidden while the field is empty.
+    QToolButton*    mBtnMatchCase;  //!< The match case toggle.
+    QToolButton*    mBtnMatchWord;  //!< The whole word toggle.
+    QToolButton*    mBtnWildCard;   //!< The pattern toggle.
+    QToolButton*    mBtnBackward;   //!< The backwards toggle.
+    int             mTrailWidth;    //!< The width the trailing group had when the margins were set.
+    int             mLeadWidth;     //!< The width the leading mark takes.
+    int             mBoxExtent;     //!< The square an option toggle is drawn in, cut to the field.
+    int             mIconExtent;    //!< The icon edge inside a toggle.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -216,8 +257,13 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// SearchLineEdit inline methods implementation
+// SearchLineEdit class inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline int SearchLineEdit::chromeWidth() const
+{
+    return mLeadWidth + textMargins().right();
+}
 
 inline QToolButton* SearchLineEdit::buttonMatchCase() const
 {
@@ -237,11 +283,6 @@ inline QToolButton* SearchLineEdit::buttonWildCard() const
 inline QToolButton* SearchLineEdit::buttonSearchBackward() const
 {
     return mBtnBackward;
-}
-
-inline QToolButton* SearchLineEdit::buttonSearch() const
-{
-    return mBtnSearch;
 }
 
 inline bool SearchLineEdit::isMatchCaseChecked() const

@@ -24,6 +24,8 @@
 
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
+#include "lusan/common/NELogPalette.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "areg/base/DateTime.hpp"
@@ -42,7 +44,7 @@ const QStringList& LoggingModelBase::getHeaderList()
           tr("Priority")
         , tr("Time Created")
         , tr("Time Received")
-        , tr("Duration, µs")
+        , tr("Duration")
         , tr("Source")
         , tr("Source ID")
         , tr("Thread")
@@ -72,6 +74,47 @@ const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns()
     };
 
     return _columnIds;
+}
+
+namespace
+{
+    //! The stored name of every column. A saved setting is keyed by these, so they are fixed
+    //! and never translated.
+    const struct { LoggingModelBase::eColumn column; const char* key; } _columnKeys[]
+    {
+          { LoggingModelBase::eColumn::LogColumnPriority    , "priority"  }
+        , { LoggingModelBase::eColumn::LogColumnTimestamp   , "timestamp" }
+        , { LoggingModelBase::eColumn::LogColumnTimeReceived, "received"  }
+        , { LoggingModelBase::eColumn::LogColumnTimeDuration, "duration"  }
+        , { LoggingModelBase::eColumn::LogColumnSource      , "source"    }
+        , { LoggingModelBase::eColumn::LogColumnSourceId    , "sourceId"  }
+        , { LoggingModelBase::eColumn::LogColumnThread      , "thread"    }
+        , { LoggingModelBase::eColumn::LogColumnThreadId    , "threadId"  }
+        , { LoggingModelBase::eColumn::LogColumnScopeId     , "scopeId"   }
+        , { LoggingModelBase::eColumn::LogColumnMessage     , "message"   }
+    };
+}
+
+QString LoggingModelBase::getColumnKey(LoggingModelBase::eColumn column)
+{
+    for (const auto& entry : _columnKeys)
+    {
+        if (entry.column == column)
+            return QString::fromLatin1(entry.key);
+    }
+
+    return QString();
+}
+
+LoggingModelBase::eColumn LoggingModelBase::getColumnByKey(const QString& key)
+{
+    for (const auto& entry : _columnKeys)
+    {
+        if (key == QLatin1String(entry.key))
+            return entry.column;
+    }
+
+    return LoggingModelBase::eColumn::LogColumnInvalid;
 }
 
 const QString & LoggingModelBase::getFileExtension()
@@ -199,6 +242,9 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     if (logMessage == nullptr)
         return QVariant();
     
+    if (role == LoggingModelBase::AnalyzedRole)
+        return QVariant((mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index));
+
     eColumn column = mActiveColumns.at(col);
     switch (static_cast<Qt::ItemDataRole>(role))
     {
@@ -212,11 +258,12 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         return getForegroundData(logMessage, column);
         
     case Qt::DecorationRole:
-    {
-        static const QIcon _iconSelect(NELusanCommon::iconLogSelected(NELusanCommon::SizeSmall));
-        return (column == eColumn::LogColumnSourceId) && (mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index) ? _iconSelect : getDecorationData(logMessage, column);
-    }
+        return getDecorationData(logMessage, column);
+
         
+    case Qt::ToolTipRole:
+        return getTooltipData(logMessage, column);
+
     case Qt::TextAlignmentRole:
         return getAlignmentData(column);
         
@@ -226,6 +273,21 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     default:
         return QVariant();
     }
+}
+
+QString LoggingModelBase::getScopeName(ITEM_ID target, uint32_t scopeId) const
+{
+    const auto entry{ mScopes.find(target) };
+    if (entry == mScopes.end())
+        return QString();
+
+    for (const areg::ScopeEntry& scope : entry->second)
+    {
+        if (scope.scopeId == scopeId)
+            return QString(scope.scopeName.as_string());
+    }
+
+    return QString();
 }
 
 QString LoggingModelBase::getHeaderName(int colIndex) const
@@ -293,6 +355,8 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
     std::string path(areg::File::normalize_path(dbPath.toStdString().c_str()));
     if (mDatabase.database_path() != path)
     {
+        // Another database is another session, and a refused span names a target of the old one.
+        clearRefusedScopes();
         mDatabase.connect(path, readOnly);
     }
 }
@@ -594,6 +658,90 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     mReadThread.start(areg::DO_NOT_WAIT);
 }
 
+void LoggingModelBase::setScopesRefused(ITEM_ID target, const QSet<uint32_t>& scopeIds, bool refuse, TIME64 since)
+{
+    if (scopeIds.isEmpty())
+        return;
+
+    bool changed{ false };
+    MapScopeSpans& scopes = mRefused[target];
+    for (uint32_t scopeId : scopeIds)
+    {
+        ListSpans& spans = scopes[scopeId];
+        const bool open{ spans.isEmpty() == false && spans.last().to == 0 };
+        if (refuse && (open == false))
+        {
+            spans.append(sRefusedSpan{ since, 0 });
+            changed = true;
+        }
+        else if ((refuse == false) && open)
+        {
+            // A span that covers the whole session leaves nothing behind when it is lifted.
+            if (spans.last().from == 0)
+                spans.removeLast();
+            else
+                spans.last().to = since;
+
+            changed = true;
+        }
+    }
+
+    if (changed)
+    {
+        emit signalRefusedScopesChanged();
+    }
+}
+
+bool LoggingModelBase::isEntryRefused(const areg::LogEntry* entry) const
+{
+    if ((entry == nullptr) || mRefused.isEmpty())
+        return false;
+
+    const auto target = mRefused.constFind(entry->logCookie);
+    if (target == mRefused.constEnd())
+        return false;
+
+    const auto scope = target.value().constFind(entry->logScopeId);
+    if (scope == target.value().constEnd())
+        return false;
+
+    for (const sRefusedSpan& span : scope.value())
+    {
+        if ((entry->logTimestamp >= span.from) && ((span.to == 0) || (entry->logTimestamp < span.to)))
+            return true;
+    }
+
+    return false;
+}
+
+bool LoggingModelBase::hasRefusedScopes(void) const
+{
+    for (auto target = mRefused.constBegin(); target != mRefused.constEnd(); ++target)
+    {
+        for (auto scope = target.value().constBegin(); scope != target.value().constEnd(); ++scope)
+        {
+            if (scope.value().isEmpty() == false)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+void LoggingModelBase::clearRefusedScopes(void)
+{
+    if (mRefused.isEmpty())
+        return;
+
+    mRefused.clear();
+    emit signalRefusedScopesChanged();
+}
+
+void LoggingModelBase::requestShowAllScopes(void)
+{
+    emit signalShowAllScopesRequested();
+}
+
 uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId, int32_t limit, uint32_t offset)
 {
     return mDatabase.setup_statement_read_logs(mStatement, instId, limit, offset);
@@ -621,6 +769,16 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
     switch (column)
     {
     case eColumn::LogColumnPriority:
+        // A scope row names the event, not the category: the reader already knows it is
+        // a scope, what they need is which end of it.
+        if (logMessage->logMessagePrio == areg::LogPriority::PrioScope)
+        {
+            if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
+                return tr("Enter");
+            else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
+                return tr("Exit");
+        }
+
         return QString::fromStdString(areg::priority_to_string(logMessage->logMessagePrio).data());
 
     case eColumn::LogColumnTimestamp:
@@ -630,7 +788,7 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
         return QString::fromStdString(areg::DateTime(logMessage->logReceived).format_time().data());
     
     case eColumn::LogColumnTimeDuration:
-        return QString::number(logMessage->logDuration);
+        return logMessage->logDuration != 0 ? NETimeUnits::duration(logMessage->logDuration) : QString();
         
     case eColumn::LogColumnSource:
         return QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")";
@@ -648,25 +806,52 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
         return QString::number(logMessage->logScopeId);
 
     case eColumn::LogColumnMessage:
-        return QString(logMessage->logMessage);
+        {
+            // logMessageLen is the length before the message was cut, so it can exceed
+            // what the entry holds. When it does, say how much is missing.
+            constexpr uint32_t maxLen{ areg::LOG_MSG_SIZE - 1u };
+            QString text{ QString::fromUtf8(logMessage->logMessage) };
+            if (logMessage->logMessageLen > maxLen)
+            {
+                text += QString("  [+%1 B]").arg(logMessage->logMessageLen - maxLen);
+            }
+
+            return text;
+        }
 
     default:
         return QString();
     }
 }
 
+QString LoggingModelBase::getTooltipData(const areg::LogEntry* logMessage, eColumn column) const
+{
+    Q_ASSERT(logMessage != nullptr);
+    if (column != eColumn::LogColumnMessage)
+        return QString();
+
+    const QString message{ QString::fromUtf8(logMessage->logMessage, static_cast<int>(areg::log_message_size(*logMessage))) };
+    if (areg::is_log_message_cut(*logMessage) == false)
+        return message;
+
+    // The row shows what arrived; the tooltip says what was sent.
+    return message + QString("\n\n") +
+           tr("Cut after %1 of %2 characters.").arg(areg::log_message_size(*logMessage)).arg(logMessage->logMessageLen);
+}
+
 QBrush LoggingModelBase::getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-    return QBrush(LogIconFactory::getLogBackgroundColor(*logMessage));
+    // The row stays neutral, so that only Fatal pulls the eye.
+    return QBrush(NELogPalette::rowBackground(NELogPalette::roleOf(*logMessage)));
 }
 
 QColor LoggingModelBase::getForegroundData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-    return LogIconFactory::getLogColor(*logMessage);
+    return NELogPalette::textColor(NELogPalette::roleOf(*logMessage));
 }
 
 QIcon LoggingModelBase::getDecorationData(const areg::LogEntry* logMessage, eColumn column) const
@@ -675,28 +860,10 @@ QIcon LoggingModelBase::getDecorationData(const areg::LogEntry* logMessage, eCol
     if (column != eColumn::LogColumnPriority)
         return QIcon();
 
-    switch (logMessage->logMessagePrio)
-    {
-    case areg::LogPriority::PrioScope:
-        if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
-            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeEnter, true);
-        else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
-            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeExit, true);
-        else
-            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, true);
-    case areg::LogPriority::PrioDebug:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, true);
-    case areg::LogPriority::PrioInfo:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, true);
-    case areg::LogPriority::PrioWarning:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, true);
-    case areg::LogPriority::PrioError:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, true);
-    case areg::LogPriority::PrioFatal:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioFatal, true);
-    default:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false);
-    }
+    // The priority cell carries its name and its colour, nothing else. A scope row is
+    // already marked in the gutter beside the rail, and a second mark here would only
+    // push the word it repeats out of line with every other row.
+    return QIcon();
 }
 
 int LoggingModelBase::getAlignmentData(eColumn column) const

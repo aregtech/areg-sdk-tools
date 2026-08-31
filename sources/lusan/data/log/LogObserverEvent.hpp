@@ -49,6 +49,8 @@ public:
         , CMD_ScopesRegistered  //!< The log observer received list of registered scopes.
         , CMD_ScopesUpdated     //!< The log observer received list of updated scopes.
         , CMD_LogMessage        //!< The log observer received log message.
+        , CMD_SourceState       //!< A log source started or stopped sending the logs it produces.
+        , CMD_ConfigRestored    //!< A log source read its configuration file again.
     };
 
 public:

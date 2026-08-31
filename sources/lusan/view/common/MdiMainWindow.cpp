@@ -303,11 +303,21 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         mLogViewer->logServiceConnected(isConnected, address, port, dbPath);
         if (isConnected == false)
         {
-            // Copy logs to offline log viewer
-            OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
-            mNaviDock.getLiveScopes().setLoggingModel(nullptr);
-            mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviOfflineLogs);
-            offlineLog->show();
+            // A session that recorded nothing has no archive to hand over, so the panel stays
+            // where the live scopes are instead of opening an empty offline window.
+            const bool hasLogs{ mLogViewer->isEmpty() == false };
+            if (hasLogs)
+            {
+                OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
+                mNaviDock.getLiveScopes().setLoggingModel(nullptr);
+                mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviOfflineLogs);
+                offlineLog->show();
+            }
+            else
+            {
+                mNaviDock.getLiveScopes().setLoggingModel(nullptr);
+                mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviLiveLogs);
+            }
 
             // Properly close and delete the live log window and viewer
             if (mLiveLogWnd != nullptr)
@@ -537,6 +547,8 @@ void MdiMainWindow::onFileNewLiveLog()
     {
         mMdiArea.setActiveSubWindow(mLiveLogWnd);
     }
+
+    mOutputDock.showLogging();
 }
 
 void MdiMainWindow::onFileOpen()
@@ -1559,6 +1571,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     mdiSub->setWindowFilePath(filePath);    
     mMdiArea.showMaximized();
     mNaviDock.showPanel(NavigationDock::NaviOfflineLogs);
+    mOutputDock.showLogging();
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
     mNaviDock.getOfflineScopes().setLoggingModel(logModel);
     if (filePath.isEmpty() == false)
@@ -2223,6 +2236,10 @@ void MdiMainWindow::writeSettings()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setValue("geometry", saveGeometry());
+
+    // Every log window has already handed its columns to the options while it closed, so this
+    // is the one write that puts the whole run on disk.
+    LusanApplication::getOptions().writeOptions();
 }
 
 MdiChild* MdiMainWindow::activeMdiChild() const

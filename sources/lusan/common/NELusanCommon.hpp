@@ -31,6 +31,7 @@
 #include <filesystem>
 #include <vector>
 
+class QAbstractItemView;
 class QKeySequence;
 class QMenu;
 class QObject;
@@ -77,10 +78,10 @@ namespace NELusanCommon
     /**
      * \brief   The default (preferred) width of the navigation window.
      **/
-    constexpr const uint32_t  MIN_NAVI_WIDTH    { 280 };
+    constexpr const uint32_t  MIN_NAVI_WIDTH    { 340 };
 
     /**
-     * \brief   The absolute minimum width the navigation window can be shrunk to (issue #516).
+     * \brief   The absolute minimum width the navigation window can be shrunk to.
      **/
     constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
 
@@ -145,6 +146,9 @@ namespace NELusanCommon
     constexpr QLatin1StringView xmlElementOptionList       { "OptionList" };
     constexpr QLatin1StringView xmlElementOption           { "Option" };
     constexpr QLatin1StringView xmlElementTheme            { "Theme" };
+    constexpr QLatin1StringView xmlElementTimeUnit         { "TimeUnit" };
+    constexpr QLatin1StringView xmlElementLogPalette       { "LogPalette" };
+    constexpr QLatin1StringView xmlElementLogRowHeight     { "LogRowHeight" };
     constexpr QLatin1StringView xmlElementWorkspaceList    { "WorspaceList" };
     constexpr QLatin1StringView xmlElementWorkspace        { "Workspace" };
     constexpr QLatin1StringView xmlElementSettings         { "Settings" };
@@ -452,6 +456,17 @@ namespace NELusanCommon
      **/
     QIcon mergeIcons(const QIcon& icon1, double scale1, const QIcon& icon2, double scale2, const QSize& size);
 
+    //! The air an input row keeps above and below what the style already asks for.
+    constexpr int   InputAir    { 2 };
+
+    /**
+     * \brief   Returns the height of a one line input control: a filter box, a find box, a
+     *          search field or a selector. Every such control in the application takes it, so
+     *          two boxes on the same panel are never a pixel apart.
+     * \param   owner   The control the height is for. Its font sets the value.
+     **/
+    int inputRowHeight(const QWidget& owner);
+
     //! Empty icon
     const QIcon     EmptyIcon{};
 
@@ -468,13 +483,20 @@ namespace NELusanCommon
     const QSize     SizeBig     { 32, 32 };
 
     /**
-     * \brief   Loads an icon from the specified file.
-     *          When dark theme icons are enabled, dark strokes are lightened.
+     * \brief   Loads an icon from the specified file. The icon picks its ink at every paint,
+     *          so it follows a theme change without being loaded again.
      * \param   fileName    The name of the file to load the icon from.
-     * \param   size        The size of the icon to load.
+     * \param   size        Kept for the call sites. The icon renders at whatever extent it is drawn at.
      * \return  The loaded icon.
      **/
     QIcon loadIcon(const QString & fileName, const QSize & size = QSize{32, 32});
+
+    /**
+     * \brief   Widens every selected range of the view to the full width of its model.
+     *          Call it after a column was added or removed, so a row selection stays whole.
+     * \param   view    The view whose selection is repaired.
+     **/
+    void refitRowSelection(QAbstractItemView* view);
 
     /**
      * \brief   Enables or disables icon adaptation for dark themes.
@@ -642,11 +664,17 @@ namespace NELusanCommon
     //<! Loads node expanded icon and sets the specified size
     inline QIcon iconNodeExpanded(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads the icon of the toolbar entries that do not fit the row
+    inline QIcon iconToolbarMore(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads open workspace icon and sets the specified size
     inline QIcon iconWorkspaceOpen(const QSize & size = QSize{ 32, 32 });
 
     //!< Loads search button icon and sets the specified size
     inline QIcon iconSearch(const QSize & size = QSize{ 32, 32 });
+
+    //!< Loads the funnel icon of the controls that narrow a list, and sets the specified size
+    inline QIcon iconFilter(const QSize & size = QSize{ 32, 32 });
 
     //!< Loads the find usages icon and sets the specified size
     inline QIcon iconSearchUsages(const QSize & size = QSize{ 32, 32 });
@@ -734,6 +762,27 @@ namespace NELusanCommon
 
     //<! Loads prio scope exit log icon and sets the specified size
     inline QIcon iconScopeExit(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that shows only the selected scopes
+    inline QIcon iconScopeSolo(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that hides the selected scopes
+    inline QIcon iconScopeMute(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that brings every hidden scope back
+    inline QIcon iconScopeRestoreAll(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon of the scope enter and exit lines
+    inline QIcon iconScopeLines(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that stops a target producing its logs
+    inline QIcon iconTargetStop(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that holds the logs a target sends
+    inline QIcon iconTargetPause(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that lets a target produce and send its logs again
+    inline QIcon iconTargetResume(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
@@ -867,12 +916,47 @@ inline QIcon NELusanCommon::iconLogFatal(const QSize & size)
 
 inline QIcon NELusanCommon::iconScopeEnter(const QSize & size)
 {
-    return loadIcon(":/icons/log-prio-scope-enter", size);
+    return loadIcon(":/icons/log-scope-enter", size);
 }
 
 inline QIcon NELusanCommon::iconScopeExit(const QSize & size)
 {
-    return loadIcon(":/icons/log-prio-scope-exit", size);
+    return loadIcon(":/icons/log-scope-exit", size);
+}
+
+inline QIcon NELusanCommon::iconScopeSolo(const QSize & size)
+{
+    return loadIcon(":/icons/scope-solo", size);
+}
+
+inline QIcon NELusanCommon::iconScopeMute(const QSize & size)
+{
+    return loadIcon(":/icons/scope-mute", size);
+}
+
+inline QIcon NELusanCommon::iconScopeRestoreAll(const QSize & size)
+{
+    return loadIcon(":/icons/scope-restore-all", size);
+}
+
+inline QIcon NELusanCommon::iconScopeLines(const QSize & size)
+{
+    return loadIcon(":/icons/scope-lines", size);
+}
+
+inline QIcon NELusanCommon::iconTargetStop(const QSize & size)
+{
+    return loadIcon(":/icons/target-stop", size);
+}
+
+inline QIcon NELusanCommon::iconTargetPause(const QSize & size)
+{
+    return loadIcon(":/icons/target-pause", size);
+}
+
+inline QIcon NELusanCommon::iconTargetResume(const QSize & size)
+{
+    return loadIcon(":/icons/target-resume", size);
 }
 
 inline QIcon NELusanCommon::iconServiceInterfaceTab(const QSize & size)
@@ -1010,6 +1094,11 @@ inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
     return loadIcon(":/icons/tree-collapse", size);
 }
 
+inline QIcon NELusanCommon::iconToolbarMore(const QSize & size)
+{
+    return loadIcon(":/icons/toolbar-more", size);
+}
+
 inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)
 {
     return loadIcon(":/icons/file-open", size);
@@ -1018,6 +1107,11 @@ inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)
 inline QIcon NELusanCommon::iconSearch(const QSize & size)
 {
     return loadIcon(":/icons/edit-find", size);
+}
+
+inline QIcon NELusanCommon::iconFilter(const QSize & size)
+{
+    return loadIcon(":/icons/filter", size);
 }
 
 inline QIcon NELusanCommon::iconSearchUsages(const QSize & size)

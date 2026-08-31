@@ -24,6 +24,9 @@
 #include "lusan/data/log/ScopeNodeBase.hpp"
 #include "areg/base/SortedLinkedList.hpp"
 #include "areg/component/ServiceDefs.hpp"
+#include "areg/logging/LoggingDefs.hpp"
+
+#include <QMap>
 
 #include <map>
 
@@ -247,6 +250,40 @@ public:
     ScopeNodeBase* findChild(const QString& childName) const override;
 
     /**
+     * \brief   Deletes every child node and leaf, leaving the node empty.
+     * \note    The caller owns the row bookkeeping of any model showing these children.
+     **/
+    void removeChildren(void);
+
+    /**
+     * \brief   Shows or hides the rows of this node and of every node and leaf below it.
+     **/
+    void setShownRecursive(bool shown) override;
+
+    /**
+     * \brief   Returns whether every scope below is shown, none is, or they disagree.
+     **/
+    Qt::CheckState shownState() const override;
+
+    /**
+     * \brief   Adds the identifiers of every hidden leaf below to the given set.
+     **/
+    int collectHiddenScopes(QSet<uint32_t> & scopeIds) const override;
+
+    /**
+     * \brief   Recomputes the show and hide state of this node from its direct children.
+     *          Call it on the parents of a node whose state has just changed, from the
+     *          nearest parent upwards.
+     **/
+    void refreshShownState();
+
+    /**
+     * \brief   Returns what the scopes below produce together, as last rebuilt by
+     *          refreshPrioritiesRecursive().
+     **/
+    sPrioRollup priorityRollup() const override;
+
+    /**
      * \brief   Returns the position of the child node in the list of child nodes.
      *          Returns NECommon::INVALID_INDEX if no child with specified name exists.
      * \param   childName   The name of the child node to find.
@@ -387,6 +424,10 @@ protected:
     NodeList    mChildNodes;
     //!< The list of child leafs.
     LeafList    mChildLeafs;
+    //!< Whether every scope below is shown, none is, or they disagree.
+    Qt::CheckState mShownState;
+    //!< What the scopes below produce together, rebuilt by refreshPrioritiesRecursive().
+    sPrioRollup mPrioRollup;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -397,6 +438,28 @@ protected:
  **/
 class ScopeRoot : public ScopeNode
 {
+//////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   What a running target knows about the priorities set on it here.
+     **/
+    enum class eTargetState : uint8_t
+    {
+          TargetApplied = 0 //!< The target generates what the tree shows
+        , TargetPending     //!< Changed here and not in effect on the target
+        , TargetSent        //!< The change is on its way, no answer yet
+        , TargetSaved       //!< The target was asked to keep the priorities across a restart
+    };
+
+    //!< How long a sent request waits for an answer before it counts as not in effect.
+    static constexpr int    TargetWaitMs    { 10000 };
+
+    //!< How long the mark of a saved configuration takes to fade away.
+    static constexpr int    TargetFadeMs    { 2400 };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -488,12 +551,144 @@ public:
      **/
     inline void setRootName(const QString& newRoot);
 
+    /**
+     * \brief   Returns true while the process this root stands for is reachable.
+     **/
+    inline bool isConnected(void) const;
+
+    /**
+     * \brief   Marks the process reachable or gone. A gone root stays in the tree.
+     **/
+    inline void setConnected(bool connected);
+
+    /**
+     * \brief   Returns true if the given connection is the same program in the same place.
+     *          The cookie is deliberately not compared: it is handed out per connection,
+     *          so a restarted process arrives with a different one.
+     **/
+    bool isSameInstance(const areg::ConnectedInstance & instance) const;
+
+    /**
+     * \brief   Remembers the priority of every scope below that carries one, by path.
+     **/
+    void savePriorities(void);
+
+    /**
+     * \brief   Remembers what the target reported the first time it named its scopes. The call
+     *          does nothing once the record exists, so the record keeps the starting point of
+     *          the target and not the last thing the reader did.
+     **/
+    void captureBaseline(void);
+
+    //!< Forgets the starting point, so the next scope list of the target becomes the new one.
+    void clearBaseline(void);
+
+    /**
+     * \brief   Returns the paths of the scopes that generate less than the target reported when
+     *          it first named them. A scope that generates more is not counted.
+     * \param   names   Receives the paths, appended. Nothing is appended when none is quieted.
+     * \return  The number of quieted scopes.
+     **/
+    int quietedScopes(QStringList& names) const;
+
+    //!< Returns what the target knows about the priorities set on this process.
+    inline ScopeRoot::eTargetState targetState(void) const;
+
+    //!< Returns how strongly the target mark is drawn, from 1.0 down to 0.0.
+    inline qreal targetFade(void) const;
+
+    /**
+     * \brief   Sets what the target knows about the priorities set on this process and
+     *          restarts the ageing of that state.
+     * \param   state   The state to hold.
+     **/
+    void setTargetState(ScopeRoot::eTargetState state);
+
+    /**
+     * \brief   Moves the target state on by the given time: an unanswered request falls back
+     *          to pending, and a saved mark fades away.
+     * \param   elapsedMs   The time passed since the previous call.
+     * \return  True if the state or the strength of the mark changed.
+     **/
+    bool ageTargetState(int elapsedMs);
+
+    //!< Returns true if the target state still changes on its own and needs to be aged.
+    inline bool isTargetAgeing(void) const;
+
+    /**
+     * \brief   Applies the remembered priorities to the scopes that are present again.
+     *          A path that no longer exists is skipped.
+     * \return  Returns the number of scopes the priority was applied to.
+     **/
+    int restorePriorities(void);
+
+    //!< Returns the way the target produces and sends its logs.
+    inline areg::LogSourceState sourceState(void) const;
+
+    //!< Returns true if the target produces its logs and sends them.
+    inline bool isSourceActive(void) const;
+
+    //!< Returns true if the target produces its logs and drops them.
+    inline bool isSourcePaused(void) const;
+
+    //!< Returns true if the target produces no log because every scope priority is off.
+    inline bool isSourceStopped(void) const;
+
+    //!< Returns true while a request to change the state waits for its answer.
+    inline bool isSourceWaiting(void) const;
+
+    //!< Returns the ID of the observer that took the target out of the active state, or zero.
+    inline ITEM_ID pausedBy(void) const;
+
+    //!< Returns the state a pending request asked for, Undefined when nothing is pending.
+    inline areg::LogSourceState wantedSourceState(void) const;
+
+    /**
+     * \brief   Marks that a request to change the state is on its way, so the interface draws
+     *          it as in flight until the answer arrives.
+     * \param   wanted  The state the target was asked to take.
+     **/
+    void markSourceRequest(areg::LogSourceState wanted);
+
+    /**
+     * \brief   Holds what the collector said about the state of the target.
+     * \param   state       The state the target is in.
+     * \param   byObserver  The ID of the observer that asked for it, zero when the collector did.
+     **/
+    void setSourceState(areg::LogSourceState state, ITEM_ID byObserver);
+
 //////////////////////////////////////////////////////////////////////////
 // Protected members
 //////////////////////////////////////////////////////////////////////////
 private:
     //!< The ID of the root.
     ITEM_ID     mRootId;
+    //!< The name of the program, as the connection reported it.
+    QString     mInstance;
+    //!< The file location of the program, as the connection reported it.
+    QString     mLocation;
+    //!< False when the process is gone and the root is kept only for its logs.
+    bool        mConnected;
+    //!< The priority of every scope that carried one, kept across a disconnect.
+    QMap<QString, uint32_t>  mSavedPrio;
+    //!< What the target reported the first time it named its scopes.
+    QMap<QString, uint32_t>  mBasePrio;
+    //!< What the target knows about the priorities set here.
+    ScopeRoot::eTargetState  mTargetState;
+    //!< The time the current target state has been held, in milliseconds.
+    int                      mTargetAge;
+    //!< How strongly the target mark is drawn, from 1.0 down to 0.0.
+    qreal                    mTargetFade;
+    //!< The way the target produces and sends its logs.
+    areg::LogSourceState     mSourceState;
+    //!< The state a pending request asked for, Undefined when nothing is pending.
+    areg::LogSourceState     mSourceWanted;
+    //!< True while a request to change the state waits for its answer.
+    bool                     mSourceWaiting;
+    //!< The time the pending request has waited for an answer, in milliseconds.
+    int                      mSourceAge;
+    //!< The ID of the observer that took the target out of the active state, zero otherwise.
+    ITEM_ID                  mPausedBy;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -555,6 +750,68 @@ inline const QString& ScopeRoot::getRootName() const
 inline void ScopeRoot::setRootName(const QString& newRoot)
 {
     mNodeName = newRoot;
+}
+
+inline bool ScopeRoot::isConnected() const
+{
+    return mConnected;
+}
+
+inline void ScopeRoot::setConnected(bool connected)
+{
+    mConnected = connected;
+}
+
+inline ScopeRoot::eTargetState ScopeRoot::targetState(void) const
+{
+    return mTargetState;
+}
+
+inline qreal ScopeRoot::targetFade(void) const
+{
+    return mTargetFade;
+}
+
+inline bool ScopeRoot::isTargetAgeing(void) const
+{
+    return (  (mTargetState == ScopeRoot::eTargetState::TargetSent)
+           || (mTargetState == ScopeRoot::eTargetState::TargetSaved)
+           || mSourceWaiting);
+}
+
+inline areg::LogSourceState ScopeRoot::sourceState(void) const
+{
+    return mSourceState;
+}
+
+inline bool ScopeRoot::isSourceActive(void) const
+{
+    return (mSourceState == areg::LogSourceState::Active);
+}
+
+inline bool ScopeRoot::isSourcePaused(void) const
+{
+    return (mSourceState == areg::LogSourceState::Paused);
+}
+
+inline bool ScopeRoot::isSourceStopped(void) const
+{
+    return (mSourceState == areg::LogSourceState::Stopped);
+}
+
+inline areg::LogSourceState ScopeRoot::wantedSourceState(void) const
+{
+    return mSourceWanted;
+}
+
+inline bool ScopeRoot::isSourceWaiting(void) const
+{
+    return mSourceWaiting;
+}
+
+inline ITEM_ID ScopeRoot::pausedBy(void) const
+{
+    return mPausedBy;
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODES_HPP

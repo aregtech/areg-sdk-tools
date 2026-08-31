@@ -657,7 +657,7 @@ private:
     void onNaviCollapsed(bool collapsed);
 
     /**
-     * rief   Gives the navigation dock area the requested width by moving the splitter, and
+     * \brief   Gives the navigation dock area the requested width by moving the splitter, and
      *          hands what it gives up to the pane beside it.
      **/
     void applyNaviWidth(int width);

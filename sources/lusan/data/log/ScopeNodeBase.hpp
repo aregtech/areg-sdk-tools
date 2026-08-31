@@ -27,6 +27,7 @@
 
 #include <QList>
 #include <QString>
+#include <QSet>
 
 /**
  * \brief   ScopeNodeBase is the base class for all scope nodes.
@@ -37,6 +38,34 @@ class ScopeNodeBase
 //////////////////////////////////////////////////////////////////////////
 // Internal types
 //////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   What the scopes under a node produce together. A leaf answers for itself.
+     *
+     *          A level counts the severities a scope writes: 0 nothing, 1 fatal and error,
+     *          2 up to warning, 3 up to information, 4 up to debug. When the low and the
+     *          high level differ, the scopes below disagree about the levels between them.
+     **/
+    struct sPrioRollup
+    {
+        uint8_t levelLow;   //!< The lowest level any scope below produces.
+        uint8_t levelHigh;  //!< The highest level any scope below produces.
+        bool    linesSome;  //!< At least one scope below writes enter and exit lines.
+        bool    linesAll;   //!< Every scope below writes enter and exit lines.
+        bool    prioSome;   //!< At least one scope below carries a priority.
+    };
+
+    //!< The highest level a scope can produce.
+    static constexpr uint8_t    PrioLevelMax    { 4 };
+
+    /**
+     * \brief   Returns the level of the given log priority.
+     * \param   prio    The bits of the log priority.
+     * \return  0 when nothing is produced, up to PrioLevelMax for debug.
+     **/
+    static uint8_t priorityLevel(uint32_t prio);
+
 protected:
 
     /**
@@ -502,8 +531,16 @@ public:
 
     /**
      * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
+     * \note    It also rebuilds the roll-up read by priorityRollup(). Call it on the tree root
+     *          after any change of priorities, otherwise the nodes above the change stay stale.
      **/
     virtual void refreshPrioritiesRecursive();
+
+    /**
+     * \brief   Returns what the scopes under this node produce together. A leaf answers for
+     *          itself, a node answers from the roll-up rebuilt by refreshPrioritiesRecursive().
+     **/
+    virtual sPrioRollup priorityRollup() const;
 
     /**
      * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
@@ -564,6 +601,31 @@ public:
      **/
     virtual uint32_t getScopeId() const;
 
+    /**
+     * \brief   Returns true if the log window draws the rows of this scope.
+     *          Says nothing about what the target generates.
+     **/
+    inline bool isShown() const;
+
+    /**
+     * \brief   Shows or hides the rows of this node and of everything below it.
+     * \param   shown   True to draw the rows, false to leave them out.
+     **/
+    virtual void setShownRecursive(bool shown);
+
+    /**
+     * \brief   Returns whether everything below is shown, nothing is, or the scopes disagree.
+     *          A node with no children answers for itself.
+     **/
+    virtual Qt::CheckState shownState() const;
+
+    /**
+     * \brief   Collects the identifiers of the leaf scopes that are hidden.
+     * \param   scopeIds    The set to add the identifiers to.
+     * \return  The number of identifiers added.
+     **/
+    virtual int collectHiddenScopes(QSet<uint32_t> & scopeIds) const;
+
 private:
     //!< Return true if the prio is an exact match
     inline bool _isExactPrio(uint32_t prio) const;
@@ -582,6 +644,8 @@ protected:
     unsigned int                mPrioStates;
     //!< The name of the node.
     QString                     mNodeName;
+    //!< False when the log window is asked not to draw the rows of this scope.
+    bool                        mShown;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -591,6 +655,11 @@ protected:
 inline const QString & ScopeNodeBase::getNodeName() const
 {
     return mNodeName;
+}
+
+inline bool ScopeNodeBase::isShown() const
+{
+    return mShown;
 }
 
 inline void ScopeNodeBase::setNodeName( const QString& newName )

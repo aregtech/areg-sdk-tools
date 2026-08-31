@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LiveLogViewer.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -18,35 +18,30 @@
  ************************************************************************/
 
 #include "lusan/view/log/LiveLogViewer.hpp"
-#include "ui/ui_LiveLogViewer.h"
 
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
+#include "lusan/view/log/LogSessionBar.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 
 #include <QTableView>
-#include <QLabel>
+#include <QToolButton>
 #include <QMdiSubWindow>
 
-const QString   LiveLogViewer::_tooltipPauseLogging     (tr("Pause current logging"));
-const QString   LiveLogViewer::_tooltipResumeLogging    (tr("Resume current logging"));
-const QString   LiveLogViewer::_tooltipStopLogging      (tr("Stop current logging"));
-const QString   LiveLogViewer::_tooltipRestartLogging   (tr("Restart logging in new database"));
+const QString   LiveLogViewer::_tooltipPauseLogging     (tr("Pause logging. The database stays open."));
+const QString   LiveLogViewer::_tooltipResumeLogging    (tr("Resume logging into the same database."));
+const QString   LiveLogViewer::_tooltipStopLogging      (tr("Stop logging and close the database. The connection stays."));
+const QString   LiveLogViewer::_tooltipRestartLogging   (tr("Resume logging in a new database."));
 
 LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : LogViewerBase (MdiChild::eMdiWindow::MdiLogViewer, nullptr, wndMain, parent)
-    , ui            (new Ui::LiveLogViewer)
+    , mReleased     (false)
 {
-    ui->setupUi(mMdiWindow);
-    mLogModel   = new LiveLogsModel(this);
-    mLogTable   = ui->logView;
-    mLogSearch  = ui->textSearch;
-    
+    mLogModel = new LiveLogsModel(this);
     setupWidgets();
-    
-    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+
     updateToolbuttons(false, false);
     ctrlPause()->setEnabled(false);
     ctrlStop()->setEnabled(false);
@@ -69,19 +64,18 @@ void LiveLogViewer::logServiceConnected(bool isConnected, const QString& address
     if (isConnected)
     {
         Q_ASSERT(mMdiSubWindow != nullptr);
-        ctrlFile()->setText(dbPath);
-        ctrlFile()->setToolTip(dbPath);
+        getSessionBar()->setDatabasePath(dbPath);
         mMdiSubWindow->setWindowTitle(logModel->getLogFileName());
-        updateToolbuttons(false, false);
         ctrlPause()->setEnabled(true);
         ctrlStop()->setEnabled(true);
+        updateToolbuttons(false, false);
     }
     else if (mMdiSubWindow != nullptr)
     {
         Q_ASSERT(logModel->getDatabasePath() == dbPath);
-        updateToolbuttons(false, false);
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
+        updateToolbuttons(false, false);
     }
 }
 
@@ -92,8 +86,7 @@ void LiveLogViewer::logDatabaseCreated(const QString& dbPath)
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
-        ctrlFile()->setText(dbPath);
-        ctrlFile()->setToolTip(dbPath);
+        getSessionBar()->setDatabasePath(dbPath);
     }
 }
 
@@ -101,6 +94,11 @@ bool LiveLogViewer::isServiceConnected() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return static_cast<LiveLogsModel *>(mLogModel)->isConnected();
+}
+
+bool LiveLogViewer::isSourceReady() const
+{
+    return isServiceConnected();
 }
 
 bool LiveLogViewer::isEmpty() const
@@ -115,24 +113,21 @@ void LiveLogViewer::detachLiveLog()
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
-        updateToolbuttons(false, false);
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
+        updateToolbuttons(false, false);
     }
 }
 
 void LiveLogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
 {
-    const QModelIndex & idxSelected = mLogModel->getSelectedLog();
-    int row = idxSelected.isValid() ? idxSelected.row() : -1;
-    int count = mFilter->rowCount(parent);
-    if ((row < 0) || (row >= count - 2))
+    Q_UNUSED(parent);
+    Q_UNUSED(first);
+    Q_UNUSED(last);
+
+    if (getSessionBar()->isFollowing())
     {
-        ctrlTable()->scrollToBottom();
-        if (row >= 0)
-        {
-            ctrlTable()->selectRow(count - 1);
-        }
+        scrollFollowing();
     }
 }
 
@@ -146,43 +141,32 @@ void LiveLogViewer::onCurrentRowChanged(const QModelIndex &current, const QModel
 
 QToolButton* LiveLogViewer::ctrlPause()
 {
-    return ui->toolPause;
+    return getSessionBar()->ctrlPause();
 }
 
 QToolButton* LiveLogViewer::ctrlStop()
 {
-    return ui->toolStop;
+    return getSessionBar()->ctrlStop();
 }
 
 QToolButton* LiveLogViewer::ctrlClear()
 {
-    return ui->toolClear;
-}
-
-QLabel* LiveLogViewer::ctrlFile()
-{
-    return ui->labelFile;
+    return getSessionBar()->ctrlClear();
 }
 
 void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
 {
-    ctrlPause()->blockSignals(true);
-    ctrlStop()->blockSignals(true);
+    const QSignalBlocker blockPause(ctrlPause());
+    const QSignalBlocker blockStop(ctrlStop());
+
     if (isPaused)
     {
-        ctrlPause()->setEnabled(true);
         ctrlPause()->setChecked(true);
         ctrlPause()->setIcon(NELusanCommon::iconPlay(NELusanCommon::SizeBig));
         ctrlPause()->setToolTip(_tooltipResumeLogging);
-
-        ctrlStop()->setEnabled(true);
-        ctrlStop()->setChecked(false);
-        ctrlStop()->setIcon(NELusanCommon::iconStop(NELusanCommon::SizeBig));
-        ctrlStop()->setToolTip(_tooltipStopLogging);
     }
     else
     {
-        ctrlPause()->setEnabled(true);
         ctrlPause()->setChecked(false);
         ctrlPause()->setIcon(NELusanCommon::iconPause(NELusanCommon::SizeBig));
         ctrlPause()->setToolTip(_tooltipPauseLogging);
@@ -190,26 +174,28 @@ void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
 
     if (isStopped)
     {
-        ctrlStop()->setEnabled(true);
         ctrlStop()->setChecked(true);
         ctrlStop()->setIcon(NELusanCommon::iconRecord(NELusanCommon::SizeBig));
         ctrlStop()->setToolTip(_tooltipRestartLogging);
-
         ctrlPause()->setEnabled(false);
-        ctrlPause()->setChecked(false);
-        ctrlPause()->setIcon(NELusanCommon::iconPause(NELusanCommon::SizeBig));
-        ctrlPause()->setToolTip(_tooltipPauseLogging);
     }
     else
     {
-        ctrlStop()->setEnabled(true);
         ctrlStop()->setChecked(false);
         ctrlStop()->setIcon(NELusanCommon::iconStop(NELusanCommon::SizeBig));
         ctrlStop()->setToolTip(_tooltipStopLogging);
     }
 
-    ctrlPause()->blockSignals(false);
-    ctrlStop()->blockSignals(false);
+    LogSessionBar::eLiveState state{ LogSessionBar::eLiveState::StateDisconnected };
+    if (isServiceConnected())
+    {
+        state = isStopped ? LogSessionBar::eLiveState::StateStopped
+              : (isPaused ? LogSessionBar::eLiveState::StatePaused
+                          : LogSessionBar::eLiveState::StateConnected);
+    }
+
+    LiveLogsModel* logModel{ static_cast<LiveLogsModel *>(mLogModel) };
+    getSessionBar()->setLiveState(state, logModel->getLofServiceAddress(), logModel->getLogServicePort());
 }
 
 void LiveLogViewer::onPauseClicked(bool checked)
@@ -240,6 +226,7 @@ void LiveLogViewer::onStopClicked(bool checked)
     else
     {
         logModel->restartLogging();
+        ctrlPause()->setEnabled(true);
         updateToolbuttons(false, false);
     }
 }
@@ -272,12 +259,18 @@ void LiveLogViewer::onWindowClosing(bool isActive)
 void LiveLogViewer::setupSignals(bool doSetup)
 {
     Q_ASSERT(mLogModel != nullptr);
+    if (mSessionBar == nullptr)
+        return;
+
     if (doSetup)
     {
         connect(mLogModel       , &LoggingModelBase::rowsInserted, this,&LiveLogViewer::onRowsInserted);
         connect(ctrlPause()     , &QToolButton::clicked         , this, &LiveLogViewer::onPauseClicked);
         connect(ctrlStop()      , &QToolButton::clicked         , this, &LiveLogViewer::onStopClicked);
         connect(ctrlClear()     , &QToolButton::clicked         , this, &LiveLogViewer::onClearClicked);
+        connect(getSessionBar() , &LogSessionBar::signalDisconnectRequested, this, [this]() {
+                    mMainWindow->getNaviLiveScopes().disconnectLogging();
+                });
     }
     else
     {
@@ -285,12 +278,13 @@ void LiveLogViewer::setupSignals(bool doSetup)
         disconnect(ctrlPause()  , &QToolButton::clicked         , this, &LiveLogViewer::onPauseClicked);
         disconnect(ctrlStop()   , &QToolButton::clicked         , this, &LiveLogViewer::onStopClicked);
         disconnect(ctrlClear()  , &QToolButton::clicked         , this, &LiveLogViewer::onClearClicked);
+        disconnect(getSessionBar(), &LogSessionBar::signalDisconnectRequested, this, nullptr);
     }
 }
 
 void LiveLogViewer::cleanResources()
 {
-    if (ui == nullptr)
+    if (mReleased)
     {
         Q_ASSERT(mLogModel == nullptr);
         Q_ASSERT(mFilter == nullptr);
@@ -303,6 +297,7 @@ void LiveLogViewer::cleanResources()
     setupSignals(false);
     LogObserver::releaseLogObserver();
     disconnect(mFilter, nullptr, this, nullptr);
+    disconnect(mLogModel, nullptr, this, nullptr);
 
     QTableView* view = ctrlTable();
     view->setModel(nullptr);
@@ -311,15 +306,16 @@ void LiveLogViewer::cleanResources()
     mSearch.setLogModel(nullptr);
     mLogModel->closeDatabase();
 
-    delete ui;
-    ui = nullptr;
-    
+    mReleased = true;
+
     delete mMdiWindow;
     mMdiWindow = nullptr;
     mHeader = nullptr;
     mLogTable = nullptr;
     mLogSearch = nullptr;
     mHighlight = nullptr;
+    mSessionBar = nullptr;
+    mEmptyState = nullptr;
     mHighlightColumn = -1;
     
     delete mFilter;

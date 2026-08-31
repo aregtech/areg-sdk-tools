@@ -134,6 +134,12 @@ namespace NESMDesign
     //!< the user's to set. Raise it if the panel's controls become unusable when squeezed.
     constexpr int       PanelMinWidth   { 180 };
 
+    //!< The shortest the Design page's Properties panel ever asks to be, in device-independent
+    //!< pixels. It is a CEILING on the panel's minimum height: the panel scrolls its content
+    //!< instead of growing, so a tall selection cannot push the Design page past the height the
+    //!< editor window has, which would carry the page tabs out of sight.
+    constexpr int       PanelMinHeight  { 120 };
+
     //!< The width the Design page's Properties dock is given when the page is built. A dock that
     //!< was never assigned a width follows its widget's size hint, so the first selection that
     //!< fills the panel would push the canvas edge aside; handing it this width once makes the
@@ -421,6 +427,15 @@ namespace NESMDesign
      * \brief   Returns a readable text color (light or dark) for the given fill.
      **/
     QColor contrastTextColor(const QColor& fill);
+
+    /**
+     * \brief   Returns the palette every canvas colour is taken from.
+     * \note    A widget palette is not usable here. A style sheet writes its own colours into
+     *          the palette of the widgets it matches, and the sheet of the next theme does not
+     *          always overwrite them, so a widget can still carry a colour of the theme before
+     *          the last one. The application palette is replaced whole on every theme.
+     **/
+    QPalette canvasPalette(void);
 
     /**
      * \brief   Returns the canvas background color of the given palette.
