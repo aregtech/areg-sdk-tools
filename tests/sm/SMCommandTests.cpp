@@ -1239,6 +1239,12 @@ namespace
         doc.getLayout().addNode(leafId);
         doc.getLayout().addEdge(intruder->getId());
 
+        // What the host's own sublevel owns: where the canvas stood inside it, and a note
+        // pinned to the level itself rather than to one of its states.
+        doc.getLayout().addView(hostId).zoom = 140;
+        const uint32_t levelNoteId = doc.getLayout().addNote(hostId).id;
+        const uint32_t stateNoteId = doc.getLayout().addNote(hostId, leafId).id;
+
         SMRemoveCompositeCommand* command = new SMRemoveCompositeCommand(doc, notifier, hostId, "Remove submachine");
         CHECK(command->isEffective());
         CHECK(command->removedStateCount() == 5);           // L1Start, Work, L2Start, Deep, L3Start
@@ -1252,6 +1258,9 @@ namespace
         CHECK(peer->getTransitions().getElementCount() == 0);
         CHECK(doc.getLayout().findNode(leafId) == nullptr);
         CHECK(doc.getLayout().findNode(hostId) != nullptr);  // the host survives, and so does its box
+        CHECK(doc.getLayout().findView(hostId) == nullptr);  // the level it described is gone
+        CHECK(doc.getLayout().findNote(levelNoteId) == nullptr);
+        CHECK(doc.getLayout().findNote(stateNoteId) == nullptr);
 
         stack.undo();
         CHECK(doc.findStateById(hostId)->hasNestedStates());
@@ -1260,6 +1269,9 @@ namespace
         CHECK(doc.findStateById(leafId) != nullptr);          // the same ID, not a fresh one
         CHECK(peer->getTransitions().getElementCount() == 1);
         CHECK(doc.getLayout().findNode(leafId) != nullptr);
+        CHECK(doc.getLayout().findView(hostId) != nullptr);
+        CHECK(doc.getLayout().findNote(levelNoteId) != nullptr);
+        CHECK(doc.getLayout().findNote(stateNoteId) != nullptr);
 
         // A plain state has nothing to remove.
         SMRemoveCompositeCommand* nothing = new SMRemoveCompositeCommand(doc, notifier, peer->getId(), "Remove submachine");

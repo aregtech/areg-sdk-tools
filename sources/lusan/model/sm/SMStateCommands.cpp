@@ -514,8 +514,9 @@ SMRemoveCompositeCommand::SMRemoveCompositeCommand(  StateMachineData& data, Doc
     mTransitions = incoming.size();
 
     // Same child order as a state delete: layout first so undo restores it last, once the
-    // elements it describes are back.
-    new SMRemoveLayoutCommand(data, notifier, owners, text, this);
+    // elements it describes are back. The host state stays and keeps its box, but the level
+    // it used to hold stops existing, so that level's viewport and its notes go with it.
+    new SMRemoveLayoutCommand(data, notifier, owners, text, this, QList<uint32_t>{ stateId });
     appendIncomingRemovals(notifier, incoming, text, this);
     // History and OnFinal describe a composition that is about to stop existing; leaving them behind raises.
     if (state->getHistory() != SMStateEntry::eHistory::None)

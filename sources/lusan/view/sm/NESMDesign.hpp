@@ -134,6 +134,12 @@ namespace NESMDesign
     //!< the user's to set. Raise it if the panel's controls become unusable when squeezed.
     constexpr int       PanelMinWidth   { 180 };
 
+    //!< The shortest the Design page's Properties panel ever asks to be, in device-independent
+    //!< pixels. It is a CEILING on the panel's minimum height: the panel scrolls its content
+    //!< instead of growing, so a tall selection cannot push the Design page past the height the
+    //!< editor window has, which would carry the page tabs out of sight.
+    constexpr int       PanelMinHeight  { 120 };
+
     //!< The width the Design page's Properties dock is given when the page is built. A dock that
     //!< was never assigned a width follows its widget's size hint, so the first selection that
     //!< fills the panel would push the canvas edge aside; handing it this width once makes the

@@ -247,20 +247,35 @@ private:
 /**
  * \class   SMRemoveLayoutCommand
  * \brief   Removes the View/Node/Edge layout entries owned by a set of element IDs, and the
- *          notes drawn on any of those IDs (a deleted composite's sublevel), restoring all of
- *          them on undo. Used as a child of the delete-state composite so a logical element
- *          and its layout are deleted (and undeleted) in one step.
+ *          notes drawn on any of those IDs, restoring all of them on undo. Used as a child of
+ *          the delete-state composite so a logical element and its layout are deleted (and
+ *          undeleted) in one step.
+ *
+ *          A level whose states go while its host state stays is named separately: only the
+ *          viewport of that level and the notes drawn on it go, and the host keeps its box.
  **/
 class SMRemoveLayoutCommand : public SMCommand
 {
 public:
-    SMRemoveLayoutCommand(StateMachineData& data, DocModelNotifier& notifier, const QList<uint32_t>& ownerIds, const QString& text, QUndoCommand* parent = nullptr);
+    /**
+     * \brief   Builds the command.
+     * \param   data        The document the layout belongs to.
+     * \param   notifier    The channel the layout change is announced on.
+     * \param   ownerIds    The elements whose View, Node and Edge entries go, together with
+     *                      the notes drawn on them or on the levels they own.
+     * \param   text        The history text.
+     * \param   parent      The composite this command belongs to, if any.
+     * \param   levelIds    The levels whose viewport and notes go while their host element
+     *                      stays; the host's own Node and Edge entries are kept.
+     **/
+    SMRemoveLayoutCommand(StateMachineData& data, DocModelNotifier& notifier, const QList<uint32_t>& ownerIds, const QString& text, QUndoCommand* parent = nullptr, const QList<uint32_t>& levelIds = QList<uint32_t>());
 
     void redo() override;
     void undo() override;
 
 private:
     QList<uint32_t>         mIds;
+    QList<uint32_t>         mLevels;
     QList<SMLayoutView>     mViews;
     QList<SMLayoutNode>     mNodes;
     QList<SMLayoutEdge>     mEdges;

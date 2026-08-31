@@ -361,6 +361,13 @@ private:
     void _refitRowSelection();
 
     /**
+     * \brief   Listens to the table's selection, so that a row the user picks releases the
+     *          follow toggle. Setting a model on a view builds a new selection model, so
+     *          this runs again after every such call.
+     **/
+    void _bindSelection();
+
+    /**
      * \brief   Draws the row counters of the session bar.
      **/
     void _updateCounters();
@@ -494,6 +501,7 @@ protected:
     LogClockSkew                mSkew;      //!< Watches the sources for a clock that disagrees with the collector.
     bool                        mSkewShown; //!< True once the clock notice was raised, so it is raised once per session.
     bool                        mFollowScroll; //!< True while the application scrolls the table itself.
+    bool                        mFollowSelect; //!< True while the application selects a row itself.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls.

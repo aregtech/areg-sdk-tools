@@ -86,6 +86,7 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mSkew     ( )
     , mSkewShown(false)
     , mFollowScroll(false)
+    , mFollowSelect(false)
 {
 }
 
@@ -234,6 +235,7 @@ void LogViewerBase::setupWidgets()
     setAttribute(Qt::WA_DeleteOnClose);
 
     mLogTable->setModel(mFilter);
+    _bindSelection();
     mLogTable->setAutoScroll(true);
     if (mHighlight == nullptr)
     {
@@ -859,6 +861,7 @@ void LogViewerBase::_restoreLayout(void)
     mLogTable->setModel(nullptr);
     mLogModel->setActiveColumns(columns);
     mLogTable->setModel(mFilter);
+    _bindSelection();
 
     // A view drops every section size when a model is set, so the widths are applied here and
     // never before the model.
@@ -1027,6 +1030,9 @@ QToolButton* LogViewerBase::ctrlSearchBackward()
 void LogViewerBase::moveToBottom(bool select)
 {
     Q_ASSERT(mLogTable != nullptr);
+    // Going to the end is the one selection the window makes for itself; it must not read back
+    // as the user picking a row, which is what stops the table from following the newest log.
+    mFollowSelect = true;
     mLogTable->scrollToBottom();
     if (select)
     {
@@ -1041,6 +1047,8 @@ void LogViewerBase::moveToBottom(bool select)
             mLogModel->selectBottom();
         }
     }
+
+    mFollowSelect = false;
 }
 
 void LogViewerBase::moveToTop(bool select)
@@ -1112,6 +1120,7 @@ void LogViewerBase::resetColumnOrder()
     mLogModel->setActiveColumns(LoggingModelBase::getDefaultColumns());
     mHeader->resetFilters();
     mLogTable->setModel(mFilter);
+    _bindSelection();
     _updateHighlightColumn();
 }
 
@@ -1122,6 +1131,7 @@ void LogViewerBase::resetFilters()
     mLogTable->setModel(nullptr);
     mHeader->resetFilters();
     mLogTable->setModel(mFilter);
+    _bindSelection();
 }
 
 void LogViewerBase::onHeaderContextMenu(const QPoint& pos)
@@ -1431,7 +1441,26 @@ void LogViewerBase::_updateHighlightColumn()
 
 void LogViewerBase::_refitRowSelection()
 {
+    // Re-selecting the same rows over their new columns is the window's own work.
+    mFollowSelect = true;
     NELusanCommon::refitRowSelection(mLogTable);
+    mFollowSelect = false;
+}
+
+void LogViewerBase::_bindSelection()
+{
+    if ((mLogTable == nullptr) || (mLogTable->selectionModel() == nullptr))
+        return;
+
+    connect(mLogTable->selectionModel(), &QItemSelectionModel::selectionChanged, this
+            , [this](const QItemSelection& selected, const QItemSelection&) {
+                // A row the user picks is a row the user wants to keep looking at, so the
+                // table stops jumping to the newest log until the follow toggle is pressed again.
+                if ((mFollowSelect == false) && (selected.isEmpty() == false) && (mSessionBar != nullptr))
+                {
+                    mSessionBar->setFollowing(false);
+                }
+            });
 }
 
 void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
