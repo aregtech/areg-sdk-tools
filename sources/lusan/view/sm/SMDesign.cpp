@@ -1501,7 +1501,6 @@ QWidget* SMDesign::buildBottomBar()
 {
     const int extent = scrollExtent();
     QWidget* bar = new QWidget(this);
-    bar->setFixedHeight(extent);
     QHBoxLayout* barLayout = new QHBoxLayout(bar);
     // The box starts clear of the canvas corner, which the frame rounds off.
     barLayout->setContentsMargins(NESMDesign::ZoomBoxIndent, 0, 0, 0);
@@ -1532,13 +1531,13 @@ QWidget* SMDesign::buildBottomBar()
     mView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
     mHScroll->setFixedHeight(extent);
-    mZoomBox->setFixedHeight(extent);
 
     QFont boxFont{ mZoomBox->font() };
     boxFont.setPixelSize(NESMDesign::ZoomTextSize);
     mZoomBox->setFont(boxFont);
     zoomEdit->setFont(boxFont);
     mZoomBox->view()->setFont(boxFont);
+    applyZoomBoxMetrics();
 
     barLayout->addWidget(mZoomBox);
     barLayout->addWidget(createScrollStep(mHScroll, Qt::LeftArrow , QStringLiteral("smCanvasStepLeft") , tr("Scroll left") , QAbstractSlider::SliderSingleStepSub));
@@ -1558,6 +1557,30 @@ QWidget* SMDesign::buildBottomBar()
 
     applyZoom(mView->getZoom());
     return bar;
+}
+
+void SMDesign::applyZoomBoxMetrics(void)
+{
+    QWidget* bar{ mZoomBox != nullptr ? mZoomBox->parentWidget() : nullptr };
+    if (bar == nullptr)
+        return;
+
+    // The styles do not agree on how tall a combo box has to be. Taking the scrollbar extent
+    // as a floor rather than as the answer keeps the percentage off the bottom edge.
+    const int boxHeight{ qMax(scrollExtent(), mZoomBox->minimumSizeHint().height()) };
+    mZoomBox->setFixedHeight(boxHeight);
+    bar->setFixedHeight(boxHeight);
+}
+
+void SMDesign::changeEvent(QEvent* event)
+{
+    QMainWindow::changeEvent(event);
+    if ((event != nullptr) && (event->type() == QEvent::Type::StyleChange))
+    {
+        // The box takes the new style in the same pass as this page, so it is measured
+        // once that pass is over and its own size hint has been dropped.
+        QMetaObject::invokeMethod(this, [this]() { applyZoomBoxMetrics(); }, Qt::ConnectionType::QueuedConnection);
+    }
 }
 
 void SMDesign::applyZoom(int percent)
@@ -1664,13 +1687,33 @@ void SMDesign::deleteSelection()
 
     StateMachineModel& model = mModel;
     StateMachineData&  data  = model.getData();
-    SMStateData* level = data.findLevel(scene.getLevelId());
+    const uint32_t levelId = scene.getLevelId();
+    SMStateData* level = data.findLevel(levelId);
     if (level == nullptr)
     {
         return;
     }
 
-    // The Start state is auto-created with its level and cannot be recreated by a tool.
+    bool startSelected{ false };
+    for (const SMStateItem* item : selection)
+    {
+        const SMStateEntry* state = data.findStateById(item->getElementId());
+        if ((state != nullptr) && (state->getKind() == SMStateEntry::eStateKind::Start))
+        {
+            startSelected = true;
+            break;
+        }
+    }
+
+    // A Start exists only as the entry marker of its own level, so inside a submachine deleting
+    // it means deleting that submachine. Anything else selected here is part of it anyway.
+    if (startSelected && (levelId != mSceneManager->getRootLevel()))
+    {
+        deleteDisplayedSubmachine();
+        return;
+    }
+
+    // The machine's own Start is created with the document and cannot be recreated by a tool.
     QStringList names;
     QList<uint32_t> deletable;
     bool skippedStart{ false };
@@ -1700,7 +1743,7 @@ void SMDesign::deleteSelection()
     if (deletable.isEmpty())
     {
         QMessageBox::information(this, tr("Delete States")
-                                 , tr("The Start state cannot be deleted - every machine level needs exactly one."));
+                                 , tr("The Start state of the machine cannot be deleted - the top level always needs one."));
         return;
     }
 
@@ -1715,7 +1758,7 @@ void SMDesign::deleteSelection()
     message += QStringLiteral("\n") + tr("Transitions from and to the deleted state(s) are deleted too.");
     if (skippedStart)
     {
-        message += QStringLiteral("\n") + tr("The selected Start state is kept - every level needs one.");
+        message += QStringLiteral("\n") + tr("The selected Start state is kept - the top level always needs one.");
     }
 
     const QMessageBox::StandardButton answer =
@@ -1742,6 +1785,48 @@ void SMDesign::deleteSelection()
 
         model.getUndoStack().push(composite);
     }
+}
+
+void SMDesign::deleteDisplayedSubmachine()
+{
+    StateMachineData& data = mModel.getData();
+    const uint32_t ownerId = getScene().getLevelId();
+    const SMStateEntry* owner = data.findStateById(ownerId);
+    if (owner == nullptr)
+    {
+        return;
+    }
+
+    SMRemoveCompositeCommand* command = new SMRemoveCompositeCommand(data, mModel.getNotifier(), ownerId
+                                                                    , tr("Delete submachine of %1").arg(owner->getName()));
+    if (command->isEffective() == false)
+    {
+        delete command;
+        return;
+    }
+
+    // A level holding nothing but its own Start has nothing the user built, so it goes silently.
+    const int states = command->removedStateCount();
+    if (states > 1)
+    {
+        const int edges = command->removedTransitionCount();
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Delete Submachine")
+                            , tr("Deleting the Start state deletes the whole submachine of '%1': %2 states and %3 transition%4 that point into them, with every submachine nested deeper. This can be undone.")
+                              .arg(owner->getName())
+                              .arg(states)
+                              .arg(edges).arg(edges == 1 ? QString() : QStringLiteral("s"))
+                            , QMessageBox::Ok | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (choice != QMessageBox::Ok)
+        {
+            delete command;
+            return;
+        }
+    }
+
+    // Standing inside the level that is about to disappear leaves the canvas on a scene with no
+    // owner, so step out to the host's own level first.
+    mSceneManager->goToParent();
+    mModel.getUndoStack().push(command);
 }
 
 void SMDesign::deleteSelectedEdges()

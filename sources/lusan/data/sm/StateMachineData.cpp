@@ -110,9 +110,14 @@ namespace
             return;
         }
 
+        // Read before the node is added: adding one moves the node list, and target would
+        // then point at released memory.
+        const double targetX{ target->x };
+        const double targetY{ target->y };
+
         SMLayoutNode& node = doc.getLayout().addNode(pseudoId);
-        node.x      = target->x;
-        node.y      = target->y - (PSEUDO_NODE_HEIGHT + PSEUDO_NODE_GAP);
+        node.x      = targetX;
+        node.y      = targetY - (PSEUDO_NODE_HEIGHT + PSEUDO_NODE_GAP);
         node.width  = PSEUDO_NODE_WIDTH;
         node.height = PSEUDO_NODE_HEIGHT;
     }

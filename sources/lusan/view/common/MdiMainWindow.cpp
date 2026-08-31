@@ -547,6 +547,8 @@ void MdiMainWindow::onFileNewLiveLog()
     {
         mMdiArea.setActiveSubWindow(mLiveLogWnd);
     }
+
+    mOutputDock.showLogging();
 }
 
 void MdiMainWindow::onFileOpen()
@@ -1569,6 +1571,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     mdiSub->setWindowFilePath(filePath);    
     mMdiArea.showMaximized();
     mNaviDock.showPanel(NavigationDock::NaviOfflineLogs);
+    mOutputDock.showLogging();
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
     mNaviDock.getOfflineScopes().setLoggingModel(logModel);
     if (filePath.isEmpty() == false)

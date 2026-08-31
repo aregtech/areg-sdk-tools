@@ -27,6 +27,8 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QResizeEvent>
+#include <QStyle>
+#include <QStyleOptionFrame>
 #include <QToolButton>
 
 SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, QWidget* parent /*= nullptr*/)
@@ -70,7 +72,16 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton>& addBut
     // never a pixel apart. The toggles are then cut to fit the field, not the other way round.
     const int rowHeight{ NELusanCommon::inputRowHeight(*this) };
     setFixedHeight(rowHeight);
-    mBoxExtent  = qMax(SearchLineEdit::SEARCH_BUTTON_MIN, rowHeight - 2);
+
+    // The toggles stand inside the field, so they are cut to what the field keeps for its
+    // text once the style took its frame and its padding. Cutting them to the whole height
+    // instead would push them under the rounded frame.
+    QStyleOptionFrame option;
+    option.initFrom(this);
+    option.lineWidth = style()->pixelMetric(QStyle::PM_DefaultFrameWidth, &option, this);
+    const int textArea{ style()->subElementRect(QStyle::SE_LineEditContents, &option, this).height() };
+
+    mBoxExtent  = qMax(SearchLineEdit::SEARCH_BUTTON_MIN, textArea);
     mIconExtent = qMax(SearchLineEdit::SEARCH_BUTTON_MIN - SearchLineEdit::SEARCH_ICON_INSET
                       , mBoxExtent - SearchLineEdit::SEARCH_ICON_INSET);
 

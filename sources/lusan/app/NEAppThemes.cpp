@@ -232,13 +232,15 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
     const QString& systemStyle = defaultStyleName();
     if (theme == OptionsManager::eAppTheme::SystemDefault)
     {
-        NELusanCommon::setIconsForDarkTheme(false);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
 #endif
         QApplication::setStyle(QStyleFactory::create(systemStyle));
         QApplication::setPalette(QApplication::style()->standardPalette());
         app->setStyleSheet(baseStyleSheet());
+        // The system theme takes its colours from the desktop, so the ink of the icons is
+        // read back from the palette that was just installed.
+        NELusanCommon::setIconsForDarkTheme(QApplication::palette().color(QPalette::ColorRole::Window).lightness() < 128);
     }
     else
     {

@@ -114,9 +114,16 @@ NaviLogScopeBase::NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidg
 
 void NaviLogScopeBase::setupScopeToolbar(void)
 {
-    // The row runs in the order the work does: bring the logs in, set what the scopes
-    // generate, narrow down what is shown, then move around the tree.
-    addSpecificTools();
+    // One plan for both explorers: the button that opens the log source, then everything the
+    // two of them share, then whatever the explorer adds of its own. The shared buttons start
+    // on the same column in each panel, however many buttons the explorer brings.
+    QToolButton* source = addSourceTool();
+    if (source != nullptr)
+    {
+        // It reports what the panel is looking at, so it stays whatever the width is.
+        setToolFixed(source);
+        addToolSeparator();
+    }
 
     mPrioBar = new LogPriorityBar(this);
     mPrioBar->setToolTip(tr("Set how much the selected scopes generate. The last cell switches the enter and exit lines."));
@@ -153,6 +160,9 @@ void NaviLogScopeBase::setupScopeToolbar(void)
                                  , tr("Collapse or expand log scopes.")
                                  , true);
     mToolCollapse->setStyleSheet(NELusanCommon::getStyleToolbutton());
+
+    addToolSeparator();
+    addExtraTools();
 
     setupTreeView(QSize(NaviLogScopeBase::ScopeIconExtent, NaviLogScopeBase::ScopeIconExtent));
     ctrlTable()->setRootIsDecorated(false);
@@ -693,7 +703,12 @@ void NaviLogScopeBase::setupScopeControls(void)
     connect(tree, &QWidget::customContextMenuRequested, this, [this](const QPoint& pos) {showScopeContextMenu(pos);});
 }
 
-void NaviLogScopeBase::addSpecificTools(void)
+QToolButton* NaviLogScopeBase::addSourceTool(void)
+{
+    return nullptr;
+}
+
+void NaviLogScopeBase::addExtraTools(void)
 {
 }
 

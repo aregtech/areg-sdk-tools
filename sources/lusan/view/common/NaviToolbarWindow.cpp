@@ -59,11 +59,7 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
     mToolbar->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Fixed);
     mToolbar->setFixedHeight(NaviToolbarWindow::toolRowHeight());
 
-    // The row is as tall as its buttons and no taller: one pixel of air above and below.
-    mToolLayout->setContentsMargins(2, NAVI_TOOL_AIR, 2, NAVI_TOOL_AIR);
-    // One pixel between entries. Each button already carries its own padding, so the gap
-    // only has to keep two hover marks apart, and every pixel saved is room for a tool.
-    mToolLayout->setSpacing(NAVI_TOOL_GAP);
+    NaviToolbarWindow::_applyRowMetrics(*mToolLayout);
 
     // The overflow mark is the one icon of the set that fills its button instead of sitting
     // inset in a square, so that it is seen at all.
@@ -82,6 +78,15 @@ NaviToolbarWindow::NaviToolbarWindow(int naviWindow, MdiMainWindow* wndMain, QWi
     mToolLayout->addWidget(mToolOverflow);
 
     connect(mToolOverflow, &QToolButton::clicked, this, [this]() { showToolOverflow(); });
+}
+
+void NaviToolbarWindow::_applyRowMetrics(QHBoxLayout& row)
+{
+    // A row is as tall as its buttons and no taller: one pixel of air above and below, and one
+    // pixel between two entries. Each button carries its own padding, so the gap only has to
+    // keep two hover marks apart, and every pixel saved is room for a tool.
+    row.setContentsMargins(2, NAVI_TOOL_AIR, 2, NAVI_TOOL_AIR);
+    row.setSpacing(NAVI_TOOL_GAP);
 }
 
 void NaviToolbarWindow::_insertTool(QWidget* widget)
@@ -284,12 +289,20 @@ void NaviToolbarWindow::showToolOverflow(void)
 {
     if (mOverflowRow == nullptr)
     {
-        mOverflowRow = new QWidget(this, Qt::WindowType::Popup);
-        mOverflowRow->setObjectName(QStringLiteral("naviToolOverflow"));
-        mOverflowLayout = new QHBoxLayout(mOverflowRow);
-        mOverflowLayout->setContentsMargins(4, 4, 4, 4);
-        mOverflowLayout->setSpacing(2);
-        mOverflowRow->installEventFilter(this);
+        // The second row is the tool row carried on, so it is built to the same measures and
+        // the buttons keep the size and the spacing they have in the row itself.
+        QFrame* row = new QFrame(this, Qt::WindowType::Popup);
+        row->setObjectName(QStringLiteral("naviToolOverflow"));
+        row->setFrameShape(QFrame::Shape::StyledPanel);
+        row->ensurePolished();
+        mOverflowLayout = new QHBoxLayout(row);
+        NaviToolbarWindow::_applyRowMetrics(*mOverflowLayout);
+        // Held to the height of the tool row plus the frame it draws. Left to size itself it
+        // would give an entry the height the entry asks for, which is a pixel more than the
+        // row grants it.
+        row->setFixedHeight(NaviToolbarWindow::toolRowHeight() + (row->frameWidth() * 2));
+        row->installEventFilter(this);
+        mOverflowRow = row;
     }
 
     for (const sToolItem& item : mToolItems)

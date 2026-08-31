@@ -473,7 +473,6 @@ bool LoggingScopesModelBase::setData(const QModelIndex& index, const QVariant& v
     emit dataChanged(index, last);
     _notifyBranchChanged(index);
     _notifyParentsChanged(index);
-    emit signalScopeVisibilityChanged();
     return true;
 }
 
@@ -493,7 +492,6 @@ void LoggingScopesModelBase::setScopeShown(const QModelIndex& index, bool shown)
     emit dataChanged(first, last);
     _notifyBranchChanged(first);
     _notifyParentsChanged(first);
-    emit signalScopeVisibilityChanged();
 }
 
 void LoggingScopesModelBase::showScopeAlone(const QModelIndex& index)
@@ -523,7 +521,6 @@ void LoggingScopesModelBase::showScopeAlone(const QModelIndex& index)
     _notifyBranchChanged(mRootIndex);
     _notifyParentsChanged(this->index(index.row(), LoggingScopesModelBase::ColumnShow, index.parent()));
     emit dataChanged(this->index(0, LoggingScopesModelBase::ColumnShow, mRootIndex), this->index(roots - 1, LoggingScopesModelBase::ColumnCount - 1, mRootIndex));
-    emit signalScopeVisibilityChanged();
 }
 
 void LoggingScopesModelBase::showAllScopes(void)
@@ -548,7 +545,6 @@ void LoggingScopesModelBase::showAllScopes(void)
 
     _notifyBranchChanged(mRootIndex);
     emit dataChanged(this->index(0, LoggingScopesModelBase::ColumnShow, mRootIndex), this->index(roots - 1, LoggingScopesModelBase::ColumnCount - 1, mRootIndex));
-    emit signalScopeVisibilityChanged();
 }
 
 bool LoggingScopesModelBase::hasHiddenScopes(void) const

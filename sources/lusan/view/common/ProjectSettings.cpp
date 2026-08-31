@@ -22,6 +22,7 @@
 #include "lusan/view/common/OptionPageProjectDirs.hpp"
 #include "lusan/view/common/OptionPageWorkspace.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
+#include "lusan/view/common/OptionPageDisplay.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QAbstractItemView>
@@ -38,6 +39,7 @@ ProjectSettings::ProjectSettings(MdiMainWindow* parent)
     , mOptionProjectDirs    (new OptionPageProjectDirs(this))
     , mOptionPageWorkspace  (new OptionPageWorkspace(this))
     , mOptionPageLogging    (new OptionPageLogging(this))
+    , mOptionPageDisplay    (new OptionPageDisplay(this))
 {
     mUi->setupUi(this);
     setupDialog();
@@ -108,11 +110,13 @@ void ProjectSettings::addSettings()
     mSettingsStackedWidget->addWidget(mOptionPageWorkspace);
     mSettingsStackedWidget->addWidget(mOptionProjectDirs);
     mSettingsStackedWidget->addWidget(mOptionPageLogging);
+    mSettingsStackedWidget->addWidget(mOptionPageDisplay);
 
     QStringList settingsList;
     settingsList.append(tr("Workspaces"));
     settingsList.append(tr("Directories"));
     settingsList.append(tr("Log settings"));
+    settingsList.append(tr("Display"));
     mModel.setStringList(settingsList);
 }
 
@@ -124,6 +128,7 @@ void ProjectSettings::onButtonClicked(QAbstractButton* button)
         mOptionProjectDirs->applyChanges();
         mOptionPageWorkspace->applyChanges();
         mOptionPageLogging->applyChanges();
+        mOptionPageDisplay->applyChanges();
         emit mMainWindow->signalOptionsApplied();
     }
 }
@@ -135,6 +140,7 @@ void ProjectSettings::onAcceptClicked()
         mOptionProjectDirs->applyChanges();
         mOptionPageWorkspace->applyChanges();
         mOptionPageLogging->applyChanges();
+        mOptionPageDisplay->applyChanges();
         accept();
     }
     else        

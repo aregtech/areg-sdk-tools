@@ -21,6 +21,7 @@
 
 #include <list>
 #include <cstdint>
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 
 #include <QObject>
@@ -226,6 +227,16 @@ public:
      **/
     inline void setTheme(eAppTheme theme);
 
+    /**
+     * \brief   Returns the unit the measured times are shown in.
+     **/
+    inline NETimeUnits::eTimeUnit getTimeUnit() const;
+
+    /**
+     * \brief   Sets the unit the measured times are shown in.
+     **/
+    inline void setTimeUnit(NETimeUnits::eTimeUnit unit);
+
 private:
     /**
      * \brief   Reads the option list from an XML stream.
@@ -243,6 +254,11 @@ private:
      * \brief   Reads the application theme setting from XML.
      **/
     void _readTheme(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Reads the time unit setting from XML.
+     **/
+    void _readTimeUnit(QXmlStreamReader& xml);
 
     /**
      * \brief   Reads the workspace list from an XML stream.
@@ -282,6 +298,7 @@ private:
     Workspaces  mWorkspaces;    //!< The list of workspace entries.
     uint32_t    mCurId;         //!< The current workspace ID.
     eAppTheme   mTheme;         //!< Configured application theme.
+    NETimeUnits::eTimeUnit mTimeUnit;   //!< The unit the measured times are shown in.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -311,6 +328,16 @@ inline OptionsManager::eAppTheme OptionsManager::getTheme() const
 inline void OptionsManager::setTheme(eAppTheme theme)
 {
     mTheme = theme;
+}
+
+inline NETimeUnits::eTimeUnit OptionsManager::getTimeUnit() const
+{
+    return mTimeUnit;
+}
+
+inline void OptionsManager::setTimeUnit(NETimeUnits::eTimeUnit unit)
+{
+    mTimeUnit = unit;
 }
 
 #endif // LUSAN_MODEL_COMMON_OPTIONSMANAGER_HPP

@@ -117,11 +117,11 @@ void OptionPageWorkspace::setupWidgets()
         return edit;
     };
 
-    mRootDir     = addPathRow(tr("Root Directory:")    , tr("Root directory of the selected workspace")                       , tr("The root directory path is empty"));
-    mSourceDir   = addPathRow(tr("Source Directory:")  , tr("The source codes directory path of the selected workspace")      , tr("The source codes directory path is empty"));
-    mIncludeDir  = addPathRow(tr("Include Directory:") , tr("The include files directory path of the selected workspace")     , tr("The include directory path is empty"));
-    mDeliveryDir = addPathRow(tr("Delivery Directory:"), tr("The thirdparty delivery directory path of the selected workspace"), tr("The thirdparty delivery directory path is empty"));
-    mLogDir      = addPathRow(tr("Log Directory:")     , tr("The log files directory path of the selected workspace")         , tr("The logs directory path is empty"));
+    mRootDir     = addPathRow(tr("Workspace Directory:"), tr("The root directory of the selected workspace")        , tr("The workspace directory path is empty"));
+    mSourceDir   = addPathRow(tr("Sources Directory:")  , tr("The source codes directory of the selected workspace"), tr("The sources directory path is empty"));
+    mIncludeDir  = addPathRow(tr("Includes Directory:") , tr("The include files directory of the selected workspace"), tr("The includes directory path is empty"));
+    mDeliveryDir = addPathRow(tr("Delivery Directory:") , tr("The thirdparty delivery directory of the selected workspace"), tr("The delivery directory path is empty"));
+    mLogDir      = addPathRow(tr("Logs Directory:")     , tr("The log files directory of the selected workspace")   , tr("The logs directory path is empty"));
 
     mDefault = new QCheckBox(details);
     mDefault->setToolTip(tr("Open this workspace at start and do not ask again"));

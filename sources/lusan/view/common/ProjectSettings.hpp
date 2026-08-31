@@ -29,6 +29,7 @@
  * Dependencies 
  ************************************************************************/
 class QAbstractButton;
+class OptionPageDisplay;
 class OptionPageProjectDirs;
 class OptionPageLogging;
 class OptionPageWorkspace;
@@ -61,7 +62,8 @@ public:
         , PageProjectDirs   = 0 //!< Page for project directories settings
         , PageWorkspace         //!< Page for workspace settings
         , PageLogging           //!< Page for logging settings
-        
+        , PageDisplay           //!< Page for the settings that change how values are written
+
         , PageCount             //!< Total number of pages
     };
 
@@ -91,6 +93,11 @@ public:
      * \brief   Returns the pointer to log settings widget.
      **/
     inline OptionPageLogging* getSettingLog();
+
+    /**
+     * \brief   Returns the pointer to display settings widget.
+     **/
+    inline OptionPageDisplay* getSettingDisplay();
 
     /**
      * \brief   Activates the page in the settings dialog.
@@ -158,6 +165,7 @@ private:
     OptionPageProjectDirs*  mOptionProjectDirs;             //!< The directory settings.
     OptionPageWorkspace*    mOptionPageWorkspace;           //!< The workspace settings.
     OptionPageLogging*      mOptionPageLogging;             //!< The log settings.
+    OptionPageDisplay*      mOptionPageDisplay;             //!< The display settings.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -183,6 +191,11 @@ inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace()
 inline OptionPageLogging * ProjectSettings::getSettingLog()
 {
     return mOptionPageLogging;
+}
+
+inline OptionPageDisplay * ProjectSettings::getSettingDisplay()
+{
+    return mOptionPageDisplay;
 }
 
 #endif // LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP

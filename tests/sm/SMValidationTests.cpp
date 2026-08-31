@@ -2330,9 +2330,13 @@ namespace
         const QList<Expect> expected =
         {
               { "TrafficLight.fsml"     , {}          , "the golden machine: must be clean" }
-            , { "FullFeature.fsml"      , {18, 19, 25, 34}, "deliberate: History on a non-composite, an unresolved import, a draft guard, an unknown tag."
-                                                           " 'Operational' and its descendants both reacting to Dispensed is the plain"
-                                                           " hierarchical override and is reported by nothing" }
+            , { "FullFeature.fsml"      , {18, 19, 25}, "deliberate: History on a non-composite, an unresolved import, a draft guard."
+                                                       " 'Operational' and its descendants both reacting to Dispensed is the plain"
+                                                       " hierarchical override and is reported by nothing."
+                                                       " It carries no unknown tag: it is also the byte-identical round-trip reference,"
+                                                       " and an unknown tag is dropped on save. UnknownTag.fsml covers rule 34" }
+            , { "UnknownTag.fsml"       , {34}        , "deliberate: the golden machine with one element the format does not place."
+                                                       " It is kept apart from the round-trip fixtures on purpose" }
             , { "GuardDemo.fsml"        , {}          , "every guard node kind, all resolved" }
             , { "SubmachineDemo.fsml"   , {}          , "one import hosted twice: the fixture that must GENERATE" }
             , { "UnresolvedImport.fsml" , {19}        , "deliberate: the import file does not exist" }

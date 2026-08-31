@@ -90,6 +90,12 @@ public:
      * \brief   Triggered, letting option page object to display a warning message.
      **/
     void warnMessage() override;
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+    virtual void showEvent(QShowEvent* event) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -171,6 +177,14 @@ private:
     void setupDialog();
 
     /**
+     * \brief   Fills the fields from the log collector configuration, starting the observer
+     *          runtime when nothing else did. Does nothing after the first call.
+     * \note    Reading the configuration starts that runtime, so it is done when the page is
+     *          first looked at and not while the settings dialog is built.
+     **/
+    void loadSettings();
+
+    /**
      * \brief   Connects the signals and slots for the log settings.
      **/
     void connectSignals();
@@ -232,6 +246,8 @@ private:
     std::unique_ptr<Ui::OptionPageLoggingForm>    ui;             //!< The user interface object.
     QRegularExpressionValidator             mPortValidator; //!< The validator for the port number input.
     bool                                    mTestTriggered; //!< Flag indicating if the test connection is triggered.
+    bool                                    mLoaded;        //!< True once the fields were filled from the configuration.
+    bool                                    mObserverOwned; //!< True when this page started the log observer runtime.
     QString                                 mAddress;       //!< The address of the log collector service.
     uint16_t                                mPort;          //!< The port number of the log collector service.
     QString                                 mLogFileName;   //!< The name of the log file.

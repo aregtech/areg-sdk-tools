@@ -34,7 +34,7 @@ if (NOT areg_FOUND)
     FetchContent_Declare(
         areg
         GIT_REPOSITORY https://github.com/aregtech/areg-sdk.git
-        GIT_TAG "feature/786-adapt-new-logging-concept-of-lusan"
+        GIT_TAG "master"
     )
     FetchContent_MakeAvailable(areg)
 

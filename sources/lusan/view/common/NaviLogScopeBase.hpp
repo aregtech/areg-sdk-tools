@@ -299,8 +299,8 @@ protected:
     /**
      * \brief   Creates the tool button row and the scope tree of the explorer. Call it from
      *          the constructor of the derived class, before the scope model is set.
-     * \note    It calls addSpecificTools(), so the derived object must be constructed before
-     *          the call.
+     * \note    It calls addSourceTool() and addExtraTools(), so the derived object must be
+     *          constructed before the call.
      **/
     void setupScopeToolbar(void);
 
@@ -397,10 +397,17 @@ protected:
     int showColumnWidth(void) const;
 
     /**
-     * \brief   Adds the tool buttons of the derived explorer placed between the collapse and
-     *          the find buttons.
+     * \brief   Creates the single button that opens the log source of the explorer. It heads
+     *          the tool row and stays in it at every width.
+     * \return  The created button, or nullptr when the explorer has no such button.
      **/
-    virtual void addSpecificTools(void);
+    virtual QToolButton* addSourceTool(void);
+
+    /**
+     * \brief   Adds the remaining tool buttons of the explorer. They close the tool row,
+     *          after every button the two explorers share.
+     **/
+    virtual void addExtraTools(void);
 
     /**
      * \brief   Returns true if the context menu offers the entries to save the priorities on

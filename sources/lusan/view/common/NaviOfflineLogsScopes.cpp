@@ -54,12 +54,16 @@ NaviOfflineLogsScopes::~NaviOfflineLogsScopes()
     delete mScopesModel;
 }
 
-void NaviOfflineLogsScopes::addSpecificTools(void)
+QToolButton* NaviOfflineLogsScopes::addSourceTool(void)
 {
     mToolDbOpen = addToolButton( NELusanCommon::iconOpenFile(NELusanCommon::SizeBig)
                                , tr("Open log file")
                                , tr("Opens log file"));
+    return mToolDbOpen;
+}
 
+void NaviOfflineLogsScopes::addExtraTools(void)
+{
     mToolDbClose = addToolButton( NELusanCommon::iconClose(NELusanCommon::SizeBig)
                                 , tr("Close log file")
                                 , tr("Close log file"));
@@ -67,9 +71,6 @@ void NaviOfflineLogsScopes::addSpecificTools(void)
     mToolRefresh = addToolButton( NELusanCommon::iconRefresh(NELusanCommon::SizeBig)
                                 , tr("Refresh and reset filters")
                                 , tr("Reloads the scopes and clears every filter."));
-
-    // Open is what the panel is for, so it stays whatever the width is.
-    setToolFixed(mToolDbOpen);
 }
 
 bool NaviOfflineLogsScopes::hasSelectAllPrioMenu(void) const

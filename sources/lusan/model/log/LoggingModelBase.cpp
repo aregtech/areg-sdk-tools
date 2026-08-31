@@ -25,6 +25,7 @@
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/common/NELogPalette.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "areg/base/DateTime.hpp"
@@ -43,7 +44,7 @@ const QStringList& LoggingModelBase::getHeaderList()
           tr("Priority")
         , tr("Time Created")
         , tr("Time Received")
-        , tr("Duration, µs")
+        , tr("Duration")
         , tr("Source")
         , tr("Source ID")
         , tr("Thread")
@@ -786,7 +787,7 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
         return QString::fromStdString(areg::DateTime(logMessage->logReceived).format_time().data());
     
     case eColumn::LogColumnTimeDuration:
-        return QString::number(logMessage->logDuration);
+        return logMessage->logDuration != 0 ? NETimeUnits::duration(logMessage->logDuration) : QString();
         
     case eColumn::LogColumnSource:
         return QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")";
@@ -858,28 +859,17 @@ QIcon LoggingModelBase::getDecorationData(const areg::LogEntry* logMessage, eCol
     if (column != eColumn::LogColumnPriority)
         return QIcon();
 
-    switch (logMessage->logMessagePrio)
-    {
-    case areg::LogPriority::PrioScope:
-        if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
-            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeEnter, true);
-        else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
-            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeExit, true);
-        else
-            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, true);
-    case areg::LogPriority::PrioDebug:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, true);
-    case areg::LogPriority::PrioInfo:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, true);
-    case areg::LogPriority::PrioWarning:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, true);
-    case areg::LogPriority::PrioError:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, true);
-    case areg::LogPriority::PrioFatal:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioFatal, true);
-    default:
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false);
-    }
+    // The priority cell carries its name and its colour. Only the two ends of a call earn a
+    // mark, because they say what the row is rather than repeat the word beside it.
+    if (logMessage->logMessagePrio != areg::LogPriority::PrioScope)
+        return QIcon();
+
+    if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeEnter, true);
+    else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeExit, true);
+
+    return QIcon();
 }
 
 int LoggingModelBase::getAlignmentData(eColumn column) const

@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 
 #include "areg/logging/areg_log.h"
@@ -215,20 +216,6 @@ QVariant ScopeLogViewerFilter::data(const QModelIndex& index, int role) const
 
     if ((role < ScopeLogViewerFilter::RoleCallDepth) || (role > ScopeLogViewerFilter::RoleCallElapsed))
     {
-        if (role == Qt::ItemDataRole::DisplayRole)
-        {
-            // A scope enter carries no duration of its own, so the row that opens a call shows
-            // how long the call took. A folded call is then still readable.
-            const LoggingModelBase* logs{ static_cast<const LoggingModelBase *>(sourceModel()) };
-            if ((logs != nullptr) && (logs->fromIndexToColumn(index.column()) == LoggingModelBase::eColumn::LogColumnTimeDuration))
-            {
-                const_cast<ScopeLogViewerFilter *>(this)->_readCalls();
-                const ScopeLogViewerFilter::sCallRow& own{ _callOf(mapToSource(index).row()) };
-                if ((own.closer >= 0) && (own.elapsed != 0))
-                    return QVariant(QString("%1 ms").arg(static_cast<double>(own.elapsed) / 1000.0, 0, 'f', 3));
-            }
-        }
-
         if ((mRelativeTime == false) || (role != Qt::ItemDataRole::DisplayRole))
             return LogViewerFilter::data(index, role);
 
@@ -248,8 +235,8 @@ QVariant ScopeLogViewerFilter::data(const QModelIndex& index, int role) const
         if ((entry == nullptr) || (opener == nullptr))
             return LogViewerFilter::data(index, role);
 
-        const qint64 sinceUs{ (static_cast<qint64>(entry->logTimestamp) - static_cast<qint64>(opener->logTimestamp)) / 1000 };
-        return QVariant(QString("+%1 ms").arg(static_cast<double>(sinceUs) / 1000.0, 0, 'f', 3));
+        const qint64 sinceUs{ static_cast<qint64>(entry->logTimestamp) - static_cast<qint64>(opener->logTimestamp) };
+        return QVariant(NETimeUnits::offset(sinceUs));
     }
 
     const_cast<ScopeLogViewerFilter *>(this)->_readCalls();

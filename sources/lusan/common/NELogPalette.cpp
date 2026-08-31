@@ -26,27 +26,29 @@ namespace
 {
     constexpr int _roleCount{ static_cast<int>(NELogPalette::eLogColorRole::RoleCount) };
 
-    //! Message text, light theme. Every value clears 4.5:1 against white.
+    //! Message text, light theme. The three loud roles are red, gold and blue, three hues far
+    //! enough apart to be told at a glance. Debug carries the weight of ordinary text and a
+    //! scope line steps back to a quiet grey, so the two ends of a call add no noise.
     const QColor _textLight[_roleCount]
     {
-          QColor(0x7F, 0x00, 0x12)      // Fatal
-        , QColor(0xC6, 0x28, 0x28)      // Error
-        , QColor(0x8A, 0x5B, 0x00)      // Warning
+          QColor(0x7A, 0x00, 0x12)      // Fatal
+        , QColor(0xD3, 0x2F, 0x2F)      // Error
+        , QColor(0x8A, 0x6A, 0x00)      // Warning
         , QColor(0x15, 0x65, 0xC0)      // Information
-        , QColor(0x00, 0x69, 0x5C)      // Debug
-        , QColor(0x5B, 0x3F, 0xD6)      // Scope
+        , QColor(0x23, 0x30, 0x3F)      // Debug
+        , QColor(0x8A, 0x93, 0xA1)      // Scope
         , QColor(0x5B, 0x64, 0x72)      // Not set
     };
 
-    //! Message text, dark theme. Every value clears 4.5:1 against the dark base.
+    //! Message text, dark theme. The same ladder, read against a dark base.
     const QColor _textDark[_roleCount]
     {
           QColor(0xFF, 0xD7, 0xD2)      // Fatal
-        , QColor(0xFF, 0x7A, 0x70)      // Error
-        , QColor(0xFF, 0xC2, 0x4D)      // Warning
+        , QColor(0xFF, 0x6B, 0x5E)      // Error
+        , QColor(0xF0, 0xB4, 0x29)      // Warning
         , QColor(0x7A, 0xB0, 0xFF)      // Information
-        , QColor(0x4D, 0xD0, 0xB1)      // Debug
-        , QColor(0xC4, 0xB2, 0xFF)      // Scope
+        , QColor(0xD8, 0xDE, 0xE9)      // Debug
+        , QColor(0x79, 0x82, 0x8F)      // Scope
         , QColor(0x9A, 0xA5, 0xB5)      // Not set
     };
 
@@ -55,10 +57,10 @@ namespace
     {
           QColor(0xB3, 0x00, 0x1B)      // Fatal
         , QColor(0xE5, 0x39, 0x35)      // Error
-        , QColor(0xF2, 0xA1, 0x00)      // Warning
+        , QColor(0xE9, 0xA4, 0x00)      // Warning
         , QColor(0x2F, 0x80, 0xED)      // Information
         , QColor(0x14, 0x90, 0x7F)      // Debug
-        , QColor(0x7A, 0x5A, 0xF8)      // Scope
+        , QColor(0x6C, 0x7A, 0x93)      // Scope
         , QColor(Qt::transparent)       // Not set
     };
 
@@ -70,7 +72,7 @@ namespace
         , QColor(0xFF, 0xB0, 0x20)      // Warning
         , QColor(0x4F, 0x8C, 0xFF)      // Information
         , QColor(0x2E, 0xC4, 0xA6)      // Debug
-        , QColor(0xA7, 0x8B, 0xFA)      // Scope
+        , QColor(0x7E, 0x8C, 0xA3)      // Scope
         , QColor(Qt::transparent)       // Not set
     };
 

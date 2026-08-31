@@ -132,7 +132,9 @@ protected:
     /**
      * \brief   Adds the open, close and refresh database tool buttons.
      **/
-    void addSpecificTools(void) override;
+    QToolButton* addSourceTool(void) override;
+
+    void addExtraTools(void) override;
 
     /**
      * \brief   Returns true, the offline explorer offers to select all priorities at once.

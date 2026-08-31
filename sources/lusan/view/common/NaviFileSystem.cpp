@@ -704,8 +704,12 @@ WorkspaceElem NaviFileSystem::setupRootPaths(const WorkspaceEntry& workspace)
     QString delivery{ NELusanCommon::fixPath(workspace.getDirDelivery()) };
     QString logs    { NELusanCommon::fixPath(workspace.getDirLogs()) };
 
-    Q_ASSERT(root.isEmpty() == false);
-    result[eWorkspaceElem::WorkspaceRoot] = {root, "[Project: " + root + "]"};
+    // Without an active workspace there is no root to show. The tree stays empty then,
+    // instead of drawing a workspace node that names no folder.
+    if (root.isEmpty())
+        return result;
+
+    result[eWorkspaceElem::WorkspaceRoot] = {root, "[Workspace: " + root + "]"};
     if (!sources.isEmpty())
     {
         result[eWorkspaceElem::WorkspaceSources]    = {sources, "[Sources: " + sources + "]"};

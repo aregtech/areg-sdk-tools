@@ -453,6 +453,7 @@ set(LUSAN_DESIGN_PAGE_SRC
     ${LUSAN}/model/common/DocValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
+    ${LUSAN}/view/common/SearchLineEdit.cpp
     ${LUSAN}/view/common/PendingEditWatcher.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
     ${LUSAN}/view/sm/SMAutoPlacer.cpp
@@ -990,8 +991,31 @@ target_link_libraries(lusan_doc_schema_tests PRIVATE
 )
 set_target_properties(lusan_doc_schema_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
+# ---------------------------------------------------------------------------
+# An icon keeps up with the theme after it has been handed to a control, and a
+# measured time is written in the unit that is configured.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_theme_icon_tests
+    ${LUSAN}/common/NELusanCommon.cpp
+    ${LUSAN}/common/NETimeUnits.cpp
+    ${LUSAN_ROOT}/tests/common/ThemeIconTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_theme_icon_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_theme_icon_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_theme_icon_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_theme_icon_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
 enable_testing()
 add_test(NAME doc_schema_tests COMMAND lusan_doc_schema_tests)
+add_test(NAME theme_icon_tests COMMAND lusan_theme_icon_tests)
+set_tests_properties(theme_icon_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
 add_test(NAME sm_reference_tests COMMAND lusan_sm_reference_tests)
 add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)
@@ -1043,3 +1067,109 @@ add_test(NAME design_pages COMMAND lusan_design_pages
 
 set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests sm_l8_proof sm_dirty_mark sm_perf design_pages PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# ---------------------------------------------------------------------------
+# The log subsystem tests.
+#
+# The log data layer and the log controls carry few dependencies, so both targets
+# build from a short source set rather than from the whole application. The model
+# tests feed synthetic log entries, so neither a collector nor an archive is needed.
+# ---------------------------------------------------------------------------
+set(LUSAN_LOG_CORE_SRC
+    ${LUSAN}/common/NELogPalette.cpp
+    ${LUSAN}/common/NELusanCommon.cpp
+    ${LUSAN}/common/NETimeUnits.cpp
+    ${LUSAN}/model/common/TableModelBase.cpp
+    ${LUSAN}/model/log/LogClockSkew.cpp
+    ${LUSAN}/model/log/LogIconFactory.cpp
+    ${LUSAN}/model/log/LogViewerFilter.cpp
+    ${LUSAN}/model/log/LoggingModelBase.cpp
+    ${LUSAN}/model/log/ScopeLogViewerFilter.cpp
+    ${LUSAN}/data/log/ScopeNodeBase.cpp
+    ${LUSAN}/data/log/ScopeNodes.cpp
+)
+
+qt_add_executable(lusan_log_model_tests
+    ${LUSAN_LOG_CORE_SRC}
+    ${LUSAN_ROOT}/tests/log/LogModelTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_log_model_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY} ${LUSAN_ROOT})
+target_compile_definitions(lusan_log_model_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_log_model_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_log_model_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+qt_add_executable(lusan_log_ui_tests
+    ${LUSAN_LOG_CORE_SRC}
+    ${LUSAN}/app/NEAppThemes.cpp
+    ${LUSAN}/view/common/SearchLineEdit.cpp
+    ${LUSAN}/view/log/LogEmptyState.cpp
+    ${LUSAN}/view/log/LogPriorityBar.cpp
+    ${LUSAN_ROOT}/tests/log/LogUiTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_log_ui_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY} ${LUSAN_ROOT})
+target_compile_definitions(lusan_log_ui_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_log_ui_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_log_ui_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# The colour table, the column keys the workspace stores, the scopes the tree keeps out
+# of the view, the view filter and the clock-skew measure.
+add_test(NAME log_model_tests COMMAND lusan_log_model_tests)
+
+# The log controls judged on what they paint: the ladder in both roles, the empty states
+# and the charger. It leaves a picture of each behind.
+add_test(NAME log_ui_tests COMMAND lusan_log_ui_tests ${CMAKE_CURRENT_BINARY_DIR}/log-shots)
+
+set_tests_properties(log_model_tests log_ui_tests PROPERTIES
+                     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# ---------------------------------------------------------------------------
+# The assembled log windows.
+#
+# LogViewerBase reaches the main window and the application, so this target is built
+# from the application's own source list with the entry point taken out, plus the test
+# driver. It is the only way to see the real windows rather than a widget on its own.
+# ---------------------------------------------------------------------------
+set(LUSAN_APP_NO_MAIN ${LUSAN_SRC})
+list(REMOVE_ITEM LUSAN_APP_NO_MAIN "${LUSAN}/app/main.cpp")
+
+# The header list of the application names main.cpp as well, so it has to lose it too,
+# or the entry point comes back through the second list.
+set(LUSAN_APP_HDR_NO_MAIN ${LUSAN_HDR})
+list(REMOVE_ITEM LUSAN_APP_HDR_NO_MAIN "${LUSAN}/app/main.cpp")
+
+qt_add_executable(lusan_log_window_shots
+    ${LUSAN_APP_NO_MAIN}
+    ${LUSAN_APP_HDR_NO_MAIN}
+    ${LUSAN_UI}
+    ${LUSAN_ROOT}/tests/log/LogWindowShots.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_log_window_shots PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY} ${LUSAN_ROOT})
+target_compile_definitions(lusan_log_window_shots PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_log_window_shots PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+    ${LUSAN_ADS_TARGET}
+)
+set_target_properties(lusan_log_window_shots PROPERTIES WIN32_EXECUTABLE OFF)
+
+# The parts the assembled windows must carry, and a picture of each window.
+add_test(NAME log_window_shots COMMAND lusan_log_window_shots ${CMAKE_CURRENT_BINARY_DIR}/log-window-shots)
+set_tests_properties(log_window_shots PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

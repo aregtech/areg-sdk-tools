@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<StateMachine FormatVersion="1.1.0">
+    <Overview ID="1" Name="TrafficLight" Version="1.0.0" Threading="Local">
+        <Description>Traffic light controller reproducing the state machine of areg-sdk
+            examples/19_pubfsm. Controls the vehicle and pedestrian lamps of one crossing
+            with two directions (east-west and south-north). Thread-local: the machine is
+            driven only from its component thread, generated without locking.</Description>
+    </Overview>
+    <DataTypeList>
+        <DataType ID="2" Name="eDirection" Type="Enumeration" Values="default">
+            <Description>The direction of traffic served by a lamp action.</Description>
+            <FieldList>
+                <EnumEntry ID="3" Name="EastWest">
+                    <Description>The east-west direction.</Description>
+                </EnumEntry>
+                <EnumEntry ID="4" Name="SouthNorth">
+                    <Description>The south-north direction.</Description>
+                </EnumEntry>
+            </FieldList>
+        </DataType>
+    </DataTypeList>
+    <EventList>
+        <Event ID="5" Name="StartTrafficLight">
+            <Description>Internal kick-off event sent when the light cycle starts.</Description>
+        </Event>
+    </EventList>
+    <TimerList>
+        <Timer ID="6" Name="Red" Timeout="10000" Repeat="1">
+            <Description>Duration of the red phase.</Description>
+        </Timer>
+        <Timer ID="7" Name="YellowRed" Timeout="3000" Repeat="1">
+            <Description>Duration of the yellow phase before switching to red.</Description>
+        </Timer>
+        <Timer ID="8" Name="Green" Timeout="10000" Repeat="1">
+            <Description>Duration of the green phase.</Description>
+        </Timer>
+        <Timer ID="9" Name="YellowGreen" Timeout="3000" Repeat="1">
+            <Description>Duration of the yellow phase before switching to green.</Description>
+        </Timer>
+        <Timer ID="10" Name="PedestrianWalk" Timeout="5000" Repeat="1">
+            <Description>The pedestrian walk window within a phase.</Description>
+        </Timer>
+        <Timer ID="11" Name="VehicleWait" Timeout="1000" Repeat="1">
+            <Description>Short vehicle hold before the opposite lamps switch.</Description>
+        </Timer>
+    </TimerList>
+    <MethodList>
+        <Method ID="12" Name="power_on" MethodType="Trigger">
+            <Description>Powers on the traffic light.</Description>
+        </Method>
+        <Method ID="13" Name="power_off" MethodType="Trigger">
+            <Description>Powers off the traffic light. Valid in any powered substate.</Description>
+        </Method>
+        <Method ID="14" Name="start_traffic_control" MethodType="Trigger">
+            <Description>Starts the traffic light control cycle.</Description>
+        </Method>
+        <Method ID="15" Name="stop_traffic_control" MethodType="Trigger">
+            <Description>Stops the control cycle and returns to the initialized state.</Description>
+        </Method>
+        <Method ID="16" Name="all_lights_off" MethodType="Action">
+            <Description>Switch all lamps off.</Description>
+        </Method>
+        <Method ID="17" Name="init_lights" MethodType="Action">
+            <Description>Initialize the lamps (blinking yellow).</Description>
+        </Method>
+        <Method ID="18" Name="set_vehicle_yellow" MethodType="Action">
+            <Description>Switch the vehicle lamps to yellow.</Description>
+        </Method>
+        <Method ID="19" Name="set_vehicle_red" MethodType="Action">
+            <Description>Switch the vehicle lamps to red.</Description>
+        </Method>
+        <Method ID="20" Name="set_vehicle_green" MethodType="Action">
+            <Description>Switch the vehicle lamps of one direction to green.</Description>
+            <ParamList>
+                <Parameter ID="21" Name="direction" DataType="eDirection" Default="EastWest">
+                    <Description>The direction whose vehicle lamps turn green.</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="22" Name="set_pedestrian_green" MethodType="Action">
+            <Description>Switch the pedestrian lamps of one direction to green.</Description>
+            <ParamList>
+                <Parameter ID="23" Name="direction" DataType="eDirection">
+                    <Description>The direction whose pedestrian lamps turn green.</Description>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="24" Name="set_pedestrian_red" MethodType="Action">
+            <Description>Switch the pedestrian lamps to red.</Description>
+        </Method>
+    </MethodList>
+    <StateList>
+        <State ID="83" Name="Start" Kind="Start">
+            <TransitionList>
+                <Transition ID="84" Kind="Initial" To="25"/>
+            </TransitionList>
+        </State>
+        <State ID="25" Name="LightOff" Kind="Normal">
+            <Description>All lamps are off. Initial state of the machine.</Description>
+            <EntryList>
+                <ActionCall ID="26" Action="all_lights_off"/>
+            </EntryList>
+            <TransitionList>
+                <Transition ID="27" Kind="External" StimulusKind="Trigger" Stimulus="power_on" To="28">
+                    <Description>Power on and enter the powered composite state.</Description>
+                </Transition>
+            </TransitionList>
+        </State>
+        <State ID="28" Name="LightOn" Kind="Normal">
+            <Description>The light is powered. Composite: initialization and the control cycle.</Description>
+            <TransitionList>
+                <Transition ID="29" Kind="External" StimulusKind="Trigger" Stimulus="power_off" To="25">
+                    <Description>Fires from any nested substate of LightOn.</Description>
+                </Transition>
+            </TransitionList>
+            <StateList>
+                <State ID="85" Name="Start1" Kind="Start">
+                    <TransitionList>
+                        <Transition ID="86" Kind="Initial" To="30"/>
+                    </TransitionList>
+                </State>
+                <State ID="30" Name="Initialize" Kind="Normal">
+                    <Description>Lamps initialized, control cycle not running.</Description>
+                    <EntryList>
+                        <ActionCall ID="31" Action="init_lights"/>
+                    </EntryList>
+                    <TransitionList>
+                        <Transition ID="32" Kind="External" StimulusKind="Trigger" Stimulus="start_traffic_control" To="34">
+                            <Description>Start the control cycle; the yellow-to-green timer
+                                is started during the transition.</Description>
+                            <OperationList>
+                                <TimerStart ID="33" Timer="YellowGreen"/>
+                            </OperationList>
+                        </Transition>
+                    </TransitionList>
+                </State>
+                <State ID="34" Name="Function" Kind="Normal">
+                    <Description>The control cycle is running. Composite: the phase cycle
+                        Yellow / Red / Green.</Description>
+                    <ExitList>
+                        <ScriptBlock ID="901">
+                            <Body><![CDATA[clearFaults();]]></Body>
+                        </ScriptBlock>
+                        <TimerStop ID="35" Timer="Red"/>
+                        <TimerStop ID="36" Timer="YellowRed"/>
+                        <TimerStop ID="37" Timer="Green"/>
+                        <TimerStop ID="38" Timer="YellowGreen"/>
+                    </ExitList>
+                    <TransitionList>
+                        <Transition ID="39" Kind="External" StimulusKind="Trigger" Stimulus="stop_traffic_control" To="30">
+                            <Description>Fires from any nested substate of Function.</Description>
+                        </Transition>
+                    </TransitionList>
+                    <StateList>
+                        <State ID="87" Name="Start2" Kind="Start">
+                            <TransitionList>
+                                <Transition ID="88" Kind="Initial" To="40"/>
+                            </TransitionList>
+                        </State>
+                        <State ID="40" Name="StartCycle" Kind="Normal">
+                            <Description>Kick-off state of the control cycle.</Description>
+                            <EntryList>
+                                <EventSend ID="41" Event="StartTrafficLight"/>
+                            </EntryList>
+                            <TransitionList>
+                                <Transition ID="42" Kind="External" StimulusKind="Event" Stimulus="StartTrafficLight" To="43"/>
+                            </TransitionList>
+                        </State>
+                        <State ID="43" Name="Yellow" Kind="Normal">
+                            <Description>Vehicle lamps are yellow. Waits for whichever
+                                yellow timer was started by the incoming transition.</Description>
+                            <EntryList>
+                                <ActionCall ID="44" Action="set_vehicle_yellow"/>
+                            </EntryList>
+                            <TransitionList>
+                                <Transition ID="45" Kind="External" StimulusKind="Timer" Stimulus="YellowRed" To="47"/>
+                                <Transition ID="46" Kind="External" StimulusKind="Timer" Stimulus="YellowGreen" To="64"/>
+                            </TransitionList>
+                        </State>
+                        <State ID="47" Name="Red" Kind="Normal">
+                            <Description>Vehicle lamps are red. Composite: pedestrians of the
+                                east-west direction are served.</Description>
+                            <EntryList>
+                                <TimerStart ID="48" Timer="Red"/>
+                                <ActionCall ID="49" Action="set_vehicle_red"/>
+                            </EntryList>
+                            <ExitList>
+                                <TimerStop ID="50" Timer="PedestrianWalk"/>
+                                <TimerStop ID="51" Timer="VehicleWait"/>
+                            </ExitList>
+                            <TransitionList>
+                                <Transition ID="52" Kind="External" StimulusKind="Timer" Stimulus="Red" To="43">
+                                    <Description>Red phase over: to yellow, then green.</Description>
+                                    <OperationList>
+                                        <TimerStart ID="53" Timer="YellowGreen"/>
+                                    </OperationList>
+                                </Transition>
+                                <Transition ID="54" Kind="Internal" StimulusKind="Timer" Stimulus="PedestrianWalk">
+                                    <Description>Internal: the walk window ends within the phase.</Description>
+                                    <OperationList>
+                                        <ActionCall ID="55" Action="set_pedestrian_red"/>
+                                    </OperationList>
+                                </Transition>
+                            </TransitionList>
+                            <StateList>
+                                <State ID="89" Name="Start3" Kind="Start">
+                                    <TransitionList>
+                                        <Transition ID="90" Kind="Initial" To="56"/>
+                                    </TransitionList>
+                                </State>
+                                <State ID="56" Name="VehicleRed" Kind="Normal">
+                                    <Description>Vehicles stopped; east-west pedestrians walk.</Description>
+                                    <EntryList>
+                                        <TimerStart ID="57" Timer="VehicleWait"/>
+                                        <TimerStart ID="58" Timer="PedestrianWalk"/>
+                                        <ActionCall ID="59" Action="set_pedestrian_green">
+                                            <ArgumentList>
+                                                <Argument ID="60" Name="direction" Source="Value" Value="EastWest"/>
+                                            </ArgumentList>
+                                        </ActionCall>
+                                    </EntryList>
+                                    <TransitionList>
+                                        <Transition ID="61" Kind="External" StimulusKind="Timer" Stimulus="VehicleWait" To="62"/>
+                                    </TransitionList>
+                                </State>
+                                <State ID="62" Name="OppositePedestrianGreen" Kind="Normal">
+                                    <Description>Opposite-direction vehicles get green. The action
+                                        argument is omitted: the declared default (EastWest) applies.</Description>
+                                    <EntryList>
+                                        <ActionCall ID="63" Action="set_vehicle_green"/>
+                                    </EntryList>
+                                </State>
+                            </StateList>
+                        </State>
+                        <State ID="64" Name="Green" Kind="Normal">
+                            <Description>Vehicle lamps are green. Composite: pedestrians of the
+                                south-north direction are served.</Description>
+                            <EntryList>
+                                <TimerStart ID="65" Timer="Green"/>
+                            </EntryList>
+                            <ExitList>
+                                <TimerStop ID="66" Timer="PedestrianWalk"/>
+                                <TimerStop ID="67" Timer="VehicleWait"/>
+                                <ActionCall ID="68" Action="set_pedestrian_red"/>
+                            </ExitList>
+                            <TransitionList>
+                                <Transition ID="69" Kind="External" StimulusKind="Timer" Stimulus="Green" To="43">
+                                    <Description>Green phase over: to yellow, then red.</Description>
+                                    <OperationList>
+                                        <TimerStart ID="70" Timer="YellowRed"/>
+                                    </OperationList>
+                                </Transition>
+                                <Transition ID="71" Kind="Internal" StimulusKind="Timer" Stimulus="PedestrianWalk">
+                                    <Description>Internal: the walk window ends within the phase.</Description>
+                                    <OperationList>
+                                        <ActionCall ID="72" Action="set_pedestrian_red"/>
+                                    </OperationList>
+                                </Transition>
+                            </TransitionList>
+                            <StateList>
+                                <State ID="91" Name="Start4" Kind="Start">
+                                    <TransitionList>
+                                        <Transition ID="92" Kind="Initial" To="73"/>
+                                    </TransitionList>
+                                </State>
+                                <State ID="73" Name="PedestrianGreen" Kind="Normal">
+                                    <Description>South-north pedestrians walk while vehicles hold.</Description>
+                                    <EntryList>
+                                        <TimerStart ID="74" Timer="VehicleWait"/>
+                                        <TimerStart ID="75" Timer="PedestrianWalk"/>
+                                        <ActionCall ID="76" Action="set_pedestrian_green">
+                                            <ArgumentList>
+                                                <Argument ID="77" Name="direction" Source="Value" Value="SouthNorth"/>
+                                            </ArgumentList>
+                                        </ActionCall>
+                                    </EntryList>
+                                    <TransitionList>
+                                        <Transition ID="78" Kind="External" StimulusKind="Timer" Stimulus="VehicleWait" To="79"/>
+                                    </TransitionList>
+                                </State>
+                                <State ID="79" Name="VehicleGreen" Kind="Normal">
+                                    <Description>South-north vehicles get green.</Description>
+                                    <EntryList>
+                                        <ActionCall ID="80" Action="set_vehicle_green">
+                                            <ArgumentList>
+                                                <Argument ID="81" Name="direction" Source="Value" Value="SouthNorth"/>
+                                            </ArgumentList>
+                                        </ActionCall>
+                                    </EntryList>
+                                </State>
+                            </StateList>
+                        </State>
+                    </StateList>
+                </State>
+            </StateList>
+        </State>
+    </StateList>
+    <Layout GridSize="16" GridVisible="true">
+        <ViewList>
+            <View Owner="1" Zoom="100" X="0" Y="0"/>
+            <View Owner="28" Zoom="100" X="0" Y="0"/>
+            <View Owner="34" Zoom="100" X="0" Y="0"/>
+            <View Owner="47" Zoom="100" X="0" Y="0"/>
+            <View Owner="64" Zoom="100" X="0" Y="0"/>
+        </ViewList>
+        <NodeList>
+            <Node Owner="25" X="80" Y="140" Width="160" Height="64"/>
+            <Node Owner="28" X="380" Y="140" Width="220" Height="96"/>
+            <Node Owner="30" X="80" Y="120" Width="160" Height="64"/>
+            <Node Owner="34" X="380" Y="120" Width="220" Height="96"/>
+            <Node Owner="40" X="80" Y="80" Width="160" Height="64"/>
+            <Node Owner="43" X="340" Y="80" Width="160" Height="64" Color="#F9A825"/>
+            <Node Owner="47" X="600" Y="80" Width="200" Height="96" Color="#C62828" HeaderColor="#8E1B1B"/>
+            <Node Owner="56" X="80" Y="100" Width="180" Height="64"/>
+            <Node Owner="62" X="360" Y="100" Width="220" Height="64" Expanded="false"/>
+            <Node Owner="64" X="340" Y="280" Width="200" Height="96" Color="#2E7D32"/>
+            <Node Owner="73" X="80" Y="100" Width="180" Height="64"/>
+            <Node Owner="79" X="360" Y="100" Width="180" Height="64"/>
+            <Node Owner="83" X="80" Y="60" Width="64" Height="32"/>
+            <Node Owner="85" X="80" Y="40" Width="64" Height="32"/>
+            <Node Owner="87" X="80" Y="0" Width="64" Height="32"/>
+            <Node Owner="89" X="80" Y="20" Width="64" Height="32"/>
+            <Node Owner="91" X="80" Y="20" Width="64" Height="32"/>
+        </NodeList>
+        <EdgeList>
+            <Edge Owner="27">
+                <Point X="240" Y="172"/>
+                <Point X="380" Y="172"/>
+                <Label X="290" Y="152"/>
+            </Edge>
+            <Edge Owner="52" Shape="Arc" Bulge="0.4">
+                <Point X="600" Y="128"/>
+                <Point X="500" Y="112"/>
+                <Label X="535" Y="170"/>
+            </Edge>
+        </EdgeList>
+        <NoteList>
+            <Note ID="82" Level="34" X="620" Y="300" Width="240" Height="72">
+                <Text>Yellow is shared by both switch directions: the incoming
+transition decides which yellow timer runs.</Text>
+            </Note>
+        </NoteList>
+    </Layout>
+</StateMachine>

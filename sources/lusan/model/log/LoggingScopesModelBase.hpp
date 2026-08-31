@@ -166,11 +166,6 @@ signals:
     void signalScopesUpdated(const QModelIndex& parent);
 
     /**
-     * \brief   Signal emitted when the set of scopes the log window should draw has changed.
-     **/
-    void signalScopeVisibilityChanged();
-
-    /**
      * \brief   Signal emitted when the number of scopes below their default, or the number
      *          of raises that go back on their own, has changed.
      **/

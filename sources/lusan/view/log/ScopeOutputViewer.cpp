@@ -22,6 +22,7 @@
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "lusan/view/log/ScopeOutputDelegate.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/common/OutputDock.hpp"
 #include "lusan/view/log/LogViewerBase.hpp"
@@ -69,6 +70,10 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     connect(mFilter, &QAbstractItemModel::modelReset, this, [this]() {
         ctrlDuration()->setText(QString("N/A"));
     });
+    connect(mFilter, &QAbstractItemModel::columnsInserted, this
+            , [this](const QModelIndex&, int, int) { NELusanCommon::refitRowSelection(ctrlTable()); });
+    connect(mFilter, &QAbstractItemModel::columnsRemoved, this
+            , [this](const QModelIndex&, int, int) { NELusanCommon::refitRowSelection(ctrlTable()); });
     connect(selModel            , &QItemSelectionModel::currentRowChanged, this
             , [this](const QModelIndex &current, const QModelIndex &previous){
                 updateToolbuttons(mFilter->rowCount(), current);
@@ -213,7 +218,7 @@ void ScopeOutputViewer::setupCallControls(void)
     {
         QAction* entry = mSlowMenu->addAction(step == 0u
                                                 ? tr("Warnings and worse only")
-                                                : tr("Also calls slower than %1 ms").arg(static_cast<double>(step) / 1000.0, 0, 'g', 3));
+                                                : tr("Also calls slower than %1").arg(NETimeUnits::duration(step)));
         entry->setCheckable(true);
         entry->setChecked(step == mSlowUs);
         entry->setData(step);
@@ -254,8 +259,8 @@ void ScopeOutputViewer::refreshSlowTip(void)
 {
     const QString tip{ mSlowUs == 0u
                         ? tr("Keeps the entries of Warning priority or worse, and the calls that carry one.")
-                        : tr("Keeps the entries of Warning priority or worse, and the calls that carry one or ran longer than %1 ms.")
-                            .arg(static_cast<double>(mSlowUs) / 1000.0, 0, 'g', 3) };
+                        : tr("Keeps the entries of Warning priority or worse, and the calls that carry one or ran longer than %1.")
+                            .arg(NETimeUnits::duration(mSlowUs)) };
     mToolPick->setToolTip(tip);
     mToolPick->setStatusTip(tip);
 }
@@ -302,8 +307,7 @@ void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QM
         const areg::LogEntry * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>() : nullptr;
         if (log != nullptr)
         {
-            float duration = static_cast<float>(static_cast<double>(log->logDuration) / 1000.0f);
-            ctrlDuration()->setText(QString::number(duration));
+            ctrlDuration()->setText(NETimeUnits::duration(log->logDuration));
         }
     }
 }

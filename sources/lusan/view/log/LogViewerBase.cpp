@@ -1431,25 +1431,7 @@ void LogViewerBase::_updateHighlightColumn()
 
 void LogViewerBase::_refitRowSelection()
 {
-    QItemSelectionModel* selection{ mLogTable != nullptr ? mLogTable->selectionModel() : nullptr };
-    if ((selection == nullptr) || (selection->hasSelection() == false))
-        return;
-
-    const QAbstractItemModel* model{ selection->model() };
-    const int lastColumn{ model != nullptr ? model->columnCount() - 1 : -1 };
-    if (lastColumn < 0)
-        return;
-
-    QItemSelection rows;
-    const QItemSelection current{ selection->selection() };
-    for (const QItemSelectionRange& range : current)
-    {
-        const QModelIndex left { model->index(range.top()   , 0         , range.parent()) };
-        const QModelIndex right{ model->index(range.bottom(), lastColumn, range.parent()) };
-        rows.merge(QItemSelection(left, right), QItemSelectionModel::Select);
-    }
-
-    selection->select(rows, QItemSelectionModel::ClearAndSelect);
+    NELusanCommon::refitRowSelection(mLogTable);
 }
 
 void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)

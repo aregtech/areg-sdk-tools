@@ -311,7 +311,8 @@ public:
     /**
      * \brief   Deletes the current selection after confirmation: selected states (with
      *          painted substates and connected transitions), or selected transitions, as
-     *          one undo step. Start states are never deleted.
+     *          one undo step. Selecting a submachine level's Start deletes that submachine;
+     *          the machine's own Start is never deleted.
      **/
     void deleteSelection();
 
@@ -446,6 +447,12 @@ protected:
      **/
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
 
+    /**
+     * \brief   Measures the zoom box again when the application style changes. The styles do
+     *          not agree on how tall a combo box has to be.
+     **/
+    virtual void changeEvent(QEvent* event) override;
+
 public:
     /**
      * \brief   Suppresses the stock dock/toolbar right-click list. Hiding a design widget
@@ -571,6 +578,9 @@ private:
      **/
     QWidget* buildBottomBar();
 
+    //!< Gives the zoom box and the bar under the canvas the height the active style needs.
+    void applyZoomBoxMetrics(void);
+
     /**
      * \brief   Builds the column right of the canvas: the vertical scrollbar between its two
      *          step arrows, matching the row under the canvas.
@@ -633,6 +643,13 @@ private:
      *          top-left corner (about 64 device pixels in), keeping the current zoom.
      **/
     void centerMachine();
+
+    /**
+     * \brief   Deletes the painted submachine the canvas currently displays and steps out to
+     *          the host state's own level, as one undo step. Confirms first when the level
+     *          holds more than its Start state. No effect on the root level.
+     **/
+    void deleteDisplayedSubmachine();
 
     /**
      * \brief   Deletes the selected transition edges after confirmation, one undo step.

@@ -67,6 +67,7 @@ OptionsManager::OptionsManager()
     , mWorkspaces   ( )
     , mCurId        ( 0 )
     , mTheme        ( eAppTheme::SystemDefault )
+    , mTimeUnit     ( NETimeUnits::DefaultUnit )
 {
 }
 
@@ -294,6 +295,7 @@ void OptionsManager::writeOptions()
         xml.writeAttribute(NELusanCommon::xmlAttributeVersion, NELusanCommon::xmlWorkspaceVersion);
             xml.writeStartElement(NELusanCommon::xmlElementOption);
                 xml.writeTextElement(NELusanCommon::xmlElementTheme, themeToString(mTheme));
+                xml.writeTextElement(NELusanCommon::xmlElementTimeUnit, NETimeUnits::unitKey(mTimeUnit));
                 xml.writeStartElement(NELusanCommon::xmlElementWorkspaceList);
                 if (hasDefaultWorkspace())
                 {
@@ -447,6 +449,11 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
                 _readTheme(xml);
             }
             else
+            if (xmlName == NELusanCommon::xmlElementTimeUnit)
+            {
+                _readTimeUnit(xml);
+            }
+            else
             if (xmlName == NELusanCommon::xmlElementWorkspaceList)
             {
                 _readWorkspaceList(xml);
@@ -466,6 +473,14 @@ void OptionsManager::_readTheme(QXmlStreamReader& xml)
 
     const QString theme = xml.readElementText(QXmlStreamReader::IncludeChildElements);
     mTheme = themeFromString(theme);
+}
+
+void OptionsManager::_readTimeUnit(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementTimeUnit)
+        return;
+
+    mTimeUnit = NETimeUnits::unitFromKey(xml.readElementText(QXmlStreamReader::IncludeChildElements));
 }
 
 void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)

@@ -19,13 +19,19 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QAbstractItemView>
+#include <QApplication>
 #include <QColor>
 #include <QDateTime>
 #include <QDir>
 #include <QEvent>
+#include <QComboBox>
 #include <QFileInfo>
 #include <QFontMetrics>
 #include <QGuiApplication>
+#include <QIconEngine>
+#include <QItemSelectionModel>
+#include <QLineEdit>
 #include <QHash>
 #include <QImage>
 #include <QPainter>
@@ -88,55 +94,150 @@ namespace
 
         return image;
     }
+
+    /**
+     * \brief   Draws a file icon with the ink the active theme asks for. The choice is made
+     *          at every paint, so a theme change reaches an icon that is already handed to a
+     *          menu, a toolbar or a view.
+     **/
+    class ThemedIconEngine : public QIconEngine
+    {
+    public:
+        explicit ThemedIconEngine(const QString& fileName)
+            : QIconEngine   ( )
+            , mFileName     ( fileName )
+            , mSource       ( fileName )
+            , mCache        ( )
+        {
+        }
+
+        void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override
+        {
+            if ((painter == nullptr) || rect.isEmpty())
+                return;
+
+            const qreal ratio{ painter->device() != nullptr ? painter->device()->devicePixelRatioF() : 1.0 };
+            const QPixmap ready{ scaledPixmap(rect.size(), mode, state, ratio) };
+            if (ready.isNull())
+                return;
+
+            const QSize extent{ ready.deviceIndependentSize().toSize() };
+            painter->drawPixmap(QStyle::alignedRect(Qt::LayoutDirection::LeftToRight, Qt::AlignmentFlag::AlignCenter, extent, rect), ready);
+        }
+
+        QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+        {
+            const QScreen* screen{ QGuiApplication::primaryScreen() };
+            return scaledPixmap(size, mode, state, screen != nullptr ? screen->devicePixelRatio() : 1.0);
+        }
+
+        QPixmap scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::State state, qreal scale) override
+        {
+            const bool isDark{ _darkThemeIcons };
+            const quint64 key{ cacheKey(size, mode, state, scale, isDark) };
+            const auto found = mCache.constFind(key);
+            if (found != mCache.constEnd())
+                return found.value();
+
+            QPixmap ready{ mSource.pixmap(size, scale, QIcon::Mode::Normal, state) };
+            if ((ready.isNull() == false) && isDark)
+            {
+                QPixmap lightened{ QPixmap::fromImage(adaptImageToDark(ready.toImage())) };
+                lightened.setDevicePixelRatio(ready.devicePixelRatio());
+                ready = lightened;
+            }
+
+            if ((ready.isNull() == false) && (mode != QIcon::Mode::Normal))
+            {
+                QStyleOption option;
+                option.palette = QApplication::palette();
+                ready = QApplication::style()->generatedIconPixmap(mode, ready, &option);
+            }
+
+            mCache.insert(key, ready);
+            return ready;
+        }
+
+        QSize actualSize(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+        {
+            return mSource.actualSize(size, mode, state);
+        }
+
+        QList<QSize> availableSizes(QIcon::Mode mode, QIcon::State state) override
+        {
+            return mSource.availableSizes(mode, state);
+        }
+
+        bool isNull(void) override
+        {
+            return mSource.isNull();
+        }
+
+        QString key(void) const override
+        {
+            return QStringLiteral("LusanThemedIcon");
+        }
+
+        QIconEngine* clone(void) const override
+        {
+            return new ThemedIconEngine(mFileName);
+        }
+
+    private:
+        //!< Packs everything that makes two renders of one file differ into a single number.
+        //!< The lookup runs on every paint, so it allocates nothing.
+        static quint64 cacheKey(const QSize& size, QIcon::Mode mode, QIcon::State state, qreal scale, bool isDark)
+        {
+            const quint64 width { static_cast<quint64>(qBound(0, size.width() , 0xFFFF)) };
+            const quint64 height{ static_cast<quint64>(qBound(0, size.height(), 0xFFFF)) };
+            const quint64 ratio { static_cast<quint64>(qBound(0, qRound(scale * 100.0), 0xFFF)) };
+            return (width << 32) | (height << 16) | (ratio << 4)
+                 | (static_cast<quint64>(mode) << 1) | static_cast<quint64>(state != QIcon::State::Off ? 1 : 0)
+                 | (isDark ? (quint64{ 1 } << 63) : quint64{ 0 });
+        }
+
+        QString                 mFileName;  //!< The file the icon is read from.
+        QIcon                   mSource;    //!< The icon as it is stored in the file.
+        QHash<quint64, QPixmap> mCache;     //!< Ready pixmaps, keyed by extent, ratio, mode, state and ink.
+    };
 }
 
 QIcon NELusanCommon::loadIcon(const QString & fileName, const QSize & size /*= QSize{32, 32}*/)
 {
+    Q_UNUSED(size);
     static QHash<QString, QIcon> _icons;
-    static bool _builtForDark{ false };
-
-    if (_builtForDark != _darkThemeIcons)
-    {
-        _icons.clear();
-        _builtForDark = _darkThemeIcons;
-    }
 
     const auto found = _icons.constFind(fileName);
     if (found != _icons.constEnd())
         return found.value();
 
     QIcon source(fileName);
-    QIcon result{ source };
-    if (_darkThemeIcons && (source.isNull() == false))
-    {
-        // A lightened mark can only be handed over as ready pixmaps, so each extent the tool
-        // draws at is rendered here. A single rescaled pixmap would blur the strokes.
-        QList<int> extents{ 12, 16, 20, 22, 24, 25, 32, 48, 64 };
-        if (extents.contains(size.height()) == false)
-            extents.append(size.height());
-
-        const QScreen* screen = QGuiApplication::primaryScreen();
-        const qreal ratio = screen != nullptr ? screen->devicePixelRatio() : 1.0;
-
-        QIcon lightened;
-        for (int extent : extents)
-        {
-            QPixmap pixmap = source.pixmap(QSize(extent, extent), ratio);
-            if (pixmap.isNull())
-                continue;
-
-            QPixmap adapted = QPixmap::fromImage(adaptImageToDark(pixmap.toImage()));
-            adapted.setDevicePixelRatio(ratio);
-            lightened.addPixmap(adapted, QIcon::Mode::Normal, QIcon::State::Off);
-            lightened.addPixmap(adapted, QIcon::Mode::Normal, QIcon::State::On);
-        }
-
-        if (lightened.isNull() == false)
-            result = lightened;
-    }
-
+    QIcon result{ source.isNull() ? source : QIcon(new ThemedIconEngine(fileName)) };
     _icons.insert(fileName, result);
     return result;
+}
+
+void NELusanCommon::refitRowSelection(QAbstractItemView* view)
+{
+    QItemSelectionModel* selection{ view != nullptr ? view->selectionModel() : nullptr };
+    if ((selection == nullptr) || (selection->hasSelection() == false))
+        return;
+
+    const QAbstractItemModel* model{ selection->model() };
+    const int lastColumn{ model != nullptr ? model->columnCount() - 1 : -1 };
+    if (lastColumn < 0)
+        return;
+
+    QItemSelection rows;
+    const QItemSelection current{ selection->selection() };
+    for (const QItemSelectionRange& range : current)
+    {
+        const QModelIndex left { model->index(range.top()   , 0         , range.parent()) };
+        const QModelIndex right{ model->index(range.bottom(), lastColumn, range.parent()) };
+        rows.merge(QItemSelection(left, right), QItemSelectionModel::SelectionFlag::Select);
+    }
+
+    selection->select(rows, QItemSelectionModel::SelectionFlag::ClearAndSelect);
 }
 
 void NELusanCommon::setIconsForDarkTheme(bool isDark)
@@ -173,7 +274,17 @@ uint64_t NELusanCommon::getTimestamp()
 
 int NELusanCommon::inputRowHeight(const QWidget& owner)
 {
-    return QFontMetrics(owner.font()).height() + NELusanCommon::InputAir;
+    // Measured on the controls the input rows are built from, so the frame, the padding and
+    // the smallest height the active style gives them are part of the answer. Taking the font
+    // alone leaves a box shorter than its own content box, and it then clips the tails of the
+    // letters that reach below the line.
+    QLineEdit edit;
+    QComboBox combo;
+    edit.setFont(owner.font());
+    combo.setFont(owner.font());
+
+    const int natural{ qMax(edit.sizeHint().height(), combo.sizeHint().height()) };
+    return qMax(natural, QFontMetrics(owner.font()).height()) + NELusanCommon::InputAir;
 }
 
 const QString& NELusanCommon::getStyleToolbutton()

@@ -123,7 +123,7 @@ LogSessionBar::LogSessionBar(LogSessionBar::eSessionMode mode, QWidget* parent /
 
     // The row is as tall as the tallest control it carries. A line edit needs more height than
     // a flat tool button, and a row sized to the button clips the text it holds.
-    mainRow->setFixedHeight(qMax(NaviToolbarWindow::toolRowHeight(), mSearch->sizeHint().height() + (_barAir * 2)));
+    mainRow->setFixedHeight(qMax(NaviToolbarWindow::toolRowHeight(), NELusanCommon::inputRowHeight(*mSearch) + (_barAir * 2)));
 
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Fixed);
     _drawCounters();

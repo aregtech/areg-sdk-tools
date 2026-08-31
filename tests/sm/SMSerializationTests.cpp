@@ -1172,15 +1172,30 @@ namespace
             }
         }
 
-        // (d) each pseudo-state's node sits above its target.
-        if ((rootStart != nullptr) && (idle != nullptr))
+        // (d) each pseudo-state's node sits in the target's column, one box and one gap above
+        //     it. The distances are checked, not only the order: a node built from a target
+        //     the node list had already moved reads as "far above" and would pass a bare
+        //     "is higher than" test.
+        auto checkPseudoNode = [&doc](const SMStateEntry* pseudo, const SMStateEntry* target)
         {
-            const SMLayoutNode* pseudoNode = doc.getLayout().findNode(rootStart->getId());
-            const SMLayoutNode* targetNode = doc.getLayout().findNode(idle->getId());
+            if ((pseudo == nullptr) || (target == nullptr))
+                return;
+
+            const SMLayoutNode* pseudoNode = doc.getLayout().findNode(pseudo->getId());
+            const SMLayoutNode* targetNode = doc.getLayout().findNode(target->getId());
             CHECK(pseudoNode != nullptr);
             CHECK(targetNode != nullptr);
-            CHECK((pseudoNode != nullptr) && (targetNode != nullptr) && (pseudoNode->y < targetNode->y));
-        }
+            if ((pseudoNode == nullptr) || (targetNode == nullptr))
+                return;
+
+            CHECK(pseudoNode->x == targetNode->x);
+            CHECK((targetNode->y - pseudoNode->y) == 80.0);
+            CHECK(pseudoNode->width == 64.0);
+            CHECK(pseudoNode->height == 32.0);
+        };
+
+        checkPseudoNode(rootStart, idle);
+        checkPseudoNode(nested != nullptr ? nested->getStartState() : nullptr, polling);
 
         // The conversion is lossless in both directions of a save: the next save writes the
         // corrected form, and reloading THAT changes nothing -- the shim is one-way, not churn.

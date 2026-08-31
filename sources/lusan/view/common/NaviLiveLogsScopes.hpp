@@ -175,7 +175,9 @@ protected:
     /**
      * \brief   Adds the connect, settings and save settings tool buttons.
      **/
-    void addSpecificTools(void) override;
+    QToolButton* addSourceTool(void) override;
+
+    void addExtraTools(void) override;
 
     /**
      * \brief   Returns true, the live explorer can save priorities on the logging targets.

@@ -92,14 +92,18 @@ NaviLiveLogsScopes::~NaviLiveLogsScopes()
     _explorer = nullptr;
 }
 
-void NaviLiveLogsScopes::addSpecificTools(void)
+QToolButton* NaviLiveLogsScopes::addSourceTool(void)
 {
     mToolConnect = addToolButton( NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig)
                                 , tr("Connect to log collector")
                                 , tr("Connect or disconnect log collector service.")
                                 , true);
     mToolConnect->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    return mToolConnect;
+}
 
+void NaviLiveLogsScopes::addExtraTools(void)
+{
     mToolSettings = addToolButton( NELusanCommon::iconSettings(NELusanCommon::SizeBig)
                                  , tr("Change log collector connection settings")
                                  , tr("Change log collector service connection settings"));
@@ -146,9 +150,6 @@ void NaviLiveLogsScopes::addSpecificTools(void)
             mScopesModel->restoreConfiguration(ctrlTable()->currentIndex());
         }
     });
-
-    // Connect reports the state of the panel, so it stays whatever the width is.
-    setToolFixed(mToolConnect);
 }
 
 bool NaviLiveLogsScopes::hasSavePrioMenu(void) const

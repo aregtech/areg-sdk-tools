@@ -220,6 +220,13 @@ private:
     void _hideDanglingSeparators(void);
 
     /**
+     * \brief   Gives a tool row its margins and its gap. The row under the chevron takes the
+     *          same ones as the row itself, so an entry does not change size when it moves.
+     * \param   row     The layout of the row to measure.
+     **/
+    static void _applyRowMetrics(QHBoxLayout& row);
+
+    /**
      * \brief   Puts an entry at the end of the tool row, before the slack that holds the
      *          overflow button against the right edge.
      * \param   widget  The entry to place.

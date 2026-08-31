@@ -34,6 +34,8 @@
 #include <QFileDialog>
 #include <QString>
 #include <QMessageBox>
+#include <QSignalBlocker>
+#include <QShowEvent>
 #include <string>
 
 const QString   OptionPageLogging::_textNoChanges         { tr("No data changed yet ...") };
@@ -51,6 +53,8 @@ OptionPageLogging::OptionPageLogging(QDialog* parent)
     , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
+    , mLoaded       {false}
+    , mObserverOwned{false}
     , mAddress      {}
     , mPort         {areg::InvalidPort}
     , mLogFileName  {}
@@ -70,6 +74,8 @@ OptionPageLogging::OptionPageLogging(QDialog *parent, const QString& address, ui
     , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
+    , mLoaded       {false}
+    , mObserverOwned{false}
     , mAddress      {address}
     , mPort         {port}
     , mLogFileName  {logFile}
@@ -93,13 +99,37 @@ OptionPageLogging::~OptionPageLogging()
 
 void OptionPageLogging::setupDialog()
 {
+    textPortNumber()->setValidator(&mPortValidator);
+    textConnectionStatus()->setTextColor(QColor(Qt::gray));
+    textConnectionStatus()->setText(_textNoChanges);
+
+    setFixedSize(size());
+}
+
+void OptionPageLogging::showEvent(QShowEvent* event)
+{
+    OptionPageBase::showEvent(event);
+    loadSettings();
+}
+
+void OptionPageLogging::loadSettings()
+{
+    if (mLoaded)
+    {
+        return;
+    }
+
+    mLoaded = true;
+
+    // Reading the collector configuration starts the observer runtime, and that costs about
+    // as much as opening a connection. It runs when this page is first looked at, so the
+    // other pages of the settings dialog open at once.
     LogCollectorClient& client = LogCollectorClient::getInstance();
     if (client.is_initialized() == false)
     {
-        client.initialize(NELusanCommon::INIT_FILE.toStdString());
+        mObserverOwned = client.initialize(NELusanCommon::INIT_FILE.toStdString());
     }
 
-    // Load logging directory path
     WorkspaceEntry currentWorkspace{ LusanApplication::getActiveWorkspace() };
     QString logLocation { currentWorkspace.getDirLogs() };
     if (logLocation.isEmpty())
@@ -107,20 +137,22 @@ void OptionPageLogging::setupDialog()
         logLocation = mLogLocation.isEmpty() ? client.config_logger_database_location().c_str() : mLogLocation;
         logLocation = NELusanCommon::fixPath(logLocation);
     }
-    
+
     QString logFile = mLogFileName.isEmpty() ? client.config_logger_database_name().c_str() : mLogFileName;
     QString address = mAddress.isEmpty() ? client.config_logger_address().c_str() : mAddress;
     uint16_t port   = mPort == areg::InvalidPort ? client.config_logger_port() : mPort;
-    
-    textPortNumber()->setValidator(&mPortValidator);
+
+    // Filling the fields is not an edit, so the page stays unmodified and the other pages
+    // keep the directories they were given.
+    const QSignalBlocker blockLocation(textLogLocation());
+    const QSignalBlocker blockFileName(textLogFileName());
+    const QSignalBlocker blockAddress (textIpAddress());
+    const QSignalBlocker blockPort    (textPortNumber());
+
     textLogLocation()->setText(logLocation);
     textLogFileName()->setText(logFile);
     textIpAddress()->setText(address);
     textPortNumber()->setText(QString::number(port));
-    textConnectionStatus()->setTextColor(QColor(Qt::gray));
-    textConnectionStatus()->setText(_textNoChanges);
-    
-    setFixedSize(size());
 }
 
 void OptionPageLogging::connectSignals()
@@ -165,8 +197,15 @@ void OptionPageLogging::applyChanges()
 
 void OptionPageLogging::closingOptions(bool OKpressed)
 {
-    LogObserver::disconnect();
-    LogObserver::releaseLogObserver();
+    // Only what this page started. Releasing the runtime a log viewer is using would
+    // stop that viewer, and the next open would pay for the start again.
+    if (mObserverOwned)
+    {
+        LogObserver::disconnect();
+        LogObserver::releaseLogObserver();
+        mObserverOwned = false;
+    }
+
     OptionPageBase::closingOptions(OKpressed);
 }
 
