@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/NESMDesign.hpp"
 
+#include <QApplication>
 #include <QPainter>
 #include <QPalette>
 #include <QPen>
@@ -26,6 +27,11 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+
+QPalette NESMDesign::canvasPalette(void)
+{
+    return QApplication::palette();
+}
 
 QColor NESMDesign::canvasBackground(const QPalette& palette)
 {

@@ -19,8 +19,10 @@
  *
  ************************************************************************/
 
+#include <algorithm>
 #include <list>
 #include <cstdint>
+#include "lusan/common/NELogPalette.hpp"
 #include "lusan/common/NETimeUnits.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 
@@ -39,6 +41,14 @@ class OptionsManager    : public QObject
 
     Q_OBJECT
 public:
+    //!< The height of one log table row when the user has not chosen one. A dense table
+    //!< shows about a third more rows than a comfortable one, and how many rows are on
+    //!< screen is what makes a burst or a gap visible without scrolling.
+    static constexpr int    LogRowHeightDefault { 21 };
+    //!< The range a chosen row height is clamped into.
+    static constexpr int    LogRowHeightMin     { 16 };
+    static constexpr int    LogRowHeightMax     { 48 };
+
     enum class eAppTheme : uint8_t
     {
           SystemDefault = 0
@@ -237,6 +247,27 @@ public:
      **/
     inline void setTimeUnit(NETimeUnits::eTimeUnit unit);
 
+    /**
+     * \brief   Returns the colour set the log rows are drawn with.
+     **/
+    inline NELogPalette::eLogPalette getLogPalette() const;
+
+    /**
+     * \brief   Sets the colour set the log rows are drawn with.
+     **/
+    inline void setLogPalette(NELogPalette::eLogPalette palette);
+
+    /**
+     * \brief   Returns the height of one row of a log table, in device independent pixels.
+     **/
+    inline int getLogRowHeight() const;
+
+    /**
+     * \brief   Sets the height of one row of a log table. A value outside the allowed
+     *          range is clamped into it.
+     **/
+    inline void setLogRowHeight(int height);
+
 private:
     /**
      * \brief   Reads the option list from an XML stream.
@@ -259,6 +290,16 @@ private:
      * \brief   Reads the time unit setting from XML.
      **/
     void _readTimeUnit(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Reads the log colour set setting from XML.
+     **/
+    void _readLogPalette(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Reads the log row height setting from XML.
+     **/
+    void _readLogRowHeight(QXmlStreamReader& xml);
 
     /**
      * \brief   Reads the workspace list from an XML stream.
@@ -299,6 +340,8 @@ private:
     uint32_t    mCurId;         //!< The current workspace ID.
     eAppTheme   mTheme;         //!< Configured application theme.
     NETimeUnits::eTimeUnit mTimeUnit;   //!< The unit the measured times are shown in.
+    NELogPalette::eLogPalette mLogPalette;   //!< The colour set the log rows are drawn with.
+    int         mLogRowHeight;  //!< The height of one row of a log table.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -333,6 +376,26 @@ inline void OptionsManager::setTheme(eAppTheme theme)
 inline NETimeUnits::eTimeUnit OptionsManager::getTimeUnit() const
 {
     return mTimeUnit;
+}
+
+inline NELogPalette::eLogPalette OptionsManager::getLogPalette() const
+{
+    return mLogPalette;
+}
+
+inline void OptionsManager::setLogPalette(NELogPalette::eLogPalette palette)
+{
+    mLogPalette = palette;
+}
+
+inline int OptionsManager::getLogRowHeight() const
+{
+    return mLogRowHeight;
+}
+
+inline void OptionsManager::setLogRowHeight(int height)
+{
+    mLogRowHeight = std::clamp(height, OptionsManager::LogRowHeightMin, OptionsManager::LogRowHeightMax);
 }
 
 inline void OptionsManager::setTimeUnit(NETimeUnits::eTimeUnit unit)

@@ -35,7 +35,7 @@ class ScopeOutputDelegate : public QStyledItemDelegate
 //////////////////////////////////////////////////////////////////////////
 public:
     //!< The width of the zone the structure is drawn in, in pixels.
-    static constexpr int    GutterWidth { 26 };
+    static constexpr int    GutterWidth { 16 };
 
     //!< The distance between the rails of two neighbouring call levels, in pixels.
     static constexpr int    LevelStep   { 4 };

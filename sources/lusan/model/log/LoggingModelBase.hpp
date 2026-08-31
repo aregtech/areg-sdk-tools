@@ -68,6 +68,10 @@ class LoggingModelBase  : public    TableModelBase
 public:
 
     //!< The index of columns (reusing LoggingModelBase columns for compatibility)
+    //!< The role that answers whether the row belongs to the call the Scope Analyzer holds.
+    //!< A delegate reads it to mark the row apart without taking any width from the cell.
+    static constexpr int    AnalyzedRole    { Qt::ItemDataRole::UserRole + 2 };
+
     enum class eColumn : int
     {
           LogColumnInvalid  = -1    //!< Invalid column index, used for error checking

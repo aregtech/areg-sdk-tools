@@ -429,6 +429,15 @@ namespace NESMDesign
     QColor contrastTextColor(const QColor& fill);
 
     /**
+     * \brief   Returns the palette every canvas colour is taken from.
+     * \note    A widget palette is not usable here. A style sheet writes its own colours into
+     *          the palette of the widgets it matches, and the sheet of the next theme does not
+     *          always overwrite them, so a widget can still carry a colour of the theme before
+     *          the last one. The application palette is replaced whole on every theme.
+     **/
+    QPalette canvasPalette(void);
+
+    /**
      * \brief   Returns the canvas background color of the given palette.
      **/
     QColor canvasBackground(const QPalette& palette);

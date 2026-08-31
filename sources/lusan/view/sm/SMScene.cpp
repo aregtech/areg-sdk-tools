@@ -300,7 +300,7 @@ void SMScene::unregisterCanvasItem(SMCanvasItem& item)
 
 void SMScene::drawBackground(QPainter* painter, const QRectF& rect)
 {
-    const QPalette palette{ (views().isEmpty() == false) ? views().first()->palette() : QPalette() };
+    const QPalette palette{ NESMDesign::canvasPalette() };
     painter->fillRect(rect, NESMDesign::canvasBackground(palette));
 
     if (mGridVisible == false)
@@ -1272,7 +1272,7 @@ void SMScene::drawForeground(QPainter* painter, const QRectF& rect)
 {
     // Edge lines paint under the state boxes (z = -1) so borders stay clean, but their labels
     // must stay readable even where they overlap a box; paint them here, above every item.
-    const QPalette palette{ (views().isEmpty() == false) ? views().first()->palette() : QPalette() };
+    const QPalette palette{ NESMDesign::canvasPalette() };
     for (SMCanvasItem* item : std::as_const(mItems))
     {
         SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);

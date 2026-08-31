@@ -24,14 +24,18 @@
  ************************************************************************/
 #include "lusan/view/common/OptionPageBase.hpp"
 
+#include "lusan/common/NELogPalette.hpp"
 #include "lusan/common/NETimeUnits.hpp"
 
+class LogRowsPreview;
 class QComboBox;
 class QDialog;
+class QLabel;
 
 /**
  * \brief   The settings that change how the application writes what it shows, rather than
- *          what it shows. Currently the unit every measured time is written in.
+ *          what it shows: the unit every measured time is written in, and the colours and
+ *          the row height of the log tables.
  **/
 class OptionPageDisplay : public OptionPageBase
 {
@@ -69,11 +73,27 @@ private:
     //!< Returns the unit the selector currently holds.
     NETimeUnits::eTimeUnit selectedUnit(void) const;
 
+    //!< Returns the colour set the selector currently holds.
+    NELogPalette::eLogPalette selectedPalette(void) const;
+
+    //!< Returns the row height the selector currently holds.
+    int selectedRowHeight(void) const;
+
+    //!< Redraws the sample rows and the line that describes the chosen colour set.
+    void refreshPreview(void);
+
+    //!< Marks the page changed when any of the three selectors differs from what is stored.
+    void updateModified(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QComboBox*  mTimeUnit;  //!< Chooses the unit every measured time is written in.
+    QComboBox*  mTimeUnit;      //!< Chooses the unit every measured time is written in.
+    QComboBox*  mLogPalette;    //!< Chooses the colour set the log rows are drawn with.
+    QComboBox*  mLogRowHeight;  //!< Chooses the height of one log table row.
+    QLabel*     mPaletteHint;   //!< Says in one line what the chosen colour set does.
+    LogRowsPreview* mPreview;   //!< Draws sample rows in the chosen colour set and height.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

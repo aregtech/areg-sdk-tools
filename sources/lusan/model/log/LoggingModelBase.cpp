@@ -242,6 +242,9 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     if (logMessage == nullptr)
         return QVariant();
     
+    if (role == LoggingModelBase::AnalyzedRole)
+        return QVariant((mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index));
+
     eColumn column = mActiveColumns.at(col);
     switch (static_cast<Qt::ItemDataRole>(role))
     {
@@ -255,10 +258,8 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         return getForegroundData(logMessage, column);
         
     case Qt::DecorationRole:
-    {
-        static const QIcon _iconSelect(NELusanCommon::iconLogSelected(NELusanCommon::SizeSmall));
-        return (column == eColumn::LogColumnSourceId) && (mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index) ? _iconSelect : getDecorationData(logMessage, column);
-    }
+        return getDecorationData(logMessage, column);
+
         
     case Qt::ToolTipRole:
         return getTooltipData(logMessage, column);
@@ -859,16 +860,9 @@ QIcon LoggingModelBase::getDecorationData(const areg::LogEntry* logMessage, eCol
     if (column != eColumn::LogColumnPriority)
         return QIcon();
 
-    // The priority cell carries its name and its colour. Only the two ends of a call earn a
-    // mark, because they say what the row is rather than repeat the word beside it.
-    if (logMessage->logMessagePrio != areg::LogPriority::PrioScope)
-        return QIcon();
-
-    if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeEnter, true);
-    else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
-        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeExit, true);
-
+    // The priority cell carries its name and its colour, nothing else. A scope row is
+    // already marked in the gutter beside the rail, and a second mark here would only
+    // push the word it repeats out of line with every other row.
     return QIcon();
 }
 

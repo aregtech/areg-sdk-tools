@@ -48,6 +48,7 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     setupCallControls();
     ctrlTable()->setModel(nullptr);
     ctrlTable()->setItemDelegate(mStructure);
+    LogViewerBase::applyRowHeight(ctrlTable());
     QItemSelectionModel *selModel = ctrlTable()->selectionModel();
     Q_ASSERT(selModel != nullptr);
     connect(ctrlLogShow()       , &QToolButton::clicked     , this, [this]()              { onShowLog(getSelectedIndex());              });

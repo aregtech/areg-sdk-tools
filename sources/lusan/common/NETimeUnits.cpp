@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -67,7 +67,7 @@ QString NETimeUnits::unitSuffix(NETimeUnits::eTimeUnit forUnit)
         return QCoreApplication::translate("NETimeUnits", "s");
     case NETimeUnits::eTimeUnit::UnitMicro:
     default:
-        return QCoreApplication::translate("NETimeUnits", "us");
+        return QCoreApplication::translate("NETimeUnits", "µs");
     }
 }
 

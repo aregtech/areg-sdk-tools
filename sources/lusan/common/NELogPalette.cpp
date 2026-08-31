@@ -20,39 +20,90 @@
 #include "lusan/common/NELogPalette.hpp"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QPalette>
 
 namespace
 {
     constexpr int _roleCount{ static_cast<int>(NELogPalette::eLogColorRole::RoleCount) };
 
-    //! Message text, light theme. The three loud roles are red, gold and blue, three hues far
-    //! enough apart to be told at a glance. Debug carries the weight of ordinary text and a
-    //! scope line steps back to a quiet grey, so the two ends of a call add no noise.
-    const QColor _textLight[_roleCount]
+    constexpr int _paletteCount{ static_cast<int>(NELogPalette::eLogPalette::PaletteCount) };
+
+    //! Message text, light theme, one row per colour set. Ladder gives every priority its own
+    //! ink and lets chroma and contrast fall down the list. Quiet colours only the three
+    //! alarms and steps the rest down in the neutral ink. Classic is the set that shipped
+    //! before, where Debug carries the weight of ordinary text.
+    const QColor _textLight[_paletteCount][_roleCount]
     {
-          QColor(0x7A, 0x00, 0x12)      // Fatal
-        , QColor(0xD3, 0x2F, 0x2F)      // Error
-        , QColor(0x8A, 0x6A, 0x00)      // Warning
-        , QColor(0x15, 0x65, 0xC0)      // Information
-        , QColor(0x23, 0x30, 0x3F)      // Debug
-        , QColor(0x8A, 0x93, 0xA1)      // Scope
-        , QColor(0x5B, 0x64, 0x72)      // Not set
+        {   QColor(0x8C, 0x0F, 0x28)    // Fatal
+        ,   QColor(0xC6, 0x28, 0x28)    // Error
+        ,   QColor(0x8A, 0x5A, 0x00)    // Warning
+        ,   QColor(0x15, 0x65, 0xC0)    // Information
+        ,   QColor(0x35, 0x78, 0x6F)    // Debug
+        ,   QColor(0x5A, 0x66, 0x75)    // Scope
+        ,   QColor(0x5B, 0x64, 0x72)    // Not set
+        ,   QColor(0x5A, 0x66, 0x75)    // Scope enter
+        ,   QColor(0x81, 0x8C, 0x9A)    // Scope exit
+        },
+        {   QColor(0x8C, 0x0F, 0x28)    // Fatal
+        ,   QColor(0xC6, 0x28, 0x28)    // Error
+        ,   QColor(0x8A, 0x5A, 0x00)    // Warning
+        ,   QColor(0x33, 0x40, 0x4F)    // Information
+        ,   QColor(0x5A, 0x66, 0x75)    // Debug
+        ,   QColor(0x6B, 0x76, 0x86)    // Scope
+        ,   QColor(0x5B, 0x64, 0x72)    // Not set
+        ,   QColor(0x6B, 0x76, 0x86)    // Scope enter
+        ,   QColor(0x8A, 0x94, 0xA2)    // Scope exit
+        },
+        {   QColor(0x7A, 0x00, 0x12)    // Fatal
+        ,   QColor(0xD3, 0x2F, 0x2F)    // Error
+        ,   QColor(0x8A, 0x6A, 0x00)    // Warning
+        ,   QColor(0x15, 0x65, 0xC0)    // Information
+        ,   QColor(0x23, 0x30, 0x3F)    // Debug
+        ,   QColor(0x8A, 0x93, 0xA1)    // Scope
+        ,   QColor(0x5B, 0x64, 0x72)    // Not set
+        ,   QColor(0x8A, 0x93, 0xA1)    // Scope enter
+        ,   QColor(0x8A, 0x93, 0xA1)    // Scope exit
+        }
     };
 
-    //! Message text, dark theme. The same ladder, read against a dark base.
-    const QColor _textDark[_roleCount]
+    //! Message text, dark theme. The same three sets, read against a dark base.
+    const QColor _textDark[_paletteCount][_roleCount]
     {
-          QColor(0xFF, 0xD7, 0xD2)      // Fatal
-        , QColor(0xFF, 0x6B, 0x5E)      // Error
-        , QColor(0xF0, 0xB4, 0x29)      // Warning
-        , QColor(0x7A, 0xB0, 0xFF)      // Information
-        , QColor(0xD8, 0xDE, 0xE9)      // Debug
-        , QColor(0x79, 0x82, 0x8F)      // Scope
-        , QColor(0x9A, 0xA5, 0xB5)      // Not set
+        {   QColor(0xFF, 0xB4, 0xAB)    // Fatal
+        ,   QColor(0xFF, 0x7A, 0x6D)    // Error
+        ,   QColor(0xF0, 0xB4, 0x29)    // Warning
+        ,   QColor(0x7A, 0xB0, 0xFF)    // Information
+        ,   QColor(0x64, 0xC7, 0xB6)    // Debug
+        ,   QColor(0xA6, 0xB0, 0xBE)    // Scope
+        ,   QColor(0x9A, 0xA5, 0xB5)    // Not set
+        ,   QColor(0xA6, 0xB0, 0xBE)    // Scope enter
+        ,   QColor(0x76, 0x7F, 0x8C)    // Scope exit
+        },
+        {   QColor(0xFF, 0xB4, 0xAB)    // Fatal
+        ,   QColor(0xFF, 0x7A, 0x6D)    // Error
+        ,   QColor(0xF0, 0xB4, 0x29)    // Warning
+        ,   QColor(0xD8, 0xDE, 0xE9)    // Information
+        ,   QColor(0xAE, 0xB7, 0xC4)    // Debug
+        ,   QColor(0x96, 0xA0, 0xAE)    // Scope
+        ,   QColor(0x9A, 0xA5, 0xB5)    // Not set
+        ,   QColor(0x96, 0xA0, 0xAE)    // Scope enter
+        ,   QColor(0x78, 0x82, 0x8F)    // Scope exit
+        },
+        {   QColor(0xFF, 0xD7, 0xD2)    // Fatal
+        ,   QColor(0xFF, 0x6B, 0x5E)    // Error
+        ,   QColor(0xF0, 0xB4, 0x29)    // Warning
+        ,   QColor(0x7A, 0xB0, 0xFF)    // Information
+        ,   QColor(0xD8, 0xDE, 0xE9)    // Debug
+        ,   QColor(0x79, 0x82, 0x8F)    // Scope
+        ,   QColor(0x9A, 0xA5, 0xB5)    // Not set
+        ,   QColor(0x79, 0x82, 0x8F)    // Scope enter
+        ,   QColor(0x79, 0x82, 0x8F)    // Scope exit
+        }
     };
 
-    //! The priority rail, light theme. Saturated, because a 4 px bar carries less ink than a letter.
+    //! The priority rail, light theme. Saturated, because a 4 px bar carries less ink than a
+    //! letter. The rail is the same in every colour set: it always says what the row is.
     const QColor _railLight[_roleCount]
     {
           QColor(0xB3, 0x00, 0x1B)      // Fatal
@@ -62,6 +113,8 @@ namespace
         , QColor(0x14, 0x90, 0x7F)      // Debug
         , QColor(0x6C, 0x7A, 0x93)      // Scope
         , QColor(Qt::transparent)       // Not set
+        , QColor(0x6C, 0x7A, 0x93)      // Scope enter
+        , QColor(0xA3, 0xAD, 0xBD)      // Scope exit
     };
 
     //! The priority rail, dark theme.
@@ -74,7 +127,18 @@ namespace
         , QColor(0x2E, 0xC4, 0xA6)      // Debug
         , QColor(0x7E, 0x8C, 0xA3)      // Scope
         , QColor(Qt::transparent)       // Not set
+        , QColor(0x88, 0x95, 0xA8)      // Scope enter
+        , QColor(0x59, 0x63, 0x6F)      // Scope exit
     };
+
+    //! The colour set in use. Replaced whole when the user picks another one.
+    NELogPalette::eLogPalette _activePalette{ NELogPalette::DefaultPalette };
+
+    inline int paletteIndex(NELogPalette::eLogPalette forPalette)
+    {
+        const int index{ static_cast<int>(forPalette) };
+        return ((index >= 0) && (index < _paletteCount)) ? index : static_cast<int>(NELogPalette::DefaultPalette);
+    }
 
     //! Row background. Only Fatal has one: 12 % of the Fatal rail colour over the
     //! theme base, so the band carries the same strength in both themes.
@@ -146,14 +210,87 @@ QColor NELogPalette::withOpacity(const QColor & color, NELogPalette::eLogOpacity
     return result;
 }
 
+NELogPalette::eLogPalette NELogPalette::palette(void)
+{
+    return _activePalette;
+}
+
+void NELogPalette::setPalette(NELogPalette::eLogPalette newPalette)
+{
+    _activePalette = (static_cast<int>(newPalette) < _paletteCount) ? newPalette : NELogPalette::DefaultPalette;
+}
+
+QString NELogPalette::paletteName(NELogPalette::eLogPalette forPalette)
+{
+    switch (forPalette)
+    {
+    case NELogPalette::eLogPalette::PaletteQuiet:
+        return QCoreApplication::translate("NELogPalette", "Quiet");
+    case NELogPalette::eLogPalette::PaletteClassic:
+        return QCoreApplication::translate("NELogPalette", "Classic");
+    case NELogPalette::eLogPalette::PaletteLadder:
+    default:
+        return QCoreApplication::translate("NELogPalette", "Ladder");
+    }
+}
+
+QString NELogPalette::paletteHint(NELogPalette::eLogPalette forPalette)
+{
+    switch (forPalette)
+    {
+    case NELogPalette::eLogPalette::PaletteQuiet:
+        return QCoreApplication::translate("NELogPalette", "Only Fatal, Error and Warning are coloured. The quietest table to hunt a failure in.");
+    case NELogPalette::eLogPalette::PaletteClassic:
+        return QCoreApplication::translate("NELogPalette", "Debug takes the ordinary text colour, and a scope keeps one grey for both of its ends.");
+    case NELogPalette::eLogPalette::PaletteLadder:
+    default:
+        return QCoreApplication::translate("NELogPalette", "Every priority owns a colour, graded so the loud ones still stand out.");
+    }
+}
+
+QString NELogPalette::paletteKey(NELogPalette::eLogPalette forPalette)
+{
+    switch (forPalette)
+    {
+    case NELogPalette::eLogPalette::PaletteQuiet:
+        return QStringLiteral("Quiet");
+    case NELogPalette::eLogPalette::PaletteClassic:
+        return QStringLiteral("Classic");
+    case NELogPalette::eLogPalette::PaletteLadder:
+    default:
+        return QStringLiteral("Ladder");
+    }
+}
+
+NELogPalette::eLogPalette NELogPalette::paletteFromKey(const QString& key)
+{
+    if (key.compare(QStringLiteral("Quiet"), Qt::CaseInsensitive) == 0)
+        return NELogPalette::eLogPalette::PaletteQuiet;
+    else if (key.compare(QStringLiteral("Classic"), Qt::CaseInsensitive) == 0)
+        return NELogPalette::eLogPalette::PaletteClassic;
+    else
+        return NELogPalette::eLogPalette::PaletteLadder;
+}
+
 QColor NELogPalette::textColor(NELogPalette::eLogColorRole role)
 {
-    return isDarkTheme() ? _textDark[roleIndex(role)] : _textLight[roleIndex(role)];
+    return NELogPalette::textColorOf(role, _activePalette, isDarkTheme());
+}
+
+QColor NELogPalette::textColorOf(NELogPalette::eLogColorRole role, NELogPalette::eLogPalette forPalette, bool dark)
+{
+    const int set{ paletteIndex(forPalette) };
+    return dark ? _textDark[set][roleIndex(role)] : _textLight[set][roleIndex(role)];
 }
 
 QColor NELogPalette::railColor(NELogPalette::eLogColorRole role)
 {
-    return isDarkTheme() ? _railDark[roleIndex(role)] : _railLight[roleIndex(role)];
+    return NELogPalette::railColorOf(role, isDarkTheme());
+}
+
+QColor NELogPalette::railColorOf(NELogPalette::eLogColorRole role, bool dark)
+{
+    return dark ? _railDark[roleIndex(role)] : _railLight[roleIndex(role)];
 }
 
 QColor NELogPalette::markColor(NELogPalette::eLogMarkRole role)
@@ -181,10 +318,15 @@ QColor NELogPalette::stateColor(NELogPalette::eLogStateRole role)
 
 QColor NELogPalette::rowBackground(NELogPalette::eLogColorRole role)
 {
+    return NELogPalette::rowBackgroundOf(role, isDarkTheme());
+}
+
+QColor NELogPalette::rowBackgroundOf(NELogPalette::eLogColorRole role, bool dark)
+{
     if (role != NELogPalette::eLogColorRole::RoleFatal)
         return QColor(Qt::transparent);
 
-    return isDarkTheme() ? _bandDark : _bandLight;
+    return dark ? _bandDark : _bandLight;
 }
 
 NELogPalette::eLogColorRole NELogPalette::roleOf(areg::LogPriority prio)
@@ -210,5 +352,13 @@ NELogPalette::eLogColorRole NELogPalette::roleOf(areg::LogPriority prio)
 
 NELogPalette::eLogColorRole NELogPalette::roleOf(const areg::LogEntry & entry)
 {
+    if (entry.logMessagePrio == areg::LogPriority::PrioScope)
+    {
+        if (entry.logMsgType == areg::LogMessageType::ScopeEnter)
+            return NELogPalette::eLogColorRole::RoleScopeEnter;
+        else if (entry.logMsgType == areg::LogMessageType::ScopeExit)
+            return NELogPalette::eLogColorRole::RoleScopeExit;
+    }
+
     return NELogPalette::roleOf(entry.logMessagePrio);
 }

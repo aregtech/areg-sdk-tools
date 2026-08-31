@@ -21,11 +21,14 @@
 
 #include "lusan/common/NELogPalette.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 
 #include "areg/logging/LoggingDefs.hpp"
 
+#include <QApplication>
 #include <QPainter>
+#include <QPalette>
 #include <QTextLayout>
 #include <QTextLine>
 #include <QList>
@@ -40,6 +43,7 @@ LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QO
 
 void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
+    _paintAnalyzed(painter, option, index);
     _paintRevealed(painter, option, index);
     _paintPriorityRail(painter, option, index);
     _paintScopeMark(painter, option, index);
@@ -113,6 +117,28 @@ void LogTextHighlight::_paintRevealed(QPainter* painter, const QStyleOptionViewI
         const int edge{ 2 };
         painter->fillRect(QRect(option.rect.left(), option.rect.top(), edge, option.rect.height())
                          , NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkRevealedEdge));
+    }
+
+    painter->restore();
+}
+
+void LogTextHighlight::_paintAnalyzed(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    if (index.data(LoggingModelBase::AnalyzedRole).toBool() == false)
+        return;
+
+    const QColor accent{ QApplication::palette().color(QPalette::ColorRole::Highlight) };
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->fillRect(option.rect, NELogPalette::withOpacity(accent, NELogPalette::eLogOpacity::OpacityTint));
+
+    // The edge rides on the leading column only, so the whole call reads as one block
+    // with a single line down its side rather than a box around every row.
+    if (index.column() == 0)
+    {
+        painter->fillRect( QRect(option.rect.left(), option.rect.top(), LogTextHighlight::AnalyzedEdge, option.rect.height())
+                         , accent);
     }
 
     painter->restore();

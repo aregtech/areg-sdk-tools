@@ -117,7 +117,7 @@ namespace
 
         void paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/, QWidget* widget) override
         {
-            const QPalette palette{ (widget != nullptr) ? widget->palette() : QPalette() };
+            const QPalette palette{ NESMDesign::canvasPalette() };
             const QRectF   body{ 0.0, 0.0, 120.0, 60.0 };
 
             painter->setRenderHint(QPainter::Antialiasing, true);

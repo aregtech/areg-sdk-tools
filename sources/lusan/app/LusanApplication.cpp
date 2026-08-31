@@ -19,6 +19,7 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/LogCollectorClient.hpp"
+#include "lusan/common/NELogPalette.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/NETimeUnits.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -331,6 +332,7 @@ void LusanApplication::applyConfiguredTheme()
     
     NEAppThemes::applyTheme(LusanApplication::theApp->mOptions.getTheme());
     NETimeUnits::setUnit(LusanApplication::theApp->mOptions.getTimeUnit());
+    NELogPalette::setPalette(LusanApplication::theApp->mOptions.getLogPalette());
 }
 
 bool LusanApplication::isWorkpacePath(const QString & path)

@@ -358,7 +358,7 @@ QPainterPath SMStateItem::shape() const
 
 void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/, QWidget* widget)
 {
-    const QPalette palette{ (widget != nullptr) ? widget->palette() : QPalette() };
+    const QPalette palette{ NESMDesign::canvasPalette() };
     const QRectF   box{ 0.0, 0.0, mSize.width(), visibleHeight() };
 
     painter->setRenderHint(QPainter::Antialiasing, true);

@@ -47,10 +47,59 @@ namespace NELogPalette
         , RoleWarning       //!< Warning
         , RoleInformation   //!< Information
         , RoleDebug         //!< Debug
-        , RoleScope         //!< Scope enter and exit
+        , RoleScope         //!< A scope, where the two ends are not told apart
         , RoleNotset        //!< The priority is not set on the scope
+        , RoleScopeEnter    //!< The row that enters a scope
+        , RoleScopeExit     //!< The row that leaves a scope
         , RoleCount         //!< Number of roles
     };
+
+    /**
+     * \brief   The colour sets the log rows can be drawn with. The rail is the same in all
+     *          three: it always says which kind of row this is. They differ in how much
+     *          colour the message text itself carries.
+     **/
+    enum class eLogPalette : uint8_t
+    {
+          PaletteLadder = 0 //!< Every priority owns an ink, graded from loud to quiet
+        , PaletteQuiet      //!< Only Fatal, Error and Warning are coloured
+        , PaletteClassic    //!< Debug takes the ordinary text colour of the theme
+        , PaletteCount      //!< Number of colour sets
+    };
+
+    //!< The colour set used until the user picks another one.
+    constexpr eLogPalette DefaultPalette{ eLogPalette::PaletteLadder };
+
+    /**
+     * \brief   Returns the colour set the log windows draw with.
+     **/
+    eLogPalette palette(void);
+
+    /**
+     * \brief   Sets the colour set the log windows draw with. The caller repaints the
+     *          views: the tables hold the colours of the previous set until they do.
+     **/
+    void setPalette(eLogPalette newPalette);
+
+    /**
+     * \brief   Returns the human readable name of the given colour set.
+     **/
+    QString paletteName(eLogPalette forPalette);
+
+    /**
+     * \brief   Returns the short description of what the given colour set does.
+     **/
+    QString paletteHint(eLogPalette forPalette);
+
+    /**
+     * \brief   Returns the stored name of the given colour set. Never translated.
+     **/
+    QString paletteKey(eLogPalette forPalette);
+
+    /**
+     * \brief   Returns the colour set of the given stored name, the default when unknown.
+     **/
+    eLogPalette paletteFromKey(const QString& key);
 
     /**
      * \brief   What a running target knows about the priorities set in the tree.
@@ -106,10 +155,33 @@ namespace NELogPalette
     QColor withOpacity(const QColor & color, eLogOpacity use);
 
     /**
-     * \brief   Returns the colour of the message text for the given role.
-     *          Chosen so that every value clears 4.5:1 against its own background.
+     * \brief   Returns the colour of the message text for the given role, in the active
+     *          colour set. Chosen so that every value clears 4.5:1 against its own
+     *          background.
      **/
     QColor textColor(eLogColorRole role);
+
+    /**
+     * \brief   Returns the colour of the message text for the given role in the given
+     *          colour set and theme, whatever is active. Used to draw a sample of a set
+     *          the user has not chosen yet.
+     * \param   role        The role to take the colour of.
+     * \param   forPalette  The colour set to read.
+     * \param   dark        True to read the dark values, false for the light ones.
+     **/
+    QColor textColorOf(eLogColorRole role, eLogPalette forPalette, bool dark);
+
+    /**
+     * \brief   Returns the colour of the priority rail for the given role and theme,
+     *          whatever theme is active.
+     **/
+    QColor railColorOf(eLogColorRole role, bool dark);
+
+    /**
+     * \brief   Returns the row background for the given role and theme, whatever theme
+     *          is active. Only Fatal has one.
+     **/
+    QColor rowBackgroundOf(eLogColorRole role, bool dark);
 
     /**
      * \brief   Returns the colour of the priority rail for the given role.

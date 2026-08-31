@@ -46,13 +46,16 @@ class LogTextHighlight : public QStyledItemDelegate
 public:
     //!< The zone at the left of the leading column that the delegate owns. No cell text is
     //!< drawn in it, so the rail and the scope marks are never overdrawn.
-    static constexpr int    GutterWidth { 22 };
+    static constexpr int    GutterWidth { 18 };
 
     //!< Where the scope mark starts inside the gutter, clear of the rail.
-    static constexpr int    MarkLeft    {  7 };
+    static constexpr int    MarkLeft    {  6 };
 
     //!< The largest a scope mark is drawn. A short row draws it smaller.
-    static constexpr int    MarkSide    { 14 };
+    static constexpr int    MarkSide    { 11 };
+
+    //!< The width of the edge that marks a row the Scope Analyzer currently holds.
+    static constexpr int    AnalyzedEdge{ 2 };
 
     LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent = nullptr);
     virtual ~LogTextHighlight() = default;
@@ -80,6 +83,12 @@ private:
      * brief   Draws the scope enter or exit mark of the row in the gutter, beside the rail.
      **/
     void _paintScopeMark(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+
+    /**
+     * brief   Draws the tint and the leading edge of a row that belongs to the call the
+     *         Scope Analyzer currently holds.
+     **/
+    void _paintAnalyzed(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

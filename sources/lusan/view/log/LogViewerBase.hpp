@@ -23,6 +23,7 @@
 #include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
+#include "lusan/view/log/LogTextHighlight.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "areg/base/areg_global.h"
 
@@ -37,7 +38,7 @@ class LogSessionBar;
 class LogTableHeader;
 class LogViewerFilter;
 class SearchLineEdit;
-class LogTextHighlight;
+
 
 class QHeaderView;
 class QModelIndex;
@@ -70,10 +71,26 @@ public:
     //!< The longest a message stays in a hit list entry.
     static constexpr int    HitListChars        { 110 };
 
+    //!< Set on every log table, so a change of the row height finds them all again.
+    static constexpr const char* PropertyLogTable { "lusanLogTable" };
+
     /**
      * \brief   Returns the file extension of the offline log files.
      **/
     static const QString& fileExtension();
+
+    /**
+     * \brief   Gives the rows of the given log table the height chosen in the options and
+     *          marks the table, so a later change of the setting finds it again.
+     * \param   table   The table to apply the height to.
+     **/
+    static void applyRowHeight(QTableView* table);
+
+    /**
+     * \brief   Gives every marked log table the height chosen in the options. Called when
+     *          the setting changes.
+     **/
+    static void refreshRowHeights(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor

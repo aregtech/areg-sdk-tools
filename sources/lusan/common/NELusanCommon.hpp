@@ -147,6 +147,8 @@ namespace NELusanCommon
     constexpr QLatin1StringView xmlElementOption           { "Option" };
     constexpr QLatin1StringView xmlElementTheme            { "Theme" };
     constexpr QLatin1StringView xmlElementTimeUnit         { "TimeUnit" };
+    constexpr QLatin1StringView xmlElementLogPalette       { "LogPalette" };
+    constexpr QLatin1StringView xmlElementLogRowHeight     { "LogRowHeight" };
     constexpr QLatin1StringView xmlElementWorkspaceList    { "WorspaceList" };
     constexpr QLatin1StringView xmlElementWorkspace        { "Workspace" };
     constexpr QLatin1StringView xmlElementSettings         { "Settings" };

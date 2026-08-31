@@ -68,6 +68,8 @@ OptionsManager::OptionsManager()
     , mCurId        ( 0 )
     , mTheme        ( eAppTheme::SystemDefault )
     , mTimeUnit     ( NETimeUnits::DefaultUnit )
+    , mLogPalette   ( NELogPalette::DefaultPalette )
+    , mLogRowHeight ( OptionsManager::LogRowHeightDefault )
 {
 }
 
@@ -296,6 +298,8 @@ void OptionsManager::writeOptions()
             xml.writeStartElement(NELusanCommon::xmlElementOption);
                 xml.writeTextElement(NELusanCommon::xmlElementTheme, themeToString(mTheme));
                 xml.writeTextElement(NELusanCommon::xmlElementTimeUnit, NETimeUnits::unitKey(mTimeUnit));
+                xml.writeTextElement(NELusanCommon::xmlElementLogPalette, NELogPalette::paletteKey(mLogPalette));
+                xml.writeTextElement(NELusanCommon::xmlElementLogRowHeight, QString::number(mLogRowHeight));
                 xml.writeStartElement(NELusanCommon::xmlElementWorkspaceList);
                 if (hasDefaultWorkspace())
                 {
@@ -454,6 +458,16 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
                 _readTimeUnit(xml);
             }
             else
+            if (xmlName == NELusanCommon::xmlElementLogPalette)
+            {
+                _readLogPalette(xml);
+            }
+            else
+            if (xmlName == NELusanCommon::xmlElementLogRowHeight)
+            {
+                _readLogRowHeight(xml);
+            }
+            else
             if (xmlName == NELusanCommon::xmlElementWorkspaceList)
             {
                 _readWorkspaceList(xml);
@@ -481,6 +495,24 @@ void OptionsManager::_readTimeUnit(QXmlStreamReader& xml)
         return;
 
     mTimeUnit = NETimeUnits::unitFromKey(xml.readElementText(QXmlStreamReader::IncludeChildElements));
+}
+
+void OptionsManager::_readLogPalette(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementLogPalette)
+        return;
+
+    mLogPalette = NELogPalette::paletteFromKey(xml.readElementText(QXmlStreamReader::IncludeChildElements));
+}
+
+void OptionsManager::_readLogRowHeight(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementLogRowHeight)
+        return;
+
+    bool valid{ false };
+    const int height{ xml.readElementText(QXmlStreamReader::IncludeChildElements).toInt(&valid) };
+    setLogRowHeight(valid ? height : OptionsManager::LogRowHeightDefault);
 }
 
 void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)

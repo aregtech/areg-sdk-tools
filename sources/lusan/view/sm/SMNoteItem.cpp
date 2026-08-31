@@ -129,7 +129,7 @@ QPainterPath SMNoteItem::shape() const
 
 void SMNoteItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/, QWidget* widget)
 {
-    const QPalette palette{ (widget != nullptr) ? widget->palette() : QPalette() };
+    const QPalette palette{ NESMDesign::canvasPalette() };
     const QRectF   box{ 0.0, 0.0, mSize.width(), mSize.height() };
 
     QColor fill{ mColorName };

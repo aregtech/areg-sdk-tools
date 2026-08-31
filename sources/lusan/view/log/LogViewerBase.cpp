@@ -38,8 +38,10 @@
 #include "areg/base/DateTime.hpp"
 #include "areg/logging/LoggingDefs.hpp"
 
+#include <QApplication>
 #include <QClipboard>
 #include <QFontDatabase>
+#include <QHeaderView>
 #include <QGuiApplication>
 #include <QItemSelectionModel>
 #include <QVBoxLayout>
@@ -212,6 +214,7 @@ void LogViewerBase::setupWidgets()
     mLogTable->setCurrentIndex(QModelIndex());
     mLogTable->horizontalHeader()->setStretchLastSection(true);
     mLogTable->verticalHeader()->hide();
+    LogViewerBase::applyRowHeight(mLogTable);
     mLogTable->setAutoScroll(true);
     mLogTable->setVerticalScrollMode(QTableView::ScrollPerItem);
     mLogTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -1394,6 +1397,39 @@ void LogViewerBase::onMouseDoubleClicked(const QModelIndex& index)
         ScopeOutputViewer & viewScope = mMainWindow->getOutputScopeLogs();
         viewScope.bindWindow(*this);
         viewScope.setupFilter(mLogModel, index);
+    }
+
+    // The Analyzer decides which rows belong to the call; the table only has to redraw,
+    // because the mark is read back from the model row by row.
+    if (mLogTable != nullptr)
+    {
+        mLogTable->viewport()->update();
+    }
+}
+
+void LogViewerBase::applyRowHeight(QTableView* table)
+{
+    if (table == nullptr)
+        return;
+
+    const int height{ LusanApplication::getOptions().getLogRowHeight() };
+    table->setProperty(LogViewerBase::PropertyLogTable, true);
+    QHeaderView* rows{ table->verticalHeader() };
+    rows->setSectionResizeMode(QHeaderView::ResizeMode::Fixed);
+    rows->setDefaultSectionSize(height);
+    rows->setMinimumSectionSize(OptionsManager::LogRowHeightMin);
+}
+
+void LogViewerBase::refreshRowHeights(void)
+{
+    const QWidgetList widgets{ QApplication::allWidgets() };
+    for (QWidget* widget : widgets)
+    {
+        QTableView* table{ qobject_cast<QTableView *>(widget) };
+        if ((table != nullptr) && table->property(LogViewerBase::PropertyLogTable).toBool())
+        {
+            LogViewerBase::applyRowHeight(table);
+        }
     }
 }
 
