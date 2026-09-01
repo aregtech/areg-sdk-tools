@@ -23,11 +23,13 @@
 
 #include <QAction>
 #include <QCursor>
+#include <QEvent>
 #include <QFontMetrics>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPalette>
 #include <QToolButton>
 
@@ -44,6 +46,9 @@ namespace
 
     //! The edge of the button that drops a chip.
     constexpr int   _dropExtent { 12 };
+
+    //! Where a chip keeps its place in the row, so a click finds the filter it stands for.
+    constexpr const char* _chipProperty { "lusanChipPosition" };
 }
 
 LogFilterChips::LogFilterChips(QWidget* parent /*= nullptr*/)
@@ -76,9 +81,9 @@ void LogFilterChips::setChips(const LogFilterChips::ListChips& chips)
     mChips = chips;
     _clearRow();
 
-    for (const LogFilterChips::sChip& chip : mChips)
+    for (int i = 0; i < mChips.size(); ++i)
     {
-        _addChip(chip);
+        _addChip(mChips.at(i), i);
     }
 
     mLayout->addStretch(1);
@@ -114,7 +119,33 @@ QColor LogFilterChips::_chipColor(LogFilterChips::eChipKind kind, const QPalette
            : palette.color(QPalette::ColorRole::Highlight);
 }
 
-void LogFilterChips::_addChip(const LogFilterChips::sChip& chip)
+bool LogFilterChips::eventFilter(QObject* watched, QEvent* event)
+{
+    const QEvent::Type kind{ event->type() };
+    if ((kind == QEvent::Type::MouseButtonPress) || (kind == QEvent::Type::MouseButtonRelease))
+    {
+        QWidget* frame{ qobject_cast<QWidget *>(watched) };
+        QMouseEvent* mouse{ static_cast<QMouseEvent *>(event) };
+        if ((frame != nullptr) && (mouse->button() == Qt::MouseButton::LeftButton))
+        {
+            // The press is taken so that the release comes back to the same chip. The chip
+            // answers on the release, and only while the pointer is still on it.
+            const int position{ frame->property(_chipProperty).toInt() };
+            if ((kind == QEvent::Type::MouseButtonRelease)
+                && frame->rect().contains(mouse->position().toPoint())
+                && (position >= 0) && (position < mChips.size()))
+            {
+                emit signalChipClicked(mChips.at(position), QRect(frame->mapToGlobal(QPoint(0, 0)), frame->size()));
+            }
+
+            return true;
+        }
+    }
+
+    return QWidget::eventFilter(watched, event);
+}
+
+void LogFilterChips::_addChip(const LogFilterChips::sChip& chip, int position)
 {
     const QColor tone { LogFilterChips::_chipColor(chip.kind, palette()) };
     const QColor fill { NELogPalette::withOpacity(tone, NELogPalette::eLogOpacity::OpacityTint) };
@@ -123,6 +154,16 @@ void LogFilterChips::_addChip(const LogFilterChips::sChip& chip)
     QFrame* frame = new QFrame(this);
     frame->setObjectName(QStringLiteral("logFilterChip"));
     frame->setToolTip(chip.hint);
+
+    // A column filter can be changed where it is named, so its chip is a control. The other
+    // chips stand for something set elsewhere, and only say what it keeps.
+    if (chip.kind == LogFilterChips::eChipKind::ChipColumn)
+    {
+        frame->setToolTip(chip.hint + QString("\n\n") + tr("Click to change what it keeps."));
+        frame->setProperty(_chipProperty, position);
+        frame->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
+        frame->installEventFilter(this);
+    }
     frame->setStyleSheet(QString("QFrame#logFilterChip { border: 1px solid rgba(%1,%2,%3,%4);"
                                  " border-radius: 3px; background-color: rgba(%1,%2,%3,%5); }")
                          .arg(tone.red()).arg(tone.green()).arg(tone.blue())

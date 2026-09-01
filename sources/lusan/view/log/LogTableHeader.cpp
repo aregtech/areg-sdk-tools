@@ -28,6 +28,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QTableView>
+#include <QTimer>
 
 namespace
 {
@@ -92,12 +93,14 @@ LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::
     , mHeaders      ( )
     , mHovered      (-1)
     , mOnFunnel     (false)
+    , mPinning      (false)
 {
     setSectionsMovable(true);
     setSectionsClickable(true);
     setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     setHighlightSections(false);
     setMouseTracking(true);
+    setFirstSectionMovable(false);
 
     // The table draws its rows in a fixed width face. The titles are read, not compared
     // column by column, so the header keeps the face of the application.
@@ -108,6 +111,40 @@ LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::
     {
         mHeaders.push_back(new LogHeaderItem(*this, i));
     }
+
+    // A section size and a resize mode belong to a model, and setting one on the view drops
+    // both. The rail is put back every time the table hands the header a new set of sections.
+    connect(this, &QHeaderView::sectionCountChanged, this, [this](int, int) { pinRailSection(); });
+
+    // A move is reported from inside the drag the header is still handling, so the rail is
+    // put back after that work is finished rather than during it.
+    connect(this, &QHeaderView::sectionMoved, this, [this](int, int, int) {
+            QTimer::singleShot(0, this, [this]() { pinRailSection(); });
+        });
+
+    pinRailSection();
+}
+
+void LogTableHeader::pinRailSection(void)
+{
+    if (mPinning || (count() <= 0))
+        return;
+
+    // The rail is named by the log, the sections belong to the table. A section is only
+    // moved and sized when the header holds it.
+    const int rail{ getColumnIndex(LoggingModelBase::eColumn::LogColumnRail) };
+    if ((rail < 0) || (rail >= count()))
+        return;
+
+    mPinning = true;
+    if (visualIndex(rail) != 0)
+    {
+        moveSection(visualIndex(rail), 0);
+    }
+
+    setSectionResizeMode(rail, QHeaderView::ResizeMode::Fixed);
+    resizeSection(rail, LoggingModelBase::RailWidth);
+    mPinning = false;
 }
 
 void LogTableHeader::resetFilters()
@@ -134,6 +171,50 @@ LogHeaderItem* LogTableHeader::getHeaderItem(LoggingModelBase::eColumn column) c
     return ((pos >= 0) && (pos < static_cast<int>(mHeaders.size())) ? mHeaders[pos] : nullptr);
 }
 
+bool LogTableHeader::canFilter(LoggingModelBase::eColumn column) const
+{
+    const LogHeaderItem* item{ getHeaderItem(column) };
+    return (item != nullptr) && item->canPopupFilter();
+}
+
+bool LogTableHeader::isFiltered(LoggingModelBase::eColumn column) const
+{
+    const LogHeaderItem* item{ getHeaderItem(column) };
+    return (item != nullptr) && item->isFiltered();
+}
+
+bool LogTableHeader::showFilterPanel(LoggingModelBase::eColumn column)
+{
+    LogHeaderItem* item{ getHeaderItem(column) };
+    if ((item == nullptr) || (item->canPopupFilter() == false))
+        return false;
+
+    fillFilterData(column);
+    item->showFilters();
+    return true;
+}
+
+bool LogTableHeader::showFilterPanelAt(LoggingModelBase::eColumn column, const QRect& anchor)
+{
+    LogHeaderItem* item{ getHeaderItem(column) };
+    if ((item == nullptr) || (item->canPopupFilter() == false))
+        return false;
+
+    fillFilterData(column);
+    item->showFiltersAt(anchor);
+    return true;
+}
+
+bool LogTableHeader::pickValue(LoggingModelBase::eColumn column, const areg::LogEntry& entry, bool exclude)
+{
+    LogHeaderItem* item{ getHeaderItem(column) };
+    if ((item == nullptr) || (item->canPopupFilter() == false))
+        return false;
+
+    fillFilterData(column);
+    return item->pickValue(entry, exclude);
+}
+
 QSize LogTableHeader::sizeHint() const
 {
     QSize hint{ QHeaderView::sizeHint() };
@@ -144,7 +225,7 @@ QSize LogTableHeader::sizeHint() const
 inline QRect LogTableHeader::filterRect(const QRect& rect) const
 {
     const int extent{ qMin(_funnelZone, rect.height()) };
-    return QRect(rect.right() - extent - (_sectionPad / 2), rect.top() + ((rect.height() - extent) / 2), extent, extent);
+    return QRect(rect.left() + (_sectionPad / 2), rect.top() + ((rect.height() - extent) / 2), extent, extent);
 }
 
 inline QRect LogTableHeader::sectionRect(int logicalIndex) const
@@ -167,7 +248,7 @@ bool LogTableHeader::isOnFunnel(const QPoint& pos, int logicalIndex) const
     return (section.isEmpty() == false) && filterRect(section).contains(pos);
 }
 
-void LogTableHeader::drawFunnel(QPainter& painter, const QRect& rect, bool isOn, bool isHot) const
+void LogTableHeader::drawFunnel(QPainter& painter, const QRect& rect, bool isOn, bool isNear, bool isHot) const
 {
     const qreal edge { static_cast<qreal>(qMin(_funnelExtent, qMin(rect.width(), rect.height()))) };
     const qreal scale{ edge / _iconGrid };
@@ -209,10 +290,46 @@ void LogTableHeader::drawFunnel(QPainter& painter, const QRect& rect, bool isOn,
     pen.setJoinStyle(Qt::PenJoinStyle::RoundJoin);
     pen.setCapStyle(Qt::PenCapStyle::RoundCap);
 
-    painter.setOpacity(isOn ? 1.0 : (isHot ? 0.85 : 0.4));
+    // Idle it is barely there, and it says the column can be narrowed without being read
+    // as a control. It brightens as the pointer comes closer and stays full while it filters.
+    painter.setOpacity(isOn ? 1.0 : (isHot ? 0.9 : (isNear ? 0.55 : 0.22)));
     painter.setPen(pen);
     painter.setBrush(Qt::BrushStyle::NoBrush);
     painter.drawPath(funnel);
+    painter.restore();
+}
+
+void LogTableHeader::drawColumnsMark(QPainter& painter, const QRect& rect, bool isHot) const
+{
+    const QPalette& pal{ palette() };
+    const QColor ink{ pal.color(QPalette::ColorRole::WindowText) };
+    const qreal edge{ qMin(12.0, qMin(static_cast<qreal>(rect.width()) - 4.0, static_cast<qreal>(rect.height()))) };
+    const qreal left{ rect.left() + ((rect.width()  - edge) / 2.0) };
+    const qreal top { rect.top()  + ((rect.height() - edge) / 2.0) };
+
+    painter.save();
+    painter.setRenderHint(QPainter::RenderHint::Antialiasing, true);
+
+    if (isHot)
+    {
+        QColor plate{ ink };
+        plate.setAlphaF(0.10);
+        painter.setPen(Qt::PenStyle::NoPen);
+        painter.setBrush(plate);
+        painter.drawRoundedRect(QRectF(rect).adjusted(2.0, 3.0, -2.0, -3.0), _funnelRound, _funnelRound);
+    }
+
+    QColor pen{ ink };
+    pen.setAlphaF(isHot ? 0.85 : 0.45);
+    painter.setBrush(Qt::BrushStyle::NoBrush);
+    painter.setPen(QPen(pen, 1.4, Qt::PenStyle::SolidLine, Qt::PenCapStyle::RoundCap, Qt::PenJoinStyle::RoundJoin));
+
+    QPainterPath chevron;
+    chevron.moveTo(left + (edge * 0.22), top + (edge * 0.40));
+    chevron.lineTo(left + (edge * 0.50), top + (edge * 0.66));
+    chevron.lineTo(left + (edge * 0.78), top + (edge * 0.40));
+    painter.drawPath(chevron);
+
     painter.restore();
 }
 
@@ -249,17 +366,31 @@ void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logi
     painter->drawLine(rect.right(), rect.top() + _titleAir, rect.right(), rect.bottom() - _titleAir);
     painter->drawLine(rect.left(), rect.bottom(), rect.right(), rect.bottom());
 
+    if (col == LoggingModelBase::eColumn::LogColumnRail)
+    {
+        drawColumnsMark(*painter, rect, isHovered);
+        painter->restore();
+        return;
+    }
+
+    const int flags{ mModel->getAlignmentData(col) };
     QRect title{ rect.adjusted(_sectionPad, 0, -_sectionPad, 0) };
     if (canFilter)
     {
         const QRect zone{ filterRect(rect) };
-        title.setRight(zone.left() - (_sectionPad / 2));
-        // A column that is narrowed says so at all times. The rest show the funnel when the
-        // pointer is on their section, so the header stays quiet while it is read.
-        if (isFiltered || isHovered)
+        // The funnel sits beside the title, at one offset in every section, so it belongs
+        // to the word it filters and every funnel of the header stands on one line.
+        if ((flags & Qt::AlignmentFlag::AlignHCenter) != 0)
         {
-            drawFunnel(*painter, zone, isFiltered, isHovered && mOnFunnel);
+            const int reserve{ zone.width() + _sectionPad };
+            title = rect.adjusted(reserve, 0, -reserve, 0);
         }
+        else
+        {
+            title.setLeft(zone.right() + (_sectionPad / 2));
+        }
+
+        drawFunnel(*painter, zone, isFiltered, isHovered, isHovered && mOnFunnel);
     }
 
     if (title.width() > 0)
@@ -274,7 +405,6 @@ void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logi
             ink = blend(ink, headerGround(pal), 0.25);
         }
 
-        const int flags{ mModel->getAlignmentData(col) };
         const QString name{ mModel->getHeaderName(logicalIndex) };
         painter->setPen(ink);
         painter->drawText(title, flags, painter->fontMetrics().elidedText(name, Qt::TextElideMode::ElideRight, title.width()));
@@ -333,6 +463,15 @@ void LogTableHeader::fillFilterData(LoggingModelBase::eColumn column)
 void LogTableHeader::mousePressEvent(QMouseEvent* event)
 {
     const int logical{ logicalIndexAt(event->pos()) };
+    if ((event->button() == Qt::MouseButton::LeftButton)
+        && (getColumn(logical) == LoggingModelBase::eColumn::LogColumnRail))
+    {
+        const QRect section{ sectionRect(logical) };
+        emit signalColumnsRequested(QRect(mapToGlobal(section.topLeft()), section.size()));
+        event->accept();
+        return;
+    }
+
     if ((event->button() == Qt::MouseButton::LeftButton) && isOnFunnel(event->pos(), logical))
     {
         const LoggingModelBase::eColumn col{ getColumn(logical) };

@@ -68,8 +68,11 @@ OptionsManager::OptionsManager()
     , mCurId        ( 0 )
     , mTheme        ( eAppTheme::SystemDefault )
     , mTimeUnit     ( NETimeUnits::DefaultUnit )
+    , mTimeStamp    ( NETimeUnits::DefaultStamp )
     , mLogPalette   ( NELogPalette::DefaultPalette )
     , mLogRowHeight ( OptionsManager::LogRowHeightDefault )
+    , mLogWordWrap  ( false )
+    , mLogWrapLines ( OptionsManager::LogWrapLinesDefault )
 {
 }
 
@@ -298,8 +301,11 @@ void OptionsManager::writeOptions()
             xml.writeStartElement(NELusanCommon::xmlElementOption);
                 xml.writeTextElement(NELusanCommon::xmlElementTheme, themeToString(mTheme));
                 xml.writeTextElement(NELusanCommon::xmlElementTimeUnit, NETimeUnits::unitKey(mTimeUnit));
+                xml.writeTextElement(NELusanCommon::xmlElementTimeStamp, NETimeUnits::stampKey(mTimeStamp));
                 xml.writeTextElement(NELusanCommon::xmlElementLogPalette, NELogPalette::paletteKey(mLogPalette));
                 xml.writeTextElement(NELusanCommon::xmlElementLogRowHeight, QString::number(mLogRowHeight));
+                xml.writeTextElement(NELusanCommon::xmlElementLogWordWrap, mLogWordWrap ? QStringLiteral("true") : QStringLiteral("false"));
+                xml.writeTextElement(NELusanCommon::xmlElementLogWrapLines, QString::number(mLogWrapLines));
                 xml.writeStartElement(NELusanCommon::xmlElementWorkspaceList);
                 if (hasDefaultWorkspace())
                 {
@@ -458,6 +464,11 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
                 _readTimeUnit(xml);
             }
             else
+            if (xmlName == NELusanCommon::xmlElementTimeStamp)
+            {
+                _readTimeStamp(xml);
+            }
+            else
             if (xmlName == NELusanCommon::xmlElementLogPalette)
             {
                 _readLogPalette(xml);
@@ -466,6 +477,16 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
             if (xmlName == NELusanCommon::xmlElementLogRowHeight)
             {
                 _readLogRowHeight(xml);
+            }
+            else
+            if (xmlName == NELusanCommon::xmlElementLogWordWrap)
+            {
+                _readLogWordWrap(xml);
+            }
+            else
+            if (xmlName == NELusanCommon::xmlElementLogWrapLines)
+            {
+                _readLogWrapLines(xml);
             }
             else
             if (xmlName == NELusanCommon::xmlElementWorkspaceList)
@@ -497,6 +518,14 @@ void OptionsManager::_readTimeUnit(QXmlStreamReader& xml)
     mTimeUnit = NETimeUnits::unitFromKey(xml.readElementText(QXmlStreamReader::IncludeChildElements));
 }
 
+void OptionsManager::_readTimeStamp(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementTimeStamp)
+        return;
+
+    mTimeStamp = NETimeUnits::stampFromKey(xml.readElementText(QXmlStreamReader::IncludeChildElements));
+}
+
 void OptionsManager::_readLogPalette(QXmlStreamReader& xml)
 {
     if (xml.name() != NELusanCommon::xmlElementLogPalette)
@@ -513,6 +542,25 @@ void OptionsManager::_readLogRowHeight(QXmlStreamReader& xml)
     bool valid{ false };
     const int height{ xml.readElementText(QXmlStreamReader::IncludeChildElements).toInt(&valid) };
     setLogRowHeight(valid ? height : OptionsManager::LogRowHeightDefault);
+}
+
+void OptionsManager::_readLogWordWrap(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementLogWordWrap)
+        return;
+
+    const QString value{ xml.readElementText(QXmlStreamReader::IncludeChildElements).trimmed() };
+    mLogWordWrap = (value.compare(QLatin1String("true"), Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
+void OptionsManager::_readLogWrapLines(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementLogWrapLines)
+        return;
+
+    bool valid{ false };
+    const int lines{ xml.readElementText(QXmlStreamReader::IncludeChildElements).toInt(&valid) };
+    setLogWrapLines(valid ? lines : OptionsManager::LogWrapLinesDefault);
 }
 
 void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)

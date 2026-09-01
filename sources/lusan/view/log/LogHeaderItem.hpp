@@ -72,6 +72,28 @@ public:
     void showFilters();
 
     /**
+     * \brief   Opens the filter panel under the given rectangle instead of under the header
+     *          section, so a column the table does not show can be reached as well.
+     * \param   anchor  The rectangle to open the panel under, in screen coordinates.
+     **/
+    void showFiltersAt(const QRect& anchor);
+
+    /**
+     * \brief   Narrows the column to the value the given row carries, or to every value
+     *          but that one.
+     * \param   entry   The row the value is taken from.
+     * \param   exclude True to keep every value except the one the row carries.
+     * \return  True when the column took the value.
+     **/
+    bool pickValue(const areg::LogEntry& entry, bool exclude);
+
+    /**
+     * \brief   Returns the value of the given row in this column, as the filter panel of the
+     *          column holds it. Empty when the column is narrowed by a phrase.
+     **/
+    NELusanCommon::AnyData valueOf(const areg::LogEntry& entry) const;
+
+    /**
      * \brief   Sets the filter string for line edit filter control.
      **/
     void setFilterData(const QString & data);

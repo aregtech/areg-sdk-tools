@@ -136,6 +136,69 @@ void LogHeaderItem::showFilters()
     mWidget->showFilterAt(QRect(corner, QSize(mHeader.sectionSize(index), mHeader.height())));
 }
 
+void LogHeaderItem::showFiltersAt(const QRect& anchor)
+{
+    if ((mType == eType::None) || (mWidget == nullptr))
+        return;
+
+    mWidget->showFilterAt(anchor);
+}
+
+NELusanCommon::AnyData LogHeaderItem::valueOf(const areg::LogEntry& entry) const
+{
+    switch (mColumn)
+    {
+    case LoggingModelBase::eColumn::LogColumnPriority:
+        return std::make_any<uint16_t>(static_cast<uint16_t>(entry.logMessagePrio));
+
+    case LoggingModelBase::eColumn::LogColumnSource:
+    case LoggingModelBase::eColumn::LogColumnSourceId:
+        return std::make_any<ITEM_ID>(entry.logCookie);
+
+    case LoggingModelBase::eColumn::LogColumnThread:
+    case LoggingModelBase::eColumn::LogColumnThreadId:
+        return std::make_any<ITEM_ID>(entry.logThreadId);
+
+    default:
+        return NELusanCommon::AnyData();
+    }
+}
+
+bool LogHeaderItem::pickValue(const areg::LogEntry& entry, bool exclude)
+{
+    if (mWidget == nullptr)
+        return false;
+
+    if (mType == eType::Combo)
+    {
+        LogComboFilterBase* combo{ static_cast<LogComboFilterBase*>(mWidget) };
+        return combo->pickValue(valueOf(entry), exclude);
+    }
+
+    // A phrase keeps what it matches. There is nothing to write into it that would keep
+    // everything else, so the reader is offered no exclude on such a column.
+    if (exclude || (mType != eType::Text))
+        return false;
+
+    QString text;
+    if (mColumn == LoggingModelBase::eColumn::LogColumnMessage)
+    {
+        text = QString::fromUtf8(entry.logMessage);
+    }
+    else if ((mColumn == LoggingModelBase::eColumn::LogColumnTimeDuration) && (entry.logDuration != 0))
+    {
+        // The panel of this column keeps the rows that last at least the given time, in
+        // the microseconds the framework measures in.
+        text = QString::number(entry.logDuration);
+    }
+
+    if (text.isEmpty())
+        return false;
+
+    mWidget->setDataFilter(NELusanCommon::FilterString{ text, true, false, false });
+    return true;
+}
+
 void LogHeaderItem::setFilterData(const QString& data)
 {
     if ((mType == eType::Text) && (mWidget != nullptr))

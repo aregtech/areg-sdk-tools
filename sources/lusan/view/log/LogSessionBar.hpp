@@ -143,6 +143,27 @@ public:
     inline LogPriorityBar* ctrlPriority(void) const;
 
     /**
+     * \brief   Returns the button that opens the panel naming every filter of the window.
+     **/
+    inline QToolButton* ctrlFilters(void) const;
+
+    /**
+     * \brief   Returns the button that opens the panel choosing the columns of the table.
+     **/
+    inline QToolButton* ctrlColumns(void) const;
+
+    /**
+     * \brief   Returns the toggle that breaks a long message over several lines.
+     **/
+    inline QToolButton* ctrlWordWrap(void) const;
+
+    /**
+     * \brief   Draws the word wrap toggle in the given state without reporting it.
+     * \param   wrap    True when a long message is broken over several lines.
+     **/
+    void setWordWrap(bool wrap);
+
+    /**
      * \brief   Returns the priorities the table draws, as a bit mask of areg::LogPriority
      *          values. Zero means every priority is drawn.
      **/
@@ -276,6 +297,12 @@ signals:
      **/
     void signalViewPriorityChanged(uint16_t mask);
 
+    /**
+     * \brief   The signal is triggered when the word wrap toggle is pressed.
+     * \param   wrap    True when a long message is to be broken over several lines.
+     **/
+    void signalWordWrapToggled(bool wrap);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -352,6 +379,9 @@ private:
     QToolButton*        mFilterMatches; //!< Turns the typed phrase into a filter on the message column.
     QToolButton*        mHitList;       //!< Lists every row the phrase matches.
     QToolButton*        mSearchScope;   //!< Says whether the search walks the shown rows or every row.
+    QToolButton*        mFilters;       //!< Opens the panel naming every filter the window has on.
+    QToolButton*        mColumns;       //!< Opens the panel choosing the columns of the table.
+    QToolButton*        mWordWrap;      //!< Breaks a long message over several lines, or keeps every row on one line.
     QLabel*             mCounters;      //!< How many rows are shown out of how many there are.
     QToolButton*        mMoveTop;       //!< Move the table to its first row.
     QToolButton*        mMoveBottom;    //!< Move the table to its last row, and keep it there while checked.
@@ -411,6 +441,21 @@ inline LogFilterChips* LogSessionBar::ctrlChips(void) const
 inline LogPriorityBar* LogSessionBar::ctrlPriority(void) const
 {
     return mPriority;
+}
+
+inline QToolButton* LogSessionBar::ctrlFilters(void) const
+{
+    return mFilters;
+}
+
+inline QToolButton* LogSessionBar::ctrlWordWrap(void) const
+{
+    return mWordWrap;
+}
+
+inline QToolButton* LogSessionBar::ctrlColumns(void) const
+{
+    return mColumns;
 }
 
 inline QToolButton* LogSessionBar::ctrlMoveTop(void) const

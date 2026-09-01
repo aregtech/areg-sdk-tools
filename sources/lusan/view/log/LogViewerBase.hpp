@@ -23,6 +23,8 @@
 #include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/log/LogTextHighlight.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "areg/base/areg_global.h"
@@ -31,7 +33,9 @@
  * Dependencies
  ************************************************************************/
 class LoggingModelBase;
+class LogColumnPicker;
 class LogEmptyState;
+class LogFilterPanel;
 class LogHitMap;
 class NaviLogScopeBase;
 class LogSessionBar;
@@ -41,6 +45,8 @@ class SearchLineEdit;
 
 
 class QHeaderView;
+class QIcon;
+class QMenu;
 class QModelIndex;
 class QPoint;
 class QString;
@@ -91,6 +97,24 @@ public:
      *          the setting changes.
      **/
     static void refreshRowHeights(void);
+
+    /**
+     * \brief   Returns a round mark in the colour the rail paints the given priority with,
+     *          sized for a menu entry.
+     * \param   prio    The priority to take the colour of.
+     * \param   on      The widget the mark is drawn for, read for its pixel ratio. May be nullptr.
+     **/
+    static QIcon priorityDot(areg::LogPriority prio, const QWidget* on);
+
+    /**
+     * \brief   Gives every row the table draws now the height its message needs, and leaves
+     *          the rows off screen as they are. The cost follows the window, not the log.
+     * \param   table       The table to measure.
+     * \param   column      The logical index of the message column.
+     * \param   least       The height a row keeps when its message fits on one line.
+     * \param   maxLines    The most lines one row may take.
+     **/
+    static void measureShownRows(QTableView* table, int column, int least, int maxLines);
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor
@@ -170,6 +194,18 @@ public:
      * \param   index   The entry to select. The index should be valid and must be mapped to the source model.
      */
     void selectSourceElement(const QModelIndex & index);
+
+    /**
+     * \brief   Marks every row the table draws that belongs to the process, thread, scope or
+     *          scope call the given subject names, and brings the first of them into view.
+     * \param   pick    What the rows are recognised by.
+     **/
+    void selectMatching(const LogViewerFilter::sIsolation& pick);
+
+    /**
+     * \brief   Opens the Scope Analyzer on the rows the reader marked in this window.
+     **/
+    void analyzeSelection(void);
 
 /************************************************************************
  * Overrides
@@ -287,6 +323,19 @@ protected:
     void resetColumnOrder();
 
     /**
+     * \brief   Shows the given columns, in the given order, and keeps the width every column
+     *          already had. The message column is added back when the list does not carry it.
+     * \param   columns The columns to show.
+     **/
+    void applyColumns(const QList<LoggingModelBase::eColumn>& columns);
+
+    /**
+     * \brief   Opens the filter panel of the column the current cell belongs to.
+     * \return  True when a panel was opened.
+     **/
+    bool filterCurrentColumn();
+
+    /**
      * \brief   Resets filters.
      **/
     void resetFilters();
@@ -311,6 +360,17 @@ protected:
      *          the user makes is what switches following off.
      **/
     void scrollFollowing();
+
+    /**
+     * \brief   Breaks a long message over several lines, or keeps every row on one line.
+     * \param   wrap    True to break a long message over several lines.
+     **/
+    void setWordWrap(bool wrap);
+
+    /**
+     * \brief   Returns true when a long message is broken over several lines.
+     **/
+    inline bool isWordWrap(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // attributes
@@ -468,12 +528,92 @@ private:
     QString _filterSummary() const;
 
     /**
-     * \brief   Appends the entries that narrow the table to one process, thread, scope or
-     *          scope call, taken from the given row.
+     * \brief   Appends one submenu per subject of the given row -- the call, the scope, the
+     *          thread and the process -- each carrying the verbs that act on that subject.
+     *          A submenu named by a value the row carries is written in bold.
      * \param   menu    The menu to fill.
      * \param   row     The row of the table the menu was opened on, or -1.
+     * \param   panel   The scope panel that owns the scope entries, or nullptr.
+     * \param   node    On output, the scope tree entry the scope submenu was filled for.
+     *                  Invalid when the panel has nothing to say about the row.
      **/
-    void _populateIsolateMenu(QMenu* menu, int row);
+    void _populateSubjectMenus(QMenu* menu, int row, NaviLogScopeBase* panel, QModelIndex& node);
+
+    /**
+     * \brief   Appends one subject submenu: the entry that names the subject, and the verbs
+     *          that narrow the table to it, mark its rows and read it in the Scope Analyzer.
+     * \param   menu    The menu to append the submenu to.
+     * \param   base    What the row is recognised by.
+     * \param   row     The row of the table the menu was opened on.
+     * \param   kind    Which subject of the row the submenu acts on.
+     * \param   title   The text of the entry that opens the submenu.
+     * \param   chip    What the chip says while the table is narrowed to this subject.
+     * \param   icon    The icon of that entry.
+     * \param   strong  True to write the title in bold, for a title that is a value of the row.
+     * \return  The submenu that was appended.
+     **/
+    QMenu* _addSubjectMenu( QMenu* menu, const LogViewerFilter::sIsolation& base, int row
+                          , LogViewerFilter::eIsolation kind, const QString& title
+                          , const QString& chip, const QIcon& icon, bool strong);
+
+    /**
+     * \brief   Reads the row a menu speaks about: what the row is recognised by, and the
+     *          names of the process, the thread and the scope it came from.
+     * \param   row     The row of the table, in the coordinates of the filter.
+     * \param   base    On output, what the row is recognised by. The kind is left unset.
+     * \param   process On output, the name of the process the row came from.
+     * \param   thread  On output, the name of the thread the row came from.
+     * \param   scope   On output, the name of the scope that wrote the row.
+     * \return  True when the row carries an entry and the names could be read.
+     **/
+    bool _rowSubject(int row, LogViewerFilter::sIsolation& base, QString& process, QString& thread, QString& scope) const;
+
+    /**
+     * \brief   Appends the entries that narrow a column to a value the clicked row carries,
+     *          or that drop that value. The column the reader clicked comes first, at the
+     *          top level of the menu, so the common case costs one click.
+     * \param   menu    The menu to fill.
+     * \param   index   The cell the menu was opened on.
+     **/
+    void _populateFilterMenu(QMenu* menu, const QModelIndex& index);
+
+    /**
+     * \brief   Narrows a column to the value one row carries, or drops that value.
+     * \param   column  The column to narrow.
+     * \param   row     The row of the table the value is taken from.
+     * \param   exclude True to keep every value except the one the row carries.
+     **/
+    void _filterByCell(LoggingModelBase::eColumn column, int row, bool exclude);
+
+    /**
+     * \brief   Opens the panel that lists every filter of the window, under its button.
+     **/
+    void _showFilterPanel();
+
+    /**
+     * \brief   Opens the panel that chooses the columns of the table.
+     * \param   anchor  The rectangle to open the panel under, in screen coordinates. An empty
+     *                  rectangle opens it under the button of the session bar.
+     **/
+    void _showColumnPicker(const QRect& anchor = QRect());
+
+    /**
+     * \brief   Gives the message column the width the table has left over, so the row fills
+     *          the window. It only grows the column, so a width the reader set is kept and
+     *          the table scrolls sideways instead.
+     **/
+    void _fitMessageColumn();
+
+    /**
+     * \brief   Gives every row the table draws now the height its message needs. Only the
+     *          rows on screen are measured, so the cost does not follow the size of the log.
+     **/
+    void _measureShownRows();
+
+    /**
+     * \brief   Puts every row back to one line.
+     **/
+    void _resetRowHeights();
 
     /**
      * \brief   Returns the given number of microseconds as a phrase, in the largest unit
@@ -522,10 +662,16 @@ protected:
     QTimer*                     mCountTimer;//!< Collects the row changes so the counters are drawn once instead of once per row.
     LogEmptyState*              mEmptyState;//!< What the table says when it has no row to draw.
     LogHitMap*                  mHitMap;    //!< The marks on the scrollbar naming the hits and the rows above a severity.
+    LogColumnPicker*            mPickColumns;//!< The panel that chooses the columns of the table.
+    LogFilterPanel*             mPickFilters;//!< The panel that lists every filter the window has on.
     LogClockSkew                mSkew;      //!< Watches the sources for a clock that disagrees with the collector.
     bool                        mSkewShown; //!< True once the clock notice was raised, so it is raised once per session.
     bool                        mFollowScroll; //!< True while the application scrolls the table itself.
     bool                        mFollowSelect; //!< True while the application selects a row itself.
+    bool                        mWordWrap;  //!< True while a long message is broken over several lines.
+    bool                        mMeasuring; //!< True while the row heights are being given, so the work does not repeat.
+    int                         mFittedWidth; //!< The width the window last gave the message column to fill the row, -1 if none.
+    int                         mFittedTaken; //!< The width every other column took when that width was given.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls.
@@ -541,6 +687,11 @@ private:
 inline LoggingModelBase* LogViewerBase::getLoggingModel() const
 {
     return mLogModel;
+}
+
+inline bool LogViewerBase::isWordWrap(void) const
+{
+    return mWordWrap;
 }
 
 inline QTableView* LogViewerBase::getLoggingTable() const

@@ -215,6 +215,15 @@ public:
      **/
     void clearFilter() override;
 
+    /**
+     * \brief   Picks the entry carrying the given value, or every entry but that one, and
+     *          reports the change.
+     * \param   value   The value to pick, in the form the list holds it.
+     * \param   exclude True to pick every entry except the one carrying the value.
+     * \return  True when the list holds the value.
+     **/
+    bool pickValue(const NELusanCommon::AnyData& value, bool exclude);
+
 protected:
 
     /**

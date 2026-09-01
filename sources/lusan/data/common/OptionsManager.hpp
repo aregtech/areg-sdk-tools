@@ -49,6 +49,12 @@ public:
     static constexpr int    LogRowHeightMin     { 16 };
     static constexpr int    LogRowHeightMax     { 48 };
 
+    //!< The most lines a wrapped log row takes when the user has not chosen a number.
+    static constexpr int    LogWrapLinesDefault { 4 };
+    //!< The range a chosen line count is clamped into.
+    static constexpr int    LogWrapLinesMin     { 2 };
+    static constexpr int    LogWrapLinesMax     { 12 };
+
     enum class eAppTheme : uint8_t
     {
           SystemDefault = 0
@@ -248,6 +254,16 @@ public:
     inline void setTimeUnit(NETimeUnits::eTimeUnit unit);
 
     /**
+     * \brief   Returns the shape the log timestamps are written in.
+     **/
+    inline NETimeUnits::eTimeStamp getTimeStamp() const;
+
+    /**
+     * \brief   Sets the shape the log timestamps are written in.
+     **/
+    inline void setTimeStamp(NETimeUnits::eTimeStamp stamp);
+
+    /**
      * \brief   Returns the colour set the log rows are drawn with.
      **/
     inline NELogPalette::eLogPalette getLogPalette() const;
@@ -267,6 +283,27 @@ public:
      *          range is clamped into it.
      **/
     inline void setLogRowHeight(int height);
+
+    /**
+     * \brief   Returns true when a log row breaks a long message over several lines.
+     **/
+    inline bool isLogWordWrap() const;
+
+    /**
+     * \brief   Says whether a log row breaks a long message over several lines.
+     **/
+    inline void setLogWordWrap(bool wrap);
+
+    /**
+     * \brief   Returns the most lines one wrapped log row may take.
+     **/
+    inline int getLogWrapLines() const;
+
+    /**
+     * \brief   Sets the most lines one wrapped log row may take. A value outside the
+     *          allowed range is clamped into it.
+     **/
+    inline void setLogWrapLines(int lines);
 
 private:
     /**
@@ -292,6 +329,11 @@ private:
     void _readTimeUnit(QXmlStreamReader& xml);
 
     /**
+     * \brief   Reads the timestamp shape setting from XML.
+     **/
+    void _readTimeStamp(QXmlStreamReader& xml);
+
+    /**
      * \brief   Reads the log colour set setting from XML.
      **/
     void _readLogPalette(QXmlStreamReader& xml);
@@ -300,6 +342,16 @@ private:
      * \brief   Reads the log row height setting from XML.
      **/
     void _readLogRowHeight(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Reads the word wrap setting of the log rows from XML.
+     **/
+    void _readLogWordWrap(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Reads the line count of a wrapped log row from XML.
+     **/
+    void _readLogWrapLines(QXmlStreamReader& xml);
 
     /**
      * \brief   Reads the workspace list from an XML stream.
@@ -340,8 +392,11 @@ private:
     uint32_t    mCurId;         //!< The current workspace ID.
     eAppTheme   mTheme;         //!< Configured application theme.
     NETimeUnits::eTimeUnit mTimeUnit;   //!< The unit the measured times are shown in.
+    NETimeUnits::eTimeStamp mTimeStamp; //!< The shape the log timestamps are written in.
     NELogPalette::eLogPalette mLogPalette;   //!< The colour set the log rows are drawn with.
     int         mLogRowHeight;  //!< The height of one row of a log table.
+    bool        mLogWordWrap;   //!< True when a log row breaks a long message over several lines.
+    int         mLogWrapLines;  //!< The most lines one wrapped log row may take.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -398,9 +453,39 @@ inline void OptionsManager::setLogRowHeight(int height)
     mLogRowHeight = std::clamp(height, OptionsManager::LogRowHeightMin, OptionsManager::LogRowHeightMax);
 }
 
+inline bool OptionsManager::isLogWordWrap() const
+{
+    return mLogWordWrap;
+}
+
+inline void OptionsManager::setLogWordWrap(bool wrap)
+{
+    mLogWordWrap = wrap;
+}
+
+inline int OptionsManager::getLogWrapLines() const
+{
+    return mLogWrapLines;
+}
+
+inline void OptionsManager::setLogWrapLines(int lines)
+{
+    mLogWrapLines = std::clamp(lines, OptionsManager::LogWrapLinesMin, OptionsManager::LogWrapLinesMax);
+}
+
 inline void OptionsManager::setTimeUnit(NETimeUnits::eTimeUnit unit)
 {
     mTimeUnit = unit;
+}
+
+inline NETimeUnits::eTimeStamp OptionsManager::getTimeStamp() const
+{
+    return mTimeStamp;
+}
+
+inline void OptionsManager::setTimeStamp(NETimeUnits::eTimeStamp stamp)
+{
+    mTimeStamp = stamp;
 }
 
 #endif // LUSAN_MODEL_COMMON_OPTIONSMANAGER_HPP

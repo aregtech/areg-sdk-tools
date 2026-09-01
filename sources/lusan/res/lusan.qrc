@@ -41,6 +41,9 @@
         <file alias="scope-mute">icons/ui-scope-mute.svg</file>
         <file alias="scope-restore-all">icons/ui-scope-restore-all.svg</file>
         <file alias="scope-lines">icons/ui-scope-lines.svg</file>
+        <file alias="subject-call">icons/log-subject-call.svg</file>
+        <file alias="subject-thread">icons/log-subject-thread.svg</file>
+        <file alias="subject-process">icons/log-subject-process.svg</file>
         <file alias="target-stop">icons/ui-target-stop.svg</file>
         <file alias="target-resume">icons/ui-target-resume.svg</file>
         <file alias="target-pause">icons/ui-target-pause.svg</file>
@@ -71,6 +74,9 @@
         <file alias="trash">icons/ui-trash.svg</file>
         <file alias="edit-find">icons/ui-edit-find.svg</file>
         <file alias="filter">icons/ui-filter.svg</file>
+        <file alias="filter-menu">icons/ui-filter-menu.svg</file>
+        <file alias="columns">icons/ui-columns.svg</file>
+        <file alias="word-wrap">icons/ui-word-wrap.svg</file>
         <file alias="edit-find-usages">icons/ui-edit-find-usages.svg</file>
         <file alias="goto-declaration">icons/ui-goto-declaration.svg</file>
         <file alias="view-navigation">icons/ui-view-navigation.svg</file>

@@ -21,6 +21,7 @@
 #include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELogPalette.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/view/log/LogEmptyState.hpp"
 #include "lusan/view/log/LogFilterChips.hpp"
@@ -29,6 +30,8 @@
 #include "lusan/view/common/NaviLogScopeBase.hpp"
 #include "lusan/view/log/LogSessionBar.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
+#include "lusan/view/log/LogTableView.hpp"
+#include "lusan/view/log/LogViewPanels.hpp"
 #include "lusan/view/log/ScopeOutputViewer.hpp"
 
 #include "lusan/model/log/LogViewerFilter.hpp"
@@ -49,6 +52,8 @@
 #include <QMdiSubWindow>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QPoint>
 #include <QScrollBar>
 #include <QShortcut>
@@ -85,10 +90,16 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mCountTimer(nullptr)
     , mEmptyState(nullptr)
     , mHitMap   (nullptr)
+    , mPickColumns(nullptr)
+    , mPickFilters(nullptr)
     , mSkew     ( )
     , mSkewShown(false)
     , mFollowScroll(false)
     , mFollowSelect(false)
+    , mWordWrap   (LusanApplication::getOptions().isLogWordWrap())
+    , mMeasuring  (false)
+    , mFittedWidth(-1)
+    , mFittedTaken(-1)
 {
 }
 
@@ -170,7 +181,7 @@ void LogViewerBase::setupWidgets()
         : LogSessionBar::eSessionMode::ModeOffline };
 
     mSessionBar = new LogSessionBar(barMode, mMdiWindow);
-    mLogTable   = new QTableView(mMdiWindow);
+    mLogTable   = new LogTableView(mMdiWindow);
     mLogSearch  = mSessionBar->ctrlSearch();
     mEmptyState = new LogEmptyState(mLogTable->viewport());
     mLogTable->viewport()->installEventFilter(this);
@@ -191,10 +202,17 @@ void LogViewerBase::setupWidgets()
     QShortcut* shortcutCopyRow = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C), this);
     QShortcut* shortcutNextBad = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* shortcutPrevBad = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
+    QShortcut* shortcutFilter  = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_F), this);
+    QShortcut* shortcutNoFilter= new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_R), this);
+    QShortcut* shortcutWrap    = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W), this);
+    QShortcut* shortcutColumns = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_K), this);
+    QShortcut* shortcutAnalyze = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A), this);
 
     // Every MDI child shares one window, so a window wide shortcut in two of them is ambiguous
     // and Qt then fires neither. Each one answers only while the focus is inside this window.
-    for (QShortcut* shortcut : { shortcutSearch, shortcutCopyMsg, shortcutCopyRow, shortcutNextBad, shortcutPrevBad })
+    for (QShortcut* shortcut : { shortcutSearch, shortcutCopyMsg, shortcutCopyRow, shortcutNextBad, shortcutPrevBad
+                               , shortcutFilter, shortcutNoFilter, shortcutWrap, shortcutColumns
+                               , shortcutAnalyze })
     {
         shortcut->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
     }
@@ -209,10 +227,13 @@ void LogViewerBase::setupWidgets()
     mLogTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     mLogTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mLogTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    mLogTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // The columns can add up to more than the window holds, so the bar appears and says so.
+    // The last section is not stretched: a stretched one cannot be widened past the viewport,
+    // and widening the message column is exactly what a long line calls for.
+    mLogTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     mLogTable->setShowGrid(false);
     mLogTable->setCurrentIndex(QModelIndex());
-    mLogTable->horizontalHeader()->setStretchLastSection(true);
+    mLogTable->horizontalHeader()->setStretchLastSection(false);
     mLogTable->verticalHeader()->hide();
     LogViewerBase::applyRowHeight(mLogTable);
     mLogTable->setAutoScroll(true);
@@ -227,8 +248,8 @@ void LogViewerBase::setupWidgets()
     mLogTable->setFont(fixed);
 
     mLogTable->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
-    mLogTable->setWordWrap(false);
-    mLogTable->setHorizontalScrollMode(QAbstractItemView::ScrollMode::ScrollPerItem);
+    mLogTable->setWordWrap(mWordWrap);
+    mLogTable->setHorizontalScrollMode(QAbstractItemView::ScrollMode::ScrollPerPixel);
 
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -243,6 +264,7 @@ void LogViewerBase::setupWidgets()
     if (mHighlight == nullptr)
     {
         mHighlight = new LogTextHighlight(mFoundPos, mLogTable);
+        mHighlight->setWordWrap(mWordWrap, LusanApplication::getOptions().getLogWrapLines());
         mLogTable->setItemDelegate(mHighlight);
     }
     _updateHighlightColumn();
@@ -282,7 +304,21 @@ void LogViewerBase::setupWidgets()
                 _updateChips();
             });
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , this, [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
-    
+    connect(mHeader     , &LogTableHeader::signalColumnsRequested       , this, [this](const QRect& anchor){_showColumnPicker(anchor);});
+    connect(mLogTable   , &QTableView::customContextMenuRequested       , this, [this](const QPoint& pos)  {onTableContextMenu(pos);});
+
+    // A wrapped row is as tall as its message, and only the rows on screen are measured, so
+    // every move of the table asks for the measurement again.
+    connect(mLogTable->verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int) { _measureShownRows(); });
+    connect(mHeader     , &QHeaderView::sectionResized, this, [this](int, int, int) {
+                _measureShownRows();
+            });
+    connect(mFilter     , &QAbstractItemModel::modelReset, this, [this]() { _measureShownRows(); });
+    connect(mFilter     , &QAbstractItemModel::rowsInserted, this, [this](const QModelIndex&, int, int) {
+                _measureShownRows();
+            });
+
+
     connect(mLogTable   , &QTableView::clicked                          , this, [this](const QModelIndex &index){onMouseButtonClicked(index);});
     connect(mLogTable   , &QTableView::doubleClicked                    , this, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
     
@@ -307,6 +343,16 @@ void LogViewerBase::setupWidgets()
     connect(shortcutCopyRow, &QShortcut::activated                      , this, &LogViewerBase::onCopyRow);
     connect(shortcutNextBad, &QShortcut::activated                      , this, [this]() { _stepToProblem(true);  });
     connect(shortcutPrevBad, &QShortcut::activated                      , this, [this]() { _stepToProblem(false); });
+    connect(shortcutFilter , &QShortcut::activated                      , this, [this]() { filterCurrentColumn(); });
+    connect(shortcutNoFilter,&QShortcut::activated                      , this, [this]() { clearEveryFilter();    });
+    connect(shortcutWrap   , &QShortcut::activated                      , this, [this]() { setWordWrap(!mWordWrap); });
+    connect(shortcutColumns, &QShortcut::activated                      , this, [this]() { _showColumnPicker();  });
+    connect(shortcutAnalyze, &QShortcut::activated                      , this, [this]() { analyzeSelection();   });
+
+    connect(mSessionBar->ctrlFilters(), &QToolButton::clicked, this, [this]() { _showFilterPanel();  });
+    connect(mSessionBar->ctrlColumns(), &QToolButton::clicked, this, [this]() { _showColumnPicker(); });
+    connect(mSessionBar, &LogSessionBar::signalWordWrapToggled, this, [this](bool wrap) { setWordWrap(wrap); });
+    mSessionBar->setWordWrap(mWordWrap);
 
     connect(mSessionBar->ctrlFilterMatches(), &QToolButton::clicked, this, [this]() {
                 filterToPhrase(NELusanCommon::FilterString{ mLogSearch->text()
@@ -349,6 +395,10 @@ void LogViewerBase::setupWidgets()
                 mLogSearch->setText(chip.phrase.text);
                 mLogSearch->setFocus();
                 onSearchClicked(true);
+            });
+    connect(chips, &LogFilterChips::signalChipClicked, this, [this](const LogFilterChips::sChip& chip, const QRect& anchor) {
+                // The chip names the filter, so it is also where the filter is changed.
+                mHeader->showFilterPanelAt(static_cast<LoggingModelBase::eColumn>(chip.column), anchor);
             });
 
     connect(mLogModel, &LoggingModelBase::signalRefusedScopesChanged, this, [this]() {
@@ -403,10 +453,15 @@ void LogViewerBase::setupWidgets()
 
 bool LogViewerBase::eventFilter(QObject* watched, QEvent* event)
 {
-    if ((mEmptyState != nullptr) && (mLogTable != nullptr) && (watched == mLogTable->viewport())
-        && (event->type() == QEvent::Type::Resize))
+    if ((mLogTable != nullptr) && (watched == mLogTable->viewport()) && (event->type() == QEvent::Type::Resize))
     {
-        mEmptyState->setGeometry(mLogTable->viewport()->rect());
+        if (mEmptyState != nullptr)
+        {
+            mEmptyState->setGeometry(mLogTable->viewport()->rect());
+        }
+
+        _fitMessageColumn();
+        _measureShownRows();
     }
 
     return MdiChild::eventFilter(watched, event);
@@ -857,29 +912,33 @@ void LogViewerBase::_restoreLayout(void)
     if (columns.isEmpty())
         return;
 
-    // The message column can never be hidden, so it comes back even if the file lost it.
-    if (columns.contains(LoggingModelBase::eColumn::LogColumnMessage) == false)
+    // A width belongs to a column, and the shaping may add the rail or the message back, so
+    // the widths are carried by column and given to the shaped list afterwards.
+    QMap<int, int> byColumn;
+    for (int i = 0; i < columns.size(); ++i)
     {
-        columns.append(LoggingModelBase::eColumn::LogColumnMessage);
-        widths.append(0);
+        byColumn.insert(static_cast<int>(columns.at(i)), widths.at(i));
     }
 
+    const QList<LoggingModelBase::eColumn> shaped{ LoggingModelBase::shapeColumns(columns) };
     mLogTable->setModel(nullptr);
-    mLogModel->setActiveColumns(columns);
+    mLogModel->setActiveColumns(shaped);
     mLogTable->setModel(mFilter);
     _bindSelection();
 
     // A view drops every section size when a model is set, so the widths are applied here and
     // never before the model.
-    for (int i = 0; i < widths.size(); ++i)
+    for (int i = 0; i < shaped.size(); ++i)
     {
-        if (widths[i] > 0)
+        const int width{ byColumn.value(static_cast<int>(shaped.at(i)), 0) };
+        if (width > 0)
         {
-            mLogTable->setColumnWidth(i, widths[i]);
+            mLogTable->setColumnWidth(i, width);
         }
     }
 
     _updateHighlightColumn();
+    _fitMessageColumn();
 }
 
 void LogViewerBase::_forgetLayout(void) const
@@ -1082,11 +1141,9 @@ void LogViewerBase::moveToRow(int row, bool select)
     Q_ASSERT(mLogTable != nullptr);
     if ((row >= 0) && (count > 0) && (row < count))
     {
-        int colMessage = mHeader != nullptr ? mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage) : 0;
-        if (colMessage < 0)
-            colMessage = 0;
-
-        QModelIndex idxSelected = mFilter->index(row, colMessage, QModelIndex());
+        // The row is revealed by the rail, the column it opens with. Asking for the message
+        // cell instead reveals the right end of the widest column of the table.
+        QModelIndex idxSelected = mFilter->index(row, 0, QModelIndex());
         mLogTable->scrollTo(idxSelected);
         if (select)
         {
@@ -1167,39 +1224,60 @@ void LogViewerBase::onTableContextMenu(const QPoint& pos)
     copyRow->setEnabled(idx.isValid());
     connect(copyRow, &QAction::triggered, this, &LogViewerBase::onCopyRow);
 
-    menu.addSeparator();
-    QMenu* isolateMenu = menu.addMenu(tr("Isolate"));
-    _populateIsolateMenu(isolateMenu, idx.isValid() ? idx.row() : -1);
+    QAction* selectAll = menu.addAction(tr("Select all rows"));
+    selectAll->setShortcut(QKeySequence::SelectAll);
+    connect(selectAll, &QAction::triggered, this, [this]() { ctrlTable()->selectAll(); });
 
-    // The same scope menu the navigation panel carries, on the scope of the clicked row. The
-    // panel owns it, so the two surfaces can never drift apart.
+    QAction* dropSelection = menu.addAction(tr("Clear the selection"));
+    dropSelection->setEnabled((mLogTable != nullptr)
+                              && (mLogTable->selectionModel() != nullptr)
+                              && mLogTable->selectionModel()->hasSelection());
+    connect(dropSelection, &QAction::triggered, this, [this]() { mLogTable->clearSelection(); });
+
+    menu.addSeparator();
+
+    QAction* find = menu.addAction(tr("Find..."));
+    find->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F));
+    connect(find, &QAction::triggered, this, [this]() { mLogSearch->setFocus(Qt::FocusReason::ShortcutFocusReason); });
+
+    QAction* nextBad = menu.addAction(tr("Next error or warning"));
+    nextBad->setShortcut(QKeySequence(Qt::Key_F8));
+    connect(nextBad, &QAction::triggered, this, [this]() { _stepToProblem(true); });
+
+    QAction* prevBad = menu.addAction(tr("Previous error or warning"));
+    prevBad->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8));
+    connect(prevBad, &QAction::triggered, this, [this]() { _stepToProblem(false); });
+
+    menu.addSeparator();
+    _populateFilterMenu(&menu, idx);
+
+    // One entry per subject of the clicked row, each carrying the verbs that act on it. The
+    // scope entries come from the navigation panel, so the two surfaces cannot drift apart.
     NaviLogScopeBase* panel{ _scopePanel() };
     QModelIndex scopeNode;
-    QString scopeName;
-    if ((panel != nullptr) && idx.isValid())
-    {
-        const areg::LogEntry* entry{ mLogModel->getLogData(mFilter->mapToSource(idx).row()) };
-        if (entry != nullptr)
-        {
-            scopeNode = panel->findScopeIndex(entry->logCookie, entry->logScopeId);
-            scopeName = mLogModel->getScopeName(entry->logCookie, entry->logScopeId);
-        }
-    }
-
-    if (scopeNode.isValid())
-    {
-        menu.addSeparator();
-        QMenu* scopeMenu = menu.addMenu(scopeName.isEmpty() ? tr("Scope") : tr("Scope: %1").arg(scopeName));
-        if (panel->populateScopeMenu(*scopeMenu, scopeNode) == false)
-        {
-            menu.removeAction(scopeMenu->menuAction());
-            scopeNode = QModelIndex();
-        }
-    }
+    _populateSubjectMenus(&menu, idx.isValid() ? idx.row() : -1, panel, scopeNode);
 
     menu.addSeparator();
+
+    QAction* wrap = menu.addAction(tr("Word wrap"));
+    wrap->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_W));
+    wrap->setCheckable(true);
+    wrap->setChecked(mWordWrap);
+    connect(wrap, &QAction::triggered, this, [this](bool checked) { setWordWrap(checked); });
+
+    QAction* pick = menu.addAction(tr("Choose columns..."));
+    pick->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_K));
+    connect(pick, &QAction::triggered, this, [this]() { _showColumnPicker(); });
+
     QMenu* columnsMenu = menu.addMenu(tr("Columns"));
     _populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
+
+    // A context menu hides the shortcut of its entries by default on this platform, and the
+    // menu is where a reader learns them.
+    for (QAction* action : menu.actions())
+    {
+        action->setShortcutVisibleInContextMenu(true);
+    }
 
     const QAction* chosen{ menu.exec(ctrlTable()->viewport()->mapToGlobal(pos)) };
     if ((chosen != nullptr) && scopeNode.isValid() && (panel != nullptr))
@@ -1208,48 +1286,267 @@ void LogViewerBase::onTableContextMenu(const QPoint& pos)
     }
 }
 
-void LogViewerBase::_populateIsolateMenu(QMenu* menu, int row)
+void LogViewerBase::_populateFilterMenu(QMenu* menu, const QModelIndex& index)
+{
+    if ((mHeader == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr))
+        return;
+
+    const int row{ index.isValid() ? index.row() : -1 };
+    const QModelIndex source{ row >= 0 ? mFilter->mapToSource(mFilter->index(row, 0, QModelIndex())) : QModelIndex() };
+    const areg::LogEntry* entry{ source.isValid() ? mLogModel->getLogData(source.row()) : nullptr };
+
+    // The columns the reader filters a log by, in the order a log is read: what happened,
+    // who wrote it, and the text itself.
+    static const LoggingModelBase::eColumn _byValue[]
+    {
+          LoggingModelBase::eColumn::LogColumnPriority
+        , LoggingModelBase::eColumn::LogColumnSource
+        , LoggingModelBase::eColumn::LogColumnThread
+    };
+
+    const LoggingModelBase::eColumn clicked{ index.isValid()
+                                           ? mHeader->getColumn(index.column())
+                                           : LoggingModelBase::eColumn::LogColumnInvalid };
+
+    if (entry == nullptr)
+    {
+        QAction* none = menu->addAction(tr("Filter by this value"));
+        none->setEnabled(false);
+        return;
+    }
+
+    // A message can be several hundred characters over several lines. The entry names the
+    // value, it does not carry it, so it is cut to one short line.
+    const auto shortText = [](const QString& text) {
+            QString one{ text.simplified() };
+            constexpr int limit{ 52 };
+            return one.size() > limit ? (one.left(limit - 1) + QChar(0x2026)) : one;
+        };
+
+    const auto addEntry = [this, entry, row, shortText](QMenu* target, LoggingModelBase::eColumn column, bool exclude) {
+            const QString value{ shortText(mLogModel->getCellData(entry, column)) };
+            if (value.isEmpty())
+                return false;
+
+            const QString name{ LogViewerBase::_columnName(static_cast<int>(column)) };
+            QAction* action = target->addAction(exclude ? tr("Exclude: %1 = %2").arg(name).arg(value)
+                                                        : tr("Filter: %1 = %2").arg(name).arg(value));
+
+            // An entry that names a priority carries the colour the rail paints that
+            // priority with, so the menu and the row the reader clicked agree.
+            if (column == LoggingModelBase::eColumn::LogColumnPriority)
+            {
+                action->setIcon(LogViewerBase::priorityDot(entry->logMessagePrio, mLogTable));
+            }
+            connect(action, &QAction::triggered, this, [this, column, row, exclude]() {
+                    _filterByCell(column, row, exclude);
+                });
+
+            return true;
+        };
+
+    // Only a column narrowed by picking values can keep everything but one of them. A column
+    // narrowed by a phrase has nothing to write that would mean "not this".
+    const auto canExclude = [](LoggingModelBase::eColumn column) {
+            return (column != LoggingModelBase::eColumn::LogColumnMessage)
+                && (column != LoggingModelBase::eColumn::LogColumnTimeDuration);
+        };
+
+    // The column the reader clicked is the one they are looking at, so it costs one click.
+    // The others are one level down, in the order a log row is read.
+    if (mHeader->canFilter(clicked) && addEntry(menu, clicked, false) && canExclude(clicked))
+    {
+        addEntry(menu, clicked, true);
+    }
+
+    QMenu* more = menu->addMenu(tr("Filter by"));
+    for (LoggingModelBase::eColumn column : _byValue)
+    {
+        if (column != clicked)
+        {
+            addEntry(more, column, false);
+        }
+    }
+
+    if (clicked != LoggingModelBase::eColumn::LogColumnMessage)
+    {
+        addEntry(more, LoggingModelBase::eColumn::LogColumnMessage, false);
+    }
+
+    more->addSeparator();
+    for (LoggingModelBase::eColumn column : _byValue)
+    {
+        if (column != clicked)
+        {
+            addEntry(more, column, true);
+        }
+    }
+
+    if (more->isEmpty())
+    {
+        menu->removeAction(more->menuAction());
+    }
+}
+
+bool LogViewerBase::_rowSubject(int row, LogViewerFilter::sIsolation& base, QString& process, QString& thread, QString& scope) const
 {
     const QModelIndex source{ (row >= 0) && (mFilter != nullptr)
                             ? mFilter->mapToSource(mFilter->index(row, 0, QModelIndex()))
                             : QModelIndex() };
-    const areg::LogEntry* entry{ source.isValid() ? mLogModel->getLogData(source.row()) : nullptr };
+    const areg::LogEntry* entry{ (source.isValid() && (mLogModel != nullptr)) ? mLogModel->getLogData(source.row()) : nullptr };
+    if (entry == nullptr)
+        return false;
 
-    if (entry != nullptr)
+    base.cookie    = entry->logCookie;
+    base.thread    = entry->logThreadId;
+    base.scopeId   = entry->logScopeId;
+    base.sessionId = entry->logSessionId;
+
+    // A name a menu entry is built from is never left empty: a source that sent none is
+    // named by the number the collector knows it under.
+    process = QString(entry->logModule);
+    if (process.isEmpty())
     {
-        LogViewerFilter::sIsolation base;
-        base.cookie    = entry->logCookie;
-        base.thread    = entry->logThreadId;
-        base.scopeId   = entry->logScopeId;
-        base.sessionId = entry->logSessionId;
+        process = tr("process %1").arg(entry->logCookie);
+    }
 
-        const QString process{ QString(entry->logModule) };
-        const QString thread { QString(entry->logThread) };
-        QString scope { mLogModel->getScopeName(entry->logCookie, entry->logScopeId) };
-        if (scope.isEmpty())
-        {
-            scope = tr("scope %1").arg(entry->logScopeId);
-        }
+    thread = QString(entry->logThread);
+    if (thread.isEmpty())
+    {
+        thread = tr("thread %1").arg(entry->logThreadId);
+    }
 
-        const auto addEntry = [this, menu, base](const QString& text, const QString& chip, LogViewerFilter::eIsolation kind) {
-                QAction* action = menu->addAction(text);
-                connect(action, &QAction::triggered, this, [this, base, chip, kind]() {
-                        LogViewerFilter::sIsolation pick{ base };
-                        pick.kind = kind;
-                        mIsolationText = chip;
-                        mFilter->setIsolation(pick);
-                        _resetSearchResult();
-                        _updateChips();
-                        _updateCounters();
+    scope = mLogModel->getScopeName(entry->logCookie, entry->logScopeId);
+    if (scope.isEmpty())
+    {
+        scope = tr("scope %1").arg(entry->logScopeId);
+    }
+
+    return true;
+}
+
+QMenu* LogViewerBase::_addSubjectMenu( QMenu* menu, const LogViewerFilter::sIsolation& base, int row
+                                     , LogViewerFilter::eIsolation kind, const QString& title
+                                     , const QString& chip, const QIcon& icon, bool strong)
+{
+    QMenu* subject = menu->addMenu(icon, title);
+
+    // A title that is a value the clicked row carries is written in bold, so the reader tells
+    // the words of the menu from the words of their own log at a glance.
+    if (strong)
+    {
+        QAction* opener{ subject->menuAction() };
+        QFont face{ opener->font() };
+        face.setBold(true);
+        opener->setFont(face);
+    }
+
+    QAction* isolate = subject->addAction(tr("Isolate these rows"));
+    connect(isolate, &QAction::triggered, this, [this, base, kind, chip]() {
+            LogViewerFilter::sIsolation pick{ base };
+            pick.kind = kind;
+            mIsolationText = chip;
+            mFilter->setIsolation(pick);
+            _resetSearchResult();
+            _updateChips();
+            _updateCounters();
+        });
+
+    QAction* mark = subject->addAction(tr("Select these rows"));
+    connect(mark, &QAction::triggered, this, [this, base, kind]() {
+            LogViewerFilter::sIsolation pick{ base };
+            pick.kind = kind;
+            selectMatching(pick);
+        });
+
+    if (mMainWindow != nullptr)
+    {
+        // The row is carried by number, not by index: rows keep arriving while the menu
+        // stands open, and an index of a live model does not survive that.
+        const int sourceRow{ mFilter->mapToSource(mFilter->index(row, 0, QModelIndex())).row() };
+        const auto addAnalyze = [this, subject, sourceRow](const QString& text, ScopeLogViewerFilter::eDataFilter mode) {
+                QAction* action = subject->addAction(text);
+                connect(action, &QAction::triggered, this, [this, sourceRow, mode]() {
+                        ScopeOutputViewer& viewScope = mMainWindow->getOutputScopeLogs();
+                        viewScope.bindWindow(*this);
+                        viewScope.analyzeAt(mLogModel, mLogModel->index(sourceRow, 0, QModelIndex()), mode);
                     });
             };
 
-        addEntry(tr("Only this call of %1").arg(scope) , tr("one call of %1").arg(scope) , LogViewerFilter::eIsolation::IsolationCall);
-        addEntry(tr("Only the thread %1").arg(thread)  , tr("thread %1").arg(thread)     , LogViewerFilter::eIsolation::IsolationThread);
-        addEntry(tr("Only the process %1").arg(process), tr("process %1").arg(process)   , LogViewerFilter::eIsolation::IsolationProcess);
-        addEntry(tr("Only the scope %1").arg(scope)    , scope                           , LogViewerFilter::eIsolation::IsolationScope);
-        menu->addSeparator();
+        switch (kind)
+        {
+        case LogViewerFilter::eIsolation::IsolationCall:
+            addAnalyze(tr("Analyze this call")          , ScopeLogViewerFilter::eDataFilter::FilterSession);
+            addAnalyze(tr("Analyze with what it called"), ScopeLogViewerFilter::eDataFilter::FilterSublogs);
+            break;
+
+        case LogViewerFilter::eIsolation::IsolationScope:
+            addAnalyze(tr("Analyze the scope")  , ScopeLogViewerFilter::eDataFilter::FilterScope);
+            break;
+
+        case LogViewerFilter::eIsolation::IsolationThread:
+            addAnalyze(tr("Analyze the thread") , ScopeLogViewerFilter::eDataFilter::FilterThread);
+            break;
+
+        case LogViewerFilter::eIsolation::IsolationProcess:
+            addAnalyze(tr("Analyze the process"), ScopeLogViewerFilter::eDataFilter::FilterProcess);
+            break;
+
+        default:
+            break;
+        }
     }
+
+    return subject;
+}
+
+void LogViewerBase::_populateSubjectMenus(QMenu* menu, int row, NaviLogScopeBase* panel, QModelIndex& node)
+{
+    node = QModelIndex();
+
+    LogViewerFilter::sIsolation base;
+    QString process;
+    QString thread;
+    QString scope;
+    if (_rowSubject(row, base, process, thread, scope))
+    {
+        menu->addSection(tr("Act on"));
+
+        // The call is the row itself, so its entry names no value and stays in plain text.
+        _addSubjectMenu(menu, base, row, LogViewerFilter::eIsolation::IsolationCall
+                       , tr("This call"), tr("one call of %1").arg(scope)
+                       , NELusanCommon::iconSubjectCall(), false);
+
+        QMenu* scopeMenu{ _addSubjectMenu(menu, base, row, LogViewerFilter::eIsolation::IsolationScope
+                                         , scope, scope, NELusanCommon::iconScopeLines(), true) };
+
+        _addSubjectMenu(menu, base, row, LogViewerFilter::eIsolation::IsolationThread
+                       , thread, tr("thread %1").arg(thread)
+                       , NELusanCommon::iconSubjectThread(), true);
+
+        _addSubjectMenu(menu, base, row, LogViewerFilter::eIsolation::IsolationProcess
+                       , process, tr("process %1").arg(process)
+                       , NELusanCommon::iconSubjectProcess(), true);
+
+        // What the navigation panel offers for the same scope, under the scope entry.
+        if (panel != nullptr)
+        {
+            const QModelIndex found{ panel->findScopeIndex(base.cookie, base.scopeId) };
+            if (found.isValid())
+            {
+                scopeMenu->addSeparator();
+                if (panel->populateScopeMenu(*scopeMenu, found))
+                {
+                    node = found;
+                }
+            }
+        }
+    }
+
+    QAction* analyzeMarked = menu->addAction(tr("Analyze the selected rows"));
+    analyzeMarked->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    analyzeMarked->setEnabled((mMainWindow != nullptr) && (_selectedRows().isEmpty() == false));
+    connect(analyzeMarked, &QAction::triggered, this, [this]() { analyzeSelection(); });
 
     QAction* drop = menu->addAction(tr("Show every process and scope again"));
     drop->setEnabled(mFilter->hasIsolation());
@@ -1259,6 +1556,78 @@ void LogViewerBase::_populateIsolateMenu(QMenu* menu, int row)
             _updateChips();
             _updateCounters();
         });
+}
+
+void LogViewerBase::selectMatching(const LogViewerFilter::sIsolation& pick)
+{
+    QItemSelectionModel* selection{ mLogTable != nullptr ? mLogTable->selectionModel() : nullptr };
+    if ((selection == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr))
+        return;
+
+    const int rows{ mFilter->rowCount() };
+    const int last{ mFilter->columnCount() - 1 };
+    if ((rows <= 0) || (last < 0))
+        return;
+
+    // The rows of one call stand apart from each other, so the runs are gathered first and
+    // handed over in one call. Selecting them row by row redraws the table on every row.
+    QItemSelection marked;
+    int first{ -1 };
+    for (int row = 0; row <= rows; ++row)
+    {
+        const areg::LogEntry* entry{ nullptr };
+        if (row < rows)
+        {
+            const QModelIndex source{ mFilter->mapToSource(mFilter->index(row, 0, QModelIndex())) };
+            entry = source.isValid() ? mLogModel->getLogData(source.row()) : nullptr;
+        }
+
+        const bool keep{ (entry != nullptr) && LogViewerFilter::matchesIsolation(pick, entry) };
+        if (keep && (first < 0))
+        {
+            first = row;
+        }
+        else if ((keep == false) && (first >= 0))
+        {
+            marked.select(mFilter->index(first, 0, QModelIndex()), mFilter->index(row - 1, last, QModelIndex()));
+            first = -1;
+        }
+    }
+
+    selection->select(marked, QItemSelectionModel::SelectionFlag::ClearAndSelect);
+    if (marked.isEmpty() == false)
+    {
+        const QModelIndex head{ marked.first().topLeft() };
+        selection->setCurrentIndex(head, QItemSelectionModel::SelectionFlag::NoUpdate);
+        mLogTable->scrollTo(head, QAbstractItemView::ScrollHint::PositionAtCenter);
+    }
+
+    _refitRowSelection();
+}
+
+void LogViewerBase::analyzeSelection(void)
+{
+    if ((mMainWindow == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr))
+        return;
+
+    const QList<int> rows{ _selectedRows() };
+    QList<int> sourceRows;
+    sourceRows.reserve(rows.size());
+    for (int row : rows)
+    {
+        const QModelIndex source{ mFilter->mapToSource(mFilter->index(row, 0, QModelIndex())) };
+        if (source.isValid())
+        {
+            sourceRows.append(source.row());
+        }
+    }
+
+    if (sourceRows.isEmpty())
+        return;
+
+    ScopeOutputViewer& viewScope = mMainWindow->getOutputScopeLogs();
+    viewScope.bindWindow(*this);
+    viewScope.analyzeRows(mLogModel, sourceRows);
 }
 
 QList<int> LogViewerBase::_selectedRows(void) const
@@ -1423,8 +1792,29 @@ void LogViewerBase::applyRowHeight(QTableView* table)
     rows->setMinimumSectionSize(OptionsManager::LogRowHeightMin);
 }
 
+QIcon LogViewerBase::priorityDot(areg::LogPriority prio, const QWidget* on)
+{
+    constexpr int extent{ 12 };
+    constexpr qreal inset{ 2.0 };
+
+    const qreal ratio{ on != nullptr ? on->devicePixelRatioF() : qApp->devicePixelRatio() };
+    QPixmap mark(QSize(qRound(extent * ratio), qRound(extent * ratio)));
+    mark.setDevicePixelRatio(ratio);
+    mark.fill(Qt::GlobalColor::transparent);
+
+    QPainter painter(&mark);
+    painter.setRenderHint(QPainter::RenderHint::Antialiasing, true);
+    painter.setPen(Qt::PenStyle::NoPen);
+    painter.setBrush(NELogPalette::railColor(NELogPalette::roleOf(prio)));
+    painter.drawEllipse(QRectF(inset, inset, extent - (2 * inset), extent - (2 * inset)));
+    painter.end();
+
+    return QIcon(mark);
+}
+
 void LogViewerBase::refreshRowHeights(void)
 {
+    const bool wrap{ LusanApplication::getOptions().isLogWordWrap() };
     const QWidgetList widgets{ QApplication::allWidgets() };
     for (QWidget* widget : widgets)
     {
@@ -1433,6 +1823,24 @@ void LogViewerBase::refreshRowHeights(void)
         {
             LogViewerBase::applyRowHeight(table);
         }
+    }
+
+    // The rows are given their one line height above, so the wrapped ones are measured after
+    // it and not before.
+    for (QWidget* widget : widgets)
+    {
+        LogViewerBase* viewer{ qobject_cast<LogViewerBase *>(widget) };
+        if (viewer == nullptr)
+            continue;
+
+        viewer->setWordWrap(wrap);
+        if (viewer->mHighlight != nullptr)
+        {
+            viewer->mHighlight->setWordWrap(wrap, LusanApplication::getOptions().getLogWrapLines());
+        }
+
+        viewer->_resetRowHeights();
+        viewer->_measureShownRows();
     }
 }
 
@@ -1476,6 +1884,295 @@ void LogViewerBase::_updateHighlightColumn()
         return;
 
     mHighlightColumn = mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage);
+
+    if (mHighlight != nullptr)
+    {
+        // A clock reading loses its meaning from its left end, so a narrow time column drops
+        // the day and the hour rather than the seconds the reader came for.
+        quint32 mask{ 0 };
+        for (LoggingModelBase::eColumn column : { LoggingModelBase::eColumn::LogColumnTimestamp
+                                                , LoggingModelBase::eColumn::LogColumnTimeReceived })
+        {
+            const int logical{ mHeader->getColumnIndex(column) };
+            if ((logical >= 0) && (logical < 32))
+            {
+                mask |= (1u << logical);
+            }
+        }
+
+        mHighlight->setElideLeftColumns(mask);
+    }
+}
+
+void LogViewerBase::applyColumns(const QList<LoggingModelBase::eColumn>& columns)
+{
+    Q_ASSERT((mLogTable != nullptr) && (mLogModel != nullptr));
+
+    const QList<LoggingModelBase::eColumn> wanted{ LoggingModelBase::shapeColumns(columns) };
+    if (wanted == mLogModel->getActiveColumns())
+        return;
+
+    // A width belongs to the column, not to the place it stands in, and setting a model on a
+    // view drops every section size. The widths are taken by column and given back after.
+    QMap<int, int> widths;
+    const QList<LoggingModelBase::eColumn> active{ mLogModel->getActiveColumns() };
+    for (int i = 0; i < active.size(); ++i)
+    {
+        widths.insert(static_cast<int>(active.at(i)), mLogTable->columnWidth(i));
+    }
+
+    mLogTable->setModel(nullptr);
+    mLogModel->setActiveColumns(wanted);
+    mLogTable->setModel(mFilter);
+    _bindSelection();
+
+    for (int i = 0; i < wanted.size(); ++i)
+    {
+        const int width{ widths.value(static_cast<int>(wanted.at(i)), 0) };
+        if (width > 0)
+        {
+            mLogTable->setColumnWidth(i, width);
+        }
+    }
+
+    _updateHighlightColumn();
+    _fitMessageColumn();
+    _refitRowSelection();
+    _measureShownRows();
+}
+
+void LogViewerBase::_fitMessageColumn()
+{
+    if ((mLogTable == nullptr) || (mLogModel == nullptr) || (mHeader == nullptr))
+        return;
+
+    const int message{ mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage) };
+    if (message < 0)
+        return;
+
+    int taken{ 0 };
+    const int columns{ mLogModel->columnCount(QModelIndex()) };
+    for (int i = 0; i < columns; ++i)
+    {
+        if (i != message)
+        {
+            taken += mLogTable->columnWidth(i);
+        }
+    }
+
+    const int room{ mLogTable->viewport()->width() - taken };
+    if (room <= 0)
+        return;
+
+    // The window owns the width of the message column only while nothing else has changed it.
+    // While it owns it, the column takes the room that is left and gives it back when the
+    // viewport loses it -- which is what happens the moment the first rows bring the vertical
+    // bar up and it takes its own width out of the viewport. A width the reader set, and the
+    // room another column took, are both kept, and the table scrolls sideways instead.
+    const int width{ mLogTable->columnWidth(message) };
+    if ((width < room) || ((width == mFittedWidth) && (taken == mFittedTaken)))
+    {
+        mLogTable->setColumnWidth(message, room);
+        mFittedWidth = room;
+        mFittedTaken = taken;
+    }
+}
+
+void LogViewerBase::_resetRowHeights()
+{
+    if (mLogTable == nullptr)
+        return;
+
+    const int height{ LusanApplication::getOptions().getLogRowHeight() };
+    const int rows{ mLogTable->model() != nullptr ? mLogTable->model()->rowCount(QModelIndex()) : 0 };
+    for (int row = 0; row < rows; ++row)
+    {
+        mLogTable->setRowHeight(row, height);
+    }
+}
+
+void LogViewerBase::measureShownRows(QTableView* table, int column, int least, int maxLines)
+{
+    const QAbstractItemModel* model{ table != nullptr ? table->model() : nullptr };
+    const int rows{ model != nullptr ? model->rowCount(QModelIndex()) : 0 };
+    if ((rows <= 0) || (column < 0))
+        return;
+
+    const int width{ table->columnWidth(column) - 6 };
+    const QFontMetrics metrics{ table->font() };
+    const int space{ table->viewport()->height() };
+
+    int row{ table->rowAt(0) };
+    row = (row < 0 ? 0 : row);
+
+    // A row that grows pushes the next one down, so the walk stops at the first row that no
+    // longer reaches the viewport, and the rows below keep the height they have.
+    for (int used = 0; (row < rows) && (used < space); ++row)
+    {
+        const QString text{ model->index(row, column).data(Qt::ItemDataRole::DisplayRole).toString() };
+        const int height{ qMax(least, LogTextHighlight::wrappedHeight(text, metrics, width, maxLines)) };
+        if (table->rowHeight(row) != height)
+        {
+            table->setRowHeight(row, height);
+        }
+
+        used += height;
+    }
+}
+
+void LogViewerBase::_measureShownRows()
+{
+    if ((mWordWrap == false) || mMeasuring || (mLogTable == nullptr) || (mHeader == nullptr))
+        return;
+
+    mMeasuring = true;
+    LogViewerBase::measureShownRows( mLogTable
+                                   , mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage)
+                                   , LusanApplication::getOptions().getLogRowHeight()
+                                   , LusanApplication::getOptions().getLogWrapLines());
+    mMeasuring = false;
+}
+
+void LogViewerBase::setWordWrap(bool wrap)
+{
+    if ((mLogTable == nullptr) || (mWordWrap == wrap))
+        return;
+
+    mWordWrap = wrap;
+    mLogTable->setWordWrap(wrap);
+    if (mHighlight != nullptr)
+    {
+        mHighlight->setWordWrap(wrap, LusanApplication::getOptions().getLogWrapLines());
+    }
+
+    if (wrap)
+    {
+        _measureShownRows();
+    }
+    else
+    {
+        _resetRowHeights();
+    }
+
+    if (mSessionBar != nullptr)
+    {
+        mSessionBar->setWordWrap(wrap);
+    }
+
+    mLogTable->viewport()->update();
+}
+
+bool LogViewerBase::filterCurrentColumn()
+{
+    if ((mHeader == nullptr) || (mLogTable == nullptr))
+        return false;
+
+    const QModelIndex current{ mLogTable->currentIndex() };
+    LoggingModelBase::eColumn column{ current.isValid()
+                                    ? mHeader->getColumn(current.column())
+                                    : LoggingModelBase::eColumn::LogColumnMessage };
+
+    // The rail carries no value, so it is not a column a filter can be written for. It is
+    // also where a row that was revealed by the application leaves the current cell.
+    if (LoggingModelBase::isPinnedColumn(column))
+    {
+        column = LoggingModelBase::eColumn::LogColumnMessage;
+    }
+
+    return mHeader->showFilterPanel(column);
+}
+
+void LogViewerBase::_filterByCell(LoggingModelBase::eColumn column, int row, bool exclude)
+{
+    if ((mHeader == nullptr) || (mFilter == nullptr) || (row < 0))
+        return;
+
+    const QModelIndex source{ mFilter->mapToSource(mFilter->index(row, 0, QModelIndex())) };
+    const areg::LogEntry* entry{ source.isValid() ? mLogModel->getLogData(source.row()) : nullptr };
+    if (entry != nullptr)
+    {
+        mHeader->pickValue(column, *entry, exclude);
+    }
+}
+
+void LogViewerBase::_showFilterPanel()
+{
+    if ((mSessionBar == nullptr) || (mHeader == nullptr) || (mFilter == nullptr))
+        return;
+
+    if (mPickFilters == nullptr)
+    {
+        mPickFilters = new LogFilterPanel(this);
+        connect(mPickFilters, &LogFilterPanel::signalClearFilters, this, [this]() { clearEveryFilter(); });
+        connect(mPickFilters, &LogFilterPanel::signalOpenFilter, this, [this](int column, const QRect& anchor) {
+                // One panel at a time. The column panel opens where its row stood, so the
+                // reader keeps the place the list gave it.
+                mPickFilters->hide();
+                mHeader->showFilterPanelAt(static_cast<LoggingModelBase::eColumn>(column), anchor);
+            });
+    }
+
+    // Every column that carries a panel is listed, whether or not the table shows it, so the
+    // reader sees what can be narrowed instead of what happens to be on screen.
+    LogFilterPanel::ListEntries entries;
+    const QList<LoggingModelBase::eColumn> active{ mLogModel->getActiveColumns() };
+    const LogViewerFilter::ListActiveFilters filters{ mFilter->activeFilters() };
+    for (int i = 0; i < static_cast<int>(LoggingModelBase::eColumn::LogColumnCount); ++i)
+    {
+        const LoggingModelBase::eColumn column{ static_cast<LoggingModelBase::eColumn>(i) };
+        if (mHeader->canFilter(column) == false)
+            continue;
+
+        LogFilterPanel::sEntry entry;
+        entry.column = column;
+        entry.shown  = active.contains(column);
+        for (const LogViewerFilter::sActiveFilter& filter : filters)
+        {
+            if (filter.column == i)
+            {
+                entry.state = filter.text;
+                break;
+            }
+        }
+
+        entries.append(entry);
+    }
+
+    mPickFilters->setEntries(entries);
+
+    const QWidget* button{ mSessionBar->ctrlFilters() };
+    mPickFilters->showAt(QRect(button->mapToGlobal(QPoint(0, 0)), button->size()));
+}
+
+void LogViewerBase::_showColumnPicker(const QRect& anchor /*= QRect()*/)
+{
+    if ((mSessionBar == nullptr) || (mLogModel == nullptr))
+        return;
+
+    if (mPickColumns == nullptr)
+    {
+        mPickColumns = new LogColumnPicker(this);
+        connect(mPickColumns, &LogColumnPicker::signalColumnsChanged, this
+                , [this](const LogColumnPicker::ListColumns& columns) {
+                    applyColumns(columns);
+                });
+        connect(mPickColumns, &LogColumnPicker::signalColumnsReset, this, [this]() {
+                _forgetLayout();
+                resetColumnOrder();
+                moveToBottom(true);
+            });
+    }
+
+    mPickColumns->setColumns(mLogModel->getActiveColumns());
+
+    if (anchor.isEmpty() == false)
+    {
+        mPickColumns->showAt(anchor);
+        return;
+    }
+
+    const QWidget* button{ mSessionBar->ctrlColumns() };
+    mPickColumns->showAt(QRect(button->mapToGlobal(QPoint(0, 0)), button->size()));
 }
 
 void LogViewerBase::_refitRowSelection()
@@ -1520,8 +2217,8 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
     for (int i = 0; i < static_cast<int>(LoggingModelBase::eColumn::LogColumnCount); ++i)
     {
         LoggingModelBase::eColumn col = static_cast<LoggingModelBase::eColumn>(i);
-        if (col == LoggingModelBase::eColumn::LogColumnMessage)
-            continue; // exclude "log message" menu entry.
+        if (LoggingModelBase::isPinnedColumn(col))
+            continue; // the table places these itself, so they are not offered.
 
         bool isVisible = activeCols.contains(col);
         QAction* action = menu->addAction(headers[i]);
@@ -1529,13 +2226,20 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
         action->setChecked(isVisible);
         action->setData(i); // Store index for later
 
+        // The menu and the column panel take the same road, so a column shown from either
+        // one lands in the same place and keeps the widths of the columns around it.
         connect(action, &QAction::triggered, this, [this, curRow, action](bool /*checked*/) {
                 if (curRow < 0)
                     moveToBottom(false);
+
+                const LoggingModelBase::eColumn column{ static_cast<LoggingModelBase::eColumn>(action->data().toInt()) };
+                QList<LoggingModelBase::eColumn> columns{ mLogModel->getActiveColumns() };
                 if (action->isChecked())
-                    mLogModel->addColumn(static_cast<LoggingModelBase::eColumn>(action->data().toInt()));
+                    columns.insert(LoggingModelBase::placeOfColumn(columns, column), column);
                 else
-                    mLogModel->removeColumn(static_cast<LoggingModelBase::eColumn>(action->data().toInt()));
+                    columns.removeAll(column);
+
+                applyColumns(columns);
             });
     }
 

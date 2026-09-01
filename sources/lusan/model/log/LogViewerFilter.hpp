@@ -156,6 +156,15 @@ public:
     //!< Returns the priorities the table draws, or zero when it draws every priority.
     inline uint16_t viewPriority(void) const;
 
+    /**
+     * \brief   Returns true when the entry belongs to the process, thread, scope or scope
+     *          call the given isolation names. A kind of IsolationNone answers true for
+     *          every entry.
+     * \param   isolation   What a row is recognised by.
+     * \param   entry       The entry to ask about.
+     **/
+    static bool matchesIsolation(const LogViewerFilter::sIsolation& isolation, const areg::LogEntry* entry);
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////

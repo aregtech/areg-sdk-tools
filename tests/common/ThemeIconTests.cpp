@@ -164,9 +164,12 @@ void testTimeUnitFormatting()
 
     const uint64_t measured{ 1240u };
 
+    // The reader sees the real symbol of the unit, so the number is checked against the
+    // suffix the unit itself reports rather than against a spelling written out here.
     NETimeUnits::setUnit(NETimeUnits::eTimeUnit::UnitMicro);
-    CHECK(NETimeUnits::duration(measured) == QStringLiteral("1240 us"));
-    CHECK(NETimeUnits::offset(-measured) == QStringLiteral("-1240 us"));
+    const QString micro{ NETimeUnits::unitSuffix(NETimeUnits::eTimeUnit::UnitMicro) };
+    CHECK(NETimeUnits::duration(measured) == (QStringLiteral("1240 ") + micro));
+    CHECK(NETimeUnits::offset(-measured) == (QStringLiteral("-1240 ") + micro));
 
     NETimeUnits::setUnit(NETimeUnits::eTimeUnit::UnitMilli);
     CHECK(NETimeUnits::duration(measured) == QStringLiteral("1.240 ms"));
@@ -176,7 +179,7 @@ void testTimeUnitFormatting()
 
     NETimeUnits::setUnit(NETimeUnits::DefaultUnit);
     CHECK(NETimeUnits::unit() == NETimeUnits::eTimeUnit::UnitMicro);
-    CHECK(NETimeUnits::offset(0) == QStringLiteral("+0 us"));
+    CHECK(NETimeUnits::offset(0) == (QStringLiteral("+0 ") + micro));
 }
 
 // The stored name survives a round trip, and an options file written by an older build,

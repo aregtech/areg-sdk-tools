@@ -38,8 +38,8 @@ class QTableView;
 // LogTableHeader class declaration
 //////////////////////////////////////////////////////////////////////////
 /**
- * \brief   The header row of a log table. Every column it can narrow carries a funnel at
- *          its right end, and the panel of that column opens under it.
+ * \brief   The header row of a log table. Every column it can narrow carries a funnel
+ *          beside its title, and the panel of that column opens under it.
  **/
 class LogTableHeader : public QHeaderView
 {
@@ -82,6 +82,43 @@ public:
      **/
     LogHeaderItem* getHeaderItem(LoggingModelBase::eColumn column) const;
 
+    /**
+     * \brief   Returns true when the given column can be narrowed by a filter.
+     **/
+    bool canFilter(LoggingModelBase::eColumn column) const;
+
+    /**
+     * \brief   Returns true when the given column carries a filter the reader set.
+     **/
+    bool isFiltered(LoggingModelBase::eColumn column) const;
+
+    /**
+     * \brief   Opens the filter panel of a column under its own header section, filled with
+     *          the values the log carries now.
+     * \param   column  The column to open the panel of.
+     * \return  True when the panel was opened.
+     **/
+    bool showFilterPanel(LoggingModelBase::eColumn column);
+
+    /**
+     * \brief   Opens the filter panel of a column at the given place. Used where the panel
+     *          is reached from outside the header, so it also works for a hidden column.
+     * \param   column  The column to open the panel of.
+     * \param   anchor  The rectangle to open the panel under, in screen coordinates.
+     * \return  True when the panel was opened.
+     **/
+    bool showFilterPanelAt(LoggingModelBase::eColumn column, const QRect& anchor);
+
+    /**
+     * \brief   Narrows a column to the value one row carries, or to every value but that one.
+     * \param   column  The column to narrow.
+     * \param   entry   The row the value is taken from.
+     * \param   exclude True to keep every value except the one the row carries.
+     * \return  True when the column took the value. A column narrowed by a phrase cannot
+     *          exclude, and answers false.
+     **/
+    bool pickValue(LoggingModelBase::eColumn column, const areg::LogEntry& entry, bool exclude);
+
 signals:
 /************************************************************************
  * Signals
@@ -103,6 +140,13 @@ signals:
      * \param   isWildCard          True if the text filter is a wildcard search.
      **/
     void signalTextFilterChanged(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
+
+    /**
+     * \brief   The signal is triggered when the reader presses the rail section, which
+     *          carries the control that chooses the columns of the table.
+     * \param   anchor  The rectangle of the rail section, in screen coordinates.
+     **/
+    void signalColumnsRequested(const QRect& anchor);
 
 protected:
 /************************************************************************
@@ -142,7 +186,7 @@ private:
 
     /**
      * \brief   Returns the square the filter funnel of a section is drawn in. It sits at the
-     *          right end of the section, so every column title starts at the same offset.
+     *          left end of the section, before the title, at one offset in every column.
      * \param   rect    The rectangle of the section.
      **/
     inline QRect filterRect(const QRect& rect) const;
@@ -152,9 +196,24 @@ private:
      * \param   painter The painter of the header.
      * \param   rect    The square to draw the funnel in.
      * \param   isOn    True when the column carries a filter.
+     * \param   isNear  True when the pointer stands anywhere on the section.
      * \param   isHot   True when the pointer stands on the funnel itself.
      **/
-    void drawFunnel(QPainter& painter, const QRect& rect, bool isOn, bool isHot) const;
+    void drawFunnel(QPainter& painter, const QRect& rect, bool isOn, bool isNear, bool isHot) const;
+
+    /**
+     * \brief   Draws the chevron of the rail section, the control that opens the column list.
+     * \param   painter The painter of the header.
+     * \param   rect    The rectangle of the section.
+     * \param   isHot   True when the pointer stands on the section.
+     **/
+    void drawColumnsMark(QPainter& painter, const QRect& rect, bool isHot) const;
+
+    /**
+     * \brief   Keeps the rail at the leading end and at its own width. Called whenever the
+     *          table gives the header a new set of sections or the reader drags one.
+     **/
+    void pinRailSection(void);
 
     /**
      * \brief   Returns the rectangle of the section based on the logical index.
@@ -192,6 +251,7 @@ private:
     QList<LogHeaderItem*>   mHeaders;   //!< List of header items, each representing a column in the log viewer.
     int                     mHovered;   //!< The logical index of the section under the mouse, -1 when there is none.
     bool                    mOnFunnel;  //!< True while the mouse stands on the funnel of the hovered section.
+    bool                    mPinning;   //!< True while the rail is being put back, so the correction does not repeat.
 };
 
 #endif // LUSAN_VIEW_LOG_LOGTABLEHEADER_HPP

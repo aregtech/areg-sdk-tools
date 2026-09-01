@@ -42,8 +42,8 @@ const QStringList& LoggingModelBase::getHeaderList()
     static QStringList _headers
     {
           tr("Priority")
-        , tr("Time Created")
-        , tr("Time Received")
+        , tr("Time")
+        , tr("Received")
         , tr("Duration")
         , tr("Source")
         , tr("Source ID")
@@ -51,6 +51,7 @@ const QStringList& LoggingModelBase::getHeaderList()
         , tr("Thread ID")
         , tr("Scope ID")
         , tr("Message")
+        , QString()
     };
 
     return _headers;
@@ -59,7 +60,7 @@ const QStringList& LoggingModelBase::getHeaderList()
 const QList<int>& LoggingModelBase::getHeaderWidths()
 {
     // One entry per column, in the order of eColumn.
-    static QList<int>  _widths{ 70, 110, 110, 80, 150, 80, 130, 90, 80, 420 };
+    static QList<int>  _widths{ 70, 110, 110, 80, 150, 80, 130, 90, 80, 420, LoggingModelBase::RailWidth };
     return _widths;
 }
 
@@ -67,7 +68,8 @@ const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns()
 {
     static QList<LoggingModelBase::eColumn>   _columnIds
     {
-          eColumn::LogColumnSourceId
+          eColumn::LogColumnRail
+        , eColumn::LogColumnSourceId
         , eColumn::LogColumnPriority
         , eColumn::LogColumnThreadId
         , eColumn::LogColumnTimestamp
@@ -93,6 +95,7 @@ namespace
         , { LoggingModelBase::eColumn::LogColumnThreadId    , "threadId"  }
         , { LoggingModelBase::eColumn::LogColumnScopeId     , "scopeId"   }
         , { LoggingModelBase::eColumn::LogColumnMessage     , "message"   }
+        , { LoggingModelBase::eColumn::LogColumnRail        , "rail"      }
     };
 }
 
@@ -116,6 +119,53 @@ LoggingModelBase::eColumn LoggingModelBase::getColumnByKey(const QString& key)
     }
 
     return LoggingModelBase::eColumn::LogColumnInvalid;
+}
+
+bool LoggingModelBase::isPinnedColumn(LoggingModelBase::eColumn column)
+{
+    return (column == LoggingModelBase::eColumn::LogColumnRail)
+        || (column == LoggingModelBase::eColumn::LogColumnMessage);
+}
+
+QList<LoggingModelBase::eColumn> LoggingModelBase::shapeColumns(const QList<LoggingModelBase::eColumn>& columns)
+{
+    QList<LoggingModelBase::eColumn> result;
+    result.reserve(columns.size() + 2);
+    result.append(LoggingModelBase::eColumn::LogColumnRail);
+
+    for (LoggingModelBase::eColumn column : columns)
+    {
+        const int index{ static_cast<int>(column) };
+        if ((index < 0) || (index >= static_cast<int>(LoggingModelBase::eColumn::LogColumnCount)))
+            continue;
+        else if (LoggingModelBase::isPinnedColumn(column) || result.contains(column))
+            continue;
+
+        result.append(column);
+    }
+
+    result.append(LoggingModelBase::eColumn::LogColumnMessage);
+    return (result.size() > 2 ? result : LoggingModelBase::getDefaultColumns());
+}
+
+int LoggingModelBase::placeOfColumn(const QList<LoggingModelBase::eColumn>& active, LoggingModelBase::eColumn column)
+{
+    // The rail opens the table and the message closes it, whatever the reader dragged.
+    if (column == LoggingModelBase::eColumn::LogColumnRail)
+        return 0;
+
+    int place{ active.contains(LoggingModelBase::eColumn::LogColumnRail) ? 1 : 0 };
+    for (int i = 0; i < active.size(); ++i)
+    {
+        const LoggingModelBase::eColumn shown{ active.at(i) };
+        if (LoggingModelBase::isPinnedColumn(shown))
+            continue;
+        else if (static_cast<int>(shown) < static_cast<int>(column))
+            place = i + 1;
+    }
+
+    const int last{ static_cast<int>(active.indexOf(LoggingModelBase::eColumn::LogColumnMessage)) };
+    return ((last >= 0) && (place > last)) ? last : place;
 }
 
 const QString & LoggingModelBase::getFileExtension()
@@ -245,11 +295,16 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     
     if (role == LoggingModelBase::AnalyzedRole)
         return QVariant((mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index));
+    else if (role == LoggingModelBase::DayChangeRole)
+        return QVariant(isDayChange(row));
 
     eColumn column = mActiveColumns.at(col);
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::DisplayRole:
+        if ((column == eColumn::LogColumnTimestamp) || (column == eColumn::LogColumnTimeReceived))
+            return getTimeDisplay(row, logMessage, column);
+
         return getDisplayData(logMessage, column);
         
     case Qt::BackgroundRole:
@@ -274,6 +329,11 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     default:
         return QVariant();
     }
+}
+
+QString LoggingModelBase::getCellData(const areg::LogEntry* logMessage, eColumn column) const
+{
+    return (logMessage != nullptr) ? getDisplayData(logMessage, column) : QString();
 }
 
 QString LoggingModelBase::getScopeName(ITEM_ID target, uint32_t scopeId) const
@@ -309,7 +369,9 @@ void LoggingModelBase::addColumn(LoggingModelBase::eColumn col, int pos /*= -1*/
 {
     if (mActiveColumns.contains(col) == false)
     {
-        pos = (pos >= 0) && (pos < static_cast<int>(mActiveColumns.size())) ? pos : mActiveColumns.size() - 1;
+        pos = (pos >= 0) && (pos < static_cast<int>(mActiveColumns.size()))
+                ? pos
+                : LoggingModelBase::placeOfColumn(mActiveColumns, col);
         beginInsertColumns(QModelIndex(), pos, pos);
         mActiveColumns.insert(pos, col);
         endInsertColumns();
@@ -318,6 +380,9 @@ void LoggingModelBase::addColumn(LoggingModelBase::eColumn col, int pos /*= -1*/
 
 void LoggingModelBase::removeColumn(LoggingModelBase::eColumn col)
 {
+    if (LoggingModelBase::isPinnedColumn(col))
+        return;
+
     int found = findColumn(col);
     if (found >= 0)
     {
@@ -330,7 +395,8 @@ void LoggingModelBase::removeColumn(LoggingModelBase::eColumn col)
 
 void LoggingModelBase::setActiveColumns(const QList<LoggingModelBase::eColumn>& columns)
 {
-    const QList<LoggingModelBase::eColumn>& cols{ columns.empty() ? getDefaultColumns() : columns };
+    const QList<LoggingModelBase::eColumn> cols{ columns.empty() ? getDefaultColumns()
+                                                                 : LoggingModelBase::shapeColumns(columns) };
 
     beginResetModel();
     mActiveColumns = cols;
@@ -783,11 +849,11 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
         return QString::fromStdString(areg::priority_to_string(logMessage->logMessagePrio).data());
 
     case eColumn::LogColumnTimestamp:
-        return QString::fromStdString(areg::DateTime(logMessage->logTimestamp).format_time().data());
+        return NETimeUnits::fullTimestamp(logMessage->logTimestamp);
 
     case eColumn::LogColumnTimeReceived:
-        return QString::fromStdString(areg::DateTime(logMessage->logReceived).format_time().data());
-    
+        return NETimeUnits::fullTimestamp(logMessage->logReceived);
+
     case eColumn::LogColumnTimeDuration:
         return logMessage->logDuration != 0 ? NETimeUnits::duration(logMessage->logDuration) : QString();
         
@@ -825,9 +891,66 @@ QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColu
     }
 }
 
+QString LoggingModelBase::getTimeDisplay(int row, const areg::LogEntry* logMessage, eColumn column) const
+{
+    Q_ASSERT(logMessage != nullptr);
+    const bool received{ column == eColumn::LogColumnTimeReceived };
+    const uint64_t value{ received ? logMessage->logReceived : logMessage->logTimestamp };
+    if (value == 0)
+        return QString();
+
+    uint64_t base    { value };
+    uint64_t previous{ value };
+    bool     withDate{ true };
+    if (row > 0)
+    {
+        const areg::LogEntry* first{ getLogData(0) };
+        const areg::LogEntry* above{ getLogData(row - 1) };
+        if (first != nullptr)
+        {
+            base = received ? first->logReceived : first->logTimestamp;
+        }
+
+        if (above != nullptr)
+        {
+            previous = received ? above->logReceived : above->logTimestamp;
+            withDate = (previous != 0) && (NETimeUnits::dayOf(previous) != NETimeUnits::dayOf(value));
+        }
+    }
+
+    return NETimeUnits::timestamp(value, base, previous, withDate);
+}
+
+bool LoggingModelBase::isDayChange(int row) const
+{
+    if (row <= 0)
+        return false;
+
+    const areg::LogEntry* entry{ getLogData(row) };
+    const areg::LogEntry* above{ getLogData(row - 1) };
+    if ((entry == nullptr) || (above == nullptr) || (entry->logTimestamp == 0) || (above->logTimestamp == 0))
+        return false;
+
+    return NETimeUnits::dayOf(above->logTimestamp) != NETimeUnits::dayOf(entry->logTimestamp);
+}
+
 QString LoggingModelBase::getTooltipData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
+    if ((column == eColumn::LogColumnTimestamp) || (column == eColumn::LogColumnTimeReceived))
+    {
+        // The cell may be written in any shape, the tool tip always says the whole clock
+        // reading, so the day and the microseconds are one hover away.
+        const uint64_t value{ column == eColumn::LogColumnTimeReceived ? logMessage->logReceived : logMessage->logTimestamp };
+        return NETimeUnits::fullTimestamp(value);
+    }
+
+    if (column == eColumn::LogColumnRail)
+    {
+        // The rail carries no text, so the hover says what its colour stands for.
+        return getDisplayData(logMessage, eColumn::LogColumnPriority);
+    }
+
     if (column != eColumn::LogColumnMessage)
         return QString();
 
@@ -878,7 +1001,8 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
     case eColumn::LogColumnTimeDuration:
         return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
 
-    case eColumn::LogColumnPriority:
+    // The rail carries a mark of its own, drawn in the middle of the cell.
+    case eColumn::LogColumnRail:
         return static_cast<int>(Qt::AlignCenter);
 
     case eColumn::LogColumnTimestamp:

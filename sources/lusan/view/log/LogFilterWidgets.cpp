@@ -356,6 +356,52 @@ QList<NELusanCommon::FilterData> LogComboFilterBase::getSelectedData() const
     return checked;
 }
 
+bool LogComboFilterBase::pickValue(const NELusanCommon::AnyData& value, bool exclude)
+{
+    if (value.has_value() == false)
+        return false;
+
+    // The list carries an identifier for a source or a thread, and a priority bit for the
+    // priorities. Anything else is not a value a row can be matched by.
+    const auto same = [&value](const NELusanCommon::AnyData& entry) -> bool
+        {
+            if ((entry.has_value() == false) || (entry.type() != value.type()))
+                return false;
+            else if (entry.type() == typeid(ITEM_ID))
+                return std::any_cast<ITEM_ID>(entry) == std::any_cast<ITEM_ID>(value);
+            else if (entry.type() == typeid(uint16_t))
+                return std::any_cast<uint16_t>(entry) == std::any_cast<uint16_t>(value);
+
+            return false;
+        };
+
+    QListWidget* list{ listWidget() };
+    const int count{ qMin(list->count(), static_cast<int>(mData.size())) };
+    int found{ -1 };
+    for (int i = 0; (found < 0) && (i < count); ++i)
+    {
+        if (same(mData[i].data))
+        {
+            found = i;
+        }
+    }
+
+    if (found < 0)
+        return false;
+
+    {
+        const QSignalBlocker blocker(list);
+        for (int i = 0; i < count; ++i)
+        {
+            list->item(i)->setCheckState(((i == found) != exclude) ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+        }
+    }
+
+    updateSummary();
+    emit signalFiltersChanged(this);
+    return true;
+}
+
 void LogComboFilterBase::clearFilter()
 {
     QListWidget* list{ listWidget() };

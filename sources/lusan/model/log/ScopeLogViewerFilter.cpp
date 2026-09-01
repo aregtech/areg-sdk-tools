@@ -43,6 +43,9 @@ ScopeLogViewerFilter::ScopeLogViewerFilter(uint32_t scopeId /*= 0u*/, LoggingMod
     , mCalls            ( )
     , mStacks           ( )
     , mFolded           ( )
+    , mPicked           ( )
+    , mHidden           ( )
+    , mRowsPicked       (false)
     , mCallsRead        (0)
     , mAutoFold         (false)
     , mInteresting      (false)
@@ -194,11 +197,21 @@ void ScopeLogViewerFilter::clearFilters()
 
 bool ScopeLogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
+    if (mRowsPicked)
+        return mPicked.contains(static_cast<int32_t>(index.row()));
+
     return (matchesScopeFilter(index) == NELusanCommon::eMatchType::ExactMatch);
 }
 
 bool ScopeLogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
+    if (mHidden.contains(static_cast<int32_t>(row)))
+        return false;
+
+    // A picked set is exactly what the reader asked for, so nothing else narrows it.
+    if (mRowsPicked)
+        return mPicked.contains(static_cast<int32_t>(row));
+
     QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
     if ((matchesScopeFilter(index) == NELusanCommon::eMatchType::NoMatch) || (LogViewerFilter::filterAcceptsRow(row, parent) == false))
         return false;
@@ -277,6 +290,51 @@ QVariant ScopeLogViewerFilter::data(const QModelIndex& index, int role) const
     }
 
     return QVariant();
+}
+
+void ScopeLogViewerFilter::setRowFilter(LoggingModelBase* model, const QList<int>& sourceRows)
+{
+    setSourceModel(nullptr);
+    clearFilters();
+    if ((model == nullptr) || sourceRows.isEmpty())
+        return;
+
+    mPicked.reserve(sourceRows.size());
+    for (int row : sourceRows)
+    {
+        mPicked.insert(static_cast<int32_t>(row));
+    }
+
+    mRowsPicked = true;
+    setSourceModel(model);
+}
+
+void ScopeLogViewerFilter::hideRows(const QList<int>& sourceRows)
+{
+    bool changed{ false };
+    for (int row : sourceRows)
+    {
+        const int32_t entry{ static_cast<int32_t>(row) };
+        if (mHidden.contains(entry) == false)
+        {
+            mHidden.insert(entry);
+            changed = true;
+        }
+    }
+
+    if (changed)
+    {
+        invalidateRowFilter();
+    }
+}
+
+void ScopeLogViewerFilter::showHiddenRows(void)
+{
+    if (mHidden.isEmpty())
+        return;
+
+    mHidden.clear();
+    invalidateRowFilter();
 }
 
 bool ScopeLogViewerFilter::toggleFold(const QModelIndex& index)
@@ -633,6 +691,10 @@ inline void ScopeLogViewerFilter::_clearData()
     mSelPriorityData.clear();
     mPriorityData.clear();
     
+    mPicked.clear();
+    mHidden.clear();
+    mRowsPicked = false;
+
     mActiveFilter = eDataFilter::NoFilter;
     mIndexStart = QModelIndex();
     mIndexEnd   = QModelIndex();

@@ -158,6 +158,30 @@ public:
     void setScopeFilter(LoggingModelBase *model, const QModelIndex& index);
 
     /**
+     * \brief   Keeps exactly the given rows of the log, in the order the log holds them.
+     *          The scope, session, thread and process filters are dropped.
+     * \param   model       The log to read.
+     * \param   sourceRows  The rows of the source model to keep.
+     * \note    The rows are named in the coordinates of the source model.
+     **/
+    void setRowFilter(LoggingModelBase* model, const QList<int>& sourceRows);
+
+    //!< Returns true when the view holds the rows the reader picked, not a scope call.
+    inline bool isRowFilter(void) const;
+
+    /**
+     * \brief   Takes the given rows out of the view. Rows already out of it stay out.
+     * \param   sourceRows  The rows of the source model to hide.
+     **/
+    void hideRows(const QList<int>& sourceRows);
+
+    //!< Brings back every row that was taken out of the view.
+    void showHiddenRows(void);
+
+    //!< Returns true when at least one row is taken out of the view.
+    inline bool hasHiddenRows(void) const;
+
+    /**
      * \brief   Sets or resets the filters by data.
      * \param   dataFilter  The data to filter.
      **/
@@ -358,6 +382,9 @@ private:
     QVector<sCallRow>   mCalls;         //!< Where every source row sits in the calls of its thread
     QHash<quint64, QVector<int32_t>> mStacks;   //!< The calls still open on each thread of each process
     QSet<int32_t>       mFolded;        //!< The scope enter rows whose calls are out of the view
+    QSet<int32_t>       mPicked;        //!< The source rows the reader picked, when the view holds a picked set
+    QSet<int32_t>       mHidden;        //!< The source rows the reader took out of the view
+    bool                mRowsPicked;    //!< True while the view holds the picked rows instead of a scope call
     int                 mCallsRead;     //!< How many source rows the call walk has already read
     bool                mAutoFold;      //!< True while the calls that carry nothing above information are folded
     bool                mInteresting;   //!< True while only the rows worth reading are shown
@@ -393,6 +420,16 @@ inline uint32_t ScopeLogViewerFilter::slowCallUs(void) const
 inline bool ScopeLogViewerFilter::isRelativeTime(void) const
 {
     return mRelativeTime;
+}
+
+inline bool ScopeLogViewerFilter::isRowFilter(void) const
+{
+    return mRowsPicked;
+}
+
+inline bool ScopeLogViewerFilter::hasHiddenRows(void) const
+{
+    return (mHidden.isEmpty() == false);
 }
 
 inline const ScopeLogViewerFilter::sCallRow& ScopeLogViewerFilter::_callOf(int srcRow) const

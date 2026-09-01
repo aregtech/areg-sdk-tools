@@ -485,30 +485,35 @@ inline void LogViewerFilter::prepareReExpression(const QString& wildcardPattern,
     }
 }
 
-inline bool LogViewerFilter::matchIsolation(const areg::LogEntry* msg) const
+bool LogViewerFilter::matchesIsolation(const LogViewerFilter::sIsolation& isolation, const areg::LogEntry* entry)
 {
-    if (mIsolation.kind == LogViewerFilter::eIsolation::IsolationNone)
+    if (isolation.kind == LogViewerFilter::eIsolation::IsolationNone)
         return true;
-    else if (msg == nullptr)
+    else if (entry == nullptr)
         return false;
-    else if (msg->logCookie != mIsolation.cookie)
+    else if (entry->logCookie != isolation.cookie)
         return false;
 
-    switch (mIsolation.kind)
+    switch (isolation.kind)
     {
     case LogViewerFilter::eIsolation::IsolationThread:
-        return (msg->logThreadId == mIsolation.thread);
+        return (entry->logThreadId == isolation.thread);
 
     case LogViewerFilter::eIsolation::IsolationScope:
-        return (msg->logScopeId == mIsolation.scopeId);
+        return (entry->logScopeId == isolation.scopeId);
 
     case LogViewerFilter::eIsolation::IsolationCall:
-        return (msg->logScopeId == mIsolation.scopeId) && (msg->logSessionId == mIsolation.sessionId);
+        return (entry->logScopeId == isolation.scopeId) && (entry->logSessionId == isolation.sessionId);
 
     case LogViewerFilter::eIsolation::IsolationProcess:
     default:
         return true;
     }
+}
+
+inline bool LogViewerFilter::matchIsolation(const areg::LogEntry* msg) const
+{
+    return LogViewerFilter::matchesIsolation(mIsolation, msg);
 }
 
 inline void LogViewerFilter::_clearData()

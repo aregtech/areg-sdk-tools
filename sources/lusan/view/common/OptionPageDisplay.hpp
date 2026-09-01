@@ -28,14 +28,17 @@
 #include "lusan/common/NETimeUnits.hpp"
 
 class LogRowsPreview;
+class QCheckBox;
 class QComboBox;
 class QDialog;
+class QFormLayout;
 class QLabel;
+class QSpinBox;
 
 /**
  * \brief   The settings that change how the application writes what it shows, rather than
- *          what it shows: the unit every measured time is written in, and the colours and
- *          the row height of the log tables.
+ *          what it shows: the unit of a measured time, the shape of a log timestamp, and
+ *          the colours and the row height of the log tables.
  **/
 class OptionPageDisplay : public OptionPageBase
 {
@@ -67,11 +70,23 @@ private:
     //!< Builds the controls of the page.
     void setupWidgets(void);
 
+    //!< Adds a section title with the line that closes it, and returns the form to fill.
+    QFormLayout* addSection(const QString& title);
+
+    //!< Adds a dimmed line under the section that was last added.
+    void addHint(const QString& text);
+
     //!< Fills the controls from the stored options.
     void refreshFromOptions(void);
 
     //!< Returns the unit the selector currently holds.
     NETimeUnits::eTimeUnit selectedUnit(void) const;
+
+    //!< Returns the timestamp shape the selector currently holds.
+    NETimeUnits::eTimeStamp selectedStamp(void) const;
+
+    //!< Writes the line showing a timestamp and a duration in the chosen settings.
+    void refreshTimeSample(void);
 
     //!< Returns the colour set the selector currently holds.
     NELogPalette::eLogPalette selectedPalette(void) const;
@@ -90,8 +105,12 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     QComboBox*  mTimeUnit;      //!< Chooses the unit every measured time is written in.
+    QComboBox*  mTimeStamp;     //!< Chooses the shape a log timestamp is written in.
     QComboBox*  mLogPalette;    //!< Chooses the colour set the log rows are drawn with.
     QComboBox*  mLogRowHeight;  //!< Chooses the height of one log table row.
+    QCheckBox*  mWordWrap;      //!< Says whether a long message is broken over several lines.
+    QSpinBox*   mWrapLines;     //!< Chooses the most lines one wrapped log row may take.
+    QLabel*     mTimeSample;    //!< Shows a timestamp and a duration in the chosen settings.
     QLabel*     mPaletteHint;   //!< Says in one line what the chosen colour set does.
     LogRowsPreview* mPreview;   //!< Draws sample rows in the chosen colour set and height.
 

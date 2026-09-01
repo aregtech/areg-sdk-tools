@@ -26,11 +26,14 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
+#include <QFontDatabase>
 #include <QFormLayout>
 #include <QFrame>
 #include <QLabel>
+#include <QSpinBox>
 #include <QVBoxLayout>
 
 namespace
@@ -41,6 +44,16 @@ namespace
           NETimeUnits::eTimeUnit::UnitMicro
         , NETimeUnits::eTimeUnit::UnitMilli
         , NETimeUnits::eTimeUnit::UnitSecond
+    };
+
+    //!< The timestamp shapes offered by the selector, in the order they are listed.
+    constexpr NETimeUnits::eTimeStamp _stamps[]
+    {
+          NETimeUnits::eTimeStamp::StampTime
+        , NETimeUnits::eTimeStamp::StampTimeMicro
+        , NETimeUnits::eTimeStamp::StampDateTime
+        , NETimeUnits::eTimeStamp::StampElapsed
+        , NETimeUnits::eTimeStamp::StampDelta
     };
 
     //!< The colour sets offered by the selector, in the order they are listed.
@@ -64,13 +77,52 @@ namespace
 OptionPageDisplay::OptionPageDisplay(QDialog* parent)
     : OptionPageBase(parent)
     , mTimeUnit     (nullptr)
+    , mTimeStamp    (nullptr)
     , mLogPalette   (nullptr)
     , mLogRowHeight (nullptr)
+    , mWordWrap     (nullptr)
+    , mWrapLines    (nullptr)
+    , mTimeSample   (nullptr)
     , mPaletteHint  (nullptr)
     , mPreview      (nullptr)
 {
     setupWidgets();
     refreshFromOptions();
+}
+
+QFormLayout* OptionPageDisplay::addSection(const QString& title)
+{
+    QVBoxLayout* stack{ static_cast<QVBoxLayout *>(layout()) };
+
+    QLabel* caption = new QLabel(title, this);
+    QFont face{ caption->font() };
+    face.setBold(true);
+    caption->setFont(face);
+
+    QFrame* rule = new QFrame(this);
+    rule->setFrameShape(QFrame::Shape::HLine);
+    rule->setFrameShadow(QFrame::Shadow::Plain);
+    rule->setLineWidth(1);
+
+    stack->addSpacing(6);
+    stack->addWidget(caption, 0);
+    stack->addWidget(rule, 0);
+
+    QFormLayout* form = new QFormLayout();
+    form->setContentsMargins(0, 6, 0, 0);
+    form->setFieldGrowthPolicy(QFormLayout::FieldGrowthPolicy::FieldsStayAtSizeHint);
+    form->setLabelAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+    stack->addLayout(form);
+
+    return form;
+}
+
+void OptionPageDisplay::addHint(const QString& text)
+{
+    QLabel* hint = new QLabel(text, this);
+    hint->setWordWrap(true);
+    hint->setEnabled(false);
+    static_cast<QVBoxLayout *>(layout())->addWidget(hint, 0);
 }
 
 void OptionPageDisplay::setupWidgets(void)
@@ -79,18 +131,9 @@ void OptionPageDisplay::setupWidgets(void)
 
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(10, 10, 10, 10);
-    layout->setSpacing(8);
+    layout->setSpacing(6);
 
-    QLabel* title = new QLabel(tr("Display"), this);
-    QFont titleFont{ title->font() };
-    titleFont.setBold(true);
-    title->setFont(titleFont);
-    layout->addWidget(title, 0);
-
-    QFormLayout* form = new QFormLayout();
-    form->setContentsMargins(0, 6, 0, 0);
-    form->setFieldGrowthPolicy(QFormLayout::FieldGrowthPolicy::FieldsStayAtSizeHint);
-    form->setLabelAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+    QFormLayout* timeForm{ addSection(tr("Time")) };
 
     mTimeUnit = new QComboBox(this);
     mTimeUnit->setToolTip(tr("The unit every duration and every elapsed time is written in."));
@@ -99,28 +142,26 @@ void OptionPageDisplay::setupWidgets(void)
         mTimeUnit->addItem(NETimeUnits::unitName(unit), static_cast<int>(unit));
     }
 
-    form->addRow(tr("Show measured times in:"), mTimeUnit);
-    layout->addLayout(form);
+    mTimeStamp = new QComboBox(this);
+    mTimeStamp->setToolTip(tr("The shape a log row writes its time in. The whole date and the microseconds stay in the tool tip of the cell."));
+    for (NETimeUnits::eTimeStamp stamp : _stamps)
+    {
+        mTimeStamp->addItem(NETimeUnits::stampName(stamp), static_cast<int>(stamp));
+    }
 
-    QLabel* hint = new QLabel(tr("The framework measures in microseconds. The other units are the same value written differently."), this);
-    hint->setWordWrap(true);
-    hint->setEnabled(false);
-    layout->addWidget(hint, 0);
+    timeForm->addRow(tr("Durations and elapsed times:"), mTimeUnit);
+    timeForm->addRow(tr("Timestamps:"), mTimeStamp);
 
-    QFrame* separator = new QFrame(this);
-    separator->setFrameShape(QFrame::Shape::HLine);
-    separator->setFrameShadow(QFrame::Shadow::Sunken);
-    layout->addSpacing(6);
-    layout->addWidget(separator, 0);
+    mTimeSample = new QLabel(this);
+    mTimeSample->setTextInteractionFlags(Qt::TextInteractionFlag::TextSelectableByMouse);
+    QFont sampleFace{ QFontDatabase::systemFont(QFontDatabase::SystemFont::FixedFont) };
+    sampleFace.setPointSizeF(font().pointSizeF());
+    mTimeSample->setFont(sampleFace);
+    timeForm->addRow(tr("Sample:"), mTimeSample);
 
-    QLabel* logTitle = new QLabel(tr("Log rows"), this);
-    logTitle->setFont(titleFont);
-    layout->addWidget(logTitle, 0);
+    addHint(tr("The framework measures in microseconds. A log table writes the day only on the row that opens it, and the whole reading is in the tool tip of the cell."));
 
-    QFormLayout* logForm = new QFormLayout();
-    logForm->setContentsMargins(0, 6, 0, 0);
-    logForm->setFieldGrowthPolicy(QFormLayout::FieldGrowthPolicy::FieldsStayAtSizeHint);
-    logForm->setLabelAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+    QFormLayout* logForm{ addSection(tr("Log rows")) };
 
     mLogPalette = new QComboBox(this);
     mLogPalette->setToolTip(tr("The colours the message text of a log row is drawn with. The rail on the left edge keeps its colour in every set."));
@@ -136,22 +177,35 @@ void OptionPageDisplay::setupWidgets(void)
         mLogRowHeight->addItem( tr("%1 (%2 px)").arg(tr(entry.name)).arg(entry.height), entry.height);
     }
 
+    mWordWrap = new QCheckBox(tr("Wrap a long message over several lines"), this);
+    mWordWrap->setToolTip(tr("A message wider than its column is written over several lines instead of being cut."));
+
+    mWrapLines = new QSpinBox(this);
+    mWrapLines->setRange(OptionsManager::LogWrapLinesMin, OptionsManager::LogWrapLinesMax);
+    mWrapLines->setToolTip(tr("The most lines one row may take. What does not fit is cut, and the whole message stays in the tool tip."));
+
     logForm->addRow(tr("Colours:"), mLogPalette);
     logForm->addRow(tr("Row height:"), mLogRowHeight);
-    layout->addLayout(logForm);
-
-    mPaletteHint = new QLabel(this);
-    mPaletteHint->setWordWrap(true);
-    mPaletteHint->setEnabled(false);
-    layout->addWidget(mPaletteHint, 0);
+    logForm->addRow(QString(), mWordWrap);
+    logForm->addRow(tr("Lines at most:"), mWrapLines);
 
     mPreview = new LogRowsPreview(this);
     mPreview->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Fixed);
     layout->addSpacing(4);
     layout->addWidget(mPreview, 0);
+
+    mPaletteHint = new QLabel(this);
+    mPaletteHint->setWordWrap(true);
+    mPaletteHint->setEnabled(false);
+    layout->addWidget(mPaletteHint, 0);
     layout->addStretch(1);
 
     connect(mTimeUnit, &QComboBox::currentIndexChanged, this, [this](int) {
+        refreshTimeSample();
+        updateModified();
+    });
+    connect(mTimeStamp, &QComboBox::currentIndexChanged, this, [this](int) {
+        refreshTimeSample();
         updateModified();
     });
     connect(mLogPalette, &QComboBox::currentIndexChanged, this, [this](int) {
@@ -162,6 +216,13 @@ void OptionPageDisplay::setupWidgets(void)
         refreshPreview();
         updateModified();
     });
+    connect(mWordWrap, &QCheckBox::toggled, this, [this](bool checked) {
+        mWrapLines->setEnabled(checked);
+        updateModified();
+    });
+    connect(mWrapLines, &QSpinBox::valueChanged, this, [this](int) {
+        updateModified();
+    });
 }
 
 void OptionPageDisplay::refreshPreview(void)
@@ -170,12 +231,28 @@ void OptionPageDisplay::refreshPreview(void)
     mPreview->setSample(selectedPalette(), selectedRowHeight());
 }
 
+void OptionPageDisplay::refreshTimeSample(void)
+{
+    // The sample is written with the chosen settings and not with the ones in force, so the
+    // line answers what the table will look like before the page is applied.
+    const NETimeUnits::eTimeUnit keep{ NETimeUnits::unit() };
+    NETimeUnits::setUnit(selectedUnit());
+    const QString sample{ tr("%1     scope call %2").arg(NETimeUnits::stampSample(selectedStamp()))
+                                                    .arg(NETimeUnits::duration(1240)) };
+    NETimeUnits::setUnit(keep);
+
+    mTimeSample->setText(sample);
+}
+
 void OptionPageDisplay::updateModified(void)
 {
     const OptionsManager& options{ LusanApplication::getOptions() };
     const bool changed{ (selectedUnit() != options.getTimeUnit())
+                        || (selectedStamp() != options.getTimeStamp())
                         || (selectedPalette() != options.getLogPalette())
-                        || (selectedRowHeight() != options.getLogRowHeight()) };
+                        || (selectedRowHeight() != options.getLogRowHeight())
+                        || (mWordWrap->isChecked() != options.isLogWordWrap())
+                        || (mWrapLines->value() != options.getLogWrapLines()) };
     setDataModified(changed);
     setCanSave(true);
 }
@@ -186,6 +263,9 @@ void OptionPageDisplay::refreshFromOptions(void)
 
     const int unit{ mTimeUnit->findData(static_cast<int>(options.getTimeUnit())) };
     mTimeUnit->setCurrentIndex(unit >= 0 ? unit : 0);
+
+    const int stamp{ mTimeStamp->findData(static_cast<int>(options.getTimeStamp())) };
+    mTimeStamp->setCurrentIndex(stamp >= 0 ? stamp : 0);
 
     const int palette{ mLogPalette->findData(static_cast<int>(options.getLogPalette())) };
     mLogPalette->setCurrentIndex(palette >= 0 ? palette : 0);
@@ -201,6 +281,11 @@ void OptionPageDisplay::refreshFromOptions(void)
 
     mLogRowHeight->setCurrentIndex(height);
 
+    mWordWrap->setChecked(options.isLogWordWrap());
+    mWrapLines->setValue(options.getLogWrapLines());
+    mWrapLines->setEnabled(options.isLogWordWrap());
+
+    refreshTimeSample();
     refreshPreview();
     setDataModified(false);
     setCanSave(true);
@@ -210,6 +295,12 @@ NETimeUnits::eTimeUnit OptionPageDisplay::selectedUnit(void) const
 {
     const int index{ mTimeUnit->currentIndex() };
     return index >= 0 ? static_cast<NETimeUnits::eTimeUnit>(mTimeUnit->itemData(index).toInt()) : NETimeUnits::DefaultUnit;
+}
+
+NETimeUnits::eTimeStamp OptionPageDisplay::selectedStamp(void) const
+{
+    const int index{ mTimeStamp->currentIndex() };
+    return index >= 0 ? static_cast<NETimeUnits::eTimeStamp>(mTimeStamp->itemData(index).toInt()) : NETimeUnits::DefaultStamp;
 }
 
 NELogPalette::eLogPalette OptionPageDisplay::selectedPalette(void) const
@@ -230,11 +321,15 @@ void OptionPageDisplay::applyChanges(void)
     {
         OptionsManager& options{ LusanApplication::getOptions() };
         options.setTimeUnit(selectedUnit());
+        options.setTimeStamp(selectedStamp());
         options.setLogPalette(selectedPalette());
         options.setLogRowHeight(selectedRowHeight());
+        options.setLogWordWrap(mWordWrap->isChecked());
+        options.setLogWrapLines(mWrapLines->value());
         options.writeOptions();
 
         NETimeUnits::setUnit(selectedUnit());
+        NETimeUnits::setStamp(selectedStamp());
         NELogPalette::setPalette(selectedPalette());
         LogViewerBase::refreshRowHeights();
 

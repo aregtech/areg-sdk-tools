@@ -31,6 +31,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QFontMetrics;
 class QPainter;
 class QStyleOptionViewItem;
 class QModelIndex;
@@ -44,8 +45,8 @@ class LogTextHighlight : public QStyledItemDelegate
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< The zone at the left of the leading column that the delegate owns. No cell text is
-    //!< drawn in it, so the rail and the scope marks are never overdrawn.
+    //!< The zone the delegate owns at the leading end of a row. It is the width of the rail
+    //!< column, so the rail and the scope marks never reach a cell that carries text.
     static constexpr int    GutterWidth { 18 };
 
     //!< Where the scope mark starts inside the gutter, clear of the rail.
@@ -61,10 +62,50 @@ public:
     virtual ~LogTextHighlight() = default;
 
 //////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Names the columns whose text is cut at its left end when the column is too
+     *          narrow. A clock reading loses its meaning from the left, not from the right.
+     * \param   mask    One bit per logical column of the table.
+     **/
+    inline void setElideLeftColumns(quint32 mask);
+
+    /**
+     * \brief   Says whether a long message is broken over several lines, and how many lines
+     *          it may take before the rest of it is cut.
+     * \param   wrap        True to break a long message over several lines.
+     * \param   maxLines    The most lines one row may take.
+     **/
+    inline void setWordWrap(bool wrap, int maxLines);
+
+    /**
+     * \brief   Returns true when a long message is broken over several lines.
+     **/
+    inline bool isWordWrap(void) const;
+
+    /**
+     * \brief   Returns the height a cell needs to hold its text, in the width it is given.
+     * \param   text        The text of the cell.
+     * \param   metrics     The metrics of the face the table draws in.
+     * \param   width       The width the cell has for its text.
+     * \param   maxLines    The most lines the answer may count.
+     * \return  The height in pixels, the air of one row included.
+     **/
+    static int wrappedHeight(const QString& text, const QFontMetrics& metrics, int width, int maxLines);
+
+//////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+
+    /**
+     * \brief   Fills the drawing options of one cell, and cuts the columns that were named
+     *          at their left end.
+     **/
+    void initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const override;
 
 private:
 
@@ -90,6 +131,11 @@ private:
      **/
     void _paintAnalyzed(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
 
+    /**
+     * brief   Draws the line that opens a calendar day, along the top edge of the row.
+     **/
+    void _paintDayChange(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -97,11 +143,34 @@ private:
     const LogSearchModel::sFoundPos& mFoundPos;
     QIcon                            mMarkEnter;    //!< The mark of a row that enters a scope.
     QIcon                            mMarkExit;     //!< The mark of a row that leaves a scope.
+    quint32                          mElideLeft;    //!< The columns whose text is cut at its left end.
+    bool                             mWordWrap;     //!< True while a long message is broken over several lines.
+    int                              mMaxLines;     //!< The most lines one row may take while wrapping.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
     AREG_NOCOPY_NOMOVE(LogTextHighlight);
 };
+
+//////////////////////////////////////////////////////////////////////////
+// LogTextHighlight inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline void LogTextHighlight::setElideLeftColumns(quint32 mask)
+{
+    mElideLeft = mask;
+}
+
+inline void LogTextHighlight::setWordWrap(bool wrap, int maxLines)
+{
+    mWordWrap = wrap;
+    mMaxLines = qMax(1, maxLines);
+}
+
+inline bool LogTextHighlight::isWordWrap(void) const
+{
+    return mWordWrap;
+}
 
 #endif  // LUSAN_VIEW_LOG_LOGTEXTHIGHLIGHT_HPP

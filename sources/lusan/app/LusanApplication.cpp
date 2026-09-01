@@ -332,6 +332,7 @@ void LusanApplication::applyConfiguredTheme()
     
     NEAppThemes::applyTheme(LusanApplication::theApp->mOptions.getTheme());
     NETimeUnits::setUnit(LusanApplication::theApp->mOptions.getTimeUnit());
+    NETimeUnits::setStamp(LusanApplication::theApp->mOptions.getTimeStamp());
     NELogPalette::setPalette(LusanApplication::theApp->mOptions.getLogPalette());
 }
 
