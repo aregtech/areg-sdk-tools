@@ -19,6 +19,8 @@
 
 #include "lusan/view/common/NaviTabRail.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
+
 #include <QAction>
 #include <QContextMenuEvent>
 #include <QFontMetrics>
@@ -36,7 +38,7 @@
 
 namespace
 {
-    constexpr int   RAIL_WIDTH_COMPACT  { 40 };     //!< Rail width while only icons are drawn.
+    constexpr int   RAIL_WIDTH_COMPACT  { static_cast<int>(NELusanCommon::NAVI_RAIL_WIDTH) };  //!< Rail width while only icons are drawn.
     constexpr int   RAIL_WIDTH_MIN      { 56 };     //!< Narrowest labelled rail.
     constexpr int   RAIL_WIDTH_MAX      { 72 };     //!< Widest labelled rail.
     constexpr int   CAPTION_LINES       { 2 };      //!< Most lines one caption may take.

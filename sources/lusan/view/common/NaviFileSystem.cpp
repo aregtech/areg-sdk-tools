@@ -28,10 +28,13 @@
 
 #include <QAbstractItemView>
 #include <QAction>
+#include <QClipboard>
 #include <QComboBox>
 #include <QDir>
 #include <QFontInfo>
+#include <QGuiApplication>
 #include <QIcon>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QStyledItemDelegate>
@@ -622,6 +625,131 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
     }
 }
 
+QModelIndex NaviFileSystem::topLevelEntry(const QModelIndex& index) const
+{
+    const QModelIndex root{ ctrlTable()->rootIndex() };
+    QModelIndex result{ index };
+    while (result.isValid() && (result.parent() != root))
+    {
+        result = result.parent();
+    }
+
+    return result;
+}
+
+void NaviFileSystem::copyEntryPath(const QModelIndex& index, bool relative)
+{
+    if (index.isValid() == false)
+        return;
+
+    const QFileInfo info{ getFileInfo(index) };
+    const QString path{ info.absoluteFilePath() };
+    if (path.isEmpty())
+        return;
+
+    QString result{ QDir::toNativeSeparators(path) };
+    if (relative)
+    {
+        const QModelIndex top{ topLevelEntry(index) };
+        if (top.isValid() && (top != index))
+        {
+            const QFileInfo topInfo{ getFileInfo(top) };
+            result = QDir::toNativeSeparators(QDir(topInfo.absoluteFilePath()).relativeFilePath(path));
+        }
+        else
+        {
+            // The top level entry names itself; there is nothing above it to measure from.
+            result = info.fileName();
+        }
+    }
+
+    QGuiApplication::clipboard()->setText(result);
+}
+
+void NaviFileSystem::onTreeViewContextMenu(const QPoint& pos)
+{
+    QTreeView* table = ctrlTable();
+    const QModelIndex index{ table->indexAt(pos) };
+    if (index.isValid())
+    {
+        // The commands act on the selection, so the right click moves it first.
+        table->setCurrentIndex(index);
+        updateToolButtons(index);
+    }
+
+    const bool onEntry{ index.isValid() };
+    const bool workspace{ (mNaviModel != nullptr) && onEntry };
+    const bool fixed{ workspace && (mNaviModel->isWorkspaceEntry(index) || mNaviModel->isRoot(index)) };
+    const bool file{ onEntry && getFileInfo(index).isFile() };
+
+    QMenu menu(this);
+    QAction* actOpen = menu.addAction(NELusanCommon::iconOpenFile(NELusanCommon::SizeSmall), tr("Open"));
+    actOpen->setEnabled(file);
+
+    menu.addSeparator();
+    QAction* actNewFolder = menu.addAction(NELusanCommon::iconNewFolder(NELusanCommon::SizeSmall), tr("New Folder"));
+    QAction* actNewFile = menu.addAction(NELusanCommon::iconNewFile(NELusanCommon::SizeSmall), tr("New File"));
+    actNewFolder->setEnabled(workspace);
+    actNewFile->setEnabled(workspace);
+
+    QAction* actRename = menu.addAction(NELusanCommon::iconRename(NELusanCommon::SizeSmall), tr("Rename"));
+    QAction* actDelete = menu.addAction(NELusanCommon::iconDelete(NELusanCommon::SizeSmall), tr("Delete"));
+    actRename->setEnabled(workspace && (fixed == false));
+    actDelete->setEnabled(workspace && (fixed == false));
+
+    menu.addSeparator();
+    QAction* actCopyRelative = menu.addAction(tr("Copy Relative Path"));
+    QAction* actCopyAbsolute = menu.addAction(tr("Copy Absolute Path"));
+    actCopyRelative->setEnabled(onEntry);
+    actCopyAbsolute->setEnabled(onEntry);
+
+    menu.addSeparator();
+    QAction* actRefresh = menu.addAction(NELusanCommon::iconRefresh(NELusanCommon::SizeSmall), tr("Refresh"));
+    QAction* actCollapse = menu.addAction(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeSmall), tr("Collapse All"));
+
+    QAction* chosen = menu.exec(table->viewport()->mapToGlobal(pos));
+    if (chosen == nullptr)
+    {
+        return;
+    }
+    else if (chosen == actOpen)
+    {
+        onTreeViewOpenRequested(index);
+    }
+    else if (chosen == actNewFolder)
+    {
+        onToolNewFolderClicked(false);
+    }
+    else if (chosen == actNewFile)
+    {
+        onToolNewFileClicked(false);
+    }
+    else if (chosen == actRename)
+    {
+        onToolEditSelectedClicked(false);
+    }
+    else if (chosen == actDelete)
+    {
+        onToolDeleteSelectedClicked(false);
+    }
+    else if (chosen == actCopyRelative)
+    {
+        copyEntryPath(index, true);
+    }
+    else if (chosen == actCopyAbsolute)
+    {
+        copyEntryPath(index, false);
+    }
+    else if (chosen == actRefresh)
+    {
+        onToolRefreshClicked(false);
+    }
+    else if (chosen == actCollapse)
+    {
+        onToolCollapseAllClicked(false);
+    }
+}
+
 void NaviFileSystem::updateData()
 {
     mRootPaths = setupRootPaths(LusanApplication::getOptions().getActiveWorkspace());
@@ -665,6 +793,7 @@ void NaviFileSystem::setupSignals()
     // fires once per gesture, so a file that fails to open cannot report its failure twice.
     connect(ctrlTable()             , &QTreeView::activated,      this, &NaviFileSystem::onTreeViewOpenRequested);
     connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::updateToolButtons);
+    connect(ctrlTable()             , &QWidget::customContextMenuRequested, this, &NaviFileSystem::onTreeViewContextMenu);
     connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
 
     connect(mWorkspaces, &QComboBox::activated, this, &NaviFileSystem::onWorkspaceSelected);

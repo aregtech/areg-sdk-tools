@@ -287,6 +287,9 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mViewGesture  (0u)
     , mRestoringView(false)
     , mSyncingGrid  (false)
+    , mPanelWidth   (NESMDesign::PanelDefaultWidth)
+    , mPanelSized   (false)
+    , mPanelRestyle (false)
 {
     mSceneManager = new SMSceneManager(model, this);
 
@@ -468,6 +471,30 @@ SMDesign::~SMDesign()
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched == mPropertiesDock)
+    {
+        // A dock that leaves the layout comes back at the width its size hint asks for, which is
+        // not the width it had. Changing the theme takes it out and puts it back, so the page
+        // hands the width back once the dock is in again.
+        if (event->type() == QEvent::Type::Hide)
+        {
+            mPanelRestyle = true;
+        }
+        else if ((event->type() == QEvent::Type::Show) && mPanelRestyle)
+        {
+            QMetaObject::invokeMethod(this, [this]()
+            {
+                applyPanelWidth();
+                mPanelRestyle = false;
+            }, Qt::ConnectionType::QueuedConnection);
+        }
+        else if ((event->type() == QEvent::Type::Resize) && mPanelSized && (mPanelRestyle == false))
+        {
+            // Past the first sizing the width is the user's, dragged on the dock separator.
+            mPanelWidth = mPropertiesDock->width();
+        }
+    }
+
     if ((event->type() == QEvent::Close) && ((watched == mPropertiesDock) || (watched == mOutlineDock)))
     {
         // The dock's own close button hides the widget but knows nothing about the placement the
@@ -1057,7 +1084,6 @@ void SMDesign::buildDesignPanels()
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
-    resizeDocks(QList<QDockWidget*>{ mPropertiesDock }, QList<int>{ NESMDesign::PanelDefaultWidth }, Qt::Horizontal);
 
     QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
@@ -1581,6 +1607,45 @@ void SMDesign::changeEvent(QEvent* event)
         // once that pass is over and its own size hint has been dropped.
         QMetaObject::invokeMethod(this, [this]() { applyZoomBoxMetrics(); }, Qt::ConnectionType::QueuedConnection);
     }
+}
+
+void SMDesign::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    QMetaObject::invokeMethod(this, [this]() { applyPanelWidth(); }, Qt::ConnectionType::QueuedConnection);
+}
+
+void SMDesign::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+    if (mPanelSized == false)
+    {
+        // The page opens narrower than it ends up, and a dock cannot be given a width the page
+        // does not have yet, so the width is asked for again until it fits.
+        QMetaObject::invokeMethod(this, [this]() { applyPanelWidth(); }, Qt::ConnectionType::QueuedConnection);
+    }
+}
+
+void SMDesign::setPropertiesWidth(int width)
+{
+    if ((mPanelSized == false) && (width >= NESMDesign::PanelMinWidth))
+    {
+        mPanelWidth = width;
+        applyPanelWidth();
+    }
+}
+
+void SMDesign::applyPanelWidth(void)
+{
+    if ((mPropertiesDock == nullptr) || (mPropertiesDock->isVisible() == false))
+        return;
+
+    if (mPropertiesDock->width() != mPanelWidth)
+    {
+        resizeDocks(QList<QDockWidget*>{ mPropertiesDock }, QList<int>{ mPanelWidth }, Qt::Orientation::Horizontal);
+    }
+
+    mPanelSized = (mPropertiesDock->width() == mPanelWidth);
 }
 
 void SMDesign::applyZoom(int percent)

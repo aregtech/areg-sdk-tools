@@ -138,6 +138,15 @@ public:
     bool isOutlineVisible() const;
 
     /**
+     * \brief   Sets the width the Properties dock opens with, so the panel comes up as wide as
+     *          the navigation tree. Ignored once the page has been shown and the dock has taken
+     *          a width, so it never overrules a width the user has dragged.
+     * \param   width   The wanted width in device independent pixels. Values below the panel
+     *                  minimum are ignored.
+     **/
+    void setPropertiesWidth(int width);
+
+    /**
      * \brief   Reveals a validation finding: a registry entry switches the editor page; a
      *          state, transition, condition or operation navigates the canvas to its level,
      *          selects it, and (for transition-owned findings) focuses the Conditions tab.
@@ -453,6 +462,16 @@ protected:
      **/
     virtual void changeEvent(QEvent* event) override;
 
+    /**
+     * \brief   Gives the Properties dock its width the first time the page comes up.
+     **/
+    virtual void showEvent(QShowEvent* event) override;
+
+    /**
+     * \brief   Gives the Properties dock its width once the page is wide enough to hold it.
+     **/
+    virtual void resizeEvent(QResizeEvent* event) override;
+
 public:
     /**
      * \brief   Suppresses the stock dock/toolbar right-click list. Hiding a design widget
@@ -580,6 +599,9 @@ private:
 
     //!< Gives the zoom box and the bar under the canvas the height the active style needs.
     void applyZoomBoxMetrics(void);
+
+    //!< Gives the Properties dock the width held in mPanelWidth.
+    void applyPanelWidth(void);
 
     /**
      * \brief   Builds the column right of the canvas: the vertical scrollbar between its two
@@ -997,6 +1019,9 @@ private:
     uint32_t            mViewGesture;   //!< The coalescing key of this level visit's viewport writes.
     bool                mRestoringView; //!< A viewport restore is in progress; do not persist.
     bool                mSyncingGrid;   //!< A programmatic grid-action resync is in progress; do not push a command.
+    int                 mPanelWidth;    //!< The width the Properties dock is kept at.
+    bool                mPanelSized;    //!< True once the Properties dock has taken that width.
+    bool                mPanelRestyle;  //!< The dock is out of the layout; its width is not the user's.
 };
 
 //////////////////////////////////////////////////////////////////////////

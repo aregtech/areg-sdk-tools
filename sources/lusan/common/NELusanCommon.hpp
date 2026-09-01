@@ -86,6 +86,16 @@ namespace NELusanCommon
     constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
 
     /**
+     * \brief   The width of the navigation icon rail while it carries no captions.
+     **/
+    constexpr const uint32_t  NAVI_RAIL_WIDTH   { 40 };
+
+    /**
+     * \brief   The width of the tree inside the navigation window: the window without its rail.
+     **/
+    constexpr const uint32_t  MIN_NAVI_TREE_WIDTH { MIN_NAVI_WIDTH - NAVI_RAIL_WIDTH };
+
+    /**
      * \brief   The minimal height of navigation window.
      **/
     constexpr const uint32_t  MIN_NAVI_HEIGHT   { 280 };
