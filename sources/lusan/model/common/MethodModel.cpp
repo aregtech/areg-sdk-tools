@@ -179,14 +179,9 @@ void MethodModel::deleteMethod(uint32_t id)
     }
 }
 
-void MethodModel::swapMethods(uint32_t firstId, uint32_t secondId)
+uint32_t MethodModel::moveMethod(uint32_t id, int delta)
 {
-    const int index1 = methods().findIndex(firstId);
-    const int index2 = methods().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mDocument.getUndoStack().push(new TDocReorderCommand<MethodEntry*, DocumentElem>(getNotifier(), methods(), index1, index2, 0u, eDocElementKind::Method, QObject::tr("Reorder methods")));
+    return docMoveElement<MethodEntry*, DocumentElem>(mDocument.getUndoStack(), getNotifier(), methods(), id, delta, 0u, eDocElementKind::Method, QObject::tr("Reorder methods"));
 }
 
 void MethodModel::renameMethod(uint32_t id, const QString& newName)
@@ -371,7 +366,7 @@ MethodParameter* MethodModel::createParam(MethodEntry* method, const QString& na
     if ((method == nullptr) || (method->findElement(name) != nullptr))
         return nullptr;
 
-    MethodParameter param(0, name, QStringLiteral("bool"), QString(), false, nullptr);
+    MethodParameter param(0, name, QStringLiteral("bool"), QString(), method->inheritsDefault(method->getElementCount()), nullptr);
     param.validate(getCustomDataTypes());
     mDocument.getUndoStack().push(new TDocAddCommand<MethodParameter, DocumentElem>(getNotifier(), *method, param, eDocElementKind::Method, QObject::tr("Add parameter")));
     return method->findElement(name);
@@ -382,7 +377,7 @@ MethodParameter* MethodModel::insertParam(MethodEntry* method, int position, con
     if ((method == nullptr) || (method->findElement(name) != nullptr))
         return nullptr;
 
-    MethodParameter param(0, name, QStringLiteral("bool"), QString(), false, nullptr);
+    MethodParameter param(0, name, QStringLiteral("bool"), QString(), method->inheritsDefault(position), nullptr);
     param.validate(getCustomDataTypes());
     mDocument.getUndoStack().push(buildInsertCommand<MethodParameter, DocumentElem>(getNotifier(), *method, param, position, method->getId(), eDocElementKind::Method, QObject::tr("Insert parameter")));
     return method->findElement(name);
@@ -396,17 +391,12 @@ void MethodModel::deleteParam(MethodEntry* method, uint32_t paramId)
     mDocument.getUndoStack().push(new TDocRemoveCommand<MethodParameter, DocumentElem>(getNotifier(), *method, paramId, eDocElementKind::Method, QObject::tr("Delete parameter")));
 }
 
-void MethodModel::swapParams(MethodEntry* method, uint32_t firstId, uint32_t secondId)
+uint32_t MethodModel::moveParam(MethodEntry* method, uint32_t paramId, int delta)
 {
-    if (method == nullptr)
-        return;
+    if ((method == nullptr) || (method->canSwapParam(paramId, delta) == false))
+        return 0u;
 
-    const int index1 = method->findIndex(firstId);
-    const int index2 = method->findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mDocument.getUndoStack().push(new TDocReorderCommand<MethodParameter, DocumentElem>(getNotifier(), *method, index1, index2, method->getId(), eDocElementKind::Method, QObject::tr("Reorder parameters")));
+    return docMoveElement<MethodParameter, DocumentElem>(mDocument.getUndoStack(), getNotifier(), *method, paramId, delta, method->getId(), eDocElementKind::Method, QObject::tr("Reorder parameters"));
 }
 
 void MethodModel::setParamName(MethodEntry* method, uint32_t paramId, const QString& name)

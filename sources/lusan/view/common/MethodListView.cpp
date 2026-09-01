@@ -20,154 +20,40 @@
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
-#include <QAbstractItemView>
 #include <QAction>
-#include <QFrame>
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QHeaderView>
 #include <QMenu>
 #include <QToolButton>
 #include <QTreeWidget>
-#include <QVBoxLayout>
 
-MethodListView::MethodListView(const MethodListConfig& config, QWidget* parent /*= nullptr*/)
-    : QWidget           (parent)
-    , mConfig           (config)
-    , mTable            (nullptr)
-    , mButtonAdd        (nullptr)
-    , mButtonInsert     (nullptr)
-    , mButtonRemove     (nullptr)
-    , mButtonParamAdd   (nullptr)
-    , mButtonMoveUp     (nullptr)
-    , mButtonMoveDown   (nullptr)
-    , mTypeActions      ( )
+namespace
 {
-    buildUi();
+    ElementListConfig listConfigOf(const MethodListConfig& config)
+    {
+        QStringList headers{ QObject::tr("Name:"), QObject::tr("Method Type:"), QObject::tr("Value:") };
+        if (config.hasReplyColumn)
+        {
+            headers.append(QObject::tr("Reply:"));
+        }
+
+        return ElementListConfig{ config.groupTitle, headers, QObject::tr("method"), QObject::tr("parameter"), false };
+    }
 }
 
-void MethodListView::buildUi()
+MethodListView::MethodListView(const MethodListConfig& config, QWidget* parent /*= nullptr*/)
+    : ElementListView (listConfigOf(config), parent)
+    , mTypeActions    ( )
 {
-    QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-
-    QGroupBox* group = new QGroupBox(mConfig.groupTitle, this);
-    QVBoxLayout* groupLayout = new QVBoxLayout(group);
-
-    QWidget* toolbar = new QWidget(group);
-    QHBoxLayout* toolbarLayout = new QHBoxLayout(toolbar);
-    toolbarLayout->setSpacing(5);
-    toolbarLayout->setContentsMargins(2, 2, 2, 2);
-
-    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new method entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected method entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new method entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
-
     // The Add split button: a plain click creates the default (the first kind), the drop-down
-    // offers the method kinds explicitly. Adding a parameter is a separate toolbar button.
-    QMenu* addMenu = new QMenu(mButtonAdd);
-    for (const QString& label : mConfig.typeMenuLabels)
+    // offers the method kinds explicitly.
+    QMenu* addMenu = new QMenu(ctrlButtonAdd());
+    for (const QString& label : config.typeMenuLabels)
     {
         QAction* action = new QAction(label, this);
         addMenu->addAction(action);
         mTypeActions.append(action);
     }
-    NELusanCommon::decorateToolButton(mButtonAdd, addMenu);
 
-    QFrame* sepParam = new QFrame(toolbar);
-    sepParam->setFrameShape(QFrame::VLine);
-    sepParam->setMaximumSize(24, 24);
-
-    mButtonParamAdd = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field add"), tr("Create and add new parameter to the selected method"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
-
-    QFrame* sep = new QFrame(toolbar);
-    sep->setFrameShape(QFrame::VLine);
-    sep->setMaximumSize(24, 24);
-
-    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
-
-    toolbarLayout->addWidget(mButtonAdd);
-    toolbarLayout->addWidget(mButtonRemove);
-    toolbarLayout->addWidget(mButtonInsert);
-    toolbarLayout->addWidget(sepParam);
-    toolbarLayout->addWidget(mButtonParamAdd);
-    toolbarLayout->addWidget(sep);
-    toolbarLayout->addWidget(mButtonMoveUp);
-    toolbarLayout->addWidget(mButtonMoveDown);
-    toolbarLayout->addStretch(1);
-
-    QStringList headers{ tr("Name:"), tr("Method Type:"), tr("Value:") };
-    if (mConfig.hasReplyColumn)
-    {
-        headers.append(tr("Reply:"));
-    }
-
-    mTable = new QTreeWidget(group);
-    mTable->setCursor(Qt::PointingHandCursor);
-    mTable->setMouseTracking(true);
-    mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
-    mTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    mTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    mTable->setDropIndicatorShown(false);
-    mTable->setIconSize(QSize(16, 16));
-    mTable->setSortingEnabled(false);
-    mTable->setAnimated(true);
-    mTable->setAllColumnsShowFocus(false);
-    mTable->setColumnCount(headers.size());
-    mTable->header()->setCascadingSectionResizes(false);
-    mTable->header()->setMinimumSectionSize(50);
-    mTable->setHeaderLabels(headers);
-
-    QHeaderView* header = mTable->header();
-    // The column policy every list page shares: the Name column takes the horizontal slack so names
-    // stay readable, and every other column fits its content so nothing is clipped.
-    header->setSectionResizeMode(ColName , QHeaderView::Stretch);
-    header->setSectionResizeMode(ColType , QHeaderView::ResizeToContents);
-    header->setSectionResizeMode(ColValue, QHeaderView::ResizeToContents);
-    if (mConfig.hasReplyColumn)
-    {
-        header->setSectionResizeMode(ColReply, QHeaderView::ResizeToContents);
-    }
-
-    groupLayout->addWidget(toolbar);
-    groupLayout->addWidget(mTable);
-    root->addWidget(group);
-}
-
-QTreeWidget* MethodListView::ctrlTableList() const
-{
-    return mTable;
-}
-
-QToolButton* MethodListView::ctrlButtonAdd() const
-{
-    return mButtonAdd;
-}
-
-QToolButton* MethodListView::ctrlButtonInsert() const
-{
-    return mButtonInsert;
-}
-
-QToolButton* MethodListView::ctrlButtonRemove() const
-{
-    return mButtonRemove;
-}
-
-QToolButton* MethodListView::ctrlButtonParamAdd() const
-{
-    return mButtonParamAdd;
-}
-
-QToolButton* MethodListView::ctrlButtonMoveUp() const
-{
-    return mButtonMoveUp;
-}
-
-QToolButton* MethodListView::ctrlButtonMoveDown() const
-{
-    return mButtonMoveDown;
+    NELusanCommon::decorateToolButton(ctrlButtonAdd(), addMenu);
 }
 
 QAction* MethodListView::typeAction(int index) const

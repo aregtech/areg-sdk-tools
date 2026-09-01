@@ -60,6 +60,7 @@
 #include "lusan/view/common/MethodDetailsView.hpp"
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/common/MethodPage.hpp"
+#include "lusan/view/common/MethodParamDetailsView.hpp"
 #include "lusan/view/common/OverviewPage.hpp"
 #include "lusan/view/si/SIOverview.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
@@ -70,6 +71,9 @@
 
 #include <QAbstractButton>
 #include <QApplication>
+#include <QCheckBox>
+#include <QGroupBox>
+#include <QMenu>
 #include <QComboBox>
 #include <QDir>
 #include <QFile>
@@ -920,7 +924,7 @@ namespace
             CHECK(importedRow->text(2) == QStringLiteral("Shared::Unit"));
             CHECK((details != nullptr) && (details->isEnabled() == false));
             CHECK(page->getList()->ctrlButtonRemove()->isEnabled() == false);
-            CHECK(page->getList()->ctrlButtonAddField()->isEnabled() == false);
+            CHECK(page->getList()->ctrlButtonAddChild()->isEnabled() == false);
 
             // Neither the document's own types nor the borrowed ones moved.
             CHECK(model.getDataTypeSection().getElements().size() == 1);
@@ -935,6 +939,323 @@ namespace
 
         savePicture(page, outDir, QStringLiteral("si-imported-datatypes"));
         delete window;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// The editing gestures every list page shares
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< The name shown on the current row of a tree, or an empty string when nothing is current.
+    QString currentRowName(const QTreeWidget* tree)
+    {
+        const QTreeWidgetItem* item = tree->currentItem();
+        return (item != nullptr) ? item->text(0) : QString();
+    }
+
+    //!< The rectangle a group box occupies inside the page it sits on.
+    QRect groupRect(const QWidget* page, const QGroupBox* group)
+    {
+        return QRect(group->mapTo(const_cast<QWidget*>(page), QPoint(0, 0)), group->size());
+    }
+
+    /**
+     * \brief   The two panels of a page take the same width and leave the same margin on either
+     *          side of the page. Every page splits its width the same way.
+     **/
+    void checkTwoColumnGeometry(const char* label, QWidget* page)
+    {
+        std::printf("--- %s\n", label);
+        QRect left;
+        QRect right;
+        for (QGroupBox* box : page->findChildren<QGroupBox*>())
+        {
+            // Only the outermost panels: a group nested inside one of them has a group above it.
+            bool nested = false;
+            for (QWidget* up = box->parentWidget(); up != nullptr; up = up->parentWidget())
+            {
+                if (qobject_cast<QGroupBox*>(up) != nullptr)
+                {
+                    nested = true;
+                    break;
+                }
+            }
+
+            if (nested)
+                continue;
+
+            const QRect rect = groupRect(page, box);
+            QRect& side = (rect.center().x() < (page->width() / 2)) ? left : right;
+            if (side.isNull() || (rect.top() < side.top()))
+            {
+                side = rect;
+            }
+        }
+
+        std::printf("    left  = x %d..%d (w %d)  y %d..%d (h %d)\n", left.left(), left.right(), left.width(), left.top(), left.bottom(), left.height());
+        std::printf("    right = x %d..%d (w %d)  y %d..%d (h %d)\n", right.left(), right.right(), right.width(), right.top(), right.bottom(), right.height());
+        CHECK(left.isNull() == false);
+        CHECK(right.isNull() == false);
+        // One pixel of slack: an odd width cannot be split in two equal halves.
+        CHECK(qAbs(left.width() - right.width()) <= 1);
+        CHECK(qAbs(left.left() - (page->width() - 1 - right.right())) <= 1);
+        CHECK(left.top() == right.top());
+        CHECK(qAbs(left.height() - right.height()) <= 1);
+    }
+
+    /**
+     * \brief   Moving a row up or down carries the selection with it. A section keeps its IDs in
+     *          list order, so the moved element ends up carrying the ID of the one it passed; a
+     *          page that reselects by the ID it read before the move lands on the wrong row.
+     **/
+    void checkMoveKeepsSelection(const char* label, QTreeWidget* tree, QToolButton* up, QToolButton* down, QTreeWidgetItem* second)
+    {
+        std::printf("--- %s\n", label);
+        tree->setCurrentItem(second);
+        QApplication::processEvents();
+        const QString moving = currentRowName(tree);
+        CHECK(moving.isEmpty() == false);
+
+        CHECK(up->isEnabled());
+        up->click();
+        QApplication::processEvents();
+        CHECK(currentRowName(tree) == moving);
+
+        CHECK(down->isEnabled());
+        down->click();
+        QApplication::processEvents();
+        CHECK(currentRowName(tree) == moving);
+    }
+
+    /**
+     * \brief   The row context menu carries the toolbar commands with the state they have now,
+     *          and the entries a keyboard user reaches by shortcut.
+     **/
+    void checkContextMenu(const char* label, ElementListView* list, int expectedEntries)
+    {
+        std::printf("--- %s\n", label);
+        QMenu menu;
+        list->buildContextMenu(menu);
+
+        QStringList entries;
+        int enabled = 0;
+        for (const QAction* action : menu.actions())
+        {
+            if (action->isSeparator())
+                continue;
+
+            entries.append(action->text());
+            if (action->isEnabled())
+            {
+                ++enabled;
+            }
+        }
+
+        std::printf("    %s\n", entries.join(QStringLiteral(" | ")).toUtf8().constData());
+        CHECK(entries.isEmpty() == false);
+        CHECK(enabled > 0);
+        // Every toolbar command is offered, plus rename, copy and the tree commands.
+        CHECK(entries.size() == expectedEntries);
+    }
+
+    /**
+     * \brief   The Methods page gestures both editors share: a parameter is added, moved and
+     *          deleted from the toolbar, and the default values stay at the end of the parameter
+     *          list, the way C++ needs them to.
+     **/
+    void testMethodParameterGestures(const char* label, MethodPage* page, MethodDataSection& methods, DocUndoStack& stack)
+    {
+        std::printf("=== %s ===\n", label);
+        MethodListView* list = page->getList();
+        QTreeWidget* tree = list->ctrlTableList();
+        MethodParamDetailsView* details = page->findChild<MethodParamDetailsView*>();
+        CHECK(details != nullptr);
+        if (details == nullptr)
+            return;
+
+        const int methodsBefore = static_cast<int>(methods.getElements().size());
+        list->ctrlButtonAdd()->click();
+        QApplication::processEvents();
+        CHECK(static_cast<int>(methods.getElements().size()) == (methodsBefore + 1));
+
+        MethodEntry* method = methods.getElements().at(methodsBefore);
+        CHECK(method != nullptr);
+        if (method == nullptr)
+            return;
+
+        // 1. Two parameters, added from the toolbar.
+        list->ctrlButtonAddChild()->click();
+        QApplication::processEvents();
+        list->ctrlButtonAddChild()->click();
+        QApplication::processEvents();
+        CHECK(method->getElementCount() == 2);
+
+        // The page rebuilds its tree from the model on every change, so a row pointer only
+        // lives until the next one. Ask for the row again before every use.
+        auto methodRow = [tree, methodsBefore]() { return tree->topLevelItem(methodsBefore); };
+        CHECK((methodRow() != nullptr) && (methodRow()->childCount() == 2));
+        if ((methodRow() == nullptr) || (methodRow()->childCount() != 2))
+            return;
+
+        // 2. Moving the second parameter up keeps the selection on it, and moving it back down
+        //    puts it where it started.
+        checkMoveKeepsSelection("parameter move keeps the selection", tree, list->ctrlButtonMoveUp(), list->ctrlButtonMoveDown(), methodRow()->child(1));
+
+        // 3. The parameter trio of the toolbar is live only on a parameter row.
+        tree->setCurrentItem(methodRow()->child(1));
+        QApplication::processEvents();
+        CHECK(list->ctrlButtonAddChild()->isEnabled());
+        CHECK(list->ctrlButtonInsertChild()->isEnabled());
+        CHECK(list->ctrlButtonRemoveChild()->isEnabled());
+        tree->setCurrentItem(methodRow());
+        QApplication::processEvents();
+        CHECK(list->ctrlButtonInsertChild()->isEnabled() == false);
+        CHECK(list->ctrlButtonRemoveChild()->isEnabled() == false);
+
+        // 4. A default value on the last parameter, and the parameter added after it comes up
+        //    carrying one too, with its checkbox refusing to give it away.
+        tree->setCurrentItem(methodRow()->child(1));
+        QApplication::processEvents();
+        CHECK(details->ctrlHasDefault()->isEnabled());
+        details->ctrlHasDefault()->setChecked(true);
+        QApplication::processEvents();
+        CHECK(method->getElements().at(1).hasDefault());
+
+        list->ctrlButtonAddChild()->click();
+        QApplication::processEvents();
+        CHECK(method->getElementCount() == 3);
+        CHECK(method->getElements().at(2).hasDefault());
+        CHECK(details->ctrlHasDefault()->isChecked());
+        CHECK(details->ctrlHasDefault()->isEnabled() == false);
+
+        // The first of the two carrying a default may still give it away.
+        tree->setCurrentItem(methodRow()->child(1));
+        QApplication::processEvents();
+        CHECK(details->ctrlHasDefault()->isEnabled());
+
+        // 5. A parameter carrying a default value cannot be moved in front of one without.
+        CHECK(list->ctrlButtonMoveUp()->isEnabled() == false);
+        CHECK(list->ctrlButtonMoveDown()->isEnabled());
+
+        // 6. And the plain one before them cannot be moved past them.
+        tree->setCurrentItem(methodRow()->child(0));
+        QApplication::processEvents();
+        CHECK(list->ctrlButtonMoveDown()->isEnabled() == false);
+
+        // 7. The row context menu carries the same commands as the toolbar.
+        checkContextMenu("Methods context menu", list, 12);
+
+        // 8. Delete removes the selected parameter, not the method that declares it.
+        tree->setCurrentItem(methodRow()->child(2));
+        QApplication::processEvents();
+        list->ctrlButtonRemoveChild()->click();
+        QApplication::processEvents();
+        CHECK(method->getElementCount() == 2);
+        CHECK(static_cast<int>(methods.getElements().size()) == (methodsBefore + 1));
+
+        // All the way back.
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+
+        QApplication::processEvents();
+        CHECK(static_cast<int>(methods.getElements().size()) == methodsBefore);
+    }
+
+    //!< The Data Types page gesture: reordering a field carries the selection with it.
+    void testDataTypeFieldGestures(const char* label, DataTypePage* page, DataTypeDataSection& types, DocUndoStack& stack)
+    {
+        std::printf("=== %s ===\n", label);
+        DataTypeListView* list = page->getList();
+        QTreeWidget* tree = list->ctrlTableList();
+
+        const int typesBefore = static_cast<int>(types.getElements().size());
+        list->ctrlButtonAdd()->click();
+        QApplication::processEvents();
+        CHECK(static_cast<int>(types.getElements().size()) == (typesBefore + 1));
+
+        list->ctrlButtonAddChild()->click();
+        QApplication::processEvents();
+        list->ctrlButtonAddChild()->click();
+        QApplication::processEvents();
+
+        QTreeWidgetItem* typeRow = tree->topLevelItem(typesBefore);
+        CHECK((typeRow != nullptr) && (typeRow->childCount() == 2));
+        if ((typeRow == nullptr) || (typeRow->childCount() != 2))
+            return;
+
+        checkMoveKeepsSelection("field move keeps the selection", tree, list->ctrlButtonMoveUp(), list->ctrlButtonMoveDown(), typeRow->child(1));
+        CHECK(tree->topLevelItem(typesBefore)->childCount() == 2);
+
+        while (stack.canUndo())
+        {
+            stack.undo();
+        }
+
+        QApplication::processEvents();
+        CHECK(static_cast<int>(types.getElements().size()) == typesBefore);
+    }
+
+    void testEditingGestures(const QString& outDir)
+    {
+        std::printf("=== the editing gestures over a service interface ===\n");
+        ServiceInterfaceModel model;
+        DocUndoStack& stack = model.getUndoStack();
+
+        {
+            SIOverview* page = new SIOverview(model.getOverviewModel());
+            QWidget* window = showPage(page);
+            checkTwoColumnGeometry("service interface / Overview column widths", page);
+            savePicture(page, outDir, QStringLiteral("si-overview-columns"));
+            delete window;
+        }
+
+        {
+            MethodPage* page = new MethodPage(model.getMethodsModel(), MethodPageConfig{ QStringLiteral("Methods"), QStringLiteral("Methods List:"), false });
+            QWidget* window = showPage(page);
+            checkTwoColumnGeometry("service interface / Methods column widths", page);
+            testMethodParameterGestures("service interface / Methods parameters", page, model.getMethodSection(), stack);
+            savePicture(page, outDir, QStringLiteral("si-methods-params"));
+            delete window;
+        }
+
+        {
+            DataTypePage* page = new DataTypePage(model.getDataTypeModel(), QStringLiteral("Data Types"));
+            QWidget* window = showPage(page);
+            testDataTypeFieldGestures("service interface / Data Types fields", page, model.getDataTypeSection(), stack);
+            delete window;
+        }
+
+        {
+            AttributePage* page = new AttributePage(model.getAttributeModel(), QStringLiteral("Attributes"));
+            QWidget* window = showPage(page);
+            AttributeListView* list = page->findChild<AttributeListView*>();
+            CHECK(list != nullptr);
+            if (list != nullptr)
+            {
+                QTreeWidget* tree = list->ctrlTableList();
+                const int before = tree->topLevelItemCount();
+                list->ctrlButtonAdd()->click();
+                QApplication::processEvents();
+                list->ctrlButtonAdd()->click();
+                QApplication::processEvents();
+                CHECK(tree->topLevelItemCount() == (before + 2));
+                checkMoveKeepsSelection("attribute move keeps the selection", tree, list->ctrlButtonMoveUp(), list->ctrlButtonMoveDown(), tree->topLevelItem(before + 1));
+                checkContextMenu("Attributes context menu", list, 7);
+                CHECK(tree->contextMenuPolicy() == Qt::CustomContextMenu);
+            }
+
+            while (stack.canUndo())
+            {
+                stack.undo();
+            }
+
+            QApplication::processEvents();
+            delete window;
+        }
     }
 }
 
@@ -961,6 +1282,7 @@ int main(int argc, char* argv[])
     testStateMachinePages(documentPath, outDir);
     testDataTypeDocumentPages(outDir);
     testImportedTypesPage(outDir);
+    testEditingGestures(outDir);
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

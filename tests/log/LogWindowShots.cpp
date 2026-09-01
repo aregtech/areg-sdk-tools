@@ -1429,7 +1429,10 @@ int main(int argc, char* argv[])
                 shown->close();
             });
 
-        const QPoint where{ table->visualRect(table->model()->index(0, 1, QModelIndex())).center() };
+        // The priority cell is the one clicked, so its filter entry stands at the top level.
+        const int prio{ model->fromColumnToIndex(LoggingModelBase::eColumn::LogColumnPriority) };
+        CHECK(prio > 0);
+        const QPoint where{ table->visualRect(table->model()->index(0, prio, QModelIndex())).center() };
         QContextMenuEvent ask(QContextMenuEvent::Reason::Mouse, where, table->viewport()->mapToGlobal(where));
         QApplication::sendEvent(table->viewport(), &ask);
         QApplication::processEvents();

@@ -24,6 +24,7 @@
  ************************************************************************/
 #include "lusan/model/common/DocCommand.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/common/DocUndoStack.hpp"
 
 #include "lusan/common/ElementBase.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
@@ -242,6 +243,42 @@ private:
     uint32_t                            mOwnerId;
     eDocElementKind                     mKind;
 };
+
+/**
+ * \brief   Moves the element carrying \p id one position towards the start or the end of the
+ *          section, through the undo stack, and answers the ID the moved element carries once
+ *          the move is done.
+ *
+ *          A section referenced by name keeps its IDs in list order, so a reorder leaves the
+ *          moved element carrying the ID its neighbour had. Reading the answer of this call is
+ *          therefore the only safe way to keep a selection on the element that moved: an ID read
+ *          before the call denotes the element that took its place.
+ *
+ * \param   stack       The document's undo stack.
+ * \param   notifier    The document's change notifier.
+ * \param   container   The section holding the element.
+ * \param   id          The ID of the element to move.
+ * \param   delta       -1 to move one position towards the start, +1 towards the end.
+ * \param   ownerId     The ID of the element owning the section, 0 for a top level section.
+ * \param   kind        The element kind the notification carries.
+ * \param   text        The undo entry text.
+ * \return  The ID the moved element carries afterwards, or 0 when nothing moved.
+ **/
+template<typename Data, typename ElemBase>
+uint32_t docMoveElement( DocUndoStack& stack, DocModelNotifier& notifier, TEDataContainer<Data, ElemBase>& container
+                       , uint32_t id, int delta, uint32_t ownerId, eDocElementKind kind, const QString& text)
+{
+    const int from = container.findIndex(id);
+    const int to   = from + delta;
+    if ((from < 0) || (to < 0) || (to >= container.getElementCount()))
+        return 0u;
+
+    if (stack.push(new TDocReorderCommand<Data, ElemBase>(notifier, container, from, to, ownerId, kind, text)) == false)
+        return 0u;
+
+    // The element sits at the target index now, and whatever ID it carries there is its ID.
+    return NELusanCommon::get_ptr<Data>{}(container.getElements().at(to))->getId();
+}
 
 /**
  * \brief   Builds a composite that inserts a pre-built element at an explicit position

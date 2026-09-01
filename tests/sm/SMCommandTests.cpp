@@ -430,7 +430,7 @@ namespace
         CHECK(point->getName() == QStringLiteral("Point2D"));
         snap();
 
-        dt.swapDataTypes(point->getId(), color->getId());
+        dt.moveDataType(point->getId(), +1);
         CHECK(dt.findIndex(point) == 1);
         snap();
 
@@ -616,7 +616,7 @@ namespace
         CHECK(ev.findEvent("Halted") == stopped);
         snap();
 
-        ev.swapEvents(started->getId(), stopped->getId());
+        ev.moveEvent(stopped->getId(), -1);
         CHECK(ev.findIndex(stopped) == 0);
         snap();
 
@@ -645,7 +645,7 @@ namespace
         tm.setDescription(tm.findTimer("T2")->getId(), "Heartbeat");
         snap();
 
-        tm.swapTimers(tm.findTimer("T1")->getId(), tm.findTimer("T2")->getId());
+        tm.moveTimer(tm.findTimer("T2")->getId(), -1);
         CHECK(tm.findIndex(tm.findTimer("T2")->getId()) == 0);   // T2 reordered to the front
         snap();
 

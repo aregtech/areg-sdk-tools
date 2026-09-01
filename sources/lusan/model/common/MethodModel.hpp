@@ -100,7 +100,15 @@ public:
     MethodEntry* createMethod(const QString& name, int kind);
     MethodEntry* insertMethod(int position, const QString& name, int kind);
     void deleteMethod(uint32_t id);
-    void swapMethods(uint32_t firstId, uint32_t secondId);
+    /**
+     * rief   Moves the method one position up or down and answers the ID it carries
+     *          afterwards. A reorder leaves the moved element with the ID of the element it
+     *          passed, so a caller keeps the selection on what moved by taking this answer.
+     * \param   id      The ID of the method to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * eturn  The ID the moved method carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveMethod(uint32_t id, int delta);
 
     void renameMethod(uint32_t id, const QString& newName);
     void setKind(uint32_t id, int kind);
@@ -129,7 +137,16 @@ public:
     MethodParameter* createParam(MethodEntry* method, const QString& name);
     MethodParameter* insertParam(MethodEntry* method, int position, const QString& name);
     void deleteParam(MethodEntry* method, uint32_t paramId);
-    void swapParams(MethodEntry* method, uint32_t firstId, uint32_t secondId);
+    /**
+     * \brief   Moves a parameter of the given method one position up or down and answers the ID
+     *          it carries afterwards. Refuses a move that would put a parameter carrying a
+     *          default value in front of one that carries none, the way C++ does.
+     * \param   method  The method owning the parameter.
+     * \param   paramId The ID of the parameter to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * \return  The ID the moved parameter carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveParam(MethodEntry* method, uint32_t paramId, int delta);
 
     void setParamName(MethodEntry* method, uint32_t paramId, const QString& name);
     //!< Sets the parameter's declared type by name, never by the resolved pointer: the pointer

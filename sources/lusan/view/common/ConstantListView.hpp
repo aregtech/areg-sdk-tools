@@ -20,48 +20,22 @@
  *
  ************************************************************************/
 
-#include <QKeySequence>
-#include <QString>
-#include <QWidget>
-
-class QToolButton;
-class QTreeWidget;
+#include "lusan/view/common/ElementListView.hpp"
 
 /**
  * \brief   The shared constant list panel: a "Constants List:" group holding the
  *          add/insert/delete + move up/down toolbar above a 3-column flat list
  *          (Name/Data Type/Value), built on a QTreeWidget.
  *
- *          The view is controller-agnostic: it only builds the widgets and exposes ctrl*()
- *          accessors. The tree is intentionally a flat, non-decorated list so that direct
- *          (inline) cell editing can be attached later via item delegates without changing
- *          this view. The page controller owns all row population and selection logic.
+ *          The tree is a flat, non-decorated list. The page controller owns all row population
+ *          and selection logic.
  **/
-class ConstantListView : public QWidget
+class ConstantListView : public ElementListView
 {
     Q_OBJECT
 
 public:
     explicit ConstantListView(QWidget* parent = nullptr);
-
-    QTreeWidget* ctrlTableList() const;
-
-    QToolButton* ctrlButtonAdd() const;
-    QToolButton* ctrlButtonInsert() const;
-    QToolButton* ctrlButtonRemove() const;
-    QToolButton* ctrlButtonMoveUp() const;
-    QToolButton* ctrlButtonMoveDown() const;
-
-private:
-    void buildUi();
-
-private:
-    QTreeWidget*    mTable;
-    QToolButton*    mButtonAdd;
-    QToolButton*    mButtonInsert;
-    QToolButton*    mButtonRemove;
-    QToolButton*    mButtonMoveUp;
-    QToolButton*    mButtonMoveDown;
 };
 
 #endif  // LUSAN_VIEW_COMMON_CONSTANTLISTVIEW_HPP

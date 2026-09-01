@@ -20,19 +20,16 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/ElementListView.hpp"
+
 #include "lusan/data/common/IncludeEntry.hpp"
 
 #include <QIcon>
-#include <QKeySequence>
 #include <QList>
-#include <QString>
-#include <QWidget>
 
 #include <cstdint>
 
 class QModelIndex;
-class QToolButton;
-class QTreeWidget;
 class QTreeWidgetItem;
 
 /**
@@ -79,7 +76,7 @@ struct IncludeTypeConfig
  *          Type and the Name of a location identically. Row population and selection belong to
  *          the page controller.
  **/
-class IncludeListView : public QWidget
+class IncludeListView : public ElementListView
 {
     Q_OBJECT
 
@@ -97,13 +94,6 @@ public:
 
     explicit IncludeListView(const IncludeTypeConfig& config, QWidget* parent = nullptr);
 
-    QTreeWidget* ctrlTableList() const;
-
-    QToolButton* ctrlButtonAdd() const;
-    QToolButton* ctrlButtonInsert() const;
-    QToolButton* ctrlButtonRemove() const;
-    QToolButton* ctrlButtonMoveUp() const;
-    QToolButton* ctrlButtonMoveDown() const;
     QToolButton* ctrlButtonUpdate() const;
 
     //!< The permanent heading row that collects \p kind. Never null: a kind with no heading of
@@ -176,17 +166,11 @@ private:
     QList<QTreeWidgetItem*> groups() const;
 
 private:
-    const IncludeTypeConfig mConfig;
-    QTreeWidget*    mTable;
-    QTreeWidgetItem* mGroupSource;
-    QTreeWidgetItem* mGroupDataType;
-    QTreeWidgetItem* mGroupDocument;   //!< Null when the host includes no document of its own kind.
-    QToolButton*    mButtonAdd;
-    QToolButton*    mButtonInsert;
-    QToolButton*    mButtonRemove;
-    QToolButton*    mButtonMoveUp;
-    QToolButton*    mButtonMoveDown;
-    QToolButton*    mButtonUpdate;
+    const IncludeTypeConfig mConfig;         //!< What this document may include.
+    QTreeWidgetItem*        mGroupSource;    //!< The C++ header heading.
+    QTreeWidgetItem*        mGroupDataType;  //!< The data type document heading.
+    QTreeWidgetItem*        mGroupDocument;  //!< Null when the host includes no document of its own kind.
+    QToolButton*            mButtonUpdate;   //!< Re-reads the type, name and version of every include.
 };
 
 //////////////////////////////////////////////////////////////////////////

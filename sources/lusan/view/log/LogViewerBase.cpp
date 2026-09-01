@@ -1510,7 +1510,9 @@ void LogViewerBase::_populateSubjectMenus(QMenu* menu, int row, NaviLogScopeBase
     QString scope;
     if (_rowSubject(row, base, process, thread, scope))
     {
-        menu->addSection(tr("Act on"));
+        // A group heading is drawn as a bare line while a theme style sheet is on, so the
+        // group is marked by a separator and the icons that open it.
+        menu->addSeparator();
 
         // The call is the row itself, so its entry names no value and stays in plain text.
         _addSubjectMenu(menu, base, row, LogViewerFilter::eIsolation::IsolationCall

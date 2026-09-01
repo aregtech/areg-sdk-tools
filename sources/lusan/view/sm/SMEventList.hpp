@@ -19,13 +19,9 @@
  *
  ************************************************************************/
 
-#include <QKeySequence>
-#include <QString>
-#include <QWidget>
+#include "lusan/view/common/ElementListView.hpp"
 
 class QAction;
-class QToolButton;
-class QTreeWidget;
 class QTreeWidgetItem;
 
 /**
@@ -38,28 +34,17 @@ class QTreeWidgetItem;
  *          parameter is selected. The panel is presentation only; the SMEvent page wires the
  *          buttons and fills the tree.
  **/
-class SMEventList : public QWidget
+class SMEventList : public ElementListView
 {
     Q_OBJECT
 
 public:
     explicit SMEventList(QWidget* parent = nullptr);
 
-    //!< The tree with the two permanent group nodes.
-    QTreeWidget* ctrlTableList() const;
     //!< The permanent "Events" group node (never deleted, never editable).
     QTreeWidgetItem* ctrlGroupEvents() const;
     //!< The permanent "Timers" group node (never deleted, never editable).
     QTreeWidgetItem* ctrlGroupTimers() const;
-
-    //!< The Add button; opens the New Event / New Timer drop-down menu.
-    QToolButton* ctrlButtonAdd() const;
-    QToolButton* ctrlButtonInsert() const;
-    QToolButton* ctrlButtonRemove() const;
-    //!< The separate "add parameter" button (enabled only when an event/parameter is selected).
-    QToolButton* ctrlButtonAddParam() const;
-    QToolButton* ctrlButtonMoveUp() const;
-    QToolButton* ctrlButtonMoveDown() const;
 
     //!< The Add drop-down menu entries.
     QAction* actionNewEvent() const;
@@ -74,20 +59,12 @@ protected:
     virtual void changeEvent(QEvent* event) override;
 
 private:
-    void buildUi();
     //!< Applies the section-header look (bold, span, tint) to one group node.
     void decorateGroup(QTreeWidgetItem* group);
 
 private:
-    QTreeWidget*        mTable;         //!< The grouped events/timers tree.
     QTreeWidgetItem*    mGroupEvents;   //!< Permanent "Events" group node.
     QTreeWidgetItem*    mGroupTimers;   //!< Permanent "Timers" group node.
-    QToolButton*        mButtonAdd;     //!< Add button: opens the New Event / New Timer menu.
-    QToolButton*        mButtonInsert;  //!< Inserts a sibling above the selection.
-    QToolButton*        mButtonRemove;  //!< Deletes the selected entry.
-    QToolButton*        mButtonAddParam;//!< Adds a payload parameter to the selected event.
-    QToolButton*        mButtonMoveUp;  //!< Moves the selection up within its group.
-    QToolButton*        mButtonMoveDown;//!< Moves the selection down within its group.
     QAction*            mActNewEvent;   //!< Drop-down: create a new event.
     QAction*            mActNewTimer;   //!< Drop-down: create a new timer.
 };

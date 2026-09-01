@@ -170,7 +170,10 @@ void SMEvent::setupSignals()
     connect(mList->ctrlButtonRemove()   , &QToolButton::clicked           , this, &SMEvent::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()   , &QToolButton::clicked           , this, &SMEvent::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown() , &QToolButton::clicked           , this, &SMEvent::onMoveDownClicked);
-    connect(mList->ctrlButtonAddParam() , &QToolButton::clicked           , this, [this]() { addNewParam(); });
+    connect(mList->ctrlButtonAddChild()   , &QToolButton::clicked         , this, &SMEvent::onAddParamClicked);
+    connect(mList->ctrlButtonInsertChild(), &QToolButton::clicked         , this, &SMEvent::onInsertParamClicked);
+    connect(mList->ctrlButtonRemoveChild(), &QToolButton::clicked         , this, &SMEvent::onRemoveParamClicked);
+    connect(mList                         , &ElementListView::signalRenameRequested, this, &SMEvent::focusNameField);
     connect(mList->actionNewEvent()     , &QAction::triggered             , this, [this]() { addNewEvent(); });
     connect(mList->actionNewTimer()     , &QAction::triggered             , this, [this]() { addNewTimer(); });
 
@@ -181,7 +184,17 @@ void SMEvent::setupSignals()
     scRemove->setContext(Qt::WidgetWithChildrenShortcut);
     scRename->setContext(Qt::WidgetWithChildrenShortcut);
     connect(scAdd   , &QShortcut::activated, this, &SMEvent::onAddClicked);
-    connect(scRemove, &QShortcut::activated, this, &SMEvent::onRemoveClicked);
+    connect(scRemove, &QShortcut::activated, this, [this]()
+    {
+        if (currentKind() == eRowKind::Param)
+        {
+            onRemoveParamClicked();
+        }
+        else
+        {
+            onRemoveClicked();
+        }
+    });
     connect(scRename, &QShortcut::activated, this, [this]() { focusNameField(); });
 
     mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
@@ -528,7 +541,9 @@ void SMEvent::updateToolbar(eRowKind kind)
     mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonInsert()->setEnabled(hasEntry);
     mList->ctrlButtonRemove()->setEnabled(hasEntry);
-    mList->ctrlButtonAddParam()->setEnabled((kind == eRowKind::Event) || (kind == eRowKind::Param));
+    mList->ctrlButtonAddChild()->setEnabled((kind == eRowKind::Event) || (kind == eRowKind::Param));
+    mList->ctrlButtonInsertChild()->setEnabled(kind == eRowKind::Param);
+    mList->ctrlButtonRemoveChild()->setEnabled(kind == eRowKind::Param);
 
     if (hasEntry == false)
     {
@@ -580,6 +595,13 @@ void SMEvent::selectedParam(SMEventEntry* owner, uint32_t paramId)
         mParamDetails->ctrlName()->setText(param->getName());
         mParamDetails->ctrlTypes()->setCurrentText(param->getType());
         mParamDetails->ctrlHasDefault()->setChecked(param->hasDefault());
+        // Only the first parameter carrying a default may drop it, and only the one in front of
+        // it may take one: the defaults have to stay at the end of the list, as C++ requires.
+        const bool canSwitch = owner->canSwitchDefaultValue(paramId);
+        mParamDetails->ctrlHasDefault()->setEnabled(canSwitch);
+        mParamDetails->ctrlHasDefault()->setToolTip(canSwitch
+                                                   ? QString()
+                                                   : tr("Every parameter after one with a default value must have one too."));
         mParamDetails->ctrlValue()->setEnabled(param->hasDefault());
         mParamDetails->ctrlValue()->setText(param->getValue());
         mParamDetails->ctrlDescription()->setPlainText(param->getDescription());
@@ -588,7 +610,7 @@ void SMEvent::selectedParam(SMEventEntry* owner, uint32_t paramId)
     mParamDetails->showNameHint(paramNameCollisionReason(owner, param->getName(), param->getId()));
 
     updateToolbar(eRowKind::Param);
-    updateMoveButtons(mEventModel.findParamIndex(owner, paramId), mEventModel.getParamCount(owner));
+    updateParamMoveButtons(owner, paramId);
 }
 
 void SMEvent::selectedTimer(const SMTimerEntry* entry)
@@ -614,6 +636,23 @@ void SMEvent::selectedTimer(const SMTimerEntry* entry)
 
     updateToolbar(eRowKind::Timer);
     updateMoveButtons(mTimerModel.findIndex(entry->getId()), mTimerModel.getTimerCount());
+}
+
+void SMEvent::updateParamMoveButtons(const SMEventEntry* owner, uint32_t paramId)
+{
+    // A parameter carrying a default value cannot end up in front of one that carries none:
+    // C++ takes the defaults from the end of the list.
+    const bool canUp   = (owner != nullptr) && owner->canSwapParam(paramId, -1);
+    const bool canDown = (owner != nullptr) && owner->canSwapParam(paramId, +1);
+
+    mList->ctrlButtonMoveUp()->setEnabled(canUp);
+    mList->ctrlButtonMoveDown()->setEnabled(canDown);
+    mList->ctrlButtonMoveUp()->setToolTip(canUp || (owner == nullptr) || (owner->findIndex(paramId) <= 0)
+                                         ? tr("Move selection up.")
+                                         : tr("A parameter with a default value cannot come before one without."));
+    mList->ctrlButtonMoveDown()->setToolTip(canDown || (owner == nullptr) || (owner->findIndex(paramId) >= (owner->getElementCount() - 1))
+                                           ? tr("Move selection down.")
+                                           : tr("A parameter without a default value cannot come after one with."));
 }
 
 void SMEvent::updateMoveButtons(int row, int rowCount)
@@ -697,10 +736,8 @@ void SMEvent::onAddClicked()
     {
     case eRowKind::GroupEvents:
     case eRowKind::Event:
-        addNewEvent();
-        break;
     case eRowKind::Param:
-        addNewParam();
+        addNewEvent();
         break;
     case eRowKind::GroupTimers:
     case eRowKind::Timer:
@@ -769,23 +806,6 @@ void SMEvent::onInsertClicked()
             selectEvent(entry->getId());
             mDetails->ctrlName()->setFocus();
             mDetails->ctrlName()->selectAll();
-        }
-        break;
-    }
-    case eRowKind::Param:
-    {
-        SMEventEntry* event = currentEvent();
-        if (event == nullptr)
-            break;
-
-        const int position = mEventModel.findParamIndex(event, currentParamId());
-        const QString name = genParamName(event);
-        MethodParameter* param = mEventModel.insertParam(event, position < 0 ? 0 : position, name);
-        if (param != nullptr)
-        {
-            selectEvent(event->getId(), param->getId());
-            mParamDetails->ctrlName()->setFocus();
-            mParamDetails->ctrlName()->selectAll();
         }
         break;
     }
@@ -972,26 +992,6 @@ void SMEvent::onRemoveClicked()
         }
         break;
     }
-    case eRowKind::Param:
-    {
-        SMEventEntry* event = currentEvent();
-        const uint32_t paramId = currentParamId();
-        if ((event == nullptr) || (paramId == 0))
-            break;
-
-        const QList<MethodParameter>& params = mEventModel.getParams(event);
-        const int index = mEventModel.findParamIndex(event, paramId);
-        uint32_t neighborId = 0;
-        if (params.size() > 1)
-        {
-            const int neighborIndex = ((index + 1) < params.size()) ? (index + 1) : (index - 1);
-            neighborId = params.at(neighborIndex).getId();
-        }
-
-        mEventModel.deleteParam(event, paramId);
-        selectEvent(event->getId(), neighborId);
-        break;
-    }
     case eRowKind::Timer:
     {
         const uint32_t id = currentTimerId();
@@ -1024,7 +1024,48 @@ void SMEvent::onRemoveClicked()
     }
 }
 
-void SMEvent::onMoveUpClicked()
+void SMEvent::onAddParamClicked()
+{
+    addNewParam();
+}
+
+void SMEvent::onInsertParamClicked()
+{
+    SMEventEntry* event = currentEvent();
+    if (event == nullptr)
+        return;
+
+    const int position = mEventModel.findParamIndex(event, currentParamId());
+    MethodParameter* param = mEventModel.insertParam(event, position < 0 ? 0 : position, genParamName(event));
+    if (param != nullptr)
+    {
+        selectEvent(event->getId(), param->getId());
+        mParamDetails->ctrlName()->setFocus();
+        mParamDetails->ctrlName()->selectAll();
+    }
+}
+
+void SMEvent::onRemoveParamClicked()
+{
+    SMEventEntry* event = currentEvent();
+    const uint32_t paramId = currentParamId();
+    if ((event == nullptr) || (paramId == 0))
+        return;
+
+    const QList<MethodParameter>& params = mEventModel.getParams(event);
+    const int index = mEventModel.findParamIndex(event, paramId);
+    uint32_t neighborId = 0;
+    if (params.size() > 1)
+    {
+        const int neighborIndex = ((index + 1) < params.size()) ? (index + 1) : (index - 1);
+        neighborId = params.at(neighborIndex).getId();
+    }
+
+    mEventModel.deleteParam(event, paramId);
+    selectEvent(event->getId(), neighborId);
+}
+
+void SMEvent::moveSelection(int delta)
 {
     switch (currentKind())
     {
@@ -1034,43 +1075,32 @@ void SMEvent::onMoveUpClicked()
         if (event == nullptr)
             break;
 
-        const int index = mEventModel.findIndex(event);
-        if (index > 0)
+        const uint32_t moved = mEventModel.moveEvent(event->getId(), delta);
+        if (moved != 0)
         {
-            const uint32_t neighborId = mEventModel.getEvents().at(index - 1)->getId();
-            mEventModel.swapEvents(event->getId(), neighborId);
-            selectEvent(event->getId());
+            selectEvent(moved);
         }
         break;
     }
     case eRowKind::Param:
     {
         SMEventEntry* event = currentEvent();
-        const uint32_t paramId = currentParamId();
-        if ((event == nullptr) || (paramId == 0))
+        if (event == nullptr)
             break;
 
-        const int index = mEventModel.findParamIndex(event, paramId);
-        if (index > 0)
+        const uint32_t moved = mEventModel.moveParam(event, currentParamId(), delta);
+        if (moved != 0)
         {
-            const uint32_t neighborId = mEventModel.getParams(event).at(index - 1).getId();
-            mEventModel.swapParams(event, paramId, neighborId);
-            selectEvent(event->getId(), paramId);
+            selectEvent(event->getId(), moved);
         }
         break;
     }
     case eRowKind::Timer:
     {
-        const uint32_t id = currentTimerId();
-        if (id == 0)
-            break;
-
-        const int index = mTimerModel.findIndex(id);
-        if (index > 0)
+        const uint32_t moved = mTimerModel.moveTimer(currentTimerId(), delta);
+        if (moved != 0)
         {
-            const uint32_t neighborId = mTimerModel.getTimers().at(index - 1).getId();
-            mTimerModel.swapTimers(id, neighborId);
-            selectTimer(id);
+            selectTimer(moved);
         }
         break;
     }
@@ -1079,60 +1109,14 @@ void SMEvent::onMoveUpClicked()
     }
 }
 
+void SMEvent::onMoveUpClicked()
+{
+    moveSelection(-1);
+}
+
 void SMEvent::onMoveDownClicked()
 {
-    switch (currentKind())
-    {
-    case eRowKind::Event:
-    {
-        SMEventEntry* event = currentEvent();
-        if (event == nullptr)
-            break;
-
-        const int index = mEventModel.findIndex(event);
-        if ((index >= 0) && (index < (mEventModel.getEventCount() - 1)))
-        {
-            const uint32_t neighborId = mEventModel.getEvents().at(index + 1)->getId();
-            mEventModel.swapEvents(event->getId(), neighborId);
-            selectEvent(event->getId());
-        }
-        break;
-    }
-    case eRowKind::Param:
-    {
-        SMEventEntry* event = currentEvent();
-        const uint32_t paramId = currentParamId();
-        if ((event == nullptr) || (paramId == 0))
-            break;
-
-        const int index = mEventModel.findParamIndex(event, paramId);
-        const int count = mEventModel.getParamCount(event);
-        if ((index >= 0) && (index < (count - 1)))
-        {
-            const uint32_t neighborId = mEventModel.getParams(event).at(index + 1).getId();
-            mEventModel.swapParams(event, paramId, neighborId);
-            selectEvent(event->getId(), paramId);
-        }
-        break;
-    }
-    case eRowKind::Timer:
-    {
-        const uint32_t id = currentTimerId();
-        if (id == 0)
-            break;
-
-        const int index = mTimerModel.findIndex(id);
-        if ((index >= 0) && (index < (mTimerModel.getTimerCount() - 1)))
-        {
-            const uint32_t neighborId = mTimerModel.getTimers().at(index + 1).getId();
-            mTimerModel.swapTimers(id, neighborId);
-            selectTimer(id);
-        }
-        break;
-    }
-    default:
-        break;
-    }
+    moveSelection(+1);
 }
 
 void SMEvent::onEventNameTextChanged(const QString& text)

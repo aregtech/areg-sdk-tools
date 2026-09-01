@@ -84,7 +84,7 @@
         <file alias="workspace-item">icons/ui-workspace-item.svg</file>
         <file alias="workspace-new">icons/ui-workspace-new.svg</file>
         <file alias="workspace-manage">icons/ui-workspace-manage.svg</file>
-        <file alias="arrow-up">icons/ui-move-up.svg</file>
+        <file alias="arrow-up">icons/ui-arrow-up.svg</file>
         <file alias="tree-expand">icons/ui-tree-expand.svg</file>
         <file alias="tree-collapse">icons/ui-tree-collapse.svg</file>
         <file alias="toolbar-more">icons/ui-toolbar-more.svg</file>

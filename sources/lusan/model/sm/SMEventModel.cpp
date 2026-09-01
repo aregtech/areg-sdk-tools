@@ -152,14 +152,9 @@ void SMEventModel::deleteEvent(uint32_t id)
     mFacade.getUndoStack().push(new TDocRemoveCommand<SMEventEntry*, DocumentElem>(getNotifier(), events(), id, eDocElementKind::Event, QObject::tr("Delete event")));
 }
 
-void SMEventModel::swapEvents(uint32_t firstId, uint32_t secondId)
+uint32_t SMEventModel::moveEvent(uint32_t id, int delta)
 {
-    const int index1 = events().findIndex(firstId);
-    const int index2 = events().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mFacade.getUndoStack().push(new TDocReorderCommand<SMEventEntry*, DocumentElem>(getNotifier(), events(), index1, index2, 0u, eDocElementKind::Event, QObject::tr("Reorder events")));
+    return docMoveElement<SMEventEntry*, DocumentElem>(mFacade.getUndoStack(), getNotifier(), events(), id, delta, 0u, eDocElementKind::Event, QObject::tr("Reorder events"));
 }
 
 void SMEventModel::renameEvent(uint32_t id, const QString& newName)
@@ -229,7 +224,7 @@ MethodParameter* SMEventModel::createParam(SMEventEntry* event, const QString& n
     if ((event == nullptr) || (event->findElement(name) != nullptr))
         return nullptr;
 
-    MethodParameter param(0, name, QStringLiteral("bool"), QString(), false, nullptr);
+    MethodParameter param(0, name, QStringLiteral("bool"), QString(), event->inheritsDefault(event->getElementCount()), nullptr);
     param.validate(getDataTypeModel().getCustomDataTypes());
     mFacade.getUndoStack().push(new TDocAddCommand<MethodParameter, DocumentElem>(getNotifier(), *event, param, eDocElementKind::Event, QObject::tr("Add parameter")));
     return event->findElement(name);
@@ -240,7 +235,7 @@ MethodParameter* SMEventModel::insertParam(SMEventEntry* event, int position, co
     if ((event == nullptr) || (event->findElement(name) != nullptr))
         return nullptr;
 
-    MethodParameter param(0, name, QStringLiteral("bool"), QString(), false, nullptr);
+    MethodParameter param(0, name, QStringLiteral("bool"), QString(), event->inheritsDefault(position), nullptr);
     param.validate(getDataTypeModel().getCustomDataTypes());
     mFacade.getUndoStack().push(buildInsertCommand<MethodParameter, DocumentElem>(getNotifier(), *event, param, position, event->getId(), eDocElementKind::Event, QObject::tr("Insert parameter")));
     return event->findElement(name);
@@ -254,17 +249,12 @@ void SMEventModel::deleteParam(SMEventEntry* event, uint32_t paramId)
     mFacade.getUndoStack().push(new TDocRemoveCommand<MethodParameter, DocumentElem>(getNotifier(), *event, paramId, eDocElementKind::Event, QObject::tr("Delete parameter")));
 }
 
-void SMEventModel::swapParams(SMEventEntry* event, uint32_t firstId, uint32_t secondId)
+uint32_t SMEventModel::moveParam(SMEventEntry* event, uint32_t paramId, int delta)
 {
-    if (event == nullptr)
-        return;
+    if ((event == nullptr) || (event->canSwapParam(paramId, delta) == false))
+        return 0u;
 
-    const int index1 = event->findIndex(firstId);
-    const int index2 = event->findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mFacade.getUndoStack().push(new TDocReorderCommand<MethodParameter, DocumentElem>(getNotifier(), *event, index1, index2, event->getId(), eDocElementKind::Event, QObject::tr("Reorder parameters")));
+    return docMoveElement<MethodParameter, DocumentElem>(mFacade.getUndoStack(), getNotifier(), *event, paramId, delta, event->getId(), eDocElementKind::Event, QObject::tr("Reorder parameters"));
 }
 
 void SMEventModel::setParamName(SMEventEntry* event, uint32_t paramId, const QString& name)

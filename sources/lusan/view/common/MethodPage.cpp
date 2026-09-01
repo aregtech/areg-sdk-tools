@@ -207,7 +207,10 @@ void MethodPage::setupSignals(void)
     connect(mList->ctrlButtonRemove()   , &QToolButton::clicked           , this, &MethodPage::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()   , &QToolButton::clicked           , this, &MethodPage::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown() , &QToolButton::clicked           , this, &MethodPage::onMoveDownClicked);
-    connect(mList->ctrlButtonParamAdd() , &QToolButton::clicked           , this, [this]() { addNewParam(); });
+    connect(mList->ctrlButtonAddChild()   , &QToolButton::clicked         , this, &MethodPage::onAddParamClicked);
+    connect(mList->ctrlButtonInsertChild(), &QToolButton::clicked         , this, &MethodPage::onInsertParamClicked);
+    connect(mList->ctrlButtonRemoveChild(), &QToolButton::clicked         , this, &MethodPage::onRemoveParamClicked);
+    connect(mList                         , &ElementListView::signalRenameRequested, this, &MethodPage::focusNameField);
 
     const int kindCount = mModel.getConfig().kinds.size();
     for (int i = 0; i < kindCount; ++i)
@@ -235,14 +238,24 @@ void MethodPage::setupSignals(void)
     {
         if (currentKind() == eRowKind::Param)
         {
-            addNewParam();
+            onAddParamClicked();
         }
         else
         {
             onAddClicked();
         }
     });
-    connect(scRemove, &QShortcut::activated, this, &MethodPage::onRemoveClicked);
+    connect(scRemove, &QShortcut::activated, this, [this]()
+    {
+        if (currentKind() == eRowKind::Param)
+        {
+            onRemoveParamClicked();
+        }
+        else
+        {
+            onRemoveClicked();
+        }
+    });
     connect(scRename, &QShortcut::activated, this, &MethodPage::focusNameField);
 
     // The shared MethodDetailsView installs the C++ identifier validator on the Name field.
@@ -746,11 +759,14 @@ void MethodPage::showCleanForm(void)
 void MethodPage::updateToolbar(eRowKind kind)
 {
     const bool hasEntry = (kind == eRowKind::Method) || (kind == eRowKind::Param);
+    const bool onParam  = (kind == eRowKind::Param);
 
     mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonInsert()->setEnabled(hasEntry);
     mList->ctrlButtonRemove()->setEnabled(hasEntry);
-    mList->ctrlButtonParamAdd()->setEnabled(hasEntry);
+    mList->ctrlButtonAddChild()->setEnabled(hasEntry);
+    mList->ctrlButtonInsertChild()->setEnabled(onParam);
+    mList->ctrlButtonRemoveChild()->setEnabled(onParam);
 
     if (hasEntry == false)
     {
@@ -770,6 +786,23 @@ void MethodPage::updateMoveButtons(int row, int rowCount)
 
     mList->ctrlButtonMoveUp()->setEnabled(row > 0);
     mList->ctrlButtonMoveDown()->setEnabled(row < (rowCount - 1));
+}
+
+void MethodPage::updateParamMoveButtons(const MethodEntry* owner, uint32_t paramId)
+{
+    // A parameter carrying a default value cannot end up in front of one that carries none:
+    // C++ takes the defaults from the end of the list.
+    const bool canUp   = (owner != nullptr) && owner->canSwapParam(paramId, -1);
+    const bool canDown = (owner != nullptr) && owner->canSwapParam(paramId, +1);
+
+    mList->ctrlButtonMoveUp()->setEnabled(canUp);
+    mList->ctrlButtonMoveDown()->setEnabled(canDown);
+    mList->ctrlButtonMoveUp()->setToolTip(canUp || (owner == nullptr) || (owner->findIndex(paramId) <= 0)
+                                        ? tr("Move selection up.")
+                                        : tr("A parameter with a default value cannot come before one without."));
+    mList->ctrlButtonMoveDown()->setToolTip(canDown || (owner == nullptr) || (owner->findIndex(paramId) >= (owner->getElementCount() - 1))
+                                          ? tr("Move selection down.")
+                                          : tr("A parameter without a default value cannot come after one with."));
 }
 
 void MethodPage::showMethodForm(MethodEntry* method)
@@ -842,6 +875,13 @@ void MethodPage::selectedParam(MethodEntry* owner, uint32_t paramId)
         mParamDetails->ctrlName()->setText(param->getName());
         mParamDetails->ctrlTypes()->setCurrentText(param->getType());
         mParamDetails->ctrlHasDefault()->setChecked(param->hasDefault());
+        // Only the first parameter carrying a default may drop it, and only the one in front of
+        // it may take one: the defaults have to stay at the end of the list, as C++ requires.
+        const bool canSwitch = owner->canSwitchDefaultValue(paramId);
+        mParamDetails->ctrlHasDefault()->setEnabled(canSwitch);
+        mParamDetails->ctrlHasDefault()->setToolTip(canSwitch
+                                                   ? QString()
+                                                   : tr("Every parameter after one with a default value must have one too."));
         mParamDetails->ctrlValue()->setEnabled(param->hasDefault());
         mParamDetails->ctrlValue()->setText(param->getValue());
         mParamDetails->ctrlDescription()->setPlainText(param->getDescription());
@@ -851,7 +891,7 @@ void MethodPage::selectedParam(MethodEntry* owner, uint32_t paramId)
     mParamDetails->showNameHint(paramNameCollisionReason(owner, param->getName(), param->getId()));
 
     updateToolbar(eRowKind::Param);
-    updateMoveButtons(mModel.findParamIndex(owner, paramId), mModel.getParamCount(owner));
+    updateParamMoveButtons(owner, paramId);
 }
 
 QString MethodPage::paramNameCollisionReason(const MethodEntry* owner, const QString& name, uint32_t selfId) const
@@ -1010,181 +1050,113 @@ void MethodPage::onAddClicked(void)
 
 void MethodPage::onInsertClicked(void)
 {
-    switch (currentKind())
+    MethodEntry* current = currentMethod();
+    const int position = (current != nullptr ? mModel.findIndex(current) : 0);
+    const int kind = (current != nullptr ? current->getKind() : 0);
+    MethodEntry* entry = mModel.insertMethod(position < 0 ? 0 : position, genMethodName(), kind);
+    if (entry != nullptr)
     {
-    case eRowKind::Method:
-    {
-        MethodEntry* current = currentMethod();
-        const int position = (current != nullptr ? mModel.findIndex(current) : 0);
-        const int kind = (current != nullptr ? current->getKind() : 0);
-        MethodEntry* entry = mModel.insertMethod(position < 0 ? 0 : position, genMethodName(), kind);
-        if (entry != nullptr)
-        {
-            selectMethod(entry->getId());
-            mDetails->ctrlName()->setFocus();
-            mDetails->ctrlName()->selectAll();
-        }
-        break;
-    }
-
-    case eRowKind::Param:
-    {
-        MethodEntry* method = currentMethod();
-        if (method == nullptr)
-            break;
-
-        const int position = mModel.findParamIndex(method, currentParamId());
-        MethodParameter* param = mModel.insertParam(method, position < 0 ? 0 : position, genParamName(method));
-        if (param != nullptr)
-        {
-            selectMethod(method->getId(), param->getId());
-            mParamDetails->ctrlName()->setFocus();
-            mParamDetails->ctrlName()->selectAll();
-        }
-        break;
-    }
-
-    default:
-        break;
+        selectMethod(entry->getId());
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
     }
 }
 
 void MethodPage::onRemoveClicked(void)
 {
-    switch (currentKind())
-    {
-    case eRowKind::Method:
-    {
-        MethodEntry* method = currentMethod();
-        if ((method == nullptr) || (confirmRemove(method->getId()) == false))
-            break;
+    MethodEntry* method = currentMethod();
+    if ((method == nullptr) || (confirmRemove(method->getId()) == false))
+        return;
 
-        const QList<MethodEntry*>& list = mModel.getMethods();
-        const int index = mModel.findIndex(method);
-        uint32_t neighborId = 0;
-        if (list.size() > 1)
-        {
-            const int neighborIndex = ((index + 1) < list.size()) ? (index + 1) : (index - 1);
-            neighborId = list.at(neighborIndex)->getId();
-        }
-
-        mModel.deleteMethod(method->getId());
-        if (neighborId != 0)
-        {
-            selectMethod(neighborId);
-        }
-        break;
+    const QList<MethodEntry*>& list = mModel.getMethods();
+    const int index = mModel.findIndex(method);
+    uint32_t neighborId = 0;
+    if (list.size() > 1)
+    {
+        const int neighborIndex = ((index + 1) < list.size()) ? (index + 1) : (index - 1);
+        neighborId = list.at(neighborIndex)->getId();
     }
 
-    case eRowKind::Param:
+    mModel.deleteMethod(method->getId());
+    if (neighborId != 0)
     {
-        MethodEntry* method = currentMethod();
-        const uint32_t paramId = currentParamId();
-        if ((method == nullptr) || (paramId == 0))
-            break;
+        selectMethod(neighborId);
+    }
+}
 
-        const QList<MethodParameter>& params = mModel.getParams(method);
-        const int index = mModel.findParamIndex(method, paramId);
-        uint32_t neighborId = 0;
-        if (params.size() > 1)
-        {
-            const int neighborIndex = ((index + 1) < params.size()) ? (index + 1) : (index - 1);
-            neighborId = params.at(neighborIndex).getId();
-        }
+void MethodPage::onAddParamClicked(void)
+{
+    addNewParam();
+}
 
-        mModel.deleteParam(method, paramId);
-        selectMethod(method->getId(), neighborId);
-        break;
+void MethodPage::onInsertParamClicked(void)
+{
+    MethodEntry* method = currentMethod();
+    if (method == nullptr)
+        return;
+
+    const int position = mModel.findParamIndex(method, currentParamId());
+    MethodParameter* param = mModel.insertParam(method, position < 0 ? 0 : position, genParamName(method));
+    if (param != nullptr)
+    {
+        selectMethod(method->getId(), param->getId());
+        mParamDetails->ctrlName()->setFocus();
+        mParamDetails->ctrlName()->selectAll();
+    }
+}
+
+void MethodPage::onRemoveParamClicked(void)
+{
+    MethodEntry* method = currentMethod();
+    const uint32_t paramId = currentParamId();
+    if ((method == nullptr) || (paramId == 0))
+        return;
+
+    const QList<MethodParameter>& params = mModel.getParams(method);
+    const int index = mModel.findParamIndex(method, paramId);
+    uint32_t neighborId = 0;
+    if (params.size() > 1)
+    {
+        const int neighborIndex = ((index + 1) < params.size()) ? (index + 1) : (index - 1);
+        neighborId = params.at(neighborIndex).getId();
     }
 
-    default:
-        break;
+    mModel.deleteParam(method, paramId);
+    selectMethod(method->getId(), neighborId);
+}
+
+void MethodPage::moveSelection(int delta)
+{
+    MethodEntry* method = currentMethod();
+    if (method == nullptr)
+        return;
+
+    if (currentKind() == eRowKind::Param)
+    {
+        const uint32_t moved = mModel.moveParam(method, currentParamId(), delta);
+        if (moved != 0)
+        {
+            selectMethod(method->getId(), moved);
+        }
+    }
+    else
+    {
+        const uint32_t moved = mModel.moveMethod(method->getId(), delta);
+        if (moved != 0)
+        {
+            selectMethod(moved);
+        }
     }
 }
 
 void MethodPage::onMoveUpClicked(void)
 {
-    switch (currentKind())
-    {
-    case eRowKind::Method:
-    {
-        MethodEntry* method = currentMethod();
-        if (method == nullptr)
-            break;
-
-        const int index = mModel.findIndex(method);
-        if (index > 0)
-        {
-            const uint32_t neighborId = mModel.getMethods().at(index - 1)->getId();
-            mModel.swapMethods(method->getId(), neighborId);
-            selectMethod(method->getId());
-        }
-        break;
-    }
-
-    case eRowKind::Param:
-    {
-        MethodEntry* method = currentMethod();
-        const uint32_t paramId = currentParamId();
-        if ((method == nullptr) || (paramId == 0))
-            break;
-
-        const int index = mModel.findParamIndex(method, paramId);
-        if (index > 0)
-        {
-            const uint32_t neighborId = mModel.getParams(method).at(index - 1).getId();
-            mModel.swapParams(method, paramId, neighborId);
-            selectMethod(method->getId(), paramId);
-        }
-        break;
-    }
-
-    default:
-        break;
-    }
+    moveSelection(-1);
 }
 
 void MethodPage::onMoveDownClicked(void)
 {
-    switch (currentKind())
-    {
-    case eRowKind::Method:
-    {
-        MethodEntry* method = currentMethod();
-        if (method == nullptr)
-            break;
-
-        const int index = mModel.findIndex(method);
-        if ((index >= 0) && (index < (mModel.getMethodCount() - 1)))
-        {
-            const uint32_t neighborId = mModel.getMethods().at(index + 1)->getId();
-            mModel.swapMethods(method->getId(), neighborId);
-            selectMethod(method->getId());
-        }
-        break;
-    }
-
-    case eRowKind::Param:
-    {
-        MethodEntry* method = currentMethod();
-        const uint32_t paramId = currentParamId();
-        if ((method == nullptr) || (paramId == 0))
-            break;
-
-        const int index = mModel.findParamIndex(method, paramId);
-        const int count = mModel.getParamCount(method);
-        if ((index >= 0) && (index < (count - 1)))
-        {
-            const uint32_t neighborId = mModel.getParams(method).at(index + 1).getId();
-            mModel.swapParams(method, paramId, neighborId);
-            selectMethod(method->getId(), paramId);
-        }
-        break;
-    }
-
-    default:
-        break;
-    }
+    moveSelection(+1);
 }
 
 //////////////////////////////////////////////////////////////////////////

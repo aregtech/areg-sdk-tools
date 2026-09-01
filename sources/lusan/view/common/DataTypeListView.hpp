@@ -19,38 +19,22 @@
  *
  ************************************************************************/
 
-#include <QKeySequence>
-#include <QString>
-#include <QWidget>
+#include "lusan/view/common/ElementListView.hpp"
 
 class QAction;
-class QMenu;
-class QToolButton;
-class QTreeWidget;
 
 /**
  * \brief   The data type list panel shared by the Service Interface (.siml), State Machine
- *          (.fsml) and future Data Type (.dtml) documents: a "Data Types List:" group holding
- *          the add/insert/delete + field add/insert/delete + move up/down toolbar above a
- *          3-column tree (Name/Data Type/Default Value).
+ *          (.fsml) and Data Type (.dtml) documents: the add/insert/delete toolbar of
+ *          \ref ElementListView with its field trio and its move buttons, above a 3-column tree
+ *          (Name/Data Type/Default Value).
  **/
-class DataTypeListView : public QWidget
+class DataTypeListView : public ElementListView
 {
     Q_OBJECT
 
 public:
     explicit DataTypeListView(QWidget* parent = nullptr);
-
-    QTreeWidget* ctrlTableList() const;
-
-    QToolButton* ctrlButtonAdd() const;
-    QToolButton* ctrlButtonInsert() const;
-    QToolButton* ctrlButtonRemove() const;
-    QToolButton* ctrlButtonMoveUp() const;
-    QToolButton* ctrlButtonMoveDown() const;
-    QToolButton* ctrlButtonAddField() const;
-    QToolButton* ctrlButtonInsertField() const;
-    QToolButton* ctrlButtonRemoveField() const;
 
     //!< The Add drop-down entries, one per data type category (default click = Structure).
     QAction* actionNewStruct() const;
@@ -59,22 +43,10 @@ public:
     QAction* actionNewContainer() const;
 
 private:
-    void buildUi();
-
-private:
-    QTreeWidget*    mTable;
-    QToolButton*    mButtonAdd;
-    QToolButton*    mButtonInsert;
-    QToolButton*    mButtonRemove;
-    QToolButton*    mButtonAddField;
-    QToolButton*    mButtonInsertField;
-    QToolButton*    mButtonRemoveField;
-    QToolButton*    mButtonMoveUp;
-    QToolButton*    mButtonMoveDown;
-    QAction*        mActNewStruct;
-    QAction*        mActNewEnum;
-    QAction*        mActNewImport;
-    QAction*        mActNewContainer;
+    QAction*        mActNewStruct;      //!< Adds a structure.
+    QAction*        mActNewEnum;        //!< Adds an enumeration.
+    QAction*        mActNewImport;      //!< Adds an imported type.
+    QAction*        mActNewContainer;   //!< Adds a container.
 };
 
 #endif  // LUSAN_VIEW_COMMON_DATATYPELISTVIEW_HPP

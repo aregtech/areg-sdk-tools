@@ -100,7 +100,15 @@ public:
     SMEventEntry* createEvent(const QString& name);
     SMEventEntry* insertEvent(int position, const QString& name);
     void deleteEvent(uint32_t id);
-    void swapEvents(uint32_t firstId, uint32_t secondId);
+    /**
+     * rief   Moves the event or timer one position up or down and answers the ID it carries
+     *          afterwards. A reorder leaves the moved element with the ID of the element it
+     *          passed, so a caller keeps the selection on what moved by taking this answer.
+     * \param   id      The ID of the entry to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * eturn  The ID the moved event or timer carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveEvent(uint32_t id, int delta);
 
     void renameEvent(uint32_t id, const QString& newName);
     void setDescription(uint32_t id, const QString& text);
@@ -115,7 +123,16 @@ public:
     MethodParameter* createParam(SMEventEntry* event, const QString& name);
     MethodParameter* insertParam(SMEventEntry* event, int position, const QString& name);
     void deleteParam(SMEventEntry* event, uint32_t paramId);
-    void swapParams(SMEventEntry* event, uint32_t firstId, uint32_t secondId);
+    /**
+     * \brief   Moves a parameter of the given event one position up or down and answers the ID it
+     *          carries afterwards. Refuses a move that would put a parameter carrying a default
+     *          value in front of one that carries none, the way C++ does.
+     * \param   event   The event owning the parameter.
+     * \param   paramId The ID of the parameter to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * \return  The ID the moved parameter carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveParam(SMEventEntry* event, uint32_t paramId, int delta);
 
     void setParamName(SMEventEntry* event, uint32_t paramId, const QString& name);
     //!< Sets the parameter's declared type by name — see DataTypeModel::setFieldType for

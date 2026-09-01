@@ -120,14 +120,9 @@ void IncludeModel::deleteInclude(uint32_t id)
     mDocument.getUndoStack().push(new TDocRemoveCommand<IncludeEntry, DocumentElem>(getNotifier(), section(), id, kindOfId(id), QObject::tr("Delete include")));
 }
 
-void IncludeModel::swapIncludes(uint32_t firstId, uint32_t secondId)
+uint32_t IncludeModel::moveInclude(uint32_t id, int delta)
 {
-    const int index1 = section().findIndex(firstId);
-    const int index2 = section().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mDocument.getUndoStack().push(new TDocReorderCommand<IncludeEntry, DocumentElem>(getNotifier(), section(), index1, index2, 0u, kindOfId(firstId), QObject::tr("Reorder includes")));
+    return docMoveElement<IncludeEntry, DocumentElem>(mDocument.getUndoStack(), getNotifier(), section(), id, delta, 0u, kindOfId(id), QObject::tr("Reorder includes"));
 }
 
 void IncludeModel::setLocation(uint32_t id, const QString& location)

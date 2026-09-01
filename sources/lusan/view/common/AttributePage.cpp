@@ -226,6 +226,7 @@ void AttributePage::setupSignals(void)
     connect(scRemove, &QShortcut::activated, this, &AttributePage::onRemoveClicked);
     connect(scAdd   , &QShortcut::activated, this, &AttributePage::onAddClicked);
     connect(scRename, &QShortcut::activated, this, &AttributePage::focusNameField);
+    connect(mList, &ElementListView::signalRenameRequested, this, &AttributePage::focusNameField);
 
     // A commit from an inline editor rebuilds the list. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &AttributePage::onEditorDataChanged, Qt::QueuedConnection);
@@ -619,33 +620,19 @@ void AttributePage::onRemoveClicked(void)
 
 void AttributePage::onMoveUpClicked(void)
 {
-    const uint32_t id = currentAttributeId();
-    if (id == 0)
-        return;
-
-    const int index = mModel.findIndex(id);
-    if (index > 0)
+    const uint32_t moved = mModel.moveAttribute(currentAttributeId(), -1);
+    if (moved != 0)
     {
-        // The swap keeps IDs attached to list position, so the moved entry's new ID is the
-        // neighbor's old ID - reselect that to keep the moved row highlighted.
-        const uint32_t neighborId = mModel.getAttributes().at(index - 1).getId();
-        mModel.swapAttributes(id, neighborId);
-        selectAttribute(neighborId);
+        selectAttribute(moved);
     }
 }
 
 void AttributePage::onMoveDownClicked(void)
 {
-    const uint32_t id = currentAttributeId();
-    if (id == 0)
-        return;
-
-    const int index = mModel.findIndex(id);
-    if ((index >= 0) && (index < (mModel.getAttributeCount() - 1)))
+    const uint32_t moved = mModel.moveAttribute(currentAttributeId(), +1);
+    if (moved != 0)
     {
-        const uint32_t neighborId = mModel.getAttributes().at(index + 1).getId();
-        mModel.swapAttributes(id, neighborId);
-        selectAttribute(neighborId);
+        selectAttribute(moved);
     }
 }
 

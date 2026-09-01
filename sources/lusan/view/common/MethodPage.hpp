@@ -193,6 +193,9 @@ protected slots:
     void onAddClicked(void);
     void onInsertClicked(void);
     void onRemoveClicked(void);
+    void onAddParamClicked(void);
+    void onInsertParamClicked(void);
+    void onRemoveParamClicked(void);
     void onMoveUpClicked(void);
     void onMoveDownClicked(void);
 
@@ -270,6 +273,9 @@ private:
 
     void addNewParam(void);
 
+    //!< Moves the selected row one position up (-1) or down (+1), and keeps the selection on it.
+    void moveSelection(int delta);
+
     QTreeWidgetItem* createMethodNode(MethodEntry* method) const;
     void setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const;
 
@@ -278,6 +284,8 @@ private:
     void showDetails(eRowKind kind);
     void updateToolbar(eRowKind kind);
     void updateMoveButtons(int row, int rowCount);
+    //!< The move buttons for a parameter row, refusing a move that C++ would not accept.
+    void updateParamMoveButtons(const MethodEntry* owner, uint32_t paramId);
 
     void selectedMethod(MethodEntry* method);
     void selectedParam(MethodEntry* owner, uint32_t paramId);

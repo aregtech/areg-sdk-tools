@@ -20,14 +20,12 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/ElementListView.hpp"
+
 #include <QList>
-#include <QString>
 #include <QStringList>
-#include <QWidget>
 
 class QAction;
-class QToolButton;
-class QTreeWidget;
 
 /**
  * \brief   The section-3 differences between the Service Interface and State Machine Methods
@@ -45,16 +43,14 @@ struct MethodListConfig
 };
 
 /**
- * \brief   The shared methods list panel: an add/insert/delete + add-parameter (+ optional
- *          delete/insert-parameter) + move up/down toolbar above a tree whose top-level rows are
+ * \brief   The shared methods list panel: the add/insert/delete toolbar of \ref ElementListView
+ *          with its parameter trio and its move buttons, above a tree whose top-level rows are
  *          methods and whose child rows are the method parameters. The Add split button always
  *          adds a method; its drop-down offers the method kinds explicitly.
  *
- *          The view is controller-agnostic: it only builds the widgets and exposes ctrl*()
- *          accessors. The page controller owns all row population and selection logic. Columns
- *          are always Name / Method Type / Value, with an optional fourth Reply column.
+ *          Columns are always Name / Method Type / Value, with an optional fourth Reply column.
  **/
-class MethodListView : public QWidget
+class MethodListView : public ElementListView
 {
     Q_OBJECT
 
@@ -72,33 +68,11 @@ public:
 
     explicit MethodListView(const MethodListConfig& config, QWidget* parent = nullptr);
 
-    QTreeWidget* ctrlTableList() const;
-
-    //!< The split Add button; the drop-down actions are typeAction(index).
-    QToolButton* ctrlButtonAdd() const;
-    QToolButton* ctrlButtonInsert() const;
-    QToolButton* ctrlButtonRemove() const;
-    //!< The "add parameter" button (enabled only when a method/parameter is selected).
-    QToolButton* ctrlButtonParamAdd() const;
-    QToolButton* ctrlButtonMoveUp() const;
-    QToolButton* ctrlButtonMoveDown() const;
-
     //!< The Add drop-down action for the given method kind, or nullptr if out of range.
     QAction* typeAction(int index) const;
 
 private:
-    void buildUi();
-
-private:
-    const MethodListConfig  mConfig;
-    QTreeWidget*            mTable;
-    QToolButton*            mButtonAdd;
-    QToolButton*            mButtonInsert;
-    QToolButton*            mButtonRemove;
-    QToolButton*            mButtonParamAdd;
-    QToolButton*            mButtonMoveUp;
-    QToolButton*            mButtonMoveDown;
-    QList<QAction*>         mTypeActions;
+    QList<QAction*> mTypeActions;    //!< The Add drop-down entries, one per method kind.
 };
 
 #endif  // LUSAN_VIEW_COMMON_METHODLISTVIEW_HPP

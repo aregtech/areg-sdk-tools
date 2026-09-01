@@ -326,14 +326,9 @@ DataTypeCustom* DataTypeModel::convertDataType(DataTypeCustom* dataType, DataTyp
     return newType;
 }
 
-void DataTypeModel::swapDataTypes(uint32_t firstId, uint32_t secondId)
+uint32_t DataTypeModel::moveDataType(uint32_t id, int delta)
 {
-    const int index1 = types().findIndex(firstId);
-    const int index2 = types().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mDocument.getUndoStack().push(new TDocReorderCommand<DataTypeCustom*, DocumentElem>(getNotifier(), types(), index1, index2, 0u, eDocElementKind::DataType, QObject::tr("Reorder data types")));
+    return docMoveElement<DataTypeCustom*, DocumentElem>(mDocument.getUndoStack(), getNotifier(), types(), id, delta, 0u, eDocElementKind::DataType, QObject::tr("Reorder data types"));
 }
 
 void DataTypeModel::renameDataType(DataTypeCustom* dataType, const QString& newName)
@@ -564,32 +559,25 @@ void DataTypeModel::deleteField(DataTypeCustom* dataType, uint32_t fieldId)
     }
 }
 
-void DataTypeModel::swapFields(DataTypeCustom* dataType, uint32_t firstId, uint32_t secondId)
+uint32_t DataTypeModel::moveField(DataTypeCustom* dataType, uint32_t fieldId, int delta)
 {
     if (dataType == nullptr)
-        return;
+        return 0u;
 
     const uint32_t ownerId = dataType->getId();
+    const QString text{ QObject::tr("Reorder fields") };
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
     {
         DataTypeStructure* structType = static_cast<DataTypeStructure*>(dataType);
-        const int index1 = structType->findIndex(firstId);
-        const int index2 = structType->findIndex(secondId);
-        if ((index1 >= 0) && (index2 >= 0))
-        {
-            mDocument.getUndoStack().push(new TDocReorderCommand<FieldEntry, DataTypeCustom>(getNotifier(), *structType, index1, index2, ownerId, eDocElementKind::DataType, QObject::tr("Reorder fields")));
-        }
+        return docMoveElement<FieldEntry, DataTypeCustom>(mDocument.getUndoStack(), getNotifier(), *structType, fieldId, delta, ownerId, eDocElementKind::DataType, text);
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         DataTypeEnum* enumType = static_cast<DataTypeEnum*>(dataType);
-        const int index1 = enumType->findIndex(firstId);
-        const int index2 = enumType->findIndex(secondId);
-        if ((index1 >= 0) && (index2 >= 0))
-        {
-            mDocument.getUndoStack().push(new TDocReorderCommand<EnumEntry, DataTypeCustom>(getNotifier(), *enumType, index1, index2, ownerId, eDocElementKind::DataType, QObject::tr("Reorder fields")));
-        }
+        return docMoveElement<EnumEntry, DataTypeCustom>(mDocument.getUndoStack(), getNotifier(), *enumType, fieldId, delta, ownerId, eDocElementKind::DataType, text);
     }
+
+    return 0u;
 }
 
 void DataTypeModel::setFieldName(DataTypeCustom* dataType, uint32_t fieldId, const QString& name)
