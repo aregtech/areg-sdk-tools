@@ -58,7 +58,8 @@ const QStringList& LoggingModelBase::getHeaderList()
 
 const QList<int>& LoggingModelBase::getHeaderWidths()
 {
-    static QList<int>  _widths{ 50, 100, 100, 50, 100, 50, 50, 200 };
+    // One entry per column, in the order of eColumn.
+    static QList<int>  _widths{ 70, 110, 110, 80, 150, 80, 130, 90, 80, 420 };
     return _widths;
 }
 
@@ -68,7 +69,7 @@ const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns()
     {
           eColumn::LogColumnSourceId
         , eColumn::LogColumnPriority
-        , eColumn::LogColumnScopeId
+        , eColumn::LogColumnThreadId
         , eColumn::LogColumnTimestamp
         , eColumn::LogColumnMessage
     };
@@ -870,12 +871,15 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
 {
     switch (column)
     {
-    case eColumn::LogColumnPriority:
+    // Digits read by place value, so they line up at their right end.
     case eColumn::LogColumnSourceId:
     case eColumn::LogColumnThreadId:
     case eColumn::LogColumnScopeId:
     case eColumn::LogColumnTimeDuration:
-        return static_cast<int>(Qt::AlignCenter | Qt::AlignVCenter);
+        return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+
+    case eColumn::LogColumnPriority:
+        return static_cast<int>(Qt::AlignCenter);
 
     case eColumn::LogColumnTimestamp:
     case eColumn::LogColumnTimeReceived:

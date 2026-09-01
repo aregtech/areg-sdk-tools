@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LogHeaderItem.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -28,76 +28,45 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     : QObject(&header)
     , mColumn(static_cast<LoggingModelBase::eColumn>(index))
     , mType (None)
+    , mActive(false)
     , mHeader(header)
     , mWidget(nullptr)
 {
     switch (mColumn)
     {
     case LoggingModelBase::eColumn::LogColumnPriority:
-        mType = eType::Combo;
+        mType   = eType::Combo;
         mWidget = new LogPrioComboFilter(&mHeader);
-        connect(mWidget, &LogPrioComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnSource:
-        mType = eType::Combo;
+        mType   = eType::Combo;
         mWidget = new LogSourceComboFilter(&mHeader);
-        connect(mWidget, &LogSourceComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnSourceId:
-        mType = eType::Combo;
+        mType   = eType::Combo;
         mWidget = new LogSourceIdComboFilter(&mHeader);
-        connect(mWidget, &LogSourceIdComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnThread:
-        mType = eType::Combo;
+        mType   = eType::Combo;
         mWidget = new LogThreadComboFilter(&mHeader);
-        connect(mWidget, &LogThreadComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnThreadId:
-        mType = eType::Combo;
+        mType   = eType::Combo;
         mWidget = new LogThreadIdComboFilter(&mHeader);
-        connect(mWidget, &LogThreadIdComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnTimeDuration:
-        mType = eType::Text;
+        mType   = eType::Text;
         mWidget = new LogDurationEditFilter(&mHeader);
-        connect(mWidget, &LogDurationEditFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            const QList<NELusanCommon::FilterData>& data = widget->getData();
-            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), data.isEmpty() ? QString() : data[0].text, false, false, false);
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnMessage:
-        mType = eType::Text;
+        mType   = eType::Text;
         mWidget = new LogMessageEditFilter(&mHeader);
-        connect(mWidget, &LogMessageEditFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
-            const QList<NELusanCommon::FilterData>& data = widget->getData();
-            if (data.isEmpty() || data[0].text.isEmpty())
-            {
-                emit mHeader.signalTextFilterChanged(fromColumnToIndex(), QString(), false, false, false);
-            }
-            else
-            {
-                NELusanCommon::FilterString fs = std::any_cast<NELusanCommon::FilterString>(data[0].data);
-                Q_ASSERT(fs.text.isEmpty() == false);
-                emit mHeader.signalTextFilterChanged(fromColumnToIndex(), fs.text, fs.isCaseSensitive, fs.isWholeWord, fs.isWildCard);
-            }
-        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnScopeId:
@@ -105,6 +74,33 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     case LoggingModelBase::eColumn::LogColumnTimeReceived:
     default:
         break;
+    }
+
+    if (mType == eType::Combo)
+    {
+        connect(mWidget, &LogFilterBase::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+                const QList<NELusanCommon::FilterData> picked{ widget->getSelectedData() };
+                markFiltered(picked.isEmpty() == false);
+                emit mHeader.signalComboFilterChanged(fromColumnToIndex(), picked);
+            });
+    }
+    else if (mType == eType::Text)
+    {
+        connect(mWidget, &LogFilterBase::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+                const QList<NELusanCommon::FilterData>& data{ widget->getData() };
+                const NELusanCommon::FilterString* phrase{ data.isEmpty() ? nullptr
+                                                         : std::any_cast<NELusanCommon::FilterString>(&data[0].data) };
+                if ((phrase == nullptr) || phrase->text.isEmpty())
+                {
+                    markFiltered(false);
+                    emit mHeader.signalTextFilterChanged(fromColumnToIndex(), QString(), false, false, false);
+                }
+                else
+                {
+                    markFiltered(true);
+                    emit mHeader.signalTextFilterChanged(fromColumnToIndex(), phrase->text, phrase->isCaseSensitive, phrase->isWholeWord, phrase->isWildCard);
+                }
+            });
     }
 }
 
@@ -118,27 +114,26 @@ inline LoggingModelBase::eColumn LogHeaderItem::fromIndexToColumn(int logicalInd
     return mHeader.mModel->fromIndexToColumn(logicalIndex);
 }
 
+void LogHeaderItem::markFiltered(bool active)
+{
+    if (mActive != active)
+    {
+        mActive = active;
+        mHeader.refreshColumn(mColumn);
+    }
+}
+
 void LogHeaderItem::showFilters()
 {
-    if (mType == eType::None)
+    if ((mType == eType::None) || (mWidget == nullptr))
         return;
 
-    Q_ASSERT(mWidget != nullptr);
-    int index   = fromColumnToIndex();
-    int pos     = mHeader.sectionViewportPosition(index);
-    int height  = mHeader.size().height();
-    QPoint pt   = mHeader.mapToGlobal(QPoint(pos, height));
+    const int index{ fromColumnToIndex() };
+    if (index < 0)
+        return;
 
-    if (mType == eType::Text)
-    {
-        Q_ASSERT(mWidget != nullptr);
-        QSize sz = mWidget->size();
-        sz.setWidth(mHeader.sectionSize(index));
-        mWidget->setMinimumSize(sz);
-    }
-
-    mWidget->move(pt);
-    mWidget->showFilter();
+    const QPoint corner{ mHeader.mapToGlobal(QPoint(mHeader.sectionViewportPosition(index), 0)) };
+    mWidget->showFilterAt(QRect(corner, QSize(mHeader.sectionSize(index), mHeader.height())));
 }
 
 void LogHeaderItem::setFilterData(const QString& data)
@@ -163,7 +158,7 @@ void LogHeaderItem::setFilterData(const std::vector<QString>& data, const NELusa
     {
         QStringList items;
         items.reserve(static_cast<int>(data.size()));
-        for (const auto& entry : data)
+        for (const QString& entry : data)
         {
             items << entry;
         }
@@ -178,23 +173,9 @@ void LogHeaderItem::setFilterData(const std::vector<areg::String>& data, const N
     {
         QStringList items;
         items.reserve(static_cast<int>(data.size()));
-        for (const auto& entry : data)
+        for (const areg::String& entry : data)
         {
             items << QString::fromStdString(entry.data());
-        }
-
-        mWidget->setDataItems(items, list);
-    }
-}
-
-void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const NELusanCommon::AnyList& list)
-{
-    if ((mType == eType::Combo) && (mWidget != nullptr))
-    {
-        QStringList items;
-        for (const auto& entry : data)
-        {
-            items << QString::number(static_cast<uint64_t>(entry));
         }
 
         mWidget->setDataItems(items, list);
@@ -204,7 +185,9 @@ void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const NELusa
 void LogHeaderItem::resetFilter()
 {
     if (mWidget != nullptr)
+    {
         mWidget->clearFilter();
+    }
 }
 
 QList<NELusanCommon::FilterData> LogHeaderItem::getFilterData() const

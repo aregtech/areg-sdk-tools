@@ -97,6 +97,9 @@ void LogFilterChips::_clearRow(void)
     {
         if (QWidget* widget = item->widget())
         {
+            // A chip is dropped from inside its own button, so it cannot be deleted here.
+            // Hiding it keeps it off the row until the deferred delete takes it.
+            widget->hide();
             widget->deleteLater();
         }
 

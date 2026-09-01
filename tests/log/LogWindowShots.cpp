@@ -27,22 +27,31 @@
 
 #include "tests/common/UiTestEnv.hpp"
 
+#include "areg/logging/LoggingDefs.hpp"
+
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "lusan/view/common/NaviToolbarWindow.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
 #include "lusan/view/log/LogEmptyState.hpp"
+#include "lusan/view/log/LogFilterChips.hpp"
+#include "lusan/view/log/LogFilterWidgets.hpp"
+#include "lusan/view/log/LogHeaderItem.hpp"
 #include "lusan/view/log/LogPriorityBar.hpp"
 #include "lusan/view/log/LogSessionBar.hpp"
+#include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/view/log/OfflineLogViewer.hpp"
 
 #include <QDir>
 #include <QHeaderView>
 #include <QLabel>
+#include <QListWidget>
 #include <QStandardPaths>
 #include <QTableView>
 #include <QHash>
@@ -75,6 +84,16 @@ namespace
         if (gShotDir.isEmpty() == false)
         {
             widget.grab().save(gShotDir + QDir::separator() + QString::fromLatin1(name) + QStringLiteral(".png"));
+        }
+    }
+
+    //!< Saves the top strip of a window, the band the session bar and the table header take.
+    void shootTop(QWidget& widget, const char* name)
+    {
+        if (gShotDir.isEmpty() == false)
+        {
+            widget.grab(QRect(0, 0, widget.width(), 72))
+                  .save(gShotDir + QDir::separator() + QString::fromLatin1(name) + QStringLiteral(".png"));
         }
     }
 
@@ -121,6 +140,39 @@ namespace
         // Rendering the panel is what lays it out. A window that was never shown does not do
         // it on its own, and activating the layout alone does not reach the nested rows.
         (void)panel.grab();
+    }
+
+    //!< The button that drops the chip standing at position @p at in the row, or nullptr.
+    QToolButton* chipDropButton(LogFilterChips& row, int at)
+    {
+        QLayout* layout{ row.layout() };
+        int seen{ 0 };
+        for (int i = 0; (layout != nullptr) && (i < layout->count()); ++i)
+        {
+            QWidget* widget{ layout->itemAt(i)->widget() };
+            if ((widget != nullptr) && (widget->objectName() == QLatin1String("logFilterChip")))
+            {
+                if (seen == at)
+                    return widget->findChild<QToolButton*>();
+
+                ++seen;
+            }
+        }
+
+        return nullptr;
+    }
+
+    //!< True when the given column is among the filters the proxy has on.
+    bool filtersColumn(const LogViewerFilter& proxy, LoggingModelBase::eColumn column)
+    {
+        const LogViewerFilter::ListActiveFilters active{ proxy.activeFilters() };
+        for (const LogViewerFilter::sActiveFilter& entry : active)
+        {
+            if (entry.column == static_cast<int>(column))
+                return true;
+        }
+
+        return false;
     }
 
     //!< Where a control starts, measured from the left edge of the panel holding it.
@@ -337,6 +389,247 @@ int main(int argc, char* argv[])
         CHECK(words.contains(QStringLiteral("collector"), Qt::CaseInsensitive));
 
         shoot(live, "live-empty");
+    }
+
+    std::printf("[filters] dropping a chip switches off the header control it stands for\n");
+    {
+        LiveLogViewer live(&window);
+        live.resize(1400, 820);
+        QApplication::processEvents();
+
+        LogTableHeader*  header{ live.findChild<LogTableHeader*>() };
+        LogFilterChips*  row   { live.findChild<LogFilterChips*>() };
+        QTableView*      table { live.findChild<QTableView*>() };
+        LogViewerFilter* proxy { table != nullptr ? qobject_cast<LogViewerFilter*>(table->model()) : nullptr };
+
+        CHECK(header != nullptr);
+        CHECK(row    != nullptr);
+        CHECK(proxy  != nullptr);
+
+        if ((header != nullptr) && (row != nullptr) && (proxy != nullptr))
+        {
+            // A phrase in the Message filter and a priority in the Priority filter, both set
+            // through the controls the reader uses.
+            LogHeaderItem* message{ header->getHeaderItem(LoggingModelBase::eColumn::LogColumnMessage) };
+            CHECK(message != nullptr);
+            if (message != nullptr)
+            {
+                message->setFilterData(NELusanCommon::FilterString{ QStringLiteral("timeout"), false, false, false });
+            }
+
+            LogPrioComboFilter* prio{ header->findChild<LogPrioComboFilter*>() };
+            QListWidget*        list{ prio != nullptr ? prio->findChild<QListWidget*>() : nullptr };
+            CHECK(prio != nullptr);
+            if (prio != nullptr)
+            {
+                prio->setDataItems(QStringList{ QStringLiteral("Debug"), QStringLiteral("Error") }
+                                  , NELusanCommon::AnyList{ std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioDebug))
+                                                          , std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioError)) });
+                list = prio->findChild<QListWidget*>();
+                CHECK(list != nullptr);
+                if (list != nullptr)
+                {
+                    CHECK(list->count() == 2);
+                    list->item(1)->setCheckState(Qt::CheckState::Checked);
+                }
+            }
+
+            QApplication::processEvents();
+            shootTop(live, "header-filtered");
+            if ((gShotDir.isEmpty() == false) && (header != nullptr))
+            {
+                const QPixmap band{ header->grab() };
+                band.scaled(band.width() * 3, band.height() * 3, Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::FastTransformation)
+                    .save(gShotDir + QDir::separator() + QStringLiteral("header-zoom.png"));
+            }
+
+            CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnMessage));
+            CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnPriority));
+            CHECK(row->chips().size() == 2);
+
+            // The chip that stands for the Message filter names the column it acts on.
+            int atMessage{ -1 };
+            for (int i = 0; i < row->chips().size(); ++i)
+            {
+                if (row->chips().at(i).column == static_cast<int>(LoggingModelBase::eColumn::LogColumnMessage))
+                {
+                    atMessage = i;
+                }
+            }
+
+            CHECK(atMessage >= 0);
+            if (atMessage >= 0)
+            {
+                CHECK(row->chips().at(atMessage).label.startsWith(QStringLiteral("Message: ")));
+            }
+
+            // Dropping that chip clears the Message filter and the header control behind it,
+            // and leaves the Priority filter exactly where it was.
+            QToolButton* drop{ atMessage >= 0 ? chipDropButton(*row, atMessage) : nullptr };
+            CHECK(drop != nullptr);
+            if (drop != nullptr)
+            {
+                drop->click();
+                QApplication::processEvents();
+            }
+
+            CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnMessage) == false);
+            CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnPriority));
+            CHECK((message == nullptr) || message->getFilterData().isEmpty());
+            CHECK(row->chips().size() == 1);
+
+            // The same for the priority chip, which is set in a list and not in a text box.
+            QToolButton* dropPrio{ chipDropButton(*row, 0) };
+            CHECK(dropPrio != nullptr);
+            if (dropPrio != nullptr)
+            {
+                dropPrio->click();
+                QApplication::processEvents();
+            }
+
+            CHECK(proxy->hasColumnFilters() == false);
+            CHECK(row->chips().isEmpty());
+            CHECK((list == nullptr) || (list->item(1)->checkState() == Qt::CheckState::Unchecked));
+        }
+    }
+
+    std::printf("[filters] a column opens the same panel after its filter was dropped\n");
+    {
+        LiveLogViewer live(&window);
+        live.resize(1400, 820);
+        QApplication::processEvents();
+
+        LogTableHeader* header{ live.findChild<LogTableHeader*>() };
+        CHECK(header != nullptr);
+        if (header != nullptr)
+        {
+            LogHeaderItem* message{ header->getHeaderItem(LoggingModelBase::eColumn::LogColumnMessage) };
+            LogHeaderItem* prio   { header->getHeaderItem(LoggingModelBase::eColumn::LogColumnPriority) };
+            LogMessageEditFilter* box { header->findChild<LogMessageEditFilter*>() };
+            LogPrioComboFilter*   plate{ header->findChild<LogPrioComboFilter*>() };
+            SearchLineEdit* phrase{ box   != nullptr ? box->findChild<SearchLineEdit*>() : nullptr };
+            QListWidget*    values{ plate != nullptr ? plate->findChild<QListWidget*>()  : nullptr };
+
+            CHECK(message != nullptr);
+            CHECK(prio    != nullptr);
+            CHECK(phrase  != nullptr);
+            CHECK(values  != nullptr);
+
+            // Opening a panel, setting a filter and dropping it again must leave the panel
+            // exactly as it was. Hiding the control inside the panel instead of the panel
+            // itself left an empty square behind for every following open.
+            if ((message != nullptr) && (box != nullptr) && (phrase != nullptr))
+            {
+                message->showFilters();
+                QApplication::processEvents();
+                shoot(*box, "filter-panel-phrase");
+                const QSize opened{ box->size() };
+                CHECK(phrase->isHidden() == false);
+                CHECK(opened.height() > 8);
+
+                message->setFilterData(NELusanCommon::FilterString{ QStringLiteral("timeout"), false, false, false });
+                message->resetFilter();
+                QApplication::processEvents();
+
+                message->showFilters();
+                QApplication::processEvents();
+                CHECK(phrase->isHidden() == false);
+                CHECK(box->size() == opened);
+                box->hide();
+            }
+
+            if ((prio != nullptr) && (plate != nullptr) && (values != nullptr))
+            {
+                plate->setDataItems(QStringList{ QStringLiteral("Fatal"), QStringLiteral("Error"), QStringLiteral("Warning")
+                                               , QStringLiteral("Information"), QStringLiteral("Debug") }
+                                   , NELusanCommon::AnyList{ std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioFatal))
+                                                           , std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioError))
+                                                           , std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioWarning))
+                                                           , std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioInfo))
+                                                           , std::make_any<uint16_t>(static_cast<uint16_t>(areg::LogPriority::PrioDebug)) });
+                values = plate->findChild<QListWidget*>();
+                CHECK(values != nullptr);
+                if (values != nullptr)
+                {
+                    values->item(1)->setCheckState(Qt::CheckState::Checked);
+                }
+
+                prio->showFilters();
+                QApplication::processEvents();
+                shoot(*plate, "filter-panel-values");
+                const QSize opened{ plate->size() };
+                CHECK(values->isHidden() == false);
+                CHECK(opened.height() > 8);
+
+                prio->resetFilter();
+                QApplication::processEvents();
+
+                prio->showFilters();
+                QApplication::processEvents();
+                CHECK(values->isHidden() == false);
+                CHECK(plate->size() == opened);
+                plate->hide();
+            }
+        }
+    }
+
+    std::printf("[search] the search box and the Message filter are one control doing two jobs\n");
+    {
+        LiveLogViewer live(&window);
+        live.resize(1400, 820);
+        QApplication::processEvents();
+
+        LogTableHeader*  header{ live.findChild<LogTableHeader*>() };
+        LogSessionBar*   bar   { live.findChild<LogSessionBar*>() };
+        LogFilterChips*  row   { live.findChild<LogFilterChips*>() };
+        QTableView*      table { live.findChild<QTableView*>() };
+        LogViewerFilter* proxy { table != nullptr ? qobject_cast<LogViewerFilter*>(table->model()) : nullptr };
+
+        CHECK(header != nullptr);
+        CHECK(bar    != nullptr);
+        CHECK(proxy  != nullptr);
+
+        LogMessageEditFilter* filter{ header != nullptr ? header->findChild<LogMessageEditFilter*>() : nullptr };
+        SearchLineEdit* inFilter{ filter != nullptr ? filter->findChild<SearchLineEdit*>() : nullptr };
+        SearchLineEdit* inBar   { bar    != nullptr ? bar->ctrlSearch() : nullptr };
+
+        CHECK(inFilter != nullptr);
+        CHECK(inBar    != nullptr);
+        CHECK(inFilter != inBar);
+
+        // Both carry the same match options, and only the search walks in a direction.
+        if ((inFilter != nullptr) && (inBar != nullptr))
+        {
+            CHECK(inFilter->buttonMatchCase() != nullptr);
+            CHECK(inFilter->buttonMatchWord() != nullptr);
+            CHECK(inFilter->buttonWildCard()  != nullptr);
+            CHECK(inBar->buttonMatchCase()    != nullptr);
+            CHECK(inBar->buttonSearchBackward()     != nullptr);
+            CHECK(inFilter->buttonSearchBackward()  == nullptr);
+        }
+
+        // Typing in the search box removes no row and raises no chip.
+        if ((inBar != nullptr) && (proxy != nullptr) && (row != nullptr))
+        {
+            inBar->setText(QStringLiteral("timeout"));
+            QApplication::processEvents();
+            CHECK(proxy->hasColumnFilters() == false);
+            CHECK(row->chips().isEmpty());
+        }
+
+        // Handing the phrase over to the filter is what removes them, and it says so with a chip.
+        if ((bar != nullptr) && (proxy != nullptr) && (row != nullptr))
+        {
+            CHECK(bar->ctrlFilterMatches()->isEnabled());
+            bar->ctrlFilterMatches()->click();
+            QApplication::processEvents();
+            CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnMessage));
+            CHECK(row->chips().size() == 1);
+            CHECK((inFilter == nullptr) || (inFilter->text() == QStringLiteral("timeout")));
+
+            // The search box keeps the phrase: the filter took it over, it did not move out.
+            CHECK((inBar == nullptr) || (inBar->text() == QStringLiteral("timeout")));
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

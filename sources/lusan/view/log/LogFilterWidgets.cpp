@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LogFilterWidgets.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -21,22 +21,85 @@
  * Includes
  ************************************************************************/
 #include "lusan/view/log/LogFilterWidgets.hpp"
+
+#include "lusan/common/NELogPalette.hpp"
 #include "lusan/view/common/SearchLineEdit.hpp"
 
+#include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QPainter>
+#include <QScreen>
+#include <QSet>
+#include <QToolButton>
+#include <QVBoxLayout>
+
+namespace
+{
+    //! The air the panel keeps between its border and its content.
+    constexpr int   _panelPad       { 6 };
+
+    //! The air between two rows of the panel.
+    constexpr int   _panelGap       { 4 };
+
+    //! The rounding of the panel corners.
+    constexpr qreal _panelRound     { 6.0 };
+
+    //! The narrowest and the widest a panel is opened at.
+    constexpr int   _panelMinWidth  { 220 };
+    constexpr int   _panelMaxWidth  { 640 };
+
+    //! The tallest the list of values grows before it starts to scroll.
+    constexpr int   _listMaxHeight  { 320 };
+
+    //! The room a list row keeps for its check mark and its air.
+    constexpr int   _listRowLead    { 44 };
+
+    //! The number of entries a list carries before it gets a find box.
+    constexpr int   _searchFrom     { 8 };
+
+    //! The entries measured to work out how wide the panel opens.
+    constexpr int   _measureUpTo    { 200 };
+
+    //!< Mixes @p over into @p base, where @p amount is how much of @p over is taken.
+    QColor blend(const QColor& base, const QColor& over, qreal amount)
+    {
+        const qreal keep{ 1.0 - amount };
+        return QColor( qRound((base.red()   * keep) + (over.red()   * amount))
+                     , qRound((base.green() * keep) + (over.green() * amount))
+                     , qRound((base.blue()  * keep) + (over.blue()  * amount)));
+    }
+
+    //!< The line the panel is drawn around with, in the theme in use.
+    QColor panelBorder(const QPalette& palette)
+    {
+        const QColor ground{ palette.color(QPalette::ColorRole::Base) };
+        return NELogPalette::isDarkTheme() ? blend(ground, QColor(Qt::GlobalColor::white), 0.24)
+                                           : blend(ground, QColor(Qt::GlobalColor::black), 0.22);
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // LogFilterBase class implementation
 //////////////////////////////////////////////////////////////////////////
 LogFilterBase::LogFilterBase(QWidget* parent)
-    : QFrame(parent)
-    , mWidget(nullptr)
+    : QFrame    (parent)
+    , mWidget   (nullptr)
+    , mData     ( )
+    , mLayout   (nullptr)
 {
-    setWindowFlags(Qt::Popup);
-    setFrameShape(QFrame::Box);
-    setFocusPolicy(Qt::NoFocus);
+    setWindowFlags(Qt::WindowType::Popup);
+    setFrameShape(QFrame::Shape::NoFrame);
+    setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+    setAttribute(Qt::WidgetAttribute::WA_TranslucentBackground, true);
+    setAttribute(Qt::WidgetAttribute::WA_NoSystemBackground, true);
+
+    mLayout = new QVBoxLayout(this);
+    mLayout->setContentsMargins(_panelPad, _panelPad, _panelPad, _panelPad);
+    mLayout->setSpacing(_panelGap);
 }
 
 void LogFilterBase::setWidget(QWidget* widget)
@@ -45,9 +108,7 @@ void LogFilterBase::setWidget(QWidget* widget)
     Q_ASSERT(widget != nullptr);
 
     mWidget = widget;
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->addWidget(mWidget);
+    mLayout->addWidget(mWidget);
 }
 
 void LogFilterBase::setDataFilter(const NELusanCommon::FilterString& filter)
@@ -57,69 +118,237 @@ void LogFilterBase::setDataFilter(const NELusanCommon::FilterString& filter)
 
 void LogFilterBase::clearFilter()
 {
-    if (mWidget != nullptr)
-    {
-        mWidget->setVisible(false);
-        mWidget->clearFocus();
-    }
+    // The panel is a window of its own, so closing it is hiding the panel. Hiding the control
+    // inside it instead leaves an empty box behind for every following open.
+    hide();
 }
 
 void LogFilterBase::showFilter()
 {
-    mWidget->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
-    mWidget->activateWindow();
     show();
+    raise();
+    if (mWidget != nullptr)
+    {
+        mWidget->show();
+        mWidget->setFocus(Qt::FocusReason::PopupFocusReason);
+    }
+}
+
+void LogFilterBase::showFilterAt(const QRect& anchor)
+{
+    ensurePolished();
+    mLayout->activate();
+
+    const QSize size{ popupSize(anchor.width()) };
+    QRect place{ QPoint(anchor.left(), anchor.bottom() + 1), size };
+
+    const QScreen* screen{ QGuiApplication::screenAt(anchor.center()) };
+    const QRect area{ screen != nullptr ? screen->availableGeometry() : QRect() };
+    if (area.isValid())
+    {
+        if (place.right() > area.right())
+            place.moveRight(area.right());
+        if (place.left() < area.left())
+            place.moveLeft(area.left());
+
+        if (place.bottom() > area.bottom())
+        {
+            // There is no room under the section, so the panel opens over the header instead.
+            const int above{ anchor.top() - 1 - size.height() };
+            place.moveTop(above >= area.top() ? above : qMax(area.top(), area.bottom() - size.height()));
+        }
+    }
+
+    setGeometry(place);
+    showFilter();
+}
+
+QSize LogFilterBase::popupSize(int anchorWidth) const
+{
+    const QSize hint{ sizeHint() };
+    const int width{ qBound(_panelMinWidth, qMax(anchorWidth, hint.width()), _panelMaxWidth) };
+    return QSize(width, hint.height());
+}
+
+void LogFilterBase::paintEvent(QPaintEvent* event)
+{
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::RenderHint::Antialiasing, true);
+    painter.setPen(QPen(panelBorder(palette()), 1.0));
+    painter.setBrush(palette().color(QPalette::ColorRole::Base));
+    painter.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), _panelRound, _panelRound);
+
+    QFrame::paintEvent(event);
+}
+
+void LogFilterBase::keyPressEvent(QKeyEvent* event)
+{
+    if ((event->key() == Qt::Key::Key_Escape) || (event->key() == Qt::Key::Key_Return) || (event->key() == Qt::Key::Key_Enter))
+    {
+        hide();
+        event->accept();
+        return;
+    }
+
+    QFrame::keyPressEvent(event);
 }
 
 //////////////////////////////////////////////////////////////////////////
 // LogComboFilterBase class implementation
 //////////////////////////////////////////////////////////////////////////
 LogComboFilterBase::LogComboFilterBase(QWidget* parent)
-    : LogFilterBase(parent)
+    : LogFilterBase (parent)
+    , mSearch       (nullptr)
+    , mSummary      (nullptr)
+    , mBtnAll       (nullptr)
+    , mBtnNone      (nullptr)
 {
-    setWidget(new QListWidget(this));
-    QListWidget* widget = listWidget();
-    widget->setSelectionMode(QAbstractItemView::NoSelection);
-    widget->setFocusPolicy(Qt::NoFocus);
+    mSearch = new QLineEdit(this);
+    mSearch->setPlaceholderText(tr("Find"));
+    mSearch->setClearButtonEnabled(true);
+    mSearch->setFixedHeight(NELusanCommon::inputRowHeight(*mSearch));
+    mSearch->hide();
+    panelLayout()->addWidget(mSearch);
+    connect(mSearch, &QLineEdit::textChanged, this, [this](const QString& phrase) { applySearch(phrase); });
 
-    connect(widget, &QListWidget::itemChanged, this, [this](QListWidgetItem* /*item*/) {
-        emit signalFiltersChanged(this);
+    setWidget(new QListWidget(this));
+    QListWidget* list{ listWidget() };
+    list->setFrameShape(QFrame::Shape::NoFrame);
+    list->setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
+    list->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+    list->setUniformItemSizes(true);
+    list->setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
+    list->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    connect(list, &QListWidget::itemChanged, this, [this](QListWidgetItem*) {
+            updateSummary();
+            emit signalFiltersChanged(this);
         });
+
+    QFrame* rule = new QFrame(this);
+    rule->setFrameShape(QFrame::Shape::HLine);
+    rule->setFixedHeight(1);
+    panelLayout()->addWidget(rule);
+
+    mSummary = new QLabel(this);
+    mSummary->setEnabled(false);
+
+    mBtnAll  = new QToolButton(this);
+    mBtnAll->setText(tr("All"));
+    mBtnNone = new QToolButton(this);
+    mBtnNone->setText(tr("None"));
+    for (QToolButton* button : { mBtnAll, mBtnNone })
+    {
+        button->setAutoRaise(true);
+        button->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
+        button->setFocusPolicy(Qt::FocusPolicy::NoFocus);
+        button->setToolButtonStyle(Qt::ToolButtonStyle::ToolButtonTextOnly);
+    }
+
+    mBtnAll->setToolTip(tr("Pick every value the list shows"));
+    mBtnNone->setToolTip(tr("Drop the filter of this column"));
+    connect(mBtnAll , &QToolButton::clicked, this, [this]() { setAllChecked(true);  });
+    connect(mBtnNone, &QToolButton::clicked, this, [this]() { setAllChecked(false); });
+
+    QHBoxLayout* foot = new QHBoxLayout();
+    foot->setContentsMargins(0, 0, 0, 0);
+    foot->setSpacing(_panelGap);
+    foot->addWidget(mSummary);
+    foot->addStretch(1);
+    foot->addWidget(mBtnAll);
+    foot->addWidget(mBtnNone);
+    panelLayout()->addLayout(foot);
+
+    updateSummary();
 }
 
-void LogComboFilterBase::setDataString(const QString& data)
+void LogComboFilterBase::setDataString(const QString& /*data*/)
 {
+}
+
+QString LogComboFilterBase::itemLabel(const QString& name, const NELusanCommon::AnyData& /*data*/) const
+{
+    return name;
+}
+
+QSet<QString> LogComboFilterBase::checkedLabels() const
+{
+    QSet<QString> picked;
+    const QListWidget* list{ listWidget() };
+    for (int i = 0; i < list->count(); ++i)
+    {
+        const QListWidgetItem* item{ list->item(i) };
+        if (item->checkState() == Qt::CheckState::Checked)
+        {
+            picked.insert(item->text());
+        }
+    }
+
+    return picked;
 }
 
 void LogComboFilterBase::setDataList(const std::vector<NELusanCommon::FilterData>& data)
 {
-    QListWidget* widget = listWidget();
-    widget->blockSignals(true);
-    widget->clear();
+    QListWidget* list{ listWidget() };
+    const QSignalBlocker blocker(list);
+
+    list->clear();
     mData.clear();
-    for (const auto& entry : data)
+    mData.reserve(static_cast<int>(data.size()));
+    for (const NELusanCommon::FilterData& entry : data)
     {
-        QListWidgetItem* item = new QListWidgetItem(entry.text, widget);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        QListWidgetItem* item = new QListWidgetItem(entry.text, list);
+        item->setFlags(item->flags() | Qt::ItemFlag::ItemIsUserCheckable);
         item->setCheckState(entry.active ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
-        widget->addItem(item);
         mData.push_back(entry);
     }
 
-    widget->blockSignals(false);
+    // A short list is read at a glance, a long one is not, so only the long one gets a find box.
+    mSearch->setVisible(list->count() > _searchFrom);
+    if (mSearch->isHidden())
+    {
+        mSearch->clear();
+    }
+    else
+    {
+        applySearch(mSearch->text());
+    }
+
+    updateSummary();
+}
+
+void LogComboFilterBase::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+{
+    const int count{ static_cast<int>(qMin(static_cast<qsizetype>(items.size()), static_cast<qsizetype>(data.size()))) };
+    const QSet<QString> before{ checkedLabels() };
+
+    std::vector<NELusanCommon::FilterData> entries;
+    entries.reserve(static_cast<size_t>(count));
+    for (int i = 0; i < count; ++i)
+    {
+        const QString label{ itemLabel(items.at(i), data[static_cast<size_t>(i)]) };
+        entries.push_back(NELusanCommon::FilterData{ label, data[static_cast<size_t>(i)], before.contains(label) });
+    }
+
+    setDataList(entries);
+
+    // A value the reader had picked can be gone from the list now, and the column then
+    // filters by something else than it did a moment ago.
+    if (checkedLabels() != before)
+    {
+        emit signalFiltersChanged(this);
+    }
 }
 
 QList<NELusanCommon::FilterData> LogComboFilterBase::getSelectedData() const
 {
     QList<NELusanCommon::FilterData> checked;
-    QListWidget* widget = listWidget();
-    int count = widget->count();
+    const QListWidget* list{ listWidget() };
+    const int count{ qMin(list->count(), static_cast<int>(mData.size())) };
     for (int i = 0; i < count; ++i)
     {
-        QListWidgetItem* item = widget->item(i);
-        if (item->checkState() == Qt::Checked)
+        if (list->item(i)->checkState() == Qt::CheckState::Checked)
         {
-            const NELusanCommon::FilterData & data = mData[i];
+            const NELusanCommon::FilterData& data{ mData[i] };
             checked.push_back(NELusanCommon::FilterData{ data.text, data.data, true });
         }
     }
@@ -129,14 +358,117 @@ QList<NELusanCommon::FilterData> LogComboFilterBase::getSelectedData() const
 
 void LogComboFilterBase::clearFilter()
 {
-    QListWidget* widget = listWidget();
-    Q_ASSERT(widget != nullptr);
-    for (int i = 0; i < widget->count(); ++i)
+    QListWidget* list{ listWidget() };
+    bool changed{ false };
+
     {
-        widget->item(i)->setCheckState(Qt::CheckState::Unchecked);
+        // The entries are unpicked behind blocked signals, so the listeners re-filter once
+        // instead of once per entry.
+        const QSignalBlocker blocker(list);
+        for (int i = 0; i < list->count(); ++i)
+        {
+            QListWidgetItem* item{ list->item(i) };
+            if (item->checkState() != Qt::CheckState::Unchecked)
+            {
+                item->setCheckState(Qt::CheckState::Unchecked);
+                changed = true;
+            }
+        }
     }
 
+    updateSummary();
     LogFilterBase::clearFilter();
+    if (changed)
+    {
+        emit signalFiltersChanged(this);
+    }
+}
+
+void LogComboFilterBase::setAllChecked(bool checked)
+{
+    QListWidget* list{ listWidget() };
+    const Qt::CheckState state{ checked ? Qt::CheckState::Checked : Qt::CheckState::Unchecked };
+    bool changed{ false };
+
+    {
+        const QSignalBlocker blocker(list);
+        for (int i = 0; i < list->count(); ++i)
+        {
+            QListWidgetItem* item{ list->item(i) };
+            // The find box leaves part of the list out of sight, and the shortcut acts on
+            // what the reader can see.
+            if (item->isHidden() || (item->checkState() == state))
+                continue;
+
+            item->setCheckState(state);
+            changed = true;
+        }
+    }
+
+    if (changed)
+    {
+        updateSummary();
+        emit signalFiltersChanged(this);
+    }
+}
+
+void LogComboFilterBase::applySearch(const QString& phrase)
+{
+    QListWidget* list{ listWidget() };
+    const bool showAll{ phrase.isEmpty() };
+    for (int i = 0; i < list->count(); ++i)
+    {
+        QListWidgetItem* item{ list->item(i) };
+        item->setHidden(showAll == false && item->text().contains(phrase, Qt::CaseSensitivity::CaseInsensitive) == false);
+    }
+}
+
+void LogComboFilterBase::updateSummary()
+{
+    if (mSummary == nullptr)
+        return;
+
+    const QListWidget* list{ listWidget() };
+    const int total{ list->count() };
+    int picked{ 0 };
+    for (int i = 0; i < total; ++i)
+    {
+        picked += (list->item(i)->checkState() == Qt::CheckState::Checked) ? 1 : 0;
+    }
+
+    mSummary->setText(picked == 0 ? tr("Every value shown") : tr("%1 of %2 picked").arg(picked).arg(total));
+    if (mBtnNone != nullptr)
+    {
+        mBtnNone->setEnabled(picked != 0);
+    }
+}
+
+QSize LogComboFilterBase::popupSize(int anchorWidth) const
+{
+    const QListWidget* list{ listWidget() };
+    const QFontMetrics metrics{ list->fontMetrics() };
+    const int rows{ list->count() };
+    const int rowHeight{ rows > 0 ? list->sizeHintForRow(0) : qMax(metrics.height() + 8, 20) };
+
+    int widest{ 0 };
+    const int measured{ qMin(rows, _measureUpTo) };
+    for (int i = 0; i < measured; ++i)
+    {
+        widest = qMax(widest, metrics.horizontalAdvance(list->item(i)->text()));
+    }
+
+    const int chrome{ (_panelPad * 2) + 2 };
+    const int width{ qBound(_panelMinWidth, qMax(anchorWidth, widest + _listRowLead + chrome), _panelMaxWidth) };
+
+    int height{ chrome + qBound(rowHeight, (rows * rowHeight) + 4, _listMaxHeight) };
+    height += _panelGap + 1;
+    height += _panelGap + qMax(mSummary->sizeHint().height(), mBtnAll->sizeHint().height());
+    if (mSearch->isHidden() == false)
+    {
+        height += _panelGap + mSearch->minimumHeight();
+    }
+
+    return QSize(width, height);
 }
 
 QListWidget* LogComboFilterBase::listWidget() const
@@ -152,37 +484,37 @@ LogTextFilterBase::LogTextFilterBase(bool extend, QWidget* parent)
 {
     if (extend)
     {
-        QList<SearchLineEdit::eToolButton> tools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
-                                                , SearchLineEdit::eToolButton::ToolButtonMatchWord
-                                                , SearchLineEdit::eToolButton::ToolButtonWildCard};
+        const QList<SearchLineEdit::eToolButton> tools{ SearchLineEdit::eToolButton::ToolButtonMatchCase
+                                                      , SearchLineEdit::eToolButton::ToolButtonMatchWord
+                                                      , SearchLineEdit::eToolButton::ToolButtonWildCard};
         setWidget(new SearchLineEdit(tools, this));
-        SearchLineEdit* widget = static_cast<SearchLineEdit*>(editWidget());
-        std::function<void(bool)> func = [this](bool checked) {
-            SearchLineEdit* w = static_cast<SearchLineEdit*>(editWidget());
-            _doSignalFilterChanged(w->text(), w->isMatchCaseChecked(), w->isMatchWordChecked(), w->isWildCardChecked());
+        SearchLineEdit* widget{ static_cast<SearchLineEdit*>(editWidget()) };
+        const std::function<void(bool)> retell = [this](bool /*checked*/) {
+                SearchLineEdit* box{ static_cast<SearchLineEdit*>(editWidget()) };
+                _doSignalFilterChanged(box->text(), box->isMatchCaseChecked(), box->isMatchWordChecked(), box->isWildCardChecked());
             };
 
         connect(widget, &SearchLineEdit::signalFilterText, this, [this](const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
-            _doSignalFilterChanged(text, isCaseSensitive, isWholeWord, isWildCard);
+                _doSignalFilterChanged(text, isCaseSensitive, isWholeWord, isWildCard);
             });
         connect(widget, &SearchLineEdit::signalSearchText, this, [this](const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard, bool /*isBackward*/) {
-            _doSignalFilterChanged(text, isCaseSensitive, isWholeWord, isWildCard);
-            hide();
-        });
-        connect(widget, &SearchLineEdit::signalButtonSearchMatchCaseClicked   , this, func);
-        connect(widget, &SearchLineEdit::signalButtonSearchMatchWordClicked   , this, func);
-        connect(widget, &SearchLineEdit::signalButtonSearchWildCardClicked    , this, func);
+                _doSignalFilterChanged(text, isCaseSensitive, isWholeWord, isWildCard);
+                hide();
+            });
+        connect(widget, &SearchLineEdit::signalButtonSearchMatchCaseClicked   , this, retell);
+        connect(widget, &SearchLineEdit::signalButtonSearchMatchWordClicked   , this, retell);
+        connect(widget, &SearchLineEdit::signalButtonSearchWildCardClicked    , this, retell);
     }
     else
     {
         setWidget(new QLineEdit(this));
-        QLineEdit* widget = editWidget();
+        QLineEdit* widget{ editWidget() };
+        widget->setClearButtonEnabled(true);
+        widget->setFixedHeight(NELusanCommon::inputRowHeight(*widget));
         connect(widget, &QLineEdit::textChanged, this, [this](const QString& text) {
-            _doSignalFilterChanged(text, false, false, false);
+                _doSignalFilterChanged(text, false, false, false);
             });
-        connect(widget, &QLineEdit::returnPressed, this, [this]() {
-            hide();
-        });
+        connect(widget, &QLineEdit::returnPressed, this, [this]() { hide(); });
     }
 }
 
@@ -191,11 +523,11 @@ void LogTextFilterBase::setDataString(const QString& data)
     editWidget()->setText(data);
 }
 
-void LogTextFilterBase::setDataList(const std::vector<NELusanCommon::FilterData>& data)
+void LogTextFilterBase::setDataList(const std::vector<NELusanCommon::FilterData>& /*data*/)
 {
 }
 
-void LogTextFilterBase::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+void LogTextFilterBase::setDataItems(const QStringList& /*items*/, const NELusanCommon::AnyList& /*data*/)
 {
 }
 
@@ -228,19 +560,38 @@ void LogTextFilterBase::setDataFilter(const NELusanCommon::FilterString& filter)
 
 void LogTextFilterBase::clearFilter()
 {
-    editWidget()->setText(QString());
+    SearchLineEdit* widget{ qobject_cast<SearchLineEdit *>(mWidget) };
+    if (widget != nullptr)
+    {
+        // A dropped filter takes its match options with it. They are reset behind blocked
+        // signals, and the text change below reports the whole thing once.
+        const QSignalBlocker blocker(widget);
+        if (widget->buttonMatchCase() != nullptr)
+            widget->buttonMatchCase()->setChecked(false);
+        if (widget->buttonMatchWord() != nullptr)
+            widget->buttonMatchWord()->setChecked(false);
+        if (widget->buttonWildCard() != nullptr)
+            widget->buttonWildCard()->setChecked(false);
+    }
+
+    if (editWidget()->text().isEmpty() == false)
+        editWidget()->setText(QString());
+    else if (mData.isEmpty() == false)
+        _doSignalFilterChanged(QString(), false, false, false);
+
     LogFilterBase::clearFilter();
 }
 
 void LogTextFilterBase::showFilter()
 {
-    QLineEdit* widget = editWidget();
+    QLineEdit* widget{ editWidget() };
     Q_ASSERT(widget != nullptr);
 
-    if (widget->text().isEmpty() == false)
-        widget->selectAll();
-
     LogFilterBase::showFilter();
+    if (widget->text().isEmpty() == false)
+    {
+        widget->selectAll();
+    }
 }
 
 QLineEdit* LogTextFilterBase::editWidget() const
@@ -256,15 +607,12 @@ inline void LogTextFilterBase::_doSignalFilterChanged(const QString& text, bool 
     }
     else
     {
-        NELusanCommon::FilterString data{ text, isCaseSensitive, isWholeWord, isWildCard };
-        if (mData.empty())
-        {
-            mData.push_back(NELusanCommon::FilterData{ text, std::make_any< NELusanCommon::FilterString >(data), true });
-        }
+        const NELusanCommon::FilterString data{ text, isCaseSensitive, isWholeWord, isWildCard };
+        const NELusanCommon::FilterData entry{ text, std::make_any<NELusanCommon::FilterString>(data), true };
+        if (mData.isEmpty())
+            mData.push_back(entry);
         else
-        {
-            mData[0] = NELusanCommon::FilterData{ text, std::make_any< NELusanCommon::FilterString >(data), true };
-        }
+            mData[0] = entry;
     }
 
     emit signalFiltersChanged(this);
@@ -278,42 +626,28 @@ LogPrioComboFilter::LogPrioComboFilter(QWidget* parent)
 {
 }
 
-void LogPrioComboFilter::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
-{
-    QListWidget* widget = listWidget();
-    std::vector<NELusanCommon::FilterData> filter;
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const QString& text = items[i];
-        // uint16_t prio = std::any_cast<uint16_t>(data[i]);
-        QList<QListWidgetItem*> f = widget->findItems(text, Qt::MatchFlag::MatchExactly);
-        Q_ASSERT(f.size() <= 1);
-        bool active = (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked);
-        filter.push_back(NELusanCommon::FilterData{ text, data[i], active });
-    }
-
-    setDataList(filter);
-}
-
 QList<NELusanCommon::FilterData> LogPrioComboFilter::getSelectedData() const
 {
-    uint16_t prio = static_cast<uint16_t>(areg::LogPriority::PrioInvalid);
-    QString text{};
+    uint16_t prio{ static_cast<uint16_t>(areg::LogPriority::PrioInvalid) };
+    QString text;
 
-    QListWidget* widget = listWidget();
-    int count = widget->count();
+    const QListWidget* list{ listWidget() };
+    const int count{ qMin(list->count(), static_cast<int>(mData.size())) };
     for (int i = 0; i < count; ++i)
     {
-        QListWidgetItem* item = widget->item(i);
-        if (item->checkState() == Qt::Checked)
+        if (list->item(i)->checkState() != Qt::CheckState::Checked)
+            continue;
+
+        const NELusanCommon::FilterData& entry{ mData[i] };
+        if (const uint16_t* value = std::any_cast<uint16_t>(&entry.data); value != nullptr)
         {
-            const NELusanCommon::FilterData f = mData[i];
-            prio |= std::any_cast<uint16_t>(f.data);
-            text += text.isEmpty() ? f.text : " | " + f.text;
+            prio |= *value;
+            text += text.isEmpty() ? entry.text : QStringLiteral(" | ") + entry.text;
         }
     }
 
-    return (prio != 0 ? QList<NELusanCommon::FilterData>{NELusanCommon::FilterData{ text, std::make_any<uint16_t>(prio), true }} : QList<NELusanCommon::FilterData>());
+    return (prio != 0 ? QList<NELusanCommon::FilterData>{ NELusanCommon::FilterData{ text, std::make_any<uint16_t>(prio), true } }
+                      : QList<NELusanCommon::FilterData>());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -324,24 +658,10 @@ LogSourceComboFilter::LogSourceComboFilter(QWidget* parent)
 {
 }
 
-void LogSourceComboFilter::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+QString LogSourceComboFilter::itemLabel(const QString& name, const NELusanCommon::AnyData& data) const
 {
-    QListWidget* widget = listWidget();
-    std::vector<NELusanCommon::FilterData> filter;
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const QString& text = items[i];
-        ITEM_ID srcId = std::any_cast<ITEM_ID>(data[i]);
-        QTextStream view;
-        QString txt;
-        view << text << " (" << srcId << ")" >> txt;
-        QList<QListWidgetItem*> f = widget->findItems(txt, Qt::MatchFlag::MatchExactly);
-        Q_ASSERT(f.size() <= 1);
-        bool active = (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked);
-        filter.push_back(NELusanCommon::FilterData{ text, data[i], active });
-    }
-
-    setDataList(filter);
+    const ITEM_ID* id{ std::any_cast<ITEM_ID>(&data) };
+    return (id != nullptr ? QStringLiteral("%1 (%2)").arg(name).arg(static_cast<qulonglong>(*id)) : name);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -352,25 +672,10 @@ LogSourceIdComboFilter::LogSourceIdComboFilter(QWidget* parent)
 {
 }
 
-void LogSourceIdComboFilter::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+QString LogSourceIdComboFilter::itemLabel(const QString& name, const NELusanCommon::AnyData& data) const
 {
-    QListWidget* widget = listWidget();
-    std::vector<NELusanCommon::FilterData> filter;
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const QString& text = items[i];
-        ITEM_ID srcId = std::any_cast<ITEM_ID>(data[i]);
-        QTextStream view;
-        QString txt;
-        view << srcId << " (" << text << ")" >> txt;
-
-        QList<QListWidgetItem*> f = widget->findItems(txt, Qt::MatchFlag::MatchExactly);
-        Q_ASSERT(f.size() <= 1);
-        bool active = (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked);
-        filter.push_back(NELusanCommon::FilterData{ text, data[i], active });
-    }
-
-    setDataList(filter);
+    const ITEM_ID* id{ std::any_cast<ITEM_ID>(&data) };
+    return (id != nullptr ? QString::number(static_cast<qulonglong>(*id)) : name);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -381,25 +686,10 @@ LogThreadComboFilter::LogThreadComboFilter(QWidget* parent)
 {
 }
 
-void LogThreadComboFilter::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+QString LogThreadComboFilter::itemLabel(const QString& name, const NELusanCommon::AnyData& data) const
 {
-    QListWidget* widget = listWidget();
-    std::vector<NELusanCommon::FilterData> filter;
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const QString& text = items[i];
-        ITEM_ID trdId = std::any_cast<ITEM_ID>(data[i]);
-        QTextStream view;
-        QString txt;
-        view << text << " (" << trdId << ")" >> txt;
-
-        QList<QListWidgetItem*> f = widget->findItems(txt, Qt::MatchFlag::MatchExactly);
-        Q_ASSERT(f.size() <= 1);
-        bool active = (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked);
-        filter.push_back(NELusanCommon::FilterData{ text, data[i], active });
-    }
-
-    setDataList(filter);
+    const ITEM_ID* id{ std::any_cast<ITEM_ID>(&data) };
+    return (id != nullptr ? QStringLiteral("%1 (%2)").arg(name).arg(static_cast<qulonglong>(*id)) : name);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -410,25 +700,10 @@ LogThreadIdComboFilter::LogThreadIdComboFilter(QWidget* parent)
 {
 }
 
-void LogThreadIdComboFilter::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+QString LogThreadIdComboFilter::itemLabel(const QString& name, const NELusanCommon::AnyData& data) const
 {
-    QListWidget* widget = listWidget();
-    std::vector<NELusanCommon::FilterData> filter;
-    for (int i = 0; i < static_cast<int>(items.size()); ++i)
-    {
-        const QString& text = items[i];
-        ITEM_ID trdId = std::any_cast<ITEM_ID>(data[i]);
-        QTextStream view;
-        QString txt;
-        view << trdId << " (" << text << ")" >> txt;
-
-        QList<QListWidgetItem*> f = widget->findItems(txt, Qt::MatchFlag::MatchExactly);
-        Q_ASSERT(f.size() <= 1);
-        bool active = (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked);
-        filter.push_back(NELusanCommon::FilterData{ text, data[i], active });
-    }
-
-    setDataList(filter);
+    const ITEM_ID* id{ std::any_cast<ITEM_ID>(&data) };
+    return (id != nullptr ? QString::number(static_cast<qulonglong>(*id)) : name);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -437,17 +712,16 @@ void LogThreadIdComboFilter::setDataItems(const QStringList& items, const NELusa
 LogDurationEditFilter::LogDurationEditFilter(QWidget* parent)
     : LogTextFilterBase(false, parent)
 {
+    editWidget()->setPlaceholderText(tr("At least, µs"));
 }
 
 QList<NELusanCommon::FilterData> LogDurationEditFilter::getSelectedData() const
 {
     QList<NELusanCommon::FilterData> checked;
-    QLineEdit* widget = editWidget();
-    QString text = widget->text();
-    if (text.isEmpty())
+    const QString text{ editWidget()->text() };
+    if (text.isEmpty() == false)
     {
-        uint32_t duration = text.toUInt();
-        checked.push_back(NELusanCommon::FilterData{ text, duration, true});
+        checked.push_back(NELusanCommon::FilterData{ text, std::make_any<uint32_t>(text.toUInt()), true });
     }
 
     return checked;
@@ -459,17 +733,18 @@ QList<NELusanCommon::FilterData> LogDurationEditFilter::getSelectedData() const
 LogMessageEditFilter::LogMessageEditFilter(QWidget* parent)
     : LogTextFilterBase(true, parent)
 {
+    editWidget()->setPlaceholderText(tr("Keep the rows carrying"));
 }
 
 QList<NELusanCommon::FilterData> LogMessageEditFilter::getSelectedData() const
 {
     QList<NELusanCommon::FilterData> checked;
-    SearchLineEdit* widget = static_cast<SearchLineEdit *>(editWidget());
-    QString text = widget->text();
+    const SearchLineEdit* widget{ static_cast<const SearchLineEdit *>(editWidget()) };
+    const QString text{ widget->text() };
     if (text.isEmpty() == false)
     {
-        NELusanCommon::FilterString f{ text, widget->isMatchCaseChecked(), widget->isMatchWordChecked(), widget->isWildCardChecked()};
-        checked.push_back(NELusanCommon::FilterData{ text, f, true });
+        const NELusanCommon::FilterString filter{ text, widget->isMatchCaseChecked(), widget->isMatchWordChecked(), widget->isWildCardChecked() };
+        checked.push_back(NELusanCommon::FilterData{ text, std::make_any<NELusanCommon::FilterString>(filter), true });
     }
 
     return checked;

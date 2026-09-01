@@ -434,6 +434,12 @@ void LogViewerBase::_updateCounters()
     _updateEmptyState();
 }
 
+QString LogViewerBase::_columnName(int column)
+{
+    const QStringList& names{ LoggingModelBase::getHeaderList() };
+    return ((column >= 0) && (column < names.size()) ? names.at(column) : QString());
+}
+
 void LogViewerBase::_updateChips()
 {
     if ((mSessionBar == nullptr) || (mFilter == nullptr) || (mLogModel == nullptr) || (mHeader == nullptr))
@@ -443,8 +449,7 @@ void LogViewerBase::_updateChips()
     const LogViewerFilter::ListActiveFilters filters{ mFilter->activeFilters() };
     for (const LogViewerFilter::sActiveFilter& entry : filters)
     {
-        const int index{ mHeader->getColumnIndex(static_cast<LoggingModelBase::eColumn>(entry.column)) };
-        const QString name{ index >= 0 ? mLogModel->getHeaderName(index) : QString() };
+        const QString name{ LogViewerBase::_columnName(entry.column) };
 
         LogFilterChips::sChip chip;
         chip.kind   = LogFilterChips::eChipKind::ChipColumn;
@@ -503,8 +508,7 @@ void LogViewerBase::_dropChip(const LogFilterChips::sChip& chip)
     }
     else if (chip.kind == LogFilterChips::eChipKind::ChipColumn)
     {
-        const int index{ mHeader->getColumnIndex(static_cast<LoggingModelBase::eColumn>(chip.column)) };
-        LogHeaderItem* item{ mHeader->getHeaderItem(index) };
+        LogHeaderItem* item{ mHeader->getHeaderItem(static_cast<LoggingModelBase::eColumn>(chip.column)) };
         if (item != nullptr)
         {
             item->resetFilter();
@@ -520,8 +524,7 @@ void LogViewerBase::filterToPhrase(const NELusanCommon::FilterString& phrase)
     if (mHeader == nullptr)
         return;
 
-    const int index{ mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage) };
-    LogHeaderItem* item{ mHeader->getHeaderItem(index) };
+    LogHeaderItem* item{ mHeader->getHeaderItem(LoggingModelBase::eColumn::LogColumnMessage) };
     if (item == nullptr)
         return;
 
@@ -979,10 +982,10 @@ QString LogViewerBase::_filterSummary() const
     const LogViewerFilter::ListActiveFilters filters{ mFilter->activeFilters() };
     for (const LogViewerFilter::sActiveFilter& entry : filters)
     {
-        const int index{ mHeader->getColumnIndex(static_cast<LoggingModelBase::eColumn>(entry.column)) };
-        if (index >= 0)
+        const QString name{ LogViewerBase::_columnName(entry.column) };
+        if (name.isEmpty() == false)
         {
-            names.append(mLogModel->getHeaderName(index));
+            names.append(name);
         }
     }
 

@@ -204,6 +204,13 @@ public:
     QString getHeaderName(int colIndex) const;
 
     /**
+     * \brief   Returns the alignment flags the given column is drawn with. The header and
+     *          the cells share them, so a column reads as one block.
+     * \param   column  The column to answer for.
+     **/
+    int getAlignmentData(eColumn column) const;
+
+    /**
      * \brief   Returns the name of the given scope of the given target.
      * \param   target  The ID of the target the scope belongs to.
      * \param   scopeId The ID of the scope.
@@ -758,14 +765,14 @@ protected:
     QString getDisplayData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
-     * \brief   Helper to get background color data for a log message and column.
-     **/
-    /**
-     * brief   Returns the tooltip of the given cell. The message column reports the
+     * \brief   Returns the tooltip of the given cell. The message column reports the
      *          full text, and how much of it was cut when the entry did not hold it all.
      **/
     QString getTooltipData(const areg::LogEntry* logMessage, eColumn column) const;
 
+    /**
+     * \brief   Helper to get background color data for a log message and column.
+     **/
     QBrush getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
@@ -777,11 +784,6 @@ protected:
      * \brief   Helper to get decoration (icon) data for a log message and column.
      **/
     QIcon getDecorationData(const areg::LogEntry* logMessage, eColumn column) const;
-
-    /**
-     * \brief   Helper to get text alignment data for a column.
-     **/
-    int getAlignmentData(eColumn column) const;
 
     /**
      * \brief   Call to clean logs and set the number of actual initialized logs objects to 0. 

@@ -33,12 +33,14 @@
 #include <QApplication>
 #include <QColor>
 #include <QPalette>
+#include <QElapsedTimer>
 #include <QSet>
 #include <QStyle>
 #include <QString>
 
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 namespace
 {
@@ -491,6 +493,68 @@ int main(int argc, char* argv[])
         }
 
         CHECK(halfAhead.hasSkew() == false);
+    }
+
+    // The cost probe walks a table of a hundred thousand rows several times over. It is not
+    // part of the run the suite makes, and it is asked for by name.
+    if ((argc > 1) && (std::strcmp(argv[1], "--cost") == 0))
+    {
+        std::printf("[cost] what one filter change costs on a table that already holds rows\n");
+
+        constexpr int rows { 100000 };
+        constexpr int every{ 7 };
+
+        TestLogModel model;
+        std::vector<areg::SharedBuffer> entries;
+        entries.reserve(rows);
+        for (int i = 0; i < rows; ++i)
+        {
+            // "timeout" lands on every seventh row, "leading" on an unbroken block of the
+            // same size. The two keep the same number of rows and cost the same to test.
+            std::string text{ "connection " + std::to_string(i) };
+            text += ((i % every) == 0) ? " timeout while reading" : " established";
+            if (i < (rows / every))
+            {
+                text += " leading";
+            }
+
+            entries.push_back(makeEntry(areg::LogMessageType::MessageText
+                                       , (i % 5) == 0 ? areg::LogPriority::PrioError : areg::LogPriority::PrioInfo
+                                       , static_cast<ITEM_ID>(1 + (i % 4)), static_cast<ITEM_ID>(10 + (i % 9))
+                                       , static_cast<uint32_t>(100 + (i % 25)), 0u
+                                       , static_cast<TIME64>(1000000 + i), static_cast<TIME64>(1000000 + i)
+                                       , text.c_str()));
+        }
+
+        model.addEntries(std::move(entries));
+        LogViewerFilter filter(&model);
+        CHECK(filter.rowCount() == rows);
+
+        const int message{ model.fromColumnToIndex(LoggingModelBase::eColumn::LogColumnMessage) };
+        QElapsedTimer clock;
+
+        // The row count is asked for inside the measure. A proxy that drops its mapping does
+        // the work on the first question put to it, and a timer stopped before that reads zero.
+        const auto measure = [&](const char* what, const QString& phrase) {
+                clock.start();
+                filter.setTextFilter(message, NELusanCommon::FilterString{ phrase, false, false, false });
+                const int kept{ filter.rowCount() };
+                const qint64 applied{ clock.elapsed() };
+
+                clock.start();
+                filter.setTextFilter(message, NELusanCommon::FilterString{ });
+                const int back{ filter.rowCount() };
+                const qint64 dropped{ clock.elapsed() };
+
+                std::printf("  %-22s kept %6d of %d | apply %6lld ms | drop %6lld ms\n"
+                           , what, kept, rows
+                           , static_cast<long long>(applied), static_cast<long long>(dropped));
+                CHECK(kept > 0);
+                CHECK(back == rows);
+            };
+
+        measure("scattered (every 7th)", QStringLiteral("timeout"));
+        measure("one unbroken block"   , QStringLiteral("leading"));
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

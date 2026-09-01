@@ -400,6 +400,13 @@ private:
     void _updateChips();
 
     /**
+     * \brief   Returns the name the reader sees for the given column. The column does not
+     *          have to be one the table shows.
+     * \param   column  The column, as a LoggingModelBase::eColumn value.
+     **/
+    static QString _columnName(int column);
+
+    /**
      * \brief   Switches off the filter the given chip stands for.
      * \param   chip    The chip the reader dropped.
      **/
