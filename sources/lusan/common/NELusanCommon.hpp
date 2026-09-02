@@ -677,6 +677,12 @@ namespace NELusanCommon
     //<! Loads node expanded icon and sets the specified size
     inline QIcon iconNodeExpanded(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads the icon that expands every row of a list page, drawn in the list toolbar family
+    inline QIcon iconListExpand(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that collapses every row of a list page, drawn in the list toolbar family
+    inline QIcon iconListCollapse(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads the icon of the toolbar entries that do not fit the row
     inline QIcon iconToolbarMore(const QSize & size = QSize{ 32, 32 });
 
@@ -1138,6 +1144,16 @@ inline QIcon NELusanCommon::iconNodeCollapsed(const QSize & size)
 inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
 {
     return loadIcon(":/icons/tree-collapse", size);
+}
+
+inline QIcon NELusanCommon::iconListExpand(const QSize & size)
+{
+    return loadIcon(":/icons/list expand", size);
+}
+
+inline QIcon NELusanCommon::iconListCollapse(const QSize & size)
+{
+    return loadIcon(":/icons/list collapse", size);
 }
 
 inline QIcon NELusanCommon::iconToolbarMore(const QSize & size)

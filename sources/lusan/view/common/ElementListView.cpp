@@ -254,10 +254,10 @@ void ElementListView::fillContextMenu(QMenu& menu)
     if (mListConfig.flatList == false)
     {
         menu.addSeparator();
-        QAction* expand = menu.addAction(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeSmall), tr("Expand All"));
+        QAction* expand = menu.addAction(NELusanCommon::iconListExpand(NELusanCommon::SizeSmall), tr("Expand All"));
         connect(expand, &QAction::triggered, mTable, &QTreeWidget::expandAll);
 
-        QAction* collapse = menu.addAction(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeSmall), tr("Collapse All"));
+        QAction* collapse = menu.addAction(NELusanCommon::iconListCollapse(NELusanCommon::SizeSmall), tr("Collapse All"));
         connect(collapse, &QAction::triggered, mTable, &QTreeWidget::collapseAll);
     }
 }
