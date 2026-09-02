@@ -22,11 +22,29 @@
 #include <QMdiArea>
 #include <QWidget>
 
+class QEvent;
+
+/**
+ * \brief   The editor area the document windows live in.
+ *
+ *          Takes its background from the active palette and re-takes it whenever the
+ *          palette changes, so the area follows a theme switch.
+ **/
 class MdiArea : public QMdiArea
 {
     Q_OBJECT
 public:
     MdiArea(QWidget * parent = nullptr);
+
+protected:
+    /**
+     * \brief   Re-takes the background brush when the palette changes.
+     **/
+    virtual void changeEvent(QEvent* event) override;
+
+private:
+    //!< Reads the background brush out of the palette in force.
+    inline void applyThemeBackground(void);
 };
 
 #endif // LUSAN_VIEW_COMMON_MDIAREA_HPP

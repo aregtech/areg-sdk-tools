@@ -22,10 +22,12 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/NETimeUnits.hpp"
+#include "lusan/view/common/MdiArea.hpp"
 
 #include <QAction>
 #include <QApplication>
 #include <QImage>
+#include <QPalette>
 #include <QPixmap>
 #include <QString>
 #include <cstdio>
@@ -202,6 +204,52 @@ void testTimeUnitKeys()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// The editor area follows the theme
+//////////////////////////////////////////////////////////////////////////
+
+//!< A palette that stands for one theme, as far as the editor area is concerned.
+static QPalette areaPalette(const QColor& ground)
+{
+    QPalette palette;
+    palette.setColor(QPalette::ColorRole::Dark, ground);
+    palette.setColor(QPalette::ColorRole::Window, ground);
+    return palette;
+}
+
+static void testEditorAreaFollowsTheTheme(void)
+{
+    std::printf("[editor area] the background follows the palette, not the build order\n");
+
+    const QColor light{ QStringLiteral("#f3f5f9") };
+    const QColor dark { QStringLiteral("#1b1e24") };
+    const QColor blue { QStringLiteral("#0d1526") };
+
+    // A new application palette is posted, not delivered on the spot, so each step turns
+    // the loop once before it reads the answer.
+    auto wear = [](const QColor& ground)
+    {
+        QApplication::setPalette(areaPalette(ground));
+        QApplication::processEvents();
+    };
+
+    // Built while one theme is in force, then handed three more. QMdiArea copies the brush
+    // out of the palette in its constructor and paints with the copy from then on, so an
+    // area that does not re-take it keeps the colours it was born under for the session.
+    wear(light);
+    MdiArea area;
+    check(area.background().color().rgb() == light.rgb(), "the area opens in the theme in force");
+
+    wear(dark);
+    check(area.background().color().rgb() == dark.rgb(), "a theme change reaches the area");
+
+    wear(blue);
+    check(area.background().color().rgb() == blue.rgb(), "the next theme reaches it as well");
+
+    wear(light);
+    check(area.background().color().rgb() == light.rgb(), "and so does the way back");
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -215,6 +263,7 @@ int main(int argc, char* argv[])
     testMissingFileStaysNull();
     testTimeUnitFormatting();
     testTimeUnitKeys();
+    testEditorAreaFollowsTheTheme();
 
     std::printf("\n%d checks, %d failures\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

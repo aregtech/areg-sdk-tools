@@ -103,14 +103,12 @@ void ElementListView::buildUi(void)
     mTable->setSortingEnabled(false);
     mTable->setAllColumnsShowFocus(false);
     mTable->setRootIsDecorated(mListConfig.flatList == false);
-    mTable->setAnimated(mListConfig.flatList == false);
+    mTable->setAnimated(false);
     mTable->setColumnCount(mListConfig.headers.size());
     mTable->header()->setCascadingSectionResizes(false);
     mTable->header()->setMinimumSectionSize(50);
     mTable->setHeaderLabels(mListConfig.headers);
 
-    // The column policy every list page shares: the first column takes the horizontal slack so
-    // names stay readable, and every other column fits its content.
     QHeaderView* header = mTable->header();
     for (int i = 0; i < mListConfig.headers.size(); ++i)
     {
@@ -264,7 +262,7 @@ void ElementListView::fillContextMenu(QMenu& menu)
 
 void ElementListView::onContextMenuRequested(const QPoint& pos)
 {
-    // The row under the cursor becomes the current one first, so every entry acts on what was
+    // The row under the cursor becomes the current one first, every entry acts on what was
     // right-clicked rather than on what was selected before.
     if (QTreeWidgetItem* under = mTable->itemAt(pos))
     {
