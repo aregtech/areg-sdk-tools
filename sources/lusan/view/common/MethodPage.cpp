@@ -145,6 +145,8 @@ MethodPage::MethodPage(MethodModel& model, const MethodPageConfig& config, QWidg
     , mTableCell            (nullptr)
     , mKindModel            (buildKindModel(model.getConfig(), this))
     , mMethodNameCounter    (0)
+    , mListPending          (false)
+    , mTypesPending         (false)
 {
     buildUi();
     setupSignals();
@@ -364,6 +366,10 @@ void MethodPage::dataTypesChanged(void)
 
 void MethodPage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
+    // The list may be waiting for a rebuild the page put off while it was hidden, and what
+    // is revealed has to be the row the model holds now.
+    flushPendingRefresh();
+
     // A finding about a parameter carries the parameter's own ID, so a method lookup that only
     // tries the top-level rows would come back empty and reveal nothing.
     uint32_t methodId = id;
@@ -578,17 +584,30 @@ void MethodPage::refreshAll(void)
     {
         const QSignalBlocker blocker(table);
         table->clear();
-        for (MethodEntry* entry : mModel.getMethods())
+
+        // One insert for the whole list. Handed the rows one at a time, the view answers each of
+        // them on its own, and the answer gets longer as the list grows.
+        QList<QTreeWidgetItem*> rows;
+        QList<QTreeWidgetItem*> open;
+        const QList<MethodEntry*>& entries = mModel.getMethods();
+        rows.reserve(entries.size());
+        for (MethodEntry* entry : entries)
         {
             if (entry == nullptr)
                 continue;
 
             QTreeWidgetItem* node = createMethodNode(entry);
-            table->addTopLevelItem(node);
+            rows.append(node);
             if (expandedMethods.contains(entry->getId()))
             {
-                node->setExpanded(true);
+                open.append(node);
             }
+        }
+
+        table->addTopLevelItems(rows);
+        for (QTreeWidgetItem* node : open)
+        {
+            node->setExpanded(true);
         }
     }
 
@@ -1379,10 +1398,53 @@ void MethodPage::onParamDeprecateHintCommitted(void)
 
 void MethodPage::onNotifierChanged(void)
 {
+    // One edit reaches every page of the document. A page the user is not looking at
+    // rebuilds its list when it comes forward, so the cost of an edit follows what the
+    // user sees and not how many pages the document has.
+    if (isVisible() == false)
+    {
+        mListPending = true;
+        return;
+    }
+
+    mListPending = false;
     refreshAll();
 }
 
+void MethodPage::flushPendingRefresh(void)
+{
+    if (mTypesPending)
+    {
+        mTypesPending = false;
+        applyDataTypesChanged();
+    }
+
+    if (mListPending)
+    {
+        mListPending = false;
+        refreshAll();
+    }
+}
+
+void MethodPage::showEvent(QShowEvent* event)
+{
+    QScrollArea::showEvent(event);
+    flushPendingRefresh();
+}
+
 void MethodPage::onDataTypesChanged(void)
+{
+    if (isVisible() == false)
+    {
+        mTypesPending = true;
+        return;
+    }
+
+    mTypesPending = false;
+    applyDataTypesChanged();
+}
+
+void MethodPage::applyDataTypesChanged(void)
 {
     populateReturnCombo();
     populateParamTypeCombo();

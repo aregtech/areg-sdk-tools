@@ -194,7 +194,6 @@ MdiMainWindow::MdiMainWindow()
     , mActNavOfflineLogs(nullptr)
     , mActNavLabels(nullptr)
     , mActNavCollapse(nullptr)
-    , mNaviWidthAnimation(nullptr)
     , mNaviExpandedWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH))
     , mActNavToolbar(nullptr)
     , mActNavProperties(nullptr)
@@ -212,6 +211,9 @@ MdiMainWindow::MdiMainWindow()
     , mSIWarmupDone (false)
     , mSchemaIndicator (nullptr)
 {
+    // The theme's style sheet lives on the windows that stand on their own, and this is one.
+    NEAppThemes::applyThemeToWindow(*this);
+
     _createActions();
     _createMenus();
     _createToolBars();
@@ -1395,6 +1397,13 @@ void MdiMainWindow::onWarmupServiceInterface()
     mSIWarmupDone = true;
     DataTypeFactory::warmup();
 
+    // Switching the workspace builds a new main window in the running process, where the
+    // throwaway page has nothing left to warm up.
+    static bool _pageWarmed{ false };
+    if (_pageWarmed)
+        return;
+
+    _pageWarmed = true;
     DataTypeDocumentModel warmupDoc;
     DataTypePage warmupPage(warmupDoc.getDataTypeModel(), QString());
 }
@@ -2155,8 +2164,7 @@ void MdiMainWindow::onNaviCollapsed(bool collapsed)
     const int target = collapsed ? mNaviDock.railWidth() : mNaviExpandedWidth;
 
     // A maximum-width clamp alone only reaches the splitter when something else already forces
-    // it to lay out again, so the splitter sizes are moved directly instead. The clamp is kept,
-    // but it lands after the run, otherwise the panel would jump to its end width at once.
+    // it to lay out again, so the splitter sizes are moved directly instead.
     area->setMaximumWidth(QWIDGETSIZE_MAX);
 
     // The dock area carries its own floor, and the splitter obeys that floor rather than the
@@ -2164,31 +2172,12 @@ void MdiMainWindow::onNaviCollapsed(bool collapsed)
     area->setMinimumWidth(collapsed ? target : 0);
     mNaviDockWidget->setMinimumWidth(collapsed ? target : 0);
 
-    if (mNaviWidthAnimation == nullptr)
-    {
-        mNaviWidthAnimation = new QVariantAnimation(this);
-        mNaviWidthAnimation->setDuration(120);
-        mNaviWidthAnimation->setEasingCurve(QEasingCurve::Type::InOutQuad);
-        connect(mNaviWidthAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
-            applyNaviWidth(value.toInt());
-        });
-        connect(mNaviWidthAnimation, &QVariantAnimation::finished, this, [this]() {
-            ads::CDockAreaWidget* done = mNaviDockWidget->dockAreaWidget();
-            if (done == nullptr)
-                return;
-
-            const bool folded = mNaviDock.isContentCollapsed();
-            applyNaviWidth(folded ? mNaviDock.railWidth() : mNaviExpandedWidth);
-            done->setMaximumWidth(folded ? mNaviDock.railWidth() : QWIDGETSIZE_MAX);
-            // The editor kept up with the run frame by frame; this settles the last one.
-            mMdiArea.viewport()->update();
-        });
-    }
-
-    mNaviWidthAnimation->stop();
-    mNaviWidthAnimation->setStartValue(area->width());
-    mNaviWidthAnimation->setEndValue(target);
-    mNaviWidthAnimation->start();
+    // The width is moved in one step. Every intermediate width lays the editor area out again,
+    // which on a large document costs more than the whole gesture is allowed to take, so a run
+    // of frames turns a click into a wait.
+    applyNaviWidth(target);
+    area->setMaximumWidth(collapsed ? target : QWIDGETSIZE_MAX);
+    mMdiArea.viewport()->update();
 }
 
 void MdiMainWindow::applyNaviWidth(int width)

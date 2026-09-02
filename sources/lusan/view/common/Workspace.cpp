@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/Workspace.hpp"
+#include "lusan/app/NEAppThemes.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/app/LusanApplication.hpp"
 
@@ -57,6 +58,8 @@ Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
     , mButtons      (nullptr)
     , mNameEdited   (false)
 {
+    // Opened before the main window on a first run, so it carries the theme itself.
+    NEAppThemes::applyThemeToWindow(*this);
     setupDialog();
 
     if (mModel.rowCount() != 0)

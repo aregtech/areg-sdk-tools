@@ -102,6 +102,11 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
+     * \brief   Rebuilds what a model change asked for while the page was hidden.
+     **/
+    virtual void showEvent(QShowEvent* event) override;
+
+    /**
      * \brief   Populates the details panel for the given include and brings the matching editor
      *          forward. A document with an editor of its own for some row kind overrides this.
      **/
@@ -187,6 +192,9 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 protected:
+    //!< Runs a rebuild the page put off while it was hidden, if one is waiting.
+    void flushPendingRefresh(void);
+
     //!< Rebuilds the whole list from the live model and restores the selection by ID.
     void refreshAll(void);
 
@@ -227,6 +235,7 @@ private:
     IncludeDetailsView* mDetails;       //!< Source and data type editor.
     TableCell*          mTableCell;     //!< Inline editor delegate for the Location column.
     uint32_t            mNameCounter;   //!< Seeds the placeholder location of a new entry.
+    bool                mListPending;   //!< A change reached this page while it was hidden; its list is stale.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

@@ -36,16 +36,19 @@ namespace
         switch (theme)
         {
         case OptionsManager::eAppTheme::SystemDefault: return QStringLiteral("System");
+        case OptionsManager::eAppTheme::SystemFusion: return QStringLiteral("SystemFusion");
         case OptionsManager::eAppTheme::ModernLight: return QStringLiteral("ModernLight");
         case OptionsManager::eAppTheme::ModernDark: return QStringLiteral("ModernDark");
         case OptionsManager::eAppTheme::MidnightBlue: return QStringLiteral("MidnightBlue");
         case OptionsManager::eAppTheme::Nord: return QStringLiteral("Nord");
-        default: return QStringLiteral("System");
+        default: return QStringLiteral("ModernLight");
         }
     }
 
     OptionsManager::eAppTheme themeFromString(const QStringView theme)
     {
+        if (theme.compare(QStringLiteral("SystemFusion"), Qt::CaseInsensitive) == 0)
+            return OptionsManager::eAppTheme::SystemFusion;
         if (theme.compare(QStringLiteral("System"), Qt::CaseInsensitive) == 0)
             return OptionsManager::eAppTheme::SystemDefault;
         if (theme.compare(QStringLiteral("ModernDark"), Qt::CaseInsensitive) == 0)
@@ -57,7 +60,7 @@ namespace
         if (theme.compare(QStringLiteral("ModernLight"), Qt::CaseInsensitive) == 0)
             return OptionsManager::eAppTheme::ModernLight;
         
-        return OptionsManager::eAppTheme::SystemDefault;
+        return OptionsManager::eAppTheme::ModernLight;
     }
 }
 
@@ -66,7 +69,7 @@ OptionsManager::OptionsManager()
     , mDefWorkspace ( 0 )
     , mWorkspaces   ( )
     , mCurId        ( 0 )
-    , mTheme        ( eAppTheme::SystemDefault )
+    , mTheme        ( eAppTheme::ModernLight )
     , mTimeUnit     ( NETimeUnits::DefaultUnit )
     , mTimeStamp    ( NETimeUnits::DefaultStamp )
     , mLogPalette   ( NELogPalette::DefaultPalette )

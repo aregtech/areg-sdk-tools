@@ -58,6 +58,7 @@ public:
     enum class eAppTheme : uint8_t
     {
           SystemDefault = 0
+        , SystemFusion
         , ModernLight
         , ModernDark
         , MidnightBlue

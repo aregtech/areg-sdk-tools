@@ -127,6 +127,11 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
+    /**
+     * \brief   Rebuilds what a model change asked for while the page was hidden.
+     **/
+    virtual void showEvent(QShowEvent* event) override;
+
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
 
     virtual int getColumnCount(void) const override;
@@ -187,6 +192,9 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    //!< Runs a rebuild the page put off while it was hidden, if one is waiting.
+    void flushPendingRefresh(void);
+
     void buildUi(const QString& headline);
     void setupSignals(void);
 
@@ -281,6 +289,7 @@ private:
     uint32_t                    mNameCounter;   //!< The counter behind the generated names.
     QString                     mCurUrl;        //!< The directory the import browser opens at.
     QString                     mCurFile;       //!< The file the import browser preselects.
+    bool                        mListPending;   //!< A change reached this page while it was hidden; its list is stale.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

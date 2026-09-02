@@ -91,6 +91,8 @@ ConstantPage::ConstantPage(ConstantModel& model, const QString& headline, QWidge
     , mTypeNames    (new QStringListModel(this))
     , mTableCell    (nullptr)
     , mNameCounter  (0)
+    , mListPending  (false)
+    , mTypesPending (false)
 {
     buildUi(headline);
     setupSignals();
@@ -435,6 +437,10 @@ uint32_t ConstantPage::currentConstantId(void) const
 
 void ConstantPage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
+    // The list may be waiting for a rebuild the page put off while it was hidden, and what
+    // is revealed has to be the row the model holds now.
+    flushPendingRefresh();
+
     if (selectConstant(id) == false)
     {
         return;
@@ -737,10 +743,53 @@ bool ConstantPage::selectConstant(uint32_t id)
 
 void ConstantPage::onNotifierChanged(void)
 {
+    // One edit reaches every page of the document. A page the user is not looking at
+    // rebuilds its list when it comes forward, so the cost of an edit follows what the
+    // user sees and not how many pages the document has.
+    if (isVisible() == false)
+    {
+        mListPending = true;
+        return;
+    }
+
+    mListPending = false;
     refreshAll();
 }
 
+void ConstantPage::flushPendingRefresh(void)
+{
+    if (mTypesPending)
+    {
+        mTypesPending = false;
+        applyDataTypesChanged();
+    }
+
+    if (mListPending)
+    {
+        mListPending = false;
+        refreshAll();
+    }
+}
+
+void ConstantPage::showEvent(QShowEvent* event)
+{
+    QScrollArea::showEvent(event);
+    flushPendingRefresh();
+}
+
 void ConstantPage::onDataTypesChanged(void)
+{
+    if (isVisible() == false)
+    {
+        mTypesPending = true;
+        return;
+    }
+
+    mTypesPending = false;
+    applyDataTypesChanged();
+}
+
+void ConstantPage::applyDataTypesChanged(void)
 {
     populateTypes();
     updateValueControl(mModel.findConstant(currentConstantId()));

@@ -116,6 +116,7 @@ DataTypePage::DataTypePage(DataTypeModel& model, const QString& headline, QWidge
     , mNameCounter      (0)
     , mCurUrl           ( )
     , mCurFile          ( )
+    , mListPending      (false)
 {
     buildUi(headline);
     setupSignals();
@@ -799,12 +800,35 @@ void DataTypePage::refreshAll(void)
         }
     }
 
+    // A row the author opened stays open across the rebuild, otherwise every edit folds the
+    // fields away under the type they belong to.
+    QList<uint32_t> openTypes;
+    QStringList openImports;
+    for (int i = 0; i < table->topLevelItemCount(); ++i)
+    {
+        QTreeWidgetItem* top = table->topLevelItem(i);
+        if (top->isExpanded() == false)
+            continue;
+
+        DataTypeCustom* entry = top->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+        if (entry != nullptr)
+            openTypes.append(entry->getId());
+        else
+            openImports.append(top->text(static_cast<int>(eColumn::ColName)));
+    }
+
     {
         const QSignalBlocker blocker(table);
         table->clear();
-        for (DataTypeCustom* entry : mModel.getCustomDataTypes())
+
+        // One insert for the whole list. Handed the rows one at a time, the view answers each of
+        // them on its own, and the answer gets longer as the list grows.
+        QList<QTreeWidgetItem*> rows;
+        const QList<DataTypeCustom*>& entries = mModel.getCustomDataTypes();
+        rows.reserve(entries.size());
+        for (DataTypeCustom* entry : entries)
         {
-            table->addTopLevelItem(createNode(entry));
+            rows.append(createNode(entry));
         }
 
         // Only the documents that resolved: one that does not is reported on the Includes page,
@@ -813,10 +837,17 @@ void DataTypePage::refreshAll(void)
         {
             if (group.isResolved())
             {
-                QTreeWidgetItem* node = createImportNode(group);
-                table->addTopLevelItem(node);
-                node->setExpanded(false);
+                rows.append(createImportNode(group));
             }
+        }
+
+        table->addTopLevelItems(rows);
+
+        for (QTreeWidgetItem* row : rows)
+        {
+            DataTypeCustom* entry = row->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+            row->setExpanded((entry != nullptr) ? openTypes.contains(entry->getId())
+                                                : openImports.contains(row->text(static_cast<int>(eColumn::ColName))));
         }
     }
 
@@ -892,6 +923,10 @@ bool DataTypePage::selectDataType(uint32_t typeId, uint32_t fieldId /*= 0*/)
 
 void DataTypePage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
+    // The list may be waiting for a rebuild the page put off while it was hidden, and what
+    // is revealed has to be the row the model holds now.
+    flushPendingRefresh();
+
     // A finding about a structure field or an enumeration entry carries the field's own id, so
     // a type lookup that only tries the top-level rows would come back empty and reveal nothing.
     uint32_t typeId = id;
@@ -1685,5 +1720,30 @@ void DataTypePage::applyCellEdit(DataTypeCustom* dataType, uint32_t fieldId, int
 
 void DataTypePage::onNotifierChanged(void)
 {
+    // One edit reaches every page of the document. A page the user is not looking at
+    // rebuilds its list when it comes forward, so the cost of an edit follows what the
+    // user sees and not how many pages the document has.
+    if (isVisible() == false)
+    {
+        mListPending = true;
+        return;
+    }
+
+    mListPending = false;
     refreshAll();
+}
+
+void DataTypePage::flushPendingRefresh(void)
+{
+    if (mListPending)
+    {
+        mListPending = false;
+        refreshAll();
+    }
+}
+
+void DataTypePage::showEvent(QShowEvent* event)
+{
+    QScrollArea::showEvent(event);
+    flushPendingRefresh();
 }
