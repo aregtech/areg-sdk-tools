@@ -24,21 +24,26 @@
 
 #include "lusan/common/NELogPalette.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/common/NETimeUnits.hpp"
 #include "lusan/model/log/LogClockSkew.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "lusan/model/log/ScopeLogViewerFilter.hpp"
 
 #include "tests/common/UiTestEnv.hpp"
 
 #include <QApplication>
 #include <QColor>
+#include <QDateTime>
 #include <QPalette>
+#include <QElapsedTimer>
 #include <QSet>
 #include <QStyle>
 #include <QString>
 
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 namespace
 {
@@ -118,6 +123,13 @@ namespace
         {
             appendLogBatch(std::move(entries), mLoadGeneration);
         }
+
+        QString timeOf(int row, LoggingModelBase::eColumn column) const
+        {
+            return getTimeDisplay(row, getLogData(row), column);
+        }
+
+        using LoggingModelBase::isDayChange;
     };
 
     //!< Paints the application in the values a light or a dark theme carries.
@@ -272,6 +284,93 @@ int main(int argc, char* argv[])
         CHECK(areg::is_log_message_cut(*cutEntry));
         CHECK(areg::log_message_size(*cutEntry) == (areg::LOG_MSG_SIZE - 1u));
         CHECK(cutEntry->logMessageLen == 823u);
+    }
+
+    std::printf("[time] the shapes a log row writes its time in\n");
+    {
+        const NETimeUnits::eTimeUnit  keepUnit { NETimeUnits::unit()  };
+        const NETimeUnits::eTimeStamp keepStamp{ NETimeUnits::stamp() };
+
+        // The measurement is built from a local reading, so every expected string below holds
+        // in any time zone the checks run in.
+        const QDateTime when{ QDate(2026, 9, 1), QTime(10, 22, 4, 121) };
+        const uint64_t stamp{ (static_cast<uint64_t>(when.toMSecsSinceEpoch()) * 1000ull) + 408ull };
+        const uint64_t oneDay{ 24ull * 60ull * 60ull * 1000000ull };
+
+        NETimeUnits::setUnit(NETimeUnits::eTimeUnit::UnitMicro);
+
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampTime);
+        CHECK(NETimeUnits::timestamp(stamp, stamp, stamp, false) == QStringLiteral("10:22:04.121"));
+        CHECK(NETimeUnits::timestamp(stamp, stamp, stamp, true)  == QStringLiteral("09-01 10:22:04.121"));
+
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampTimeMicro);
+        CHECK(NETimeUnits::timestamp(stamp, stamp, stamp, false) == QStringLiteral("10:22:04.121408"));
+
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampDateTime);
+        CHECK(NETimeUnits::timestamp(stamp, stamp, stamp, false) == QStringLiteral("2026-09-01 10:22:04.121"));
+
+        // A relative shape counts from another row and never carries a day.
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampElapsed);
+        CHECK(NETimeUnits::timestamp(stamp + 83456000ull, stamp, stamp, true) == QStringLiteral("+00:01:23.456"));
+
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampDelta);
+        CHECK(NETimeUnits::timestamp(stamp + 12480ull, stamp, stamp, true) == NETimeUnits::offset(12480));
+
+        // The whole reading is what the tool tip and the copied line carry.
+        CHECK(NETimeUnits::fullTimestamp(stamp) == QStringLiteral("2026-09-01 10:22:04.121408"));
+        CHECK(NETimeUnits::fullTimestamp(0) == QString());
+
+        CHECK(NETimeUnits::dayOf(stamp + oneDay) == (NETimeUnits::dayOf(stamp) + 1));
+        CHECK(NETimeUnits::dayOf(stamp + 3600000000ull) == NETimeUnits::dayOf(stamp));
+        CHECK(NETimeUnits::isRelative(NETimeUnits::eTimeStamp::StampDelta));
+        CHECK(NETimeUnits::isRelative(NETimeUnits::eTimeStamp::StampTime) == false);
+
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampTime);
+
+        TestLogModel model;
+        std::vector<areg::SharedBuffer> entries;
+        entries.push_back(makeEntry(areg::LogMessageType::MessageText, areg::LogPriority::PrioInfo, 1u, 10u, 100u, 0u
+                                   , stamp, stamp + 500ull, "first of the day"));
+        entries.push_back(makeEntry(areg::LogMessageType::MessageText, areg::LogPriority::PrioInfo, 1u, 10u, 100u, 0u
+                                   , stamp + 3600000000ull, stamp + 3600000500ull, "one hour later"));
+        entries.push_back(makeEntry(areg::LogMessageType::MessageText, areg::LogPriority::PrioInfo, 1u, 10u, 100u, 0u
+                                   , stamp + oneDay, stamp + oneDay + 500ull, "the next day"));
+        model.addEntries(std::move(entries));
+        CHECK(model.rowCount() == 3);
+
+        // The day is written on the row that opens it, and on nothing else.
+        CHECK(model.timeOf(0, LoggingModelBase::eColumn::LogColumnTimestamp) == QStringLiteral("09-01 10:22:04.121"));
+        CHECK(model.timeOf(1, LoggingModelBase::eColumn::LogColumnTimestamp) == QStringLiteral("11:22:04.121"));
+        CHECK(model.timeOf(2, LoggingModelBase::eColumn::LogColumnTimestamp) == QStringLiteral("09-02 10:22:04.121"));
+
+        // The first row opens no day, it has no row above it to differ from.
+        CHECK(model.isDayChange(0) == false);
+        CHECK(model.isDayChange(1) == false);
+        CHECK(model.isDayChange(2));
+
+        // The received column answers with its own measurement, not with the created one.
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampTimeMicro);
+        CHECK(model.timeOf(1, LoggingModelBase::eColumn::LogColumnTimestamp)    == QStringLiteral("11:22:04.121408"));
+        CHECK(model.timeOf(1, LoggingModelBase::eColumn::LogColumnTimeReceived) == QStringLiteral("11:22:04.121908"));
+
+        // The elapsed shape counts from the first row of the window, in either column.
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampElapsed);
+        CHECK(model.timeOf(0, LoggingModelBase::eColumn::LogColumnTimestamp) == QStringLiteral("+00:00:00.000"));
+        CHECK(model.timeOf(1, LoggingModelBase::eColumn::LogColumnTimestamp) == QStringLiteral("+01:00:00.000"));
+
+        // The delta shape counts from the row above.
+        NETimeUnits::setStamp(NETimeUnits::eTimeStamp::StampDelta);
+        CHECK(model.timeOf(0, LoggingModelBase::eColumn::LogColumnTimestamp) == NETimeUnits::offset(0));
+        CHECK(model.timeOf(1, LoggingModelBase::eColumn::LogColumnTimestamp) == NETimeUnits::offset(3600000000ll));
+
+        // The header names the two columns apart at any width. Both used to begin with "Time".
+        CHECK(LoggingModelBase::getHeaderList().at(static_cast<int>(LoggingModelBase::eColumn::LogColumnTimestamp))
+              != LoggingModelBase::getHeaderList().at(static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeReceived)));
+        CHECK(LoggingModelBase::getHeaderList().at(static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeReceived)).startsWith(
+              LoggingModelBase::getHeaderList().at(static_cast<int>(LoggingModelBase::eColumn::LogColumnTimestamp))) == false);
+
+        NETimeUnits::setUnit(keepUnit);
+        NETimeUnits::setStamp(keepStamp);
     }
 
     std::printf("[problem] the predicate the marks, F8 and the output window share\n");
@@ -491,6 +590,139 @@ int main(int argc, char* argv[])
         }
 
         CHECK(halfAhead.hasSkew() == false);
+    }
+
+    // The cost probe walks a table of a hundred thousand rows several times over. It is not
+    // part of the run the suite makes, and it is asked for by name.
+    if ((argc > 1) && (std::strcmp(argv[1], "--cost") == 0))
+    {
+        std::printf("[cost] what one filter change costs on a table that already holds rows\n");
+
+        constexpr int rows { 100000 };
+        constexpr int every{ 7 };
+
+        TestLogModel model;
+        std::vector<areg::SharedBuffer> entries;
+        entries.reserve(rows);
+        for (int i = 0; i < rows; ++i)
+        {
+            // "timeout" lands on every seventh row, "leading" on an unbroken block of the
+            // same size. The two keep the same number of rows and cost the same to test.
+            std::string text{ "connection " + std::to_string(i) };
+            text += ((i % every) == 0) ? " timeout while reading" : " established";
+            if (i < (rows / every))
+            {
+                text += " leading";
+            }
+
+            entries.push_back(makeEntry(areg::LogMessageType::MessageText
+                                       , (i % 5) == 0 ? areg::LogPriority::PrioError : areg::LogPriority::PrioInfo
+                                       , static_cast<ITEM_ID>(1 + (i % 4)), static_cast<ITEM_ID>(10 + (i % 9))
+                                       , static_cast<uint32_t>(100 + (i % 25)), 0u
+                                       , static_cast<TIME64>(1000000 + i), static_cast<TIME64>(1000000 + i)
+                                       , text.c_str()));
+        }
+
+        model.addEntries(std::move(entries));
+        LogViewerFilter filter(&model);
+        CHECK(filter.rowCount() == rows);
+
+        const int message{ model.fromColumnToIndex(LoggingModelBase::eColumn::LogColumnMessage) };
+        QElapsedTimer clock;
+
+        // The row count is asked for inside the measure. A proxy that drops its mapping does
+        // the work on the first question put to it, and a timer stopped before that reads zero.
+        const auto measure = [&](const char* what, const QString& phrase) {
+                clock.start();
+                filter.setTextFilter(message, NELusanCommon::FilterString{ phrase, false, false, false });
+                const int kept{ filter.rowCount() };
+                const qint64 applied{ clock.elapsed() };
+
+                clock.start();
+                filter.setTextFilter(message, NELusanCommon::FilterString{ });
+                const int back{ filter.rowCount() };
+                const qint64 dropped{ clock.elapsed() };
+
+                std::printf("  %-22s kept %6d of %d | apply %6lld ms | drop %6lld ms\n"
+                           , what, kept, rows
+                           , static_cast<long long>(applied), static_cast<long long>(dropped));
+                CHECK(kept > 0);
+                CHECK(back == rows);
+            };
+
+        measure("scattered (every 7th)", QStringLiteral("timeout"));
+        measure("one unbroken block"   , QStringLiteral("leading"));
+    }
+
+    std::printf("[select] the predicate the Isolate and the Select menus share\n");
+    {
+        //                                                           prio                          cookie thread scope session time
+        const areg::SharedBuffer one{ makeEntry(areg::LogMessageType::MessageText, areg::LogPriority::PrioInfo, 1u, 10u, 100u, 7u, 1000, 1000, "alpha") };
+        const areg::LogEntry* entry{ reinterpret_cast<const areg::LogEntry*>(one.buffer()) };
+
+        LogViewerFilter::sIsolation pick;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry));   // IsolationNone takes every row
+        CHECK(LogViewerFilter::matchesIsolation(pick, nullptr));
+
+        pick.kind      = LogViewerFilter::eIsolation::IsolationCall;
+        pick.cookie    = 1u;
+        pick.thread    = 10u;
+        pick.scopeId   = 100u;
+        pick.sessionId = 7u;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry));
+        CHECK(LogViewerFilter::matchesIsolation(pick, nullptr) == false);
+
+        // The call is one run of one scope: another run of the same scope is not it.
+        pick.sessionId = 8u;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry) == false);
+
+        // The scope is every run of it, the thread is every scope of it, the process is all.
+        pick.kind = LogViewerFilter::eIsolation::IsolationScope;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry));
+        pick.kind = LogViewerFilter::eIsolation::IsolationThread;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry));
+        pick.kind = LogViewerFilter::eIsolation::IsolationProcess;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry));
+
+        // Every kind is bounded by the process the row came from.
+        pick.cookie = 2u;
+        CHECK(LogViewerFilter::matchesIsolation(pick, entry) == false);
+    }
+
+    std::printf("[analyzer] the picked rows, and the rows taken out of the view\n");
+    {
+        TestLogModel model;
+        std::vector<areg::SharedBuffer> entries;
+        for (int i = 0; i < 6; ++i)
+        {
+            entries.push_back(makeEntry( areg::LogMessageType::MessageText, areg::LogPriority::PrioInfo
+                                       , 1u, 10u, 100u, 7u
+                                       , 1000 + i, 1000 + i, "row"));
+        }
+
+        model.addEntries(std::move(entries));
+
+        ScopeLogViewerFilter filter;
+        filter.setRowFilter(&model, QList<int>{ 1, 3, 5 });
+        CHECK(filter.isRowFilter());
+        CHECK(filter.rowCount() == 3);
+
+        // The picked rows are the ones the log window marks as read apart.
+        CHECK(filter.filterExactMatch(model.index(1, 0)));
+        CHECK(filter.filterExactMatch(model.index(2, 0)) == false);
+
+        // A row taken out of the view goes, and comes back whole.
+        filter.hideRows(QList<int>{ 3 });
+        CHECK(filter.hasHiddenRows());
+        CHECK(filter.rowCount() == 2);
+        filter.showHiddenRows();
+        CHECK(filter.hasHiddenRows() == false);
+        CHECK(filter.rowCount() == 3);
+
+        // Reading a call again drops the picked set with everything else.
+        filter.setScopeFilter(&model, 100u, 7u, 10u, 1u);
+        CHECK(filter.isRowFilter() == false);
+        CHECK(filter.rowCount() == 6);
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

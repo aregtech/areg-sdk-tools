@@ -72,6 +72,10 @@ public:
     //!< A delegate reads it to mark the row apart without taking any width from the cell.
     static constexpr int    AnalyzedRole    { Qt::ItemDataRole::UserRole + 2 };
 
+    //!< The role that answers whether the row is the first of a calendar day. A delegate
+    //!< reads it to draw the boundary, so a day change is found while scrolling.
+    static constexpr int    DayChangeRole   { Qt::ItemDataRole::UserRole + 3 };
+
     enum class eColumn : int
     {
           LogColumnInvalid  = -1    //!< Invalid column index, used for error checking
@@ -85,6 +89,7 @@ public:
         , LogColumnThreadId         //!< Log message thread ID
         , LogColumnScopeId          //!< Log message scope ID
         , LogColumnMessage          //!< Log message text
+        , LogColumnRail             //!< The narrow leading column carrying the priority rail
 
         , LogColumnCount            //!< Maximum number of columns
     };
@@ -97,6 +102,9 @@ public:
         , LoggingOffline        // Offline logging, reading from a database file
         , LoggingDisconneced    // Logging was live, it is disconnected from the log collector service, but still is connected to the database.
     };
+
+    //!< The width of the leading rail column, in pixels. It never changes.
+    static constexpr int        RailWidth       { 20 };
 
     //!< Number of entries the reading thread pulls from the database in one step.
     //!< Used when the caller did not ask for an explicit step size.
@@ -166,6 +174,29 @@ public:
      **/
     static LoggingModelBase::eColumn getColumnByKey(const QString& key);
 
+    /**
+     * \brief   Returns true when the table places the column itself and the reader cannot
+     *          move it, hide it or drop it. The rail and the message are such columns.
+     **/
+    static bool isPinnedColumn(LoggingModelBase::eColumn column);
+
+    /**
+     * \brief   Puts a list of columns in a shape the table can take: the rail first, the
+     *          message last, every column named once, and nothing unknown.
+     * \param   columns The list to shape. An empty list gives the default columns back.
+     **/
+    static QList<LoggingModelBase::eColumn> shapeColumns(const QList<LoggingModelBase::eColumn>& columns);
+
+    /**
+     * \brief   Returns the place a column takes when it is shown, so that every way of
+     *          showing it puts it in the same place.
+     * \param   active  The columns the table shows now.
+     * \param   column  The column being shown.
+     * \return  The index to insert at. The column lands after the last shown column that
+     *          comes before it in the fixed order, and always before the message.
+     **/
+    static int placeOfColumn(const QList<LoggingModelBase::eColumn>& active, LoggingModelBase::eColumn column);
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -202,6 +233,21 @@ public:
      * \param   colIndex The zero-based index of the column.
      **/
     QString getHeaderName(int colIndex) const;
+
+    /**
+     * \brief   Returns the alignment flags the given column is drawn with. The header and
+     *          the cells share them, so a column reads as one block.
+     * \param   column  The column to answer for.
+     **/
+    int getAlignmentData(eColumn column) const;
+
+    /**
+     * \brief   Returns the text one column carries for one log entry, whether or not the
+     *          table shows that column. A time column answers with its full clock reading.
+     * \param   logMessage  The entry to write. An empty string when it is null.
+     * \param   column      The column to write it for.
+     **/
+    QString getCellData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
      * \brief   Returns the name of the given scope of the given target.
@@ -758,14 +804,30 @@ protected:
     QString getDisplayData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
-     * \brief   Helper to get background color data for a log message and column.
+     * \brief   Returns the time of a row in the shape chosen in the options. The row is
+     *          needed because the elapsed and the delta shapes count from another row.
+     * \param   row         The row of the model.
+     * \param   logMessage  The entry that row holds.
+     * \param   column      The time column to write, created or received.
      **/
+    QString getTimeDisplay(int row, const areg::LogEntry* logMessage, eColumn column) const;
+
     /**
-     * brief   Returns the tooltip of the given cell. The message column reports the
+     * \brief   Returns true when the row opens a calendar day that the row above did not.
+     *          The first row of the model opens no day, it has nothing above it.
+     * \param   row The row of the model.
+     **/
+    bool isDayChange(int row) const;
+
+    /**
+     * \brief   Returns the tooltip of the given cell. The message column reports the
      *          full text, and how much of it was cut when the entry did not hold it all.
      **/
     QString getTooltipData(const areg::LogEntry* logMessage, eColumn column) const;
 
+    /**
+     * \brief   Helper to get background color data for a log message and column.
+     **/
     QBrush getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
@@ -777,11 +839,6 @@ protected:
      * \brief   Helper to get decoration (icon) data for a log message and column.
      **/
     QIcon getDecorationData(const areg::LogEntry* logMessage, eColumn column) const;
-
-    /**
-     * \brief   Helper to get text alignment data for a column.
-     **/
-    int getAlignmentData(eColumn column) const;
 
     /**
      * \brief   Call to clean logs and set the number of actual initialized logs objects to 0. 

@@ -924,6 +924,12 @@ void MdiMainWindow::syncDesignWidgets()
     if (design != nullptr)
     {
         design->setPlacementState(static_cast<int>(mPlaceToolbar), static_cast<int>(mPlaceProperties), static_cast<int>(mPlaceOutline));
+        // The Properties panel opens as wide as the navigation tree, which is the navigation
+        // window without its icon rail.
+        if (mNaviDock.isContentCollapsed() == false)
+        {
+            design->setPropertiesWidth(mNaviDock.width() - mNaviDock.railWidth());
+        }
     }
 
     // Toolbar: the drawing toolbar always shows its buttons in the Navigation Window (disabled

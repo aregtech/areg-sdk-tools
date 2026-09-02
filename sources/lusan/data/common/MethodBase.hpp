@@ -384,6 +384,24 @@ public:
      */
     bool canSwapParamRight(int position) const;
 
+    /**
+     * \brief   Whether the parameter may move one position up or down without breaking the rule
+     *          that every parameter following one with a default value carries one too.
+     * \param   id      The ID of the parameter to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * \return  True when the move keeps the declaration something C++ accepts.
+     **/
+    bool canSwapParam(uint32_t id, int delta) const;
+
+    /**
+     * \brief   Whether a parameter placed at the given position starts out carrying a default
+     *          value. C++ takes the defaults from the end of the parameter list, so a parameter
+     *          following one that has a default must have one as well.
+     * \param   position    The position the new parameter is placed at.
+     * \return  True when the new parameter must carry a default value.
+     **/
+    bool inheritsDefault(int position) const;
+
 protected:
 
     /**

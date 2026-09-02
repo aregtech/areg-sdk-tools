@@ -18,125 +18,30 @@
  ************************************************************************/
 
 #include "lusan/view/common/AttributeListView.hpp"
-#include "lusan/common/NELusanCommon.hpp"
 
-#include <QFrame>
-#include <QGroupBox>
-#include <QHBoxLayout>
-#include <QHeaderView>
 #include <QStringList>
-#include <QToolButton>
-#include <QTreeWidget>
-#include <QVBoxLayout>
 
-AttributeListView::AttributeListView(const AttributeViewConfig& config, QWidget* parent /*= nullptr*/)
-    : QWidget           (parent)
-    , mConfig           (config)
-    , mTable            (nullptr)
-    , mButtonAdd        (nullptr)
-    , mButtonInsert     (nullptr)
-    , mButtonRemove     (nullptr)
-    , mButtonMoveUp     (nullptr)
-    , mButtonMoveDown   (nullptr)
+namespace
 {
-    buildUi();
-}
-
-void AttributeListView::buildUi()
-{
-    QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-
-    QGroupBox* group = new QGroupBox(tr("Attributes List:"), this);
-    QVBoxLayout* groupLayout = new QVBoxLayout(group);
-
-    QWidget* toolbar = new QWidget(group);
-    QHBoxLayout* toolbarLayout = new QHBoxLayout(toolbar);
-    toolbarLayout->setSpacing(5);
-    toolbarLayout->setContentsMargins(2, 2, 2, 2);
-
-    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new attribute entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected attribute entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new attribute entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
-
-    QFrame* sep = new QFrame(toolbar);
-    sep->setFrameShape(QFrame::VLine);
-    sep->setMaximumSize(24, 24);
-
-    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
-
-    toolbarLayout->addWidget(mButtonAdd);
-    toolbarLayout->addWidget(mButtonRemove);
-    toolbarLayout->addWidget(mButtonInsert);
-    toolbarLayout->addWidget(sep);
-    toolbarLayout->addWidget(mButtonMoveUp);
-    toolbarLayout->addWidget(mButtonMoveDown);
-    toolbarLayout->addStretch(1);
-
     // The third column depends on the editor: a state machine attribute carries a default value, a
     // service interface attribute an update notification kind. Exactly one config flag is set.
-    QStringList headers{ tr("Name:"), tr("Data Type:") };
-    if (mConfig.hasValue)
+    ElementListConfig listConfigOf(const AttributeViewConfig& config)
     {
-        headers.append(tr("Value:"));
+        QStringList headers{ QObject::tr("Name:"), QObject::tr("Data Type:") };
+        if (config.hasValue)
+        {
+            headers.append(QObject::tr("Value:"));
+        }
+        if (config.hasNotification)
+        {
+            headers.append(QObject::tr("Notification Type:"));
+        }
+
+        return ElementListConfig{ QObject::tr("Attributes List:"), headers, QObject::tr("attribute"), QString(), true };
     }
-    if (mConfig.hasNotification)
-    {
-        headers.append(tr("Notification Type:"));
-    }
-
-    mTable = new QTreeWidget(group);
-    mTable->setCursor(Qt::PointingHandCursor);
-    mTable->setMouseTracking(true);
-    mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
-    mTable->setDropIndicatorShown(false);
-    mTable->setIconSize(QSize(16, 16));
-    mTable->setSortingEnabled(false);
-    mTable->setRootIsDecorated(false);
-    mTable->setAllColumnsShowFocus(false);
-    mTable->setColumnCount(headers.size());
-    mTable->header()->setCascadingSectionResizes(false);
-    mTable->header()->setMinimumSectionSize(50);
-    mTable->setHeaderLabels(headers);
-
-    // The column policy every list page shares: the Name column takes the horizontal slack so names
-    // stay readable, and every other column fits its content.
-    QHeaderView* header = mTable->header();
-    header->setSectionResizeMode(0, QHeaderView::Stretch);
-    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-
-    groupLayout->addWidget(toolbar);
-    groupLayout->addWidget(mTable);
-    root->addWidget(group);
 }
 
-QTreeWidget* AttributeListView::ctrlTableList() const
+AttributeListView::AttributeListView(const AttributeViewConfig& config, QWidget* parent /*= nullptr*/)
+    : ElementListView(listConfigOf(config), parent)
 {
-    return mTable;
-}
-
-QToolButton* AttributeListView::ctrlButtonAdd() const
-{
-    return mButtonAdd;
-}
-
-QToolButton* AttributeListView::ctrlButtonInsert() const
-{
-    return mButtonInsert;
-}
-
-QToolButton* AttributeListView::ctrlButtonRemove() const
-{
-    return mButtonRemove;
-}
-
-QToolButton* AttributeListView::ctrlButtonMoveUp() const
-{
-    return mButtonMoveUp;
-}
-
-QToolButton* AttributeListView::ctrlButtonMoveDown() const
-{
-    return mButtonMoveDown;
 }

@@ -196,6 +196,8 @@ private:
     bool selectDataType(uint32_t typeId, uint32_t fieldId = 0);
     //!< Selects an imported type by its qualified name; returns false if no group carries it.
     bool selectImportedType(const QString& qualifiedName);
+    //!< Moves the selected row one position up (-1) or down (+1), and keeps the selection on it.
+    void moveSelection(int delta);
     //!< Clears the details/fields panels and disables the field-only tool buttons.
     void showClean(void);
 

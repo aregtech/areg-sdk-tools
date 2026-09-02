@@ -102,14 +102,9 @@ void ConstantModel::deleteConstant(uint32_t id)
     mDocument.getUndoStack().push(new TDocRemoveCommand<ConstantEntry, DocumentElem>(getNotifier(), section(), id, eDocElementKind::Constant, QObject::tr("Delete constant")));
 }
 
-void ConstantModel::swapConstants(uint32_t firstId, uint32_t secondId)
+uint32_t ConstantModel::moveConstant(uint32_t id, int delta)
 {
-    const int index1 = section().findIndex(firstId);
-    const int index2 = section().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mDocument.getUndoStack().push(new TDocReorderCommand<ConstantEntry, DocumentElem>(getNotifier(), section(), index1, index2, 0u, eDocElementKind::Constant, QObject::tr("Reorder constants")));
+    return docMoveElement<ConstantEntry, DocumentElem>(mDocument.getUndoStack(), getNotifier(), section(), id, delta, 0u, eDocElementKind::Constant, QObject::tr("Reorder constants"));
 }
 
 void ConstantModel::renameConstant(uint32_t id, const QString& newName)

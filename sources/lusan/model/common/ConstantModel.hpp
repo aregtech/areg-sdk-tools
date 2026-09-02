@@ -76,7 +76,15 @@ public:
     ConstantEntry* createConstant(const QString& name);
     ConstantEntry* insertConstant(int position, const QString& name);
     void deleteConstant(uint32_t id);
-    void swapConstants(uint32_t firstId, uint32_t secondId);
+    /**
+     * rief   Moves the constant one position up or down and answers the ID it carries
+     *          afterwards. A reorder leaves the moved element with the ID of the element it
+     *          passed, so a caller keeps the selection on what moved by taking this answer.
+     * \param   id      The ID of the constant to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * eturn  The ID the moved constant carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveConstant(uint32_t id, int delta);
 
     void renameConstant(uint32_t id, const QString& newName);
 

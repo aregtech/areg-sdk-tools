@@ -680,6 +680,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/EditCancelFilter.cpp
+    ${LUSAN}/view/common/ElementListView.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/MethodDetailsView.cpp
     ${LUSAN}/view/common/MethodListView.cpp
@@ -807,6 +808,7 @@ set(LUSAN_EDITOR_PAGE_SRC
     ${LUSAN}/view/common/DataTypeFieldDetailsView.cpp
     ${LUSAN}/view/common/DataTypeListView.cpp
     ${LUSAN}/view/common/DataTypePage.cpp
+    ${LUSAN}/view/common/ElementListView.cpp
     ${LUSAN}/view/common/EditCancelFilter.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/IncludeDetailsView.cpp

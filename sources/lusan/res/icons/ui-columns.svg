@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: choose the columns of a table, a frame with a head band and two dividers -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 3.4 5.2 H 20.6 V 18.8 H 3.4 Z"/>
+<path d="M 3.4 9.4 H 20.6"/>
+<path d="M 9.1 9.4 V 18.8"/>
+<path d="M 14.9 9.4 V 18.8"/>
+</g>
+</svg>

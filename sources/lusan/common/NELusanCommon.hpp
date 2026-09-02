@@ -86,6 +86,16 @@ namespace NELusanCommon
     constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
 
     /**
+     * \brief   The width of the navigation icon rail while it carries no captions.
+     **/
+    constexpr const uint32_t  NAVI_RAIL_WIDTH   { 40 };
+
+    /**
+     * \brief   The width of the tree inside the navigation window: the window without its rail.
+     **/
+    constexpr const uint32_t  MIN_NAVI_TREE_WIDTH { MIN_NAVI_WIDTH - NAVI_RAIL_WIDTH };
+
+    /**
      * \brief   The minimal height of navigation window.
      **/
     constexpr const uint32_t  MIN_NAVI_HEIGHT   { 280 };
@@ -149,6 +159,9 @@ namespace NELusanCommon
     constexpr QLatin1StringView xmlElementTimeUnit         { "TimeUnit" };
     constexpr QLatin1StringView xmlElementLogPalette       { "LogPalette" };
     constexpr QLatin1StringView xmlElementLogRowHeight     { "LogRowHeight" };
+    constexpr QLatin1StringView xmlElementTimeStamp        { "TimeStamp" };
+    constexpr QLatin1StringView xmlElementLogWordWrap      { "LogWordWrap" };
+    constexpr QLatin1StringView xmlElementLogWrapLines     { "LogWrapLines" };
     constexpr QLatin1StringView xmlElementWorkspaceList    { "WorspaceList" };
     constexpr QLatin1StringView xmlElementWorkspace        { "Workspace" };
     constexpr QLatin1StringView xmlElementSettings         { "Settings" };
@@ -664,6 +677,12 @@ namespace NELusanCommon
     //<! Loads node expanded icon and sets the specified size
     inline QIcon iconNodeExpanded(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads the icon that expands every row of a list page, drawn in the list toolbar family
+    inline QIcon iconListExpand(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that collapses every row of a list page, drawn in the list toolbar family
+    inline QIcon iconListCollapse(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads the icon of the toolbar entries that do not fit the row
     inline QIcon iconToolbarMore(const QSize & size = QSize{ 32, 32 });
 
@@ -675,6 +694,15 @@ namespace NELusanCommon
 
     //!< Loads the funnel icon of the controls that narrow a list, and sets the specified size
     inline QIcon iconFilter(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon of the panel that lists every filter a window has on
+    inline QIcon iconFilterMenu(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon of the panel that chooses the columns of a table
+    inline QIcon iconColumns(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon of the control that breaks a long line over several lines
+    inline QIcon iconWordWrap(const QSize & size = QSize{ 32, 32 });
 
     //!< Loads the find usages icon and sets the specified size
     inline QIcon iconSearchUsages(const QSize & size = QSize{ 32, 32 });
@@ -774,6 +802,15 @@ namespace NELusanCommon
 
     //<! Loads the icon of the scope enter and exit lines
     inline QIcon iconScopeLines(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that stands for one call of a scope
+    inline QIcon iconSubjectCall(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that stands for one thread
+    inline QIcon iconSubjectThread(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads the icon that stands for one process
+    inline QIcon iconSubjectProcess(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads the icon that stops a target producing its logs
     inline QIcon iconTargetStop(const QSize & size = QSize{ 32, 32 });
@@ -944,6 +981,21 @@ inline QIcon NELusanCommon::iconScopeLines(const QSize & size)
     return loadIcon(":/icons/scope-lines", size);
 }
 
+inline QIcon NELusanCommon::iconSubjectCall(const QSize & size)
+{
+    return loadIcon(":/icons/subject-call", size);
+}
+
+inline QIcon NELusanCommon::iconSubjectThread(const QSize & size)
+{
+    return loadIcon(":/icons/subject-thread", size);
+}
+
+inline QIcon NELusanCommon::iconSubjectProcess(const QSize & size)
+{
+    return loadIcon(":/icons/subject-process", size);
+}
+
 inline QIcon NELusanCommon::iconTargetStop(const QSize & size)
 {
     return loadIcon(":/icons/target-stop", size);
@@ -1094,6 +1146,16 @@ inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
     return loadIcon(":/icons/tree-collapse", size);
 }
 
+inline QIcon NELusanCommon::iconListExpand(const QSize & size)
+{
+    return loadIcon(":/icons/list expand", size);
+}
+
+inline QIcon NELusanCommon::iconListCollapse(const QSize & size)
+{
+    return loadIcon(":/icons/list collapse", size);
+}
+
 inline QIcon NELusanCommon::iconToolbarMore(const QSize & size)
 {
     return loadIcon(":/icons/toolbar-more", size);
@@ -1112,6 +1174,21 @@ inline QIcon NELusanCommon::iconSearch(const QSize & size)
 inline QIcon NELusanCommon::iconFilter(const QSize & size)
 {
     return loadIcon(":/icons/filter", size);
+}
+
+inline QIcon NELusanCommon::iconFilterMenu(const QSize & size)
+{
+    return loadIcon(":/icons/filter-menu", size);
+}
+
+inline QIcon NELusanCommon::iconColumns(const QSize & size)
+{
+    return loadIcon(":/icons/columns", size);
+}
+
+inline QIcon NELusanCommon::iconWordWrap(const QSize & size)
+{
+    return loadIcon(":/icons/word-wrap", size);
 }
 
 inline QIcon NELusanCommon::iconSearchUsages(const QSize & size)

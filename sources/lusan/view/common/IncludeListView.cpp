@@ -36,87 +36,40 @@ namespace
     constexpr int IncludeIdRole { Qt::UserRole };
 }
 
-IncludeListView::IncludeListView(const IncludeTypeConfig& config, QWidget* parent /*= nullptr*/)
-    : QWidget           (parent)
-    , mConfig           (config)
-    , mTable            (nullptr)
-    , mGroupSource      (nullptr)
-    , mGroupDataType    (nullptr)
-    , mGroupDocument    (nullptr)
-    , mButtonAdd        (nullptr)
-    , mButtonInsert     (nullptr)
-    , mButtonRemove     (nullptr)
-    , mButtonMoveUp     (nullptr)
-    , mButtonMoveDown   (nullptr)
-    , mButtonUpdate     (nullptr)
+namespace
 {
-    buildUi();
+    ElementListConfig listConfigOf(void)
+    {
+        return ElementListConfig{ QObject::tr("Include Files:")
+                                , QStringList{ QObject::tr("Location:"), QObject::tr("Type:"), QObject::tr("Name:"), QObject::tr("Version:") }
+                                , QObject::tr("include")
+                                , QString()
+                                , false };
+    }
 }
 
-void IncludeListView::buildUi()
+IncludeListView::IncludeListView(const IncludeTypeConfig& config, QWidget* parent /*= nullptr*/)
+    : ElementListView (listConfigOf(), parent)
+    , mConfig         (config)
+    , mGroupSource    (nullptr)
+    , mGroupDataType  (nullptr)
+    , mGroupDocument  (nullptr)
+    , mButtonUpdate   (nullptr)
 {
-    QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-
-    QGroupBox* group = new QGroupBox(tr("Include Files:"), this);
-    QVBoxLayout* groupLayout = new QVBoxLayout(group);
-
-    QWidget* toolbar = new QWidget(group);
-    QHBoxLayout* toolbarLayout = new QHBoxLayout(toolbar);
-    toolbarLayout->setSpacing(5);
-    toolbarLayout->setContentsMargins(2, 2, 2, 2);
-
-    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new include entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected include entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new include entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
-
     // Add has no kind menu: the extension of the location decides the group. A new entry starts
     // under Include Files and moves as soon as its location says otherwise.
-    QFrame* sep = new QFrame(toolbar);
-    sep->setFrameShape(QFrame::VLine);
-    sep->setMaximumSize(24, 24);
+    addToolbarSeparator();
+    mButtonUpdate = NELusanCommon::createToolButton(ctrlToolbar(), QStringLiteral(":/icons/Update Item"), tr("Refresh the type, name and version from the include files."), QKeySequence(Qt::CTRL | Qt::Key_R));
+    addToolbarButton(mButtonUpdate);
 
-    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
+    QTreeWidget* table = ctrlTableList();
+    table->header()->setStretchLastSection(false);
 
-    QFrame* sepUpdate = new QFrame(toolbar);
-    sepUpdate->setFrameShape(QFrame::VLine);
-    sepUpdate->setMaximumSize(24, 24);
-
-    mButtonUpdate = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/Update Item"), tr("Refresh the type, name and version from the include files."), QKeySequence(Qt::CTRL | Qt::Key_R));
-
-    toolbarLayout->addWidget(mButtonAdd);
-    toolbarLayout->addWidget(mButtonRemove);
-    toolbarLayout->addWidget(mButtonInsert);
-    toolbarLayout->addWidget(sep);
-    toolbarLayout->addWidget(mButtonMoveUp);
-    toolbarLayout->addWidget(mButtonMoveDown);
-    toolbarLayout->addWidget(sepUpdate);
-    toolbarLayout->addWidget(mButtonUpdate);
-    toolbarLayout->addStretch(1);
-
-    mTable = new QTreeWidget(group);
-    mTable->setCursor(Qt::PointingHandCursor);
-    mTable->setMouseTracking(true);
-    mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
-    mTable->setDropIndicatorShown(false);
-    mTable->setIconSize(QSize(16, 16));
-    mTable->setSortingEnabled(false);
-    mTable->setAllColumnsShowFocus(false);
-    mTable->setColumnCount(4);
-    mTable->header()->setStretchLastSection(false);
-    mTable->header()->setMinimumSectionSize(50);
-    mTable->setHeaderLabels(QStringList{ tr("Location:"), tr("Type:"), tr("Name:"), tr("Version:") });
-    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColLocation), QHeaderView::Stretch);
-    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColType)    , QHeaderView::ResizeToContents);
-    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColName)    , QHeaderView::ResizeToContents);
-    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColVersion) , QHeaderView::ResizeToContents);
-
-    mGroupSource   = new QTreeWidgetItem(mTable);
+    mGroupSource   = new QTreeWidgetItem(table);
     // A host that includes no document of a given kind gets no heading for it: an empty group
     // that can never fill reads as a place to put something, and there is nothing to put there.
-    mGroupDataType = (mConfig.hasDataTypes() ? new QTreeWidgetItem(mTable) : nullptr);
-    mGroupDocument = (mConfig.hasDocuments() ? new QTreeWidgetItem(mTable) : nullptr);
+    mGroupDataType = (mConfig.hasDataTypes() ? new QTreeWidgetItem(table) : nullptr);
+    mGroupDocument = (mConfig.hasDocuments() ? new QTreeWidgetItem(table) : nullptr);
     // Each heading is marked with its own kind, and only the headings this page actually built.
     // ctrlGroup() answers the source heading for a kind that has none, so driving this from the
     // kinds would let an absent kind overwrite the mark the source heading already carries.
@@ -137,20 +90,16 @@ void IncludeListView::buildUi()
     prepareGroup(eIncludeKind::Document, mGroupDocument);
 
     updateGroupCounts(0, 0, 0);
-
-    groupLayout->addWidget(toolbar);
-    groupLayout->addWidget(mTable);
-    root->addWidget(group);
 }
 
 void IncludeListView::decorateGroup(QTreeWidgetItem* group)
 {
-    QFont font{ mTable->font() };
+    QFont font{ ctrlTableList()->font() };
     font.setBold(true);
     group->setFont(static_cast<int>(eColumn::ColLocation), font);
     group->setFirstColumnSpanned(true);
 
-    QColor tint{ mTable->palette().color(QPalette::Highlight) };
+    QColor tint{ ctrlTableList()->palette().color(QPalette::Highlight) };
     tint.setAlpha(28);
     group->setBackground(static_cast<int>(eColumn::ColLocation), tint);
 }
@@ -210,7 +159,7 @@ void IncludeListView::changeEvent(QEvent* event)
         }
     }
 
-    QWidget::changeEvent(event);
+    ElementListView::changeEvent(event);
 }
 
 void IncludeListView::clearRows()
@@ -293,10 +242,10 @@ QTreeWidgetItem* IncludeListView::itemAt(const QModelIndex& index) const
     const QModelIndex parent = index.parent();
     if (parent.isValid() == false)
     {
-        return mTable->topLevelItem(index.row());
+        return ctrlTableList()->topLevelItem(index.row());
     }
 
-    QTreeWidgetItem* group = mTable->topLevelItem(parent.row());
+    QTreeWidgetItem* group = ctrlTableList()->topLevelItem(parent.row());
     return ((group != nullptr) && (index.row() < group->childCount()) ? group->child(index.row()) : nullptr);
 }
 
@@ -344,36 +293,6 @@ QString IncludeListView::nameForLocation(const QString& location) const
     // A document or data type include carries a declared name; until the file is parsed the
     // base name (no extension) is its best proxy. A source include is shown by its file name.
     return (kindForLocation(location) == eIncludeKind::Source ? info.fileName() : info.completeBaseName());
-}
-
-QTreeWidget* IncludeListView::ctrlTableList() const
-{
-    return mTable;
-}
-
-QToolButton* IncludeListView::ctrlButtonAdd() const
-{
-    return mButtonAdd;
-}
-
-QToolButton* IncludeListView::ctrlButtonInsert() const
-{
-    return mButtonInsert;
-}
-
-QToolButton* IncludeListView::ctrlButtonRemove() const
-{
-    return mButtonRemove;
-}
-
-QToolButton* IncludeListView::ctrlButtonMoveUp() const
-{
-    return mButtonMoveUp;
-}
-
-QToolButton* IncludeListView::ctrlButtonMoveDown() const
-{
-    return mButtonMoveDown;
 }
 
 QToolButton* IncludeListView::ctrlButtonUpdate() const

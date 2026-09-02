@@ -156,6 +156,15 @@ public:
     //!< Returns the priorities the table draws, or zero when it draws every priority.
     inline uint16_t viewPriority(void) const;
 
+    /**
+     * \brief   Returns true when the entry belongs to the process, thread, scope or scope
+     *          call the given isolation names. A kind of IsolationNone answers true for
+     *          every entry.
+     * \param   isolation   What a row is recognised by.
+     * \param   entry       The entry to ask about.
+     **/
+    static bool matchesIsolation(const LogViewerFilter::sIsolation& isolation, const areg::LogEntry* entry);
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////
@@ -203,11 +212,10 @@ protected:
      **/
     inline void invalidateRowFilter(void)
     {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
-        endFilterChange(QSortFilterProxyModel::Direction::Rows);
-#else   // QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
-        invalidateFilter();
-#endif  // QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+        // The mapping is dropped and built again in one pass. Asking the proxy to work out
+        // the difference instead walks the kept rows run by run, and a log filter keeps rows
+        // that are spread over the whole table, which makes that path quadratic.
+        invalidate();
     }
 
 //////////////////////////////////////////////////////////////////////////

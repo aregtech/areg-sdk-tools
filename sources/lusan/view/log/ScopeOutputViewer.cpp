@@ -29,8 +29,19 @@
 
 #include "areg/logging/areg_log.h"
 
+#include "lusan/app/LusanApplication.hpp"
+
 #include <QActionGroup>
+#include <QApplication>
+#include <QClipboard>
+#include <QHeaderView>
 #include <QMenu>
+#include <QRadioButton>
+#include <QScrollBar>
+#include <QShortcut>
+#include <QTableView>
+
+#include <algorithm>
 
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
@@ -49,6 +60,29 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     ctrlTable()->setModel(nullptr);
     ctrlTable()->setItemDelegate(mStructure);
     LogViewerBase::applyRowHeight(ctrlTable());
+
+    // The window holds one call, so the whole of a message is worth the height it takes and
+    // the reader never has to scroll sideways to finish a line.
+    ctrlTable()->setWordWrap(true);
+    ctrlTable()->setHorizontalScrollMode(QAbstractItemView::ScrollMode::ScrollPerPixel);
+    ctrlTable()->viewport()->installEventFilter(this);
+    ctrlTable()->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
+    connect(ctrlTable(), &QTableView::customContextMenuRequested, this, &ScopeOutputViewer::onTableContextMenu);
+
+    // The menu of the table names these keys, so the window answers them. Each one answers
+    // only while the focus is inside this window: the log window carries the same keys.
+    QShortcut* keyCopyMsg{ new QShortcut(QKeySequence::Copy, this) };
+    QShortcut* keyCopyRow{ new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C), this) };
+    QShortcut* keyHide   { new QShortcut(QKeySequence::Delete, this) };
+    for (QShortcut* key : { keyCopyMsg, keyCopyRow, keyHide })
+    {
+        key->setContext(Qt::ShortcutContext::WidgetWithChildrenShortcut);
+    }
+
+    connect(keyCopyMsg, &QShortcut::activated, this, [this]() { copyRows(selectedRows(), true);  });
+    connect(keyCopyRow, &QShortcut::activated, this, [this]() { copyRows(selectedRows(), false); });
+    connect(keyHide   , &QShortcut::activated, this, [this]() { hideRows(selectedRows());        });
+
     QItemSelectionModel *selModel = ctrlTable()->selectionModel();
     Q_ASSERT(selModel != nullptr);
     connect(ctrlLogShow()       , &QToolButton::clicked     , this, [this]()              { onShowLog(getSelectedIndex());              });
@@ -70,7 +104,9 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     });
     connect(mFilter, &QAbstractItemModel::modelReset, this, [this]() {
         ctrlDuration()->setText(QString("N/A"));
+        shapeLogTable();
     });
+    connect(ctrlTable()->verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int) { shapeLogTable(); });
     connect(mFilter, &QAbstractItemModel::columnsInserted, this
             , [this](const QModelIndex&, int, int) { NELusanCommon::refitRowSelection(ctrlTable()); });
     connect(mFilter, &QAbstractItemModel::columnsRemoved, this
@@ -103,13 +139,16 @@ bool ScopeOutputViewer::releaseWindow(MdiChild& mdiChild)
     bool result = OutputWindow::releaseWindow(mdiChild);
     if (result)
     {
+        // Dropping the log takes the columns of the table with it, and the table answers
+        // that with a resize. The window lets the table go first, so nothing shapes it
+        // against a log it no longer reads.
+        mLogModel = nullptr;
+        ctrlTable()->setModel(nullptr);
         if (mFilter != nullptr)
         {
             mFilter->setScopeFilter(nullptr, 0, 0, 0, 0);
         }
 
-        mLogModel = nullptr;
-        ctrlTable()->setModel(nullptr);
         updateLogTable();
     }
 
@@ -148,6 +187,247 @@ void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, const QModelInde
     }
     
     updateLogTable();
+}
+
+void ScopeOutputViewer::analyzeAt(LoggingModelBase* logModel, const QModelIndex& index, ScopeLogViewerFilter::eDataFilter mode)
+{
+    setupFilter(logModel, index);
+    if ((mFilter == nullptr) || (logModel == nullptr))
+        return;
+
+    QRadioButton* button{ nullptr };
+    switch (mode)
+    {
+    case ScopeLogViewerFilter::eDataFilter::FilterSublogs:
+        button = ctrlRadioSublogs();
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterScope:
+        button = ctrlRadioScope();
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterThread:
+        button = ctrlRadioThread();
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterProcess:
+        button = ctrlRadioProcess();
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterSession:
+    default:
+        button = ctrlRadioSession();
+        break;
+    }
+
+    // A button that already stands checked sends nothing, so the filter is told directly.
+    if ((button != nullptr) && (button->isChecked() == false))
+    {
+        button->setChecked(true);
+    }
+    else
+    {
+        mFilter->filterData(mode);
+        updateLogTable();
+    }
+}
+
+void ScopeOutputViewer::analyzeRows(LoggingModelBase* logModel, const QList<int>& sourceRows)
+{
+    if (mFilter == nullptr)
+    {
+        ctrlTable()->setModel(nullptr);
+        return;
+    }
+
+    mLogModel = logModel;
+    mFilter->setRowFilter(logModel, sourceRows);
+    if (ctrlTable()->model() == nullptr)
+    {
+        ctrlTable()->setModel(logModel == nullptr ? nullptr : mFilter);
+    }
+
+    // The picked rows belong to no one call, so none of the radios names what is shown.
+    updateLogTable();
+    ctrlRadioSession()->setEnabled(false);
+    ctrlRadioSublogs()->setEnabled(false);
+    ctrlRadioScope()->setEnabled(false);
+    ctrlRadioThread()->setEnabled(false);
+    ctrlRadioProcess()->setEnabled(false);
+}
+
+QList<int> ScopeOutputViewer::selectedRows(void) const
+{
+    QList<int> result;
+    const QTableView* table{ ctrlTable() };
+    const QItemSelectionModel* selection{ table != nullptr ? table->selectionModel() : nullptr };
+    if (selection == nullptr)
+        return result;
+
+    for (const QModelIndex& index : selection->selectedRows())
+    {
+        result.append(index.row());
+    }
+
+    if (result.isEmpty() && selection->currentIndex().isValid())
+    {
+        result.append(selection->currentIndex().row());
+    }
+
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
+void ScopeOutputViewer::copyRows(const QList<int>& rows, bool messageOnly) const
+{
+    if ((mFilter == nullptr) || (mLogModel == nullptr) || rows.isEmpty())
+        return;
+
+    const int message{ mLogModel->fromColumnToIndex(LoggingModelBase::eColumn::LogColumnMessage) };
+    const int columns{ mFilter->columnCount() };
+    QString text;
+    for (int row : rows)
+    {
+        if (messageOnly)
+        {
+            if (message >= 0)
+            {
+                text += mFilter->index(row, message).data(Qt::ItemDataRole::DisplayRole).toString();
+                text += QLatin1Char('\n');
+            }
+
+            continue;
+        }
+
+        QStringList cells;
+        for (int column = 0; column < columns; ++column)
+        {
+            if (column != mLogModel->fromColumnToIndex(LoggingModelBase::eColumn::LogColumnRail))
+            {
+                cells.append(mFilter->index(row, column).data(Qt::ItemDataRole::DisplayRole).toString());
+            }
+        }
+
+        text += cells.join(QLatin1Char('\t'));
+        text += QLatin1Char('\n');
+    }
+
+    if (text.isEmpty() == false)
+    {
+        QApplication::clipboard()->setText(text);
+    }
+}
+
+void ScopeOutputViewer::hideRows(const QList<int>& rows)
+{
+    if ((mFilter == nullptr) || rows.isEmpty())
+        return;
+
+    QList<int> sourceRows;
+    sourceRows.reserve(rows.size());
+    for (int row : rows)
+    {
+        const QModelIndex source{ mFilter->mapToSource(mFilter->index(row, 0)) };
+        if (source.isValid())
+        {
+            sourceRows.append(source.row());
+        }
+    }
+
+    mFilter->hideRows(sourceRows);
+    updateLogTable();
+}
+
+void ScopeOutputViewer::onTableContextMenu(const QPoint& pos)
+{
+    QTableView* table{ ctrlTable() };
+    if ((table == nullptr) || (mFilter == nullptr))
+        return;
+
+    QModelIndex clicked{ table->indexAt(pos) };
+    if (clicked.isValid())
+    {
+        // The menu speaks about the row it opened on, so a right click also moves the cursor.
+        table->selectionModel()->setCurrentIndex(clicked, QItemSelectionModel::NoUpdate);
+    }
+    else
+    {
+        clicked = getSelectedIndex();
+    }
+
+    const QList<int> rows{ selectedRows() };
+    const bool hasRows{ rows.isEmpty() == false };
+
+    // The row is carried by number, not by index: the view can be filtered again while the
+    // menu stands open, and an index does not survive that.
+    const int clickedRow{ clicked.isValid() ? clicked.row() : -1 };
+
+    QMenu menu(this);
+
+    QAction* reveal = menu.addAction(tr("Show in the log window"));
+    reveal->setEnabled((clickedRow >= 0) && (mMdiChild != nullptr));
+    connect(reveal, &QAction::triggered, this, [this, clickedRow]() { onShowLog(mFilter->index(clickedRow, 0)); });
+
+    menu.addSeparator();
+
+    QAction* copyMsg = menu.addAction(tr("Copy message"));
+    copyMsg->setShortcut(QKeySequence::Copy);
+    copyMsg->setEnabled(hasRows);
+    connect(copyMsg, &QAction::triggered, this, [this, rows]() { copyRows(rows, true); });
+
+    QAction* copyRow = menu.addAction(tr("Copy row"));
+    copyRow->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C));
+    copyRow->setEnabled(hasRows);
+    connect(copyRow, &QAction::triggered, this, [this, rows]() { copyRows(rows, false); });
+
+    menu.addSeparator();
+
+    QAction* hide = menu.addAction(rows.size() > 1 ? tr("Hide these rows") : tr("Hide this row"));
+    hide->setShortcut(QKeySequence::Delete);
+    hide->setEnabled(hasRows);
+    connect(hide, &QAction::triggered, this, [this, rows]() { hideRows(rows); });
+
+    QAction* unhide = menu.addAction(tr("Show the hidden rows"));
+    unhide->setEnabled(mFilter->hasHiddenRows());
+    connect(unhide, &QAction::triggered, this, [this]() {
+            mFilter->showHiddenRows();
+            updateLogTable();
+        });
+
+    menu.addSeparator();
+
+    QAction* fold = menu.addAction(tr("Fold or open this call"));
+    fold->setEnabled((clickedRow >= 0)
+                     && (clicked.data(ScopeLogViewerFilter::RoleCallFold).toInt()
+                         != ScopeLogViewerFilter::eCallFold::FoldNone));
+    connect(fold, &QAction::triggered, this, [this, clickedRow]() {
+            if (mFilter->toggleFold(mFilter->index(clickedRow, 0)))
+            {
+                updateLogTable();
+            }
+        });
+
+    QAction* quiet = menu.addAction(tr("Fold the quiet calls"));
+    quiet->setCheckable(true);
+    quiet->setChecked(mFilter->isAutoFold());
+    connect(quiet, &QAction::triggered, this, [this](bool checked) { onAutoFoldToggled(checked); });
+
+    QAction* worth = menu.addAction(tr("Keep only what is worth reading"));
+    worth->setCheckable(true);
+    worth->setChecked(mFilter->isInterestingOnly());
+    connect(worth, &QAction::triggered, this, [this](bool checked) { onInterestingToggled(checked); });
+
+    QAction* since = menu.addAction(tr("Count the time from the entry of the call"));
+    since->setCheckable(true);
+    since->setChecked(mFilter->isRelativeTime());
+    connect(since, &QAction::triggered, this, [this](bool checked) { onRelativeTimeToggled(checked); });
+
+    for (QAction* action : menu.actions())
+    {
+        action->setShortcutVisibleInContextMenu(true);
+    }
+
+    menu.exec(table->viewport()->mapToGlobal(pos));
 }
 
 void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
@@ -373,6 +653,46 @@ inline QToolButton* ScopeOutputViewer::ctrlScopePrev() const
     return ui->toolScopePrev;
 }
 
+void ScopeOutputViewer::shapeLogTable()
+{
+    QTableView* table{ ctrlTable() };
+    if ((table == nullptr) || (mLogModel == nullptr) || (table->model() == nullptr))
+        return;
+
+    // The table loses its sections the moment the log is dropped, and the resize it answers
+    // with reaches this call while the log is still named here. A section is only shaped
+    // when the header holds it.
+    QHeaderView* header{ table->horizontalHeader() };
+    const int sections{ header != nullptr ? header->count() : 0 };
+    if (sections <= 0)
+        return;
+
+    // The structure of the call is drawn in the leading column, which the table keeps at its
+    // own width and never moves.
+    const int rail{ mLogModel->fromColumnToIndex(LoggingModelBase::eColumn::LogColumnRail) };
+    if ((rail >= 0) && (rail < sections))
+    {
+        header->setSectionResizeMode(rail, QHeaderView::ResizeMode::Fixed);
+        table->setColumnWidth(rail, LoggingModelBase::RailWidth);
+    }
+
+    LogViewerBase::measureShownRows( table
+                                   , mLogModel->fromColumnToIndex(LoggingModelBase::eColumn::LogColumnMessage)
+                                   , LusanApplication::getOptions().getLogRowHeight()
+                                   , LusanApplication::getOptions().getLogWrapLines());
+}
+
+bool ScopeOutputViewer::eventFilter(QObject* watched, QEvent* event)
+{
+    if ((event != nullptr) && (event->type() == QEvent::Type::Resize)
+        && (ctrlTable() != nullptr) && (watched == ctrlTable()->viewport()))
+    {
+        shapeLogTable();
+    }
+
+    return OutputWindow::eventFilter(watched, event);
+}
+
 inline void ScopeOutputViewer::updateLogTable()
 {
     QTableView *logTable = mMdiChild != nullptr ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
@@ -381,6 +701,7 @@ inline void ScopeOutputViewer::updateLogTable()
         logTable->viewport()->update();
     }
 
+    shapeLogTable();
     updateControls(true);
 }
 

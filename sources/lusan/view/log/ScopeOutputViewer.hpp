@@ -23,13 +23,13 @@
  * Includes
  ************************************************************************/
 #include "lusan/view/common/OutputWindow.hpp"
+#include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "areg/component/ServiceDefs.hpp"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
 
-class ScopeLogViewerFilter;
 class LoggingModelBase;
 class ScopeOutputDelegate;
 class QCheckBox;
@@ -115,10 +115,39 @@ public:
      **/
     void setupFilter(LoggingModelBase* logModel, const QModelIndex& index);
 
+    /**
+     * \brief   Reads the log the given row belongs to, keeping the call, the scope, the
+     *          thread or the process that row came from.
+     * \param   logModel    The pointer to the logging source model to read.
+     * \param   index       The index in the source model to read from.
+     * \param   mode        What of the log to keep.
+     **/
+    void analyzeAt(LoggingModelBase* logModel, const QModelIndex& index, ScopeLogViewerFilter::eDataFilter mode);
+
+    /**
+     * \brief   Reads exactly the given rows of the log, in the order the log holds them.
+     * \param   logModel    The pointer to the logging source model to read.
+     * \param   sourceRows  The rows of the source model to read.
+     **/
+    void analyzeRows(LoggingModelBase* logModel, const QList<int>& sourceRows);
+
+    /**
+     * \brief   Takes the given rows of the table out of the view. They come back when the
+     *          reader asks for the hidden rows again, or when another log is read.
+     * \param   rows    The rows to hide, in the coordinates of this window's table.
+     **/
+    void hideRows(const QList<int>& rows);
+
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
 private slots:
+
+    /**
+     * \brief   Opens the menu of the log table on the row under the pointer.
+     * \param   pos     Where the menu was asked for, in the coordinates of the viewport.
+     **/
+    void onTableContextMenu(const QPoint& pos);
 
     /**
      * \brief   Triggered when the user clicks on a radio button to select the type of logs to filter and display.
@@ -178,6 +207,17 @@ private:
     inline void updateLogTable();
 
     /**
+     * \brief   Keeps the leading column at the width of the call structure and gives every
+     *          row the table draws now the height its message needs.
+     **/
+    void shapeLogTable();
+
+    /**
+     * \brief   Re-shapes the rows when the table changes size.
+     **/
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+    /**
      * \brief   Updates the controls, enabling or disabling them based on the current state.
      * \param   selectSession   If true and output window has logs, the select log session will be selected.
      */
@@ -193,6 +233,13 @@ private:
     //!< Returns the index of the selected element of the logs in the output window.
     //!< No log is selected if return value is invalid.
     inline QModelIndex getSelectedIndex() const;
+
+    //!< Returns the rows of the table the reader selected, or the current row when
+    //!< nothing is selected. The rows are in the coordinates of this window's filter.
+    QList<int> selectedRows(void) const;
+
+    //!< Puts the given rows of the table on the clipboard. One column when @p messageOnly.
+    void copyRows(const QList<int>& rows, bool messageOnly) const;
 
 private:
 

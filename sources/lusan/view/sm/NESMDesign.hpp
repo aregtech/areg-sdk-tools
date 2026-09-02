@@ -140,12 +140,11 @@ namespace NESMDesign
     //!< editor window has, which would carry the page tabs out of sight.
     constexpr int       PanelMinHeight  { 120 };
 
-    //!< The width the Design page's Properties dock is given when the page is built. A dock that
-    //!< was never assigned a width follows its widget's size hint, so the first selection that
-    //!< fills the panel would push the canvas edge aside; handing it this width once makes the
-    //!< width the user's from the start. Shares NELusanCommon::MIN_NAVI_WIDTH with the Navigation
-    //!< Window so the Design page opens with the left and right docks the same width.
-    constexpr int       PanelDefaultWidth   { static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH) };
+    //!< The width the Design page's Properties dock opens with. It matches the tree of the
+    //!< Navigation Window, which is that window without its icon rail, so both panels of the
+    //!< main window show their content over the same width. The Design page replaces it with
+    //!< the measured navigation width when there is one.
+    constexpr int       PanelDefaultWidth   { static_cast<int>(NELusanCommon::MIN_NAVI_TREE_WIDTH) };
 
     //!< The fixed canvas working area of one machine level.
     constexpr double    SceneExtent     { 10000.0 };

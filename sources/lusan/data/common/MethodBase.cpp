@@ -104,8 +104,7 @@ void MethodBase::setDescription(const QString& description)
 MethodParameter* MethodBase::addParam(const QString& name)
 {
     MethodParameter* result{ nullptr };
-    bool isDefault = mElementList.size() > 0 ? mElementList.last().hasDefault() : false;
-    MethodParameter entry(getNextId(), name, isDefault, this);    
+    MethodParameter entry(getNextId(), name, inheritsDefault(mElementList.size()), this);    
     if (addElement(std::move(entry), true))
     {
         Q_ASSERT(mElementList.size() > 0);
@@ -120,13 +119,7 @@ MethodParameter* MethodBase::insertParam(int position, const QString& name)
     MethodParameter* result{ nullptr };
     if ((position >= 0) && (position <= mElementList.size()))
     {
-        bool isDefault{ false };
-        if ((position > 0) && (position <= mElementList.size()))
-        {
-            isDefault = mElementList[position - 1].hasDefault();
-        }
-
-        MethodParameter entry(getNextId(), name, isDefault, this);        
+        MethodParameter entry(getNextId(), name, inheritsDefault(position), this);        
         if (insertElement(position, std::move(entry), true))
         {
             result = &mElementList[position];
@@ -379,6 +372,21 @@ MethodParameter* MethodBase::makeValueDefault(const QString& name, bool makeDefa
     }
 
     return param;
+}
+
+bool MethodBase::canSwapParam(uint32_t id, int delta) const
+{
+    if (delta < 0)
+        return canSwapParamLeft(id);
+    else if (delta > 0)
+        return canSwapParamRight(id);
+
+    return false;
+}
+
+bool MethodBase::inheritsDefault(int position) const
+{
+    return (position > 0) && (position <= mElementList.size()) && mElementList[position - 1].hasDefault();
 }
 
 bool MethodBase::canSwapParamLeft(uint32_t id) const

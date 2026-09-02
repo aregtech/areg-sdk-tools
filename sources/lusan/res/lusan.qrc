@@ -9,6 +9,8 @@
         <file alias="move up">icons/ui-move-up.svg</file>
         <file alias="Update Item">icons/ui-refresh.svg</file>
         <file alias="field insert">icons/ui-field-insert.svg</file>
+        <file alias="list expand">icons/ui-list-expand.svg</file>
+        <file alias="list collapse">icons/ui-list-collapse.svg</file>
         <file alias="data method broadcast">icons/data-method-broadcast.svg</file>
         <file alias="data method request">icons/data-method-request.svg</file>
         <file alias="data method response">icons/data-method-response.svg</file>
@@ -41,6 +43,9 @@
         <file alias="scope-mute">icons/ui-scope-mute.svg</file>
         <file alias="scope-restore-all">icons/ui-scope-restore-all.svg</file>
         <file alias="scope-lines">icons/ui-scope-lines.svg</file>
+        <file alias="subject-call">icons/log-subject-call.svg</file>
+        <file alias="subject-thread">icons/log-subject-thread.svg</file>
+        <file alias="subject-process">icons/log-subject-process.svg</file>
         <file alias="target-stop">icons/ui-target-stop.svg</file>
         <file alias="target-resume">icons/ui-target-resume.svg</file>
         <file alias="target-pause">icons/ui-target-pause.svg</file>
@@ -71,6 +76,9 @@
         <file alias="trash">icons/ui-trash.svg</file>
         <file alias="edit-find">icons/ui-edit-find.svg</file>
         <file alias="filter">icons/ui-filter.svg</file>
+        <file alias="filter-menu">icons/ui-filter-menu.svg</file>
+        <file alias="columns">icons/ui-columns.svg</file>
+        <file alias="word-wrap">icons/ui-word-wrap.svg</file>
         <file alias="edit-find-usages">icons/ui-edit-find-usages.svg</file>
         <file alias="goto-declaration">icons/ui-goto-declaration.svg</file>
         <file alias="view-navigation">icons/ui-view-navigation.svg</file>
@@ -78,7 +86,7 @@
         <file alias="workspace-item">icons/ui-workspace-item.svg</file>
         <file alias="workspace-new">icons/ui-workspace-new.svg</file>
         <file alias="workspace-manage">icons/ui-workspace-manage.svg</file>
-        <file alias="arrow-up">icons/ui-move-up.svg</file>
+        <file alias="arrow-up">icons/ui-arrow-up.svg</file>
         <file alias="tree-expand">icons/ui-tree-expand.svg</file>
         <file alias="tree-collapse">icons/ui-tree-collapse.svg</file>
         <file alias="toolbar-more">icons/ui-toolbar-more.svg</file>

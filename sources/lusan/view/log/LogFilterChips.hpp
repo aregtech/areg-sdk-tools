@@ -116,6 +116,13 @@ signals:
     void signalChipDropped(const LogFilterChips::sChip& chip);
 
     /**
+     * \brief   Emitted when a chip is clicked, to change what it filters by.
+     * \param   chip    The filter the reader wants to edit.
+     * \param   anchor  The chip itself, in screen coordinates, to open its panel under it.
+     **/
+    void signalChipClicked(const LogFilterChips::sChip& chip, const QRect& anchor);
+
+    /**
      * \brief   Emitted when a chip is asked to move into the search box instead.
      * \param   chip    The filter whose phrase and options the search takes over.
      **/
@@ -127,11 +134,20 @@ signals:
     void signalClearAll(void);
 
 //////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+    /**
+     * \brief   Turns a click on a chip into a request to change what it filters by.
+     **/
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+//////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
     //!< Builds one chip and appends it to the row.
-    void _addChip(const LogFilterChips::sChip& chip);
+    void _addChip(const LogFilterChips::sChip& chip, int position);
 
     //!< Removes every widget the row holds.
     void _clearRow(void);

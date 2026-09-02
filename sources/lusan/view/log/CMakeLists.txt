@@ -10,7 +10,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/log/LogPriorityBar.cpp
     ${LUSAN}/view/log/LogSessionBar.cpp
     ${LUSAN}/view/log/LogTableHeader.cpp
+    ${LUSAN}/view/log/LogTableView.cpp
     ${LUSAN}/view/log/LogTextHighlight.cpp
+    ${LUSAN}/view/log/LogViewPanels.cpp
     ${LUSAN}/view/log/ScopeOutputDelegate.cpp
     ${LUSAN}/view/log/LogViewerBase.cpp
     ${LUSAN}/view/log/OfflineLogViewer.cpp
@@ -27,7 +29,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/log/LogPriorityBar.hpp
     ${LUSAN}/view/log/LogSessionBar.hpp
     ${LUSAN}/view/log/LogTableHeader.hpp
+    ${LUSAN}/view/log/LogTableView.hpp
     ${LUSAN}/view/log/LogTextHighlight.hpp
+    ${LUSAN}/view/log/LogViewPanels.hpp
     ${LUSAN}/view/log/ScopeOutputDelegate.hpp
     ${LUSAN}/view/log/LogViewerBase.hpp
     ${LUSAN}/view/log/OfflineLogViewer.hpp

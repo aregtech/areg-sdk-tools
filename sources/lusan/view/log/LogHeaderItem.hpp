@@ -72,6 +72,28 @@ public:
     void showFilters();
 
     /**
+     * \brief   Opens the filter panel under the given rectangle instead of under the header
+     *          section, so a column the table does not show can be reached as well.
+     * \param   anchor  The rectangle to open the panel under, in screen coordinates.
+     **/
+    void showFiltersAt(const QRect& anchor);
+
+    /**
+     * \brief   Narrows the column to the value the given row carries, or to every value
+     *          but that one.
+     * \param   entry   The row the value is taken from.
+     * \param   exclude True to keep every value except the one the row carries.
+     * \return  True when the column took the value.
+     **/
+    bool pickValue(const areg::LogEntry& entry, bool exclude);
+
+    /**
+     * \brief   Returns the value of the given row in this column, as the filter panel of the
+     *          column holds it. Empty when the column is narrowed by a phrase.
+     **/
+    NELusanCommon::AnyData valueOf(const areg::LogEntry& entry) const;
+
+    /**
      * \brief   Sets the filter string for line edit filter control.
      **/
     void setFilterData(const QString & data);
@@ -93,14 +115,14 @@ public:
     void setFilterData(const std::vector<areg::String> & data, const NELusanCommon::AnyList& list);
 
     /**
-     * \brief   Sets the list of integers in the combo-box filter control
-     **/
-    void setFilterData(const std::vector<ITEM_ID> & data, const NELusanCommon::AnyList& list);
-
-    /**
      * \brief   Returns true if header object can be visualized in the pop-up widget.
      **/
     inline bool canPopupFilter() const;
+
+    /**
+     * \brief   Returns true if the column carries a filter the reader set.
+     **/
+    inline bool isFiltered() const;
 
     /**
      * \brief   Resets filter data.
@@ -125,6 +147,9 @@ private:
     //!< Return LogColumnInvalid value if index is invalid.
     inline LoggingModelBase::eColumn fromIndexToColumn(int logicalIndex) const;
 
+    //!< Remembers whether the column carries a filter and draws its section again.
+    void markFiltered(bool active);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -132,6 +157,7 @@ private:
 
     LoggingModelBase::eColumn mColumn;  //!< The index of the header item.
     eType           mType;      //!< Type of the header item.
+    bool            mActive;    //!< True while the column carries a filter.
     LogTableHeader& mHeader;    //!< The header object, which contains this item.
     LogFilterBase * mWidget;    //<!< The filter widget, which is displayed in the header item.
 };
@@ -142,7 +168,12 @@ private:
 
 inline bool LogHeaderItem::canPopupFilter() const
 {
-    return (mType != None);    
+    return (mType != None);
+}
+
+inline bool LogHeaderItem::isFiltered() const
+{
+    return mActive;
 }
 
 #endif  // LUSAN_VIEW_LOG_LOGHEADERITEM_HPP

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Lusan icon: insert an entry above, a list carrying an upward arrow -->
+<!-- Lusan icon: insert an entry above, a new row over the list, marked with an add sign -->
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
 <g fill="none" stroke="#000000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<path d="M3.4 5.9h10.6"/>
-<path d="M3.4 11.3h7.4"/>
-<path d="M3.4 16.7h5.6"/>
-<path d="M18.5 17.6v-6.1"/>
-<path d="M16.1 13.9l2.4-2.4 2.4 2.4"/>
+<path d="M3.4 8.8h6.2"/>
+<path d="M3.4 13.15h10.6"/>
+<path d="M3.4 17.5h7.4"/>
+<path d="M15.6 8.8h5.8"/>
+<path d="M18.5 5.9v5.8"/>
 </g>
 </svg>

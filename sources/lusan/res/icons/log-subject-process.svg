@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: one process, a running module on its two pins -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4.6" y="6.4" width="14.8" height="11.2" rx="2.2"/>
+<path d="M 9.4 3.2 V 6.4"/>
+<path d="M 14.6 3.2 V 6.4"/>
+<path d="M 9.4 17.6 V 20.8"/>
+<path d="M 14.6 17.6 V 20.8"/>
+</g>
+</svg>

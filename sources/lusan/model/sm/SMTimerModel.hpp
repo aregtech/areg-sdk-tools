@@ -79,7 +79,15 @@ public:
     SMTimerEntry* createTimer(const QString& name);
     SMTimerEntry* insertTimer(int position, const QString& name);
     void deleteTimer(uint32_t id);
-    void swapTimers(uint32_t firstId, uint32_t secondId);
+    /**
+     * \brief   Moves the timer one position up or down and answers the ID it carries afterwards.
+     *          A reorder leaves the moved element with the ID of the element it passed, so a
+     *          caller keeps the selection on what moved by taking this answer.
+     * \param   id      The ID of the timer to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * \return  The ID the moved timer carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveTimer(uint32_t id, int delta);
 
     void renameTimer(uint32_t id, const QString& newName);
     //!< Timeout in milliseconds; minimum 1 (a zero timeout is invalid).

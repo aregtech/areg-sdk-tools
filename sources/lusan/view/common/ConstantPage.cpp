@@ -168,6 +168,7 @@ void ConstantPage::setupSignals(void)
     connect(scRemove, &QShortcut::activated, this, &ConstantPage::onRemoveClicked);
     connect(scAdd   , &QShortcut::activated, this, &ConstantPage::onAddClicked);
     connect(scRename, &QShortcut::activated, this, &ConstantPage::focusNameField);
+    connect(mList, &ElementListView::signalRenameRequested, this, &ConstantPage::focusNameField);
 
     // A commit from an inline editor rebuilds the list. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &ConstantPage::onEditorDataChanged, Qt::QueuedConnection);
@@ -533,33 +534,19 @@ void ConstantPage::onRemoveClicked(void)
 
 void ConstantPage::onMoveUpClicked(void)
 {
-    const uint32_t id = currentConstantId();
-    if (id == 0)
-        return;
-
-    const int index = mModel.findIndex(id);
-    if (index > 0)
+    const uint32_t moved = mModel.moveConstant(currentConstantId(), -1);
+    if (moved != 0)
     {
-        // The swap keeps IDs attached to list position, so the moved entry's new ID is the
-        // neighbor's old ID - reselect that to keep the moved row highlighted.
-        const uint32_t neighborId = mModel.getConstants().at(index - 1).getId();
-        mModel.swapConstants(id, neighborId);
-        selectConstant(neighborId);
+        selectConstant(moved);
     }
 }
 
 void ConstantPage::onMoveDownClicked(void)
 {
-    const uint32_t id = currentConstantId();
-    if (id == 0)
-        return;
-
-    const int index = mModel.findIndex(id);
-    if ((index >= 0) && (index < (mModel.getConstantCount() - 1)))
+    const uint32_t moved = mModel.moveConstant(currentConstantId(), +1);
+    if (moved != 0)
     {
-        const uint32_t neighborId = mModel.getConstants().at(index + 1).getId();
-        mModel.swapConstants(id, neighborId);
-        selectConstant(neighborId);
+        selectConstant(moved);
     }
 }
 

@@ -111,14 +111,9 @@ void AttributeModel::deleteAttribute(uint32_t id)
     mDocument.getUndoStack().push(new TDocRemoveCommand<AttributeEntry, DocumentElem>(getNotifier(), section(), id, eDocElementKind::Attribute, QObject::tr("Delete attribute")));
 }
 
-void AttributeModel::swapAttributes(uint32_t firstId, uint32_t secondId)
+uint32_t AttributeModel::moveAttribute(uint32_t id, int delta)
 {
-    const int index1 = section().findIndex(firstId);
-    const int index2 = section().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mDocument.getUndoStack().push(new TDocReorderCommand<AttributeEntry, DocumentElem>(getNotifier(), section(), index1, index2, 0u, eDocElementKind::Attribute, QObject::tr("Reorder attributes")));
+    return docMoveElement<AttributeEntry, DocumentElem>(mDocument.getUndoStack(), getNotifier(), section(), id, delta, 0u, eDocElementKind::Attribute, QObject::tr("Reorder attributes"));
 }
 
 void AttributeModel::renameAttribute(uint32_t id, const QString& newName)

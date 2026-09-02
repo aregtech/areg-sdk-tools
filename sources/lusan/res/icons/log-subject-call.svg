@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lusan icon: one call, a run bounded at both ends with the chosen row on it -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" color="#000000">
+<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M 4.6 6.4 V 17.6"/>
+<path d="M 19.4 6.4 V 17.6"/>
+<path d="M 4.6 12 H 9.4"/>
+<path d="M 14.6 12 H 19.4"/>
+<circle cx="12" cy="12" r="2.6"/>
+</g>
+</svg>

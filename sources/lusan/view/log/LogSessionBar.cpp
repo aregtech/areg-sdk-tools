@@ -79,6 +79,9 @@ LogSessionBar::LogSessionBar(LogSessionBar::eSessionMode mode, QWidget* parent /
     , mFilterMatches(nullptr)
     , mHitList      (nullptr)
     , mSearchScope  (nullptr)
+    , mFilters      (nullptr)
+    , mColumns      (nullptr)
+    , mWordWrap     (nullptr)
     , mCounters     (nullptr)
     , mMoveTop      (nullptr)
     , mMoveBottom   (nullptr)
@@ -196,6 +199,24 @@ void LogSessionBar::_buildMainRow(void)
     connect(mPriority, &LogPriorityBar::signalScopeToggled, this, [this](bool) {
             emit signalViewPriorityChanged(viewPriorityMask());
         });
+
+    // The ladder narrows by priority, these two by value and by column. Together they are
+    // everything that decides which rows and which fields the table draws.
+    mFilters = _addButton(NELusanCommon::iconFilterMenu(NELusanCommon::SizeBig)
+                         , tr("What this window filters by"));
+    mFilters->setWhatsThis(tr("Lists every column that can be narrowed and what each one keeps, also the columns the table does not show."));
+
+    mColumns = _addButton(NELusanCommon::iconColumns(NELusanCommon::SizeBig)
+                         , tr("The columns the table shows"));
+    mColumns->setWhatsThis(tr("Checks the columns to show and drags them into the order to show them. The panel stays open while the table follows."));
+
+    mWordWrap = _addButton(NELusanCommon::iconWordWrap(NELusanCommon::SizeBig)
+                          , tr("Break a long message over several lines"));
+    mWordWrap->setCheckable(true);
+    mWordWrap->setWhatsThis(tr("A message longer than its column is written over several lines instead of being cut. The number of lines is set in the display options."));
+    connect(mWordWrap, &QToolButton::toggled, this, [this](bool checked) { emit signalWordWrapToggled(checked); });
+
+    mShrinkable << mColumns << mFilters << mWordWrap;
 
     _addSeparator();
 
@@ -675,6 +696,15 @@ void LogSessionBar::setFollowing(bool follow)
     {
         const QSignalBlocker blocker(mMoveBottom);
         mMoveBottom->setChecked(follow);
+    }
+}
+
+void LogSessionBar::setWordWrap(bool wrap)
+{
+    if ((mWordWrap != nullptr) && (mWordWrap->isChecked() != wrap))
+    {
+        const QSignalBlocker blocker(mWordWrap);
+        mWordWrap->setChecked(wrap);
     }
 }
 

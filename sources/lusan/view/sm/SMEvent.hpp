@@ -138,6 +138,9 @@ private slots:
     void onAddClicked();
     void onInsertClicked();
     void onRemoveClicked();
+    void onAddParamClicked();
+    void onInsertParamClicked();
+    void onRemoveParamClicked();
     void onMoveUpClicked();
     void onMoveDownClicked();
 
@@ -181,6 +184,9 @@ private:
     //!< Creates a new payload parameter for the selected event, selects it and focuses its name.
     void addNewParam();
 
+    //!< Moves the selected row one position up (-1) or down (+1), and keeps the selection on it.
+    void moveSelection(int delta);
+
     //!< Rebuilds both group subtrees from the live models and restores the selection by ID.
     void refreshAll();
     //!< Selects the event / parameter row by ID; returns false if not found.
@@ -200,6 +206,8 @@ private:
     void selectedParam(SMEventEntry* owner, uint32_t paramId);
     void selectedTimer(const SMTimerEntry* entry);
     void updateMoveButtons(int row, int rowCount);
+    //!< The move buttons for a parameter row, refusing a move that C++ would not accept.
+    void updateParamMoveButtons(const SMEventEntry* owner, uint32_t paramId);
     void populateTypeCombo();
     //!< Puts keyboard focus into the visible detail form's name field.
     void focusNameField();

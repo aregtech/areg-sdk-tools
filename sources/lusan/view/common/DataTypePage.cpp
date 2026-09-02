@@ -190,9 +190,9 @@ void DataTypePage::setupSignals(void)
     connect(mList->ctrlButtonAdd()         , &QToolButton::clicked            , this, &DataTypePage::onAddClicked);
     connect(mList->ctrlButtonInsert()      , &QToolButton::clicked            , this, &DataTypePage::onInsertClicked);
     connect(mList->ctrlButtonRemove()      , &QToolButton::clicked            , this, &DataTypePage::onRemoveClicked);
-    connect(mList->ctrlButtonAddField()    , &QToolButton::clicked            , this, &DataTypePage::onAddFieldClicked);
-    connect(mList->ctrlButtonInsertField() , &QToolButton::clicked            , this, &DataTypePage::onInsertFieldClicked);
-    connect(mList->ctrlButtonRemoveField() , &QToolButton::clicked            , this, &DataTypePage::onRemoveFieldClicked);
+    connect(mList->ctrlButtonAddChild()    , &QToolButton::clicked            , this, &DataTypePage::onAddFieldClicked);
+    connect(mList->ctrlButtonInsertChild() , &QToolButton::clicked            , this, &DataTypePage::onInsertFieldClicked);
+    connect(mList->ctrlButtonRemoveChild() , &QToolButton::clicked            , this, &DataTypePage::onRemoveFieldClicked);
     connect(mList->ctrlButtonMoveUp()      , &QToolButton::clicked            , this, &DataTypePage::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()    , &QToolButton::clicked            , this, &DataTypePage::onMoveDownClicked);
     connect(mList->actionNewStruct()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Structure); });
@@ -231,6 +231,7 @@ void DataTypePage::setupSignals(void)
         }
     });
     connect(scRename, &QShortcut::activated, this, &DataTypePage::focusNameField);
+    connect(mList, &ElementListView::signalRenameRequested, this, &DataTypePage::focusNameField);
 
     // A commit from an inline editor rebuilds the tree. Let the delegate close first.
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &DataTypePage::onEditorDataChanged, Qt::QueuedConnection);
@@ -422,9 +423,9 @@ void DataTypePage::selectedStruct(DataTypeStructure* dataType)
     applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), static_cast<DataTypeCustom*>(dataType));
 
     mList->ctrlButtonRemove()->setEnabled(true);
-    mList->ctrlButtonAddField()->setEnabled(true);
-    mList->ctrlButtonInsertField()->setEnabled(true);
-    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonAddChild()->setEnabled(true);
+    mList->ctrlButtonInsertChild()->setEnabled(true);
+    mList->ctrlButtonRemoveChild()->setEnabled(false);
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
@@ -448,9 +449,9 @@ void DataTypePage::selectedEnum(DataTypeEnum* dataType)
     applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), static_cast<DataTypeCustom*>(dataType));
 
     mList->ctrlButtonRemove()->setEnabled(true);
-    mList->ctrlButtonAddField()->setEnabled(true);
-    mList->ctrlButtonInsertField()->setEnabled(true);
-    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonAddChild()->setEnabled(true);
+    mList->ctrlButtonInsertChild()->setEnabled(true);
+    mList->ctrlButtonRemoveChild()->setEnabled(false);
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
@@ -478,9 +479,9 @@ void DataTypePage::selectedImport(DataTypeImported* dataType)
     applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), static_cast<DataTypeCustom*>(dataType));
 
     mList->ctrlButtonRemove()->setEnabled(true);
-    mList->ctrlButtonAddField()->setEnabled(false);
-    mList->ctrlButtonInsertField()->setEnabled(false);
-    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonAddChild()->setEnabled(false);
+    mList->ctrlButtonInsertChild()->setEnabled(false);
+    mList->ctrlButtonRemoveChild()->setEnabled(false);
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
@@ -521,9 +522,9 @@ void DataTypePage::selectedContainer(DataTypeContainer* dataType)
     applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), static_cast<DataTypeCustom*>(dataType));
 
     mList->ctrlButtonRemove()->setEnabled(true);
-    mList->ctrlButtonAddField()->setEnabled(false);
-    mList->ctrlButtonInsertField()->setEnabled(false);
-    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonAddChild()->setEnabled(false);
+    mList->ctrlButtonInsertChild()->setEnabled(false);
+    mList->ctrlButtonRemoveChild()->setEnabled(false);
     updateMoveButtons(mModel.findIndex(dataType), mModel.getDataTypeCount());
 }
 
@@ -553,9 +554,9 @@ void DataTypePage::selectedStructField(DataTypeStructure* parent, uint32_t field
     applyDeprecatedDisplay(mFields->ctrlDeprecated(), mFields->ctrlDeprecateHint(), field);
 
     mList->ctrlButtonRemove()->setEnabled(false);
-    mList->ctrlButtonAddField()->setEnabled(true);
-    mList->ctrlButtonInsertField()->setEnabled(true);
-    mList->ctrlButtonRemoveField()->setEnabled(true);
+    mList->ctrlButtonAddChild()->setEnabled(true);
+    mList->ctrlButtonInsertChild()->setEnabled(true);
+    mList->ctrlButtonRemoveChild()->setEnabled(true);
     updateMoveButtons(parent->findIndex(fieldId), parent->getElementCount());
 }
 
@@ -582,9 +583,9 @@ void DataTypePage::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
     applyDeprecatedDisplay(mFields->ctrlDeprecated(), mFields->ctrlDeprecateHint(), field);
 
     mList->ctrlButtonRemove()->setEnabled(false);
-    mList->ctrlButtonAddField()->setEnabled(true);
-    mList->ctrlButtonInsertField()->setEnabled(true);
-    mList->ctrlButtonRemoveField()->setEnabled(true);
+    mList->ctrlButtonAddChild()->setEnabled(true);
+    mList->ctrlButtonInsertChild()->setEnabled(true);
+    mList->ctrlButtonRemoveChild()->setEnabled(true);
     updateMoveButtons(parent->findIndex(fieldId), parent->getElementCount());
 }
 
@@ -633,9 +634,9 @@ void DataTypePage::showClean(void)
     mDetails->ctrlName()->clear();
 
     mList->ctrlButtonRemove()->setEnabled(false);
-    mList->ctrlButtonAddField()->setEnabled(false);
-    mList->ctrlButtonInsertField()->setEnabled(false);
-    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonAddChild()->setEnabled(false);
+    mList->ctrlButtonInsertChild()->setEnabled(false);
+    mList->ctrlButtonRemoveChild()->setEnabled(false);
     mList->ctrlButtonMoveUp()->setEnabled(false);
     mList->ctrlButtonMoveDown()->setEnabled(false);
 }
@@ -649,9 +650,9 @@ void DataTypePage::lockDetails(bool locked)
     if (locked)
     {
         mList->ctrlButtonRemove()->setEnabled(false);
-        mList->ctrlButtonAddField()->setEnabled(false);
-        mList->ctrlButtonInsertField()->setEnabled(false);
-        mList->ctrlButtonRemoveField()->setEnabled(false);
+        mList->ctrlButtonAddChild()->setEnabled(false);
+        mList->ctrlButtonInsertChild()->setEnabled(false);
+        mList->ctrlButtonRemoveChild()->setEnabled(false);
         mList->ctrlButtonMoveUp()->setEnabled(false);
         mList->ctrlButtonMoveDown()->setEnabled(false);
     }
@@ -1175,7 +1176,7 @@ void DataTypePage::onRemoveFieldClicked(void)
     }
 }
 
-void DataTypePage::onMoveUpClicked(void)
+void DataTypePage::moveSelection(int delta)
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -1184,64 +1185,30 @@ void DataTypePage::onMoveUpClicked(void)
     const uint32_t fieldId = currentFieldId();
     if (fieldId == 0)
     {
-        const int index = mModel.findIndex(dataType);
-        if (index > 0)
+        const uint32_t moved = mModel.moveDataType(dataType->getId(), delta);
+        if (moved != 0)
         {
-            const uint32_t neighborId = mModel.getCustomDataTypes().at(index - 1)->getId();
-            mModel.swapDataTypes(dataType->getId(), neighborId);
-            selectDataType(dataType->getId());
+            selectDataType(moved);
         }
     }
     else
     {
-        const int index = mModel.findChildIndex(dataType, fieldId);
-        if (index > 0)
+        const uint32_t moved = mModel.moveField(dataType, fieldId, delta);
+        if (moved != 0)
         {
-            uint32_t neighborId = 0;
-            if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-                neighborId = mModel.getStructChildren(static_cast<DataTypeStructure*>(dataType)).at(index - 1).getId();
-            else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-                neighborId = mModel.getEnumChildren(static_cast<DataTypeEnum*>(dataType)).at(index - 1).getId();
-
-            mModel.swapFields(dataType, fieldId, neighborId);
-            selectDataType(dataType->getId(), fieldId);
+            selectDataType(dataType->getId(), moved);
         }
     }
 }
 
+void DataTypePage::onMoveUpClicked(void)
+{
+    moveSelection(-1);
+}
+
 void DataTypePage::onMoveDownClicked(void)
 {
-    DataTypeCustom* dataType = currentDataType();
-    if (dataType == nullptr)
-        return;
-
-    const uint32_t fieldId = currentFieldId();
-    if (fieldId == 0)
-    {
-        const int index = mModel.findIndex(dataType);
-        if ((index >= 0) && (index < (mModel.getDataTypeCount() - 1)))
-        {
-            const uint32_t neighborId = mModel.getCustomDataTypes().at(index + 1)->getId();
-            mModel.swapDataTypes(dataType->getId(), neighborId);
-            selectDataType(dataType->getId());
-        }
-    }
-    else
-    {
-        const int index = mModel.findChildIndex(dataType, fieldId);
-        const int count = mModel.getChildCount(dataType);
-        if ((index >= 0) && (index < (count - 1)))
-        {
-            uint32_t neighborId = 0;
-            if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-                neighborId = mModel.getStructChildren(static_cast<DataTypeStructure*>(dataType)).at(index + 1).getId();
-            else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-                neighborId = mModel.getEnumChildren(static_cast<DataTypeEnum*>(dataType)).at(index + 1).getId();
-
-            mModel.swapFields(dataType, fieldId, neighborId);
-            selectDataType(dataType->getId(), fieldId);
-        }
-    }
+    moveSelection(+1);
 }
 
 void DataTypePage::onNameCommitted(void)

@@ -20,14 +20,9 @@
  *
  ************************************************************************/
 
-#include <QKeySequence>
-#include <QString>
-#include <QWidget>
+#include "lusan/view/common/ElementListView.hpp"
 
 #include "lusan/view/common/AttributeDetailsView.hpp"
-
-class QToolButton;
-class QTreeWidget;
 
 /**
  * \brief   The shared attribute list panel: an "Attributes List:" group holding the
@@ -38,11 +33,8 @@ class QTreeWidget;
  *          Notification column when `AttributeViewConfig::hasNotification` is set (Service
  *          Interface). For the two current editors this yields exactly three columns with the
  *          differing column at index 2, so the page controllers can address it as a fixed index.
- *
- *          The view is controller-agnostic: it only builds the widgets and exposes ctrl*()
- *          accessors. The page controller owns all row population and selection logic.
  **/
-class AttributeListView : public QWidget
+class AttributeListView : public ElementListView
 {
     Q_OBJECT
 
@@ -59,26 +51,6 @@ public:
     };
 
     explicit AttributeListView(const AttributeViewConfig& config, QWidget* parent = nullptr);
-
-    QTreeWidget* ctrlTableList() const;
-
-    QToolButton* ctrlButtonAdd() const;
-    QToolButton* ctrlButtonInsert() const;
-    QToolButton* ctrlButtonRemove() const;
-    QToolButton* ctrlButtonMoveUp() const;
-    QToolButton* ctrlButtonMoveDown() const;
-
-private:
-    void buildUi();
-
-private:
-    const AttributeViewConfig mConfig;
-    QTreeWidget*    mTable;
-    QToolButton*    mButtonAdd;
-    QToolButton*    mButtonInsert;
-    QToolButton*    mButtonRemove;
-    QToolButton*    mButtonMoveUp;
-    QToolButton*    mButtonMoveDown;
 };
 
 #endif  // LUSAN_VIEW_COMMON_ATTRIBUTELISTVIEW_HPP

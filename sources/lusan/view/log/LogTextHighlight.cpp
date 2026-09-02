@@ -29,8 +29,10 @@
 #include <QApplication>
 #include <QPainter>
 #include <QPalette>
+#include <QFontMetrics>
 #include <QTextLayout>
 #include <QTextLine>
+#include <QTextOption>
 #include <QList>
 
 LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent /*= nullptr*/)
@@ -38,7 +40,41 @@ LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QO
     , mFoundPos(foundPos)
     , mMarkEnter(NELusanCommon::iconScopeEnter(QSize(LogTextHighlight::MarkSide, LogTextHighlight::MarkSide)))
     , mMarkExit (NELusanCommon::iconScopeExit (QSize(LogTextHighlight::MarkSide, LogTextHighlight::MarkSide)))
+    , mElideLeft(0)
+    , mWordWrap (false)
+    , mMaxLines (4)
 {
+}
+
+int LogTextHighlight::wrappedHeight(const QString& text, const QFontMetrics& metrics, int width, int maxLines)
+{
+    const int line{ metrics.lineSpacing() };
+    const int air { 4 };
+    if (text.isEmpty() || (width <= 0))
+        return line + air;
+
+    const QRect box{ metrics.boundingRect(QRect(0, 0, width, 0), Qt::TextFlag::TextWordWrap, text) };
+    const int lines{ qBound(1, (box.height() + (line / 2)) / qMax(1, line), qMax(1, maxLines)) };
+    return (lines * line) + air;
+}
+
+void LogTextHighlight::initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const
+{
+    QStyledItemDelegate::initStyleOption(option, index);
+
+    const int column{ index.column() };
+    if ((column >= 0) && (column < 32) && (((mElideLeft >> column) & 1u) != 0u))
+    {
+        option->textElideMode = Qt::TextElideMode::ElideLeft;
+    }
+
+    // A wrapped cell reads from its top edge. Centring it would move the first line down as
+    // soon as the row grows, and the eye would lose the column it was following.
+    if (mWordWrap && ((option->features & QStyleOptionViewItem::ViewItemFeature::WrapText) != 0))
+    {
+        option->displayAlignment = (option->displayAlignment & ~Qt::AlignmentFlag::AlignVertical_Mask)
+                                 | Qt::AlignmentFlag::AlignTop;
+    }
 }
 
 void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
@@ -47,14 +83,9 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
     _paintRevealed(painter, option, index);
     _paintPriorityRail(painter, option, index);
     _paintScopeMark(painter, option, index);
+    _paintDayChange(painter, option, index);
 
-    // The gutter belongs to the delegate, so the text of the leading column starts after it.
-    QStyleOptionViewItem cell{ option };
-    if (index.column() == 0)
-    {
-        cell.rect.setLeft(cell.rect.left() + LogTextHighlight::GutterWidth);
-    }
-
+    const QStyleOptionViewItem& cell{ option };
     const int foundColumn = static_cast<int>(mFoundPos.colFound);
     if ((static_cast<int>(mFoundPos.rowFound) != index.row()) ||
         ((foundColumn >= 0) && (foundColumn != index.column())) ||
@@ -64,40 +95,43 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
         return;
     }
     
-    int start{ mFoundPos.posStart };
-    int end{ mFoundPos.posEnd };
-    QString cellText = index.data(Qt::DisplayRole).toString();
+    const int start{ mFoundPos.posStart };
+    const int end{ mFoundPos.posEnd };
+    const QString cellText{ index.data(Qt::DisplayRole).toString() };
     painter->save();
 
-    // Prepare text layout
     QTextLayout layout(cellText, option.font);
-    QList<QTextLayout::FormatRange> formats;
+    QTextOption shape;
+    shape.setWrapMode(mWordWrap ? QTextOption::WrapMode::WrapAtWordBoundaryOrAnywhere
+                                : QTextOption::WrapMode::NoWrap);
+    layout.setTextOption(shape);
 
     QTextLayout::FormatRange highlightRange;
     highlightRange.start = start;
     highlightRange.length = end - start;
     highlightRange.format.setBackground(NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkSearchHit));
     highlightRange.format.setForeground(NELogPalette::markColor(NELogPalette::eLogMarkRole::MarkSearchHitText));
+    layout.setFormats(QList<QTextLayout::FormatRange>{ highlightRange });
 
-    formats.append(highlightRange);
-    layout.setFormats(formats);
-
+    const int room{ cell.rect.width() - 4 };
+    qreal used{ 0.0 };
     layout.beginLayout();
-    QTextLine line = layout.createLine();
+    for (QTextLine line = layout.createLine(); line.isValid(); line = layout.createLine())
+    {
+        line.setLineWidth(room);
+        line.setPosition(QPointF(0.0, used));
+        used += line.height();
+        if ((mWordWrap == false) || (used + line.height() > cell.rect.height()))
+            break;
+    }
 
-    // Set the line width to match the highlighted text only
-    line.setLineWidth(cell.rect.width());
     layout.endLayout();
-
     painter->setFont(cell.font);
 
-    // Calculate vertical alignment (centered)
-    float textHeight = static_cast<int>(line.height());
-    float yOffset = static_cast<float>(cell.rect.top()) + static_cast<float>(cell.rect.height() - textHeight) / 2;
-
-    QPointF textPos(cell.rect.left() + 2, yOffset + 1);
-
-    layout.draw(painter, textPos);
+    // One line sits in the middle of the row, a wrapped block starts at the top of it.
+    const qreal top{ mWordWrap ? static_cast<qreal>(cell.rect.top() + 1)
+                               : cell.rect.top() + ((cell.rect.height() - used) / 2.0) + 1.0 };
+    layout.draw(painter, QPointF(cell.rect.left() + 2, top));
     painter->restore();
 }
 
@@ -141,6 +175,20 @@ void LogTextHighlight::_paintAnalyzed(QPainter* painter, const QStyleOptionViewI
                          , accent);
     }
 
+    painter->restore();
+}
+
+void LogTextHighlight::_paintDayChange(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    if (index.data(LoggingModelBase::DayChangeRole).toBool() == false)
+        return;
+
+    const QColor ink{ QApplication::palette().color(QPalette::ColorRole::WindowText) };
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+    painter->fillRect( QRect(option.rect.left(), option.rect.top(), option.rect.width(), 1)
+                     , NELogPalette::withOpacity(ink, NELogPalette::eLogOpacity::OpacityHover));
     painter->restore();
 }
 

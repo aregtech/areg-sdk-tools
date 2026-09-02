@@ -157,7 +157,6 @@ void OverviewPage::buildUi(const OverviewPageConfig& config)
     QVBoxLayout* linksColumn = new QVBoxLayout(links);
     linksColumn->setContentsMargins(0, 0, 0, 0);
     linksColumn->addWidget(buildLinksPanel(config.links));
-    linksColumn->addStretch(1);
     columns->addWidget(links, 1);
 
     root->addLayout(columns, 1);
@@ -171,8 +170,14 @@ void OverviewPage::buildUi(const OverviewPageConfig& config)
 QWidget* OverviewPage::buildLinksPanel(const QList<OverviewPageLink>& links)
 {
     QGroupBox* group = new QGroupBox(tr("Quick Links:"), this);
-    QFormLayout* layout = new QFormLayout(group);
+    // The panel fills its half of the page, the way the right panel of every other page does.
+    // The links themselves stay at the top of it.
+    QVBoxLayout* column = new QVBoxLayout(group);
+    QFormLayout* layout = new QFormLayout();
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+    column->addLayout(layout);
+    column->addStretch(1);
 
     for (const OverviewPageLink& link : links)
     {

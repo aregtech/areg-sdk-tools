@@ -136,7 +136,15 @@ public:
     DataTypeCustom* insertDataType(int position, const QString& name, DataTypeBase::eCategory category);
     void deleteDataType(DataTypeCustom* dataType);
     DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);
-    void swapDataTypes(uint32_t firstId, uint32_t secondId);
+    /**
+     * rief   Moves the data type one position up or down and answers the ID it carries
+     *          afterwards. A reorder leaves the moved element with the ID of the element it
+     *          passed, so a caller keeps the selection on what moved by taking this answer.
+     * \param   id      The ID of the data type to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * eturn  The ID the moved data type carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveDataType(uint32_t id, int delta);
 
     void renameDataType(DataTypeCustom* dataType, const QString& newName);
     void setDescription(DataTypeCustom* dataType, const QString& text);
@@ -167,7 +175,15 @@ public:
     ElementBase* createField(DataTypeCustom* dataType, const QString& name);
     ElementBase* insertField(DataTypeCustom* dataType, int position, const QString& name);
     void deleteField(DataTypeCustom* dataType, uint32_t fieldId);
-    void swapFields(DataTypeCustom* dataType, uint32_t firstId, uint32_t secondId);
+    /**
+     * \brief   Moves a field of the given data type one position up or down and answers the ID it
+     *          carries afterwards.
+     * \param   dataType    The structure or enumeration owning the field.
+     * \param   fieldId     The ID of the field to move.
+     * \param   delta       -1 to move one position up, +1 to move one position down.
+     * \return  The ID the moved field carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveField(DataTypeCustom* dataType, uint32_t fieldId, int delta);
 
     void setFieldName(DataTypeCustom* dataType, uint32_t fieldId, const QString& name);
 

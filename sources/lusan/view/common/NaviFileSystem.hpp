@@ -179,6 +179,13 @@ private slots:
      **/
     void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
 
+    /**
+     * \brief   Shows the commands of the entry under the mouse: open, create, rename, delete
+     *          and the two path copies.
+     * \param   pos     The position of the click, in tree viewport coordinates.
+     **/
+    void onTreeViewContextMenu(const QPoint& pos);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -218,6 +225,22 @@ private:
      * \param   index   The index the buttons should describe.
      **/
     void updateToolButtons(const QModelIndex &index);
+
+    /**
+     * \brief   Returns the top level entry of the tree the given index sits under: the workspace
+     *          root, one of the workspace directories, or, in computer mode, the drive.
+     * \param   index   The index to walk up from.
+     * \return  The top level index, or an invalid index if there is none.
+     **/
+    QModelIndex topLevelEntry(const QModelIndex& index) const;
+
+    /**
+     * \brief   Puts the path of the given entry on the clipboard.
+     * \param   index       The index of the entry.
+     * \param   relative    True to write the path measured from the top level entry it sits
+     *                      under, false to write the path on the file system.
+     **/
+    void copyEntryPath(const QModelIndex& index, bool relative);
 
     /**
      * \brief   Updates the data of the file system.

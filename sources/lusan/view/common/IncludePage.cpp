@@ -180,6 +180,7 @@ void IncludePage::setupSignals(void)
     connect(scRemove, &QShortcut::activated, this, &IncludePage::onRemoveClicked);
     connect(scAdd   , &QShortcut::activated, this, &IncludePage::onAddClicked);
     connect(scRename, &QShortcut::activated, this, &IncludePage::focusLocationField);
+    connect(mList, &ElementListView::signalRenameRequested, this, &IncludePage::focusLocationField);
 
     // The include path keystroke validator lives inside the shared IncludeDetailsView.
     connect(mDetails->ctrlInclude()      , &QLineEdit::editingFinished, this, &IncludePage::onLocationCommitted);
@@ -437,33 +438,19 @@ void IncludePage::onRemoveClicked(void)
 
 void IncludePage::onMoveUpClicked(void)
 {
-    const uint32_t id = currentIncludeId();
-    if (id == 0)
-        return;
-
-    const int index = mModel.findIndex(id);
-    if (index > 0)
+    const uint32_t moved = mModel.moveInclude(currentIncludeId(), -1);
+    if (moved != 0)
     {
-        // The swap keeps IDs attached to list position, so the moved entry's new ID is the
-        // neighbor's old ID -- reselect that to keep the moved row highlighted.
-        const uint32_t neighborId = mModel.getIncludes().at(index - 1).getId();
-        mModel.swapIncludes(id, neighborId);
-        selectInclude(neighborId);
+        selectInclude(moved);
     }
 }
 
 void IncludePage::onMoveDownClicked(void)
 {
-    const uint32_t id = currentIncludeId();
-    if (id == 0)
-        return;
-
-    const int index = mModel.findIndex(id);
-    if ((index >= 0) && (index < (mModel.getIncludeCount() - 1)))
+    const uint32_t moved = mModel.moveInclude(currentIncludeId(), +1);
+    if (moved != 0)
     {
-        const uint32_t neighborId = mModel.getIncludes().at(index + 1).getId();
-        mModel.swapIncludes(id, neighborId);
-        selectInclude(neighborId);
+        selectInclude(moved);
     }
 }
 

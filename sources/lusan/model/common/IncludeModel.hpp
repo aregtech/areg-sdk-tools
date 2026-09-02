@@ -97,7 +97,15 @@ public:
     IncludeEntry* insertInclude(int position, const QString& location);
 
     void deleteInclude(uint32_t id);
-    void swapIncludes(uint32_t firstId, uint32_t secondId);
+    /**
+     * rief   Moves the include one position up or down and answers the ID it carries
+     *          afterwards. A reorder leaves the moved element with the ID of the element it
+     *          passed, so a caller keeps the selection on what moved by taking this answer.
+     * \param   id      The ID of the include to move.
+     * \param   delta   -1 to move one position up, +1 to move one position down.
+     * eturn  The ID the moved include carries afterwards, or 0 when nothing moved.
+     **/
+    uint32_t moveInclude(uint32_t id, int delta);
 
     //!< The location is the include's unique name, so this is both the rename and the path edit.
     void setLocation(uint32_t id, const QString& location);

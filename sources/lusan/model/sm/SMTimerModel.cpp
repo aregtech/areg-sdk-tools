@@ -103,14 +103,9 @@ void SMTimerModel::deleteTimer(uint32_t id)
     mFacade.getUndoStack().push(new TDocRemoveCommand<SMTimerEntry, DocumentElem>(getNotifier(), timers(), id, eDocElementKind::Timer, QObject::tr("Delete timer")));
 }
 
-void SMTimerModel::swapTimers(uint32_t firstId, uint32_t secondId)
+uint32_t SMTimerModel::moveTimer(uint32_t id, int delta)
 {
-    const int index1 = timers().findIndex(firstId);
-    const int index2 = timers().findIndex(secondId);
-    if ((index1 < 0) || (index2 < 0))
-        return;
-
-    mFacade.getUndoStack().push(new TDocReorderCommand<SMTimerEntry, DocumentElem>(getNotifier(), timers(), index1, index2, 0u, eDocElementKind::Timer, QObject::tr("Reorder timers")));
+    return docMoveElement<SMTimerEntry, DocumentElem>(mFacade.getUndoStack(), getNotifier(), timers(), id, delta, 0u, eDocElementKind::Timer, QObject::tr("Reorder timers"));
 }
 
 void SMTimerModel::renameTimer(uint32_t id, const QString& newName)
