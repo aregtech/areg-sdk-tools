@@ -378,6 +378,8 @@ void NaviLogScopeBase::setupScopeSearch(void)
     // The dock is narrow. Without this the box holds its own width and pushes the row apart.
     mFilterEdit->setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Fixed);
 
+    mFilterEdit->installEventFilter(this);
+
     filterRow->addWidget(mFilterEdit, 1);
     addNaviBar(mFilterBar);
 
@@ -675,11 +677,21 @@ void NaviLogScopeBase::updateMatchMark(void)
 
 bool NaviLogScopeBase::eventFilter(QObject* watched, QEvent* event)
 {
-    if ((watched == mFindEdit) && (event->type() == QEvent::Type::KeyPress)
+    if ((event->type() == QEvent::Type::KeyPress)
         && (static_cast<QKeyEvent*>(event)->key() == Qt::Key::Key_Escape))
     {
-        showScopeFind(false);
-        return true;
+        if (watched == mFindEdit)
+        {
+            showScopeFind(false);
+            return true;
+        }
+        else if (watched == mFilterEdit)
+        {
+            // The tree comes back whole and the focus goes with it.
+            mFilterEdit->clear();
+            ctrlTable()->setFocus();
+            return true;
+        }
     }
 
     return NaviToolbarWindow::eventFilter(watched, event);

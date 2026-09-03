@@ -234,12 +234,6 @@ void SearchLineEdit::keyPressEvent(QKeyEvent* event)
         event->accept();
         return;
     }
-    else if (event->key() == Qt::Key_Escape)
-    {
-        clear();
-        event->accept();
-        return;
-    }
 
     QLineEdit::keyPressEvent(event);
 }

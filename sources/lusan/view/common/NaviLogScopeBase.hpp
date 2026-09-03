@@ -372,7 +372,8 @@ protected:
     void applyTargetState(const QModelIndex& node, areg::LogSourceState state);
 
     /**
-     * \brief   Closes the find row when Escape is pressed inside its box.
+     * \brief   Answers Escape in the two boxes of the panel. It closes the find row, and
+     *          it empties the filter box and gives the focus back to the tree.
      **/
     bool eventFilter(QObject* watched, QEvent* event) override;
 

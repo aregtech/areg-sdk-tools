@@ -69,6 +69,13 @@ public:
      **/
     void showAt(const QRect& anchor);
 
+    /**
+     * \brief   Returns the rectangle to open a panel under so that it takes the place this
+     *          one stands in. A panel that leads to another one hands it over, and the reader
+     *          keeps the corner the first panel gave.
+     **/
+    QRect handOverRect(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -238,6 +245,8 @@ public:
 public:
     /**
      * \brief   Fills the panel with the columns that can be narrowed and their state.
+     *          The columns the table shows are listed first, in the order they arrive,
+     *          and the ones it hides follow under a line of their own.
      * \param   entries The columns to list, in the order to list them.
      **/
     void setEntries(const LogFilterPanel::ListEntries& entries);
@@ -249,8 +258,8 @@ signals:
     /**
      * \brief   Emitted when the reader picks a column to narrow.
      * \param   column  The column, as a LoggingModelBase::eColumn value.
-     * \param   anchor  The row that was picked, in screen coordinates, to open the panel of
-     *                  the column under it.
+     * \param   anchor  The rectangle to open the panel of the column under, in screen
+     *                  coordinates. It puts that panel where this one stands.
      **/
     void signalOpenFilter(int column, const QRect& anchor);
 
@@ -258,6 +267,16 @@ signals:
      * \brief   Emitted when every filter is asked to go.
      **/
     void signalClearFilters(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    //!< Adds the row of one column, and says what the column keeps.
+    void _addRow(const LogFilterPanel::sEntry& entry);
+
+    //!< Adds the line the columns out of the table are listed under.
+    void _addDivider(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

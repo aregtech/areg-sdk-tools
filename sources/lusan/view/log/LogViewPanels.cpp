@@ -172,6 +172,14 @@ void LogPopoverBase::showAt(const QRect& anchor)
     setFocus(Qt::FocusReason::PopupFocusReason);
 }
 
+QRect LogPopoverBase::handOverRect(void) const
+{
+    // The panel that follows opens under the rectangle it is given, so a one pixel line right
+    // above this panel lands it on the same corner.
+    const QRect place{ geometry() };
+    return QRect(place.left(), place.top() - 1, place.width(), 1);
+}
+
 void LogPopoverBase::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
@@ -463,12 +471,10 @@ LogFilterPanel::LogFilterPanel(QWidget* parent /*= nullptr*/)
         });
 
     connect(mList, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
-            if (item == nullptr)
+            if ((item == nullptr) || (item->data(_columnRole).isValid() == false))
                 return;
 
-            const QRect row{ mList->visualItemRect(item) };
-            const QRect anchor{ mList->viewport()->mapToGlobal(row.topLeft()), row.size() };
-            emit signalOpenFilter(item->data(_columnRole).toInt(), anchor);
+            emit signalOpenFilter(item->data(_columnRole).toInt(), handOverRect());
         });
 }
 
@@ -479,28 +485,66 @@ void LogFilterPanel::setEntries(const LogFilterPanel::ListEntries& entries)
     bool anyFilter{ false };
     for (const LogFilterPanel::sEntry& entry : entries)
     {
-        const bool narrowed{ entry.state.isEmpty() == false };
-        anyFilter = anyFilter || narrowed;
-
-        QListWidgetItem* item = new QListWidgetItem(mList);
-        item->setData(_columnRole, static_cast<int>(entry.column));
-        item->setText(narrowed ? tr("%1: %2").arg(columnName(entry.column)).arg(entry.state)
-                               : columnName(entry.column));
-
-        QFont face{ item->font() };
-        face.setBold(narrowed);
-        item->setFont(face);
-
-        QString hint{ narrowed ? tr("Keeps: %1").arg(entry.state) : tr("Every value passes.") };
-        if (entry.shown == false)
+        anyFilter = anyFilter || (entry.state.isEmpty() == false);
+        if (entry.shown)
         {
-            hint += QString("\n") + tr("The table does not show this column.");
-            item->setForeground(QApplication::palette().color(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text));
+            _addRow(entry);
+        }
+    }
+
+    // The columns out of the table are named once, under a line of their own, instead of
+    // every one of their rows carrying the same mark.
+    bool divided{ false };
+    for (const LogFilterPanel::sEntry& entry : entries)
+    {
+        if (entry.shown)
+            continue;
+
+        if (divided == false)
+        {
+            _addDivider();
+            divided = true;
         }
 
-        item->setToolTip(hint);
+        _addRow(entry);
     }
 
     fitToRows(mList);
     mClearAll->setEnabled(anyFilter);
+}
+
+void LogFilterPanel::_addRow(const LogFilterPanel::sEntry& entry)
+{
+    const bool narrowed{ entry.state.isEmpty() == false };
+
+    QListWidgetItem* item = new QListWidgetItem(mList);
+    item->setData(_columnRole, static_cast<int>(entry.column));
+    item->setText(narrowed ? tr("%1: %2").arg(columnName(entry.column)).arg(entry.state)
+                           : columnName(entry.column));
+
+    // The weight marks the columns that hold something back. They are the few, and they are
+    // what the panel is opened for.
+    QFont face{ item->font() };
+    face.setBold(narrowed);
+    item->setFont(face);
+
+    QString hint{ narrowed ? tr("Keeps: %1").arg(entry.state) : tr("Every value passes.") };
+    if (entry.shown == false)
+    {
+        hint += QString("\n") + tr("The table does not show this column.");
+        item->setForeground(QApplication::palette().color(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text));
+    }
+
+    item->setToolTip(hint);
+}
+
+void LogFilterPanel::_addDivider(void)
+{
+    QListWidgetItem* item = new QListWidgetItem(tr("Not shown in the table"), mList);
+    item->setFlags(Qt::ItemFlag::NoItemFlags);
+    item->setForeground(QApplication::palette().color(QPalette::ColorGroup::Disabled, QPalette::ColorRole::Text));
+
+    QFont face{ item->font() };
+    face.setItalic(true);
+    item->setFont(face);
 }

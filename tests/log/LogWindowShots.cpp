@@ -56,6 +56,7 @@
 
 #include <QDir>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QLabel>
 #include <QListWidget>
@@ -667,6 +668,65 @@ int main(int argc, char* argv[])
         }
     }
 
+    std::printf("[filters] a column the table does not show filters the same as one on screen\n");
+    {
+        LiveLogViewer live(&window);
+        live.resize(1400, 820);
+        QApplication::processEvents();
+
+        LogTableHeader*   header{ live.findChild<LogTableHeader*>() };
+        LoggingModelBase* model { live.getLoggingModel() };
+        QTableView*       table { live.findChild<QTableView*>() };
+        LogViewerFilter*  proxy { table != nullptr ? qobject_cast<LogViewerFilter*>(table->model()) : nullptr };
+        LogFilterChips*   chips { live.findChild<LogFilterChips*>() };
+
+        CHECK(header != nullptr);
+        CHECK(model  != nullptr);
+        CHECK(proxy  != nullptr);
+
+        if ((header != nullptr) && (model != nullptr) && (proxy != nullptr))
+        {
+            // Duration is not one of the columns the table opens with, so the Filters panel is
+            // the only way to reach it.
+            CHECK(model->getActiveColumns().contains(LoggingModelBase::eColumn::LogColumnTimeDuration) == false);
+
+            LogHeaderItem* duration{ header->getHeaderItem(LoggingModelBase::eColumn::LogColumnTimeDuration) };
+            CHECK(duration != nullptr);
+            if (duration != nullptr)
+            {
+                duration->setFilterData(NELusanCommon::FilterString{ QStringLiteral("100"), false, false, false });
+                QApplication::processEvents();
+
+                // What the header says and what the table holds must be the same thing. A
+                // column off the screen used to mark itself and filter nothing.
+                CHECK(duration->isFiltered());
+                CHECK(proxy->hasColumnFilters());
+                CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnTimeDuration));
+
+                // The Filters panel and the chip row both read the same list, so what the
+                // header marks is what they name.
+                QString kept;
+                for (const LogViewerFilter::sActiveFilter& entry : proxy->activeFilters())
+                {
+                    if (entry.column == static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeDuration))
+                    {
+                        kept = entry.text;
+                    }
+                }
+
+                CHECK(kept == QStringLiteral("100"));
+                CHECK((chips == nullptr) || (chips->chips().isEmpty() == false));
+
+                duration->resetFilter();
+                QApplication::processEvents();
+                CHECK(duration->isFiltered() == false);
+                CHECK(proxy->hasColumnFilters() == false);
+                CHECK(filtersColumn(*proxy, LoggingModelBase::eColumn::LogColumnTimeDuration) == false);
+                CHECK((chips == nullptr) || chips->chips().isEmpty());
+            }
+        }
+    }
+
     std::printf("[search] the search box and the Message filter are one control doing two jobs\n");
     {
         LiveLogViewer live(&window);
@@ -723,6 +783,20 @@ int main(int argc, char* argv[])
 
             // The search box keeps the phrase: the filter took it over, it did not move out.
             CHECK((inBar == nullptr) || (inBar->text() == QStringLiteral("timeout")));
+        }
+
+        // Escape belongs to the window, not to the box. It reaches the window from the box
+        // and drops the phrase there.
+        if (inBar != nullptr)
+        {
+            inBar->setFocus();
+            inBar->setText(QStringLiteral("timeout"));
+            QApplication::processEvents();
+
+            QKeyEvent escape(QEvent::Type::KeyPress, Qt::Key::Key_Escape, Qt::KeyboardModifier::NoModifier);
+            QApplication::sendEvent(inBar, &escape);
+            QApplication::processEvents();
+            CHECK(inBar->text().isEmpty());
         }
     }
 
@@ -1082,10 +1156,11 @@ int main(int argc, char* argv[])
     {
         LogFilterPanel panel;
         LogFilterPanel::ListEntries entries;
-        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnPriority, QStringLiteral("Error"), true });
-        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnSource  , QString()             , true });
-        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnThread  , QString()             , false });
-        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnMessage , QStringLiteral("timeout"), true });
+        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnPriority    , QStringLiteral("Error")  , true  });
+        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnSource      , QString()                , true  });
+        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnThread      , QString()                , false });
+        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnMessage     , QStringLiteral("timeout"), true  });
+        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnTimeDuration, QStringLiteral("500")    , false });
         panel.setEntries(entries);
         panel.resize(320, panel.sizeHint().height());
         QApplication::processEvents();
@@ -1095,18 +1170,87 @@ int main(int argc, char* argv[])
 
         if (list != nullptr)
         {
-            CHECK(list->count() == entries.size());
+            // The columns the table shows come first, then the line, then the rest.
+            CHECK(list->count() == entries.size() + 1);
 
-            // A narrowed column carries what it keeps, and says it in bold.
+            // A narrowed column carries what it keeps after its name, and says it in bold.
             CHECK(list->item(0)->text().contains(QStringLiteral("Error")));
             CHECK(list->item(0)->font().bold());
-            CHECK(list->item(1)->font().bold() == false);
+            CHECK(list->item(2)->text().contains(QStringLiteral("timeout")));
+            CHECK(list->item(2)->font().bold());
 
-            // A column the table does not show is still reachable, and is marked apart.
-            CHECK(list->item(2)->toolTip().isEmpty() == false);
+            // A column that keeps nothing is the quiet one, whether the table shows it or not.
+            CHECK(list->item(1)->font().bold() == false);
+            CHECK(list->item(4)->font().bold() == false);
+
+            // The line carries no column and cannot be picked.
+            CHECK(list->item(3)->data(Qt::ItemDataRole::UserRole + 1).isValid() == false);
+            CHECK(list->item(3)->flags() == Qt::ItemFlag::NoItemFlags);
+
+            // A column out of the table is still reachable, and one that filters from there
+            // is the loudest row of the panel: bold, and under the line.
+            CHECK(list->item(4)->toolTip().isEmpty() == false);
+            CHECK(list->item(5)->text().contains(QStringLiteral("500")));
+            CHECK(list->item(5)->font().bold());
         }
 
         shoot(panel, "filter-panel");
+
+        // With nothing out of the table there is nothing to name, so no line is drawn.
+        LogFilterPanel whole;
+        LogFilterPanel::ListEntries shown;
+        shown.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnPriority, QString(), true });
+        shown.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnMessage , QString(), true });
+        whole.setEntries(shown);
+        QApplication::processEvents();
+
+        QListWidget* wholeList{ whole.findChild<QListWidget*>() };
+        CHECK((wholeList != nullptr) && (wholeList->count() == shown.size()));
+    }
+
+    std::printf("[filters] Escape closes every column panel, whatever control it carries\n");
+    {
+        LogPrioComboFilter    combo;
+        LogDurationEditFilter duration;
+        LogMessageEditFilter  message;
+        message.setDataString(QStringLiteral("timeout"));
+
+        LogFilterBase* panels[]{ &combo, &duration, &message };
+        for (LogFilterBase* panel : panels)
+        {
+            panel->showFilterAt(QRect(120, 80, 180, 22));
+            QApplication::processEvents();
+            CHECK(panel->isVisible());
+
+            QWidget* target{ panel->focusWidget() != nullptr ? panel->focusWidget() : panel };
+            QKeyEvent escape(QEvent::Type::KeyPress, Qt::Key::Key_Escape, Qt::KeyboardModifier::NoModifier);
+            QApplication::sendEvent(target, &escape);
+            QApplication::processEvents();
+            CHECK(panel->isVisible() == false);
+        }
+
+        // Escape leaves the panel, it does not empty the box behind it.
+        CHECK(message.getSelectedData().isEmpty() == false);
+    }
+
+    std::printf("[filters] the panel of a picked column takes the place the list stood in\n");
+    {
+        LogFilterPanel list;
+        LogFilterPanel::ListEntries entries;
+        entries.append(LogFilterPanel::sEntry{ LoggingModelBase::eColumn::LogColumnMessage, QString(), true });
+        list.setEntries(entries);
+        list.showAt(QRect(400, 120, 96, 24));
+        QApplication::processEvents();
+
+        const QRect stood{ list.geometry() };
+        const QRect handOver{ list.handOverRect() };
+
+        // A panel opens under the rectangle it is given, so the one that follows lands on
+        // the corner this list stood on instead of on the row that was clicked.
+        CHECK(handOver.left() == stood.left());
+        CHECK(handOver.bottom() + 1 == stood.top());
+        CHECK(handOver.width() == stood.width());
+        list.hide();
     }
 
     std::printf("[select] the menu marks every row of one call, one scope and one process\n");

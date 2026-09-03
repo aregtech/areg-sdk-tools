@@ -292,13 +292,13 @@ void LogViewerBase::setupWidgets()
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged, this
-            , [this](int column, const QList<NELusanCommon::FilterData>& items){
+            , [this](LoggingModelBase::eColumn column, const QList<NELusanCommon::FilterData>& items){
                 _resetSearchResult();
                 mFilter->setComboFilter(column, items);
                 _updateChips();
             });
     connect(mHeader     , &LogTableHeader::signalTextFilterChanged, this
-            , [this](int column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
+            , [this](LoggingModelBase::eColumn column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
                 _resetSearchResult();
                 mFilter->setTextFilter(column, text, isCaseSensitive, isWholeWord, isWildCard);
                 _updateChips();
@@ -2107,8 +2107,8 @@ void LogViewerBase::_showFilterPanel()
         mPickFilters = new LogFilterPanel(this);
         connect(mPickFilters, &LogFilterPanel::signalClearFilters, this, [this]() { clearEveryFilter(); });
         connect(mPickFilters, &LogFilterPanel::signalOpenFilter, this, [this](int column, const QRect& anchor) {
-                // One panel at a time. The column panel opens where its row stood, so the
-                // reader keeps the place the list gave it.
+                // One panel at a time. The column panel takes the place the list stood in,
+                // so the reader keeps looking at the same corner of the screen.
                 mPickFilters->hide();
                 mHeader->showFilterPanelAt(static_cast<LoggingModelBase::eColumn>(column), anchor);
             });
@@ -2119,25 +2119,39 @@ void LogViewerBase::_showFilterPanel()
     LogFilterPanel::ListEntries entries;
     const QList<LoggingModelBase::eColumn> active{ mLogModel->getActiveColumns() };
     const LogViewerFilter::ListActiveFilters filters{ mFilter->activeFilters() };
+    const auto makeEntry = [&filters](LoggingModelBase::eColumn column, bool shown) {
+            LogFilterPanel::sEntry entry;
+            entry.column = column;
+            entry.shown  = shown;
+            for (const LogViewerFilter::sActiveFilter& filter : filters)
+            {
+                if (filter.column == static_cast<int>(column))
+                {
+                    entry.state = filter.text;
+                    break;
+                }
+            }
+
+            return entry;
+        };
+
+    // The columns on screen come in the order the table holds them, so the panel and the
+    // header read the same way. The ones out of the table follow.
+    for (const LoggingModelBase::eColumn column : active)
+    {
+        if (mHeader->canFilter(column))
+        {
+            entries.append(makeEntry(column, true));
+        }
+    }
+
     for (int i = 0; i < static_cast<int>(LoggingModelBase::eColumn::LogColumnCount); ++i)
     {
         const LoggingModelBase::eColumn column{ static_cast<LoggingModelBase::eColumn>(i) };
-        if (mHeader->canFilter(column) == false)
-            continue;
-
-        LogFilterPanel::sEntry entry;
-        entry.column = column;
-        entry.shown  = active.contains(column);
-        for (const LogViewerFilter::sActiveFilter& filter : filters)
+        if (mHeader->canFilter(column) && (active.contains(column) == false))
         {
-            if (filter.column == i)
-            {
-                entry.state = filter.text;
-                break;
-            }
+            entries.append(makeEntry(column, false));
         }
-
-        entries.append(entry);
     }
 
     mPickFilters->setEntries(entries);

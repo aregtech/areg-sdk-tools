@@ -126,20 +126,21 @@ signals:
 
     /**
      * \brief   The signal is triggered when a combo-box filter is changed.
-     * \param   logicalColumn  The logical column index of the filter.
-     * \param   items           The list of items selected in the combo-box filter.
+     * \param   column  The column of the filter. It is the column itself and not a place
+     *                  in the table, so a column the table hides carries its filter too.
+     * \param   items   The list of items selected in the combo-box filter.
      **/
-    void signalComboFilterChanged(int logicalColumn, const QList<NELusanCommon::FilterData>& items);
+    void signalComboFilterChanged(LoggingModelBase::eColumn column, const QList<NELusanCommon::FilterData>& items);
 
     /**
      * \brief   The signal is triggered when a text filter is changed.
-     * \param   logicalColumn  The logical column index of the filter.
+     * \param   column              The column of the filter, not a place in the table.
      * \param   text                The text entered in the text filter.
      * \param   isCaseSensitive     True if the text filter is case-sensitive.
      * \param   isWholeWord         True if the text filter is for whole words only.
      * \param   isWildCard          True if the text filter is a wildcard search.
      **/
-    void signalTextFilterChanged(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
+    void signalTextFilterChanged(LoggingModelBase::eColumn column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
     /**
      * \brief   The signal is triggered when the reader presses the rail section, which

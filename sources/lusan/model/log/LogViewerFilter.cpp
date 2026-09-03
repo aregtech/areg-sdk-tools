@@ -45,17 +45,12 @@ LogViewerFilter::~LogViewerFilter()
     _clearData();
 }
 
-void LogViewerFilter::setComboFilter(int logicalColumn, const NELusanCommon::FilterList& filters)
+void LogViewerFilter::setComboFilter(LoggingModelBase::eColumn column, const NELusanCommon::FilterList& filters)
 {
-    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
-    if (model == nullptr)
+    if (column == LoggingModelBase::eColumn::LogColumnInvalid)
         return;
 
-    LoggingModelBase::eColumn ecol = model->fromIndexToColumn(logicalColumn);
-    if (ecol == LoggingModelBase::eColumn::LogColumnInvalid)
-        return;
-
-    int columnKey = static_cast<int>(ecol);
+    int columnKey = static_cast<int>(column);
     if (filters.isEmpty())
     {
         if (mComboFilters.contains(columnKey))
@@ -71,28 +66,23 @@ void LogViewerFilter::setComboFilter(int logicalColumn, const NELusanCommon::Fil
     }
 }
 
-void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
+void LogViewerFilter::setTextFilter(LoggingModelBase::eColumn column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
 {
-    setTextFilter(logicalColumn, NELusanCommon::FilterString{ text, isCaseSensitive, isWholeWord, isWildCard });
+    setTextFilter(column, NELusanCommon::FilterString{ text, isCaseSensitive, isWholeWord, isWildCard });
 }
 
-void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter)
+void LogViewerFilter::setTextFilter(LoggingModelBase::eColumn column, const NELusanCommon::FilterString& filter)
 {
-    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
-    if (model == nullptr)
+    if (column == LoggingModelBase::eColumn::LogColumnInvalid)
         return;
 
-    LoggingModelBase::eColumn ecol = model->fromIndexToColumn(logicalColumn);
-    if (ecol == LoggingModelBase::eColumn::LogColumnInvalid)
-        return;
-
-    int columnKey = static_cast<int>(ecol);
+    int columnKey = static_cast<int>(column);
     if (filter.text.isEmpty())
     {
         if (mTextFilters.contains(columnKey))
         {
             mTextFilters.remove(columnKey);
-            if (ecol == LoggingModelBase::eColumn::LogColumnMessage)
+            if (column == LoggingModelBase::eColumn::LogColumnMessage)
             {
                 // If the filter is removed, we need to invalidate the filter
                 // to ensure that the model updates correctly.
@@ -104,12 +94,8 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
     }
     else
     {
-        switch (ecol)
+        switch (column)
         {
-        case LoggingModelBase::eColumn::LogColumnInvalid:
-            mTextFilters.clear();
-            break;
-            
         case LoggingModelBase::eColumn::LogColumnTimeDuration:
         {   
             uint32_t duration = filter.text.toUInt();
