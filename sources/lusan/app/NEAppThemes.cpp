@@ -176,8 +176,6 @@ namespace
             "ads--CDockOverlayCross"
             "{ qproperty-iconColors: \"Frame=#ff2f6fed Background=#ffffffff Overlay=#ff2f6fed"
             " Arrow=#ff2f6fed Shadow=#ff000000\"; }"
-            // The dock resize grip is invisible with the stock style; mark it with a seam
-            // line that lights up on hover (see the matching rule in theme-template.qss).
             "ads--CDockSplitter::handle:horizontal"
             "{ width: 6px; border-left: 1px solid palette(mid); }"
             "ads--CDockSplitter::handle:vertical"
@@ -230,9 +228,6 @@ namespace
 
 QList<OptionsManager::eAppTheme> NEAppThemes::allThemes()
 {
-    // The designed themes come first and the one the application starts on leads them. The
-    // native system theme is last: it is the only entry that swaps the widget style, which
-    // takes far longer than every other switch.
     return QList<OptionsManager::eAppTheme>
     {
           OptionsManager::eAppTheme::ModernLight
@@ -271,40 +266,25 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
     if (app == nullptr)
         return;
 
-    // Read unconditionally: it latches the style the desktop started the application with,
-    // and it has to latch before the first theme replaces that style.
     const QString& systemStyle = defaultStyleName();
     const QPalette& systemPalette = defaultPalette();
     const bool native{ theme == OptionsManager::eAppTheme::SystemDefault };
     const bool system{ native || (theme == OptionsManager::eAppTheme::SystemFusion) };
     const QString wanted{ native ? systemStyle : QStringLiteral("Fusion") };
 
-    // Installing a style walks and repolishes every widget of the application through the
-    // style sheet that is still on, which costs about as much as the sheet itself. The four
-    // built-in themes all run on Fusion, so the style is only swapped when it really changes.
     if (wanted != appliedStyleName())
     {
         QApplication::setStyle(QStyleFactory::create(wanted));
         appliedStyleName() = wanted;
     }
 
-    // The sheet goes on the windows, not on the application. Handing it to the application makes
-    // Qt walk and rebuild the rules of every widget there is, which on a session with a document
-    // open takes several times longer than handing the same sheet to the windows themselves. A
-    // widget reads the sheets of its own parent chain, so one call per parentless window reaches
-    // everything under it, dialogs, menus and tool tips included.
     if (system)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
 #endif
-        // The native variant reads the colours back from the style the desktop gave it. The
-        // Fusion variant cannot: Fusion answers with its own light palette, so it takes the
-        // palette the desktop handed over at startup instead.
         QApplication::setPalette(native ? QApplication::style()->standardPalette() : systemPalette);
         activeStyleSheet() = baseStyleSheet();
-        // The system theme takes its colours from the desktop, so the ink of the icons is
-        // read back from the palette that was just installed.
         NELusanCommon::setIconsForDarkTheme(QApplication::palette().color(QPalette::ColorRole::Window).lightness() < 128);
     }
     else
