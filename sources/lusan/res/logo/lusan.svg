@@ -1,107 +1,63 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Background gradient for the rounded-square tile -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3a3f47"/>
-      <stop offset="45%" stop-color="#23272e"/>
-      <stop offset="100%" stop-color="#15171b"/>
+    <!-- Deep Metallic Orange Outer Gradient -->
+    <linearGradient id="orangeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA726"/>
+      <stop offset="45%" stop-color="#FF6D00"/>
+      <stop offset="100%" stop-color="#B23C00"/>
     </linearGradient>
 
-    <!-- Subtle top highlight for a soft plastic/glass feel -->
-    <linearGradient id="topSheen" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.10"/>
-      <stop offset="35%" stop-color="#ffffff" stop-opacity="0"/>
+    <!-- Secondary Contrast Gradient -->
+    <linearGradient id="orangeGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFD180"/>
+      <stop offset="55%" stop-color="#E65100"/>
+      <stop offset="100%" stop-color="#7A1F00"/>
     </linearGradient>
 
-    <!-- Cyan node radial gradient -->
-    <radialGradient id="nodeGrad" cx="35%" cy="30%" r="75%">
-      <stop offset="0%" stop-color="#eafffe"/>
-      <stop offset="35%" stop-color="#7ff2f2"/>
-      <stop offset="100%" stop-color="#22c9d4"/>
+    <!-- Specular Rim Highlight -->
+    <linearGradient id="rimHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#FF9E00" stop-opacity="0.1"/>
+    </linearGradient>
+
+    <!-- Central White Light Core -->
+    <radialGradient id="centerWhiteLight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="30%" stop-color="#FFF3E0"/>
+      <stop offset="65%" stop-color="#FF9100"/>
+      <stop offset="100%" stop-color="#DD2C00" stop-opacity="0"/>
     </radialGradient>
 
-    <!-- Glow filter for nodes and lines -->
-    <filter id="glow" x="-120%" y="-120%" width="340%" height="340%">
-      <feGaussianBlur stdDeviation="6" result="blur1"/>
-      <feMerge>
-        <feMergeNode in="blur1"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <!-- Subtle Drop Shadow for Contrast on Light/Dark Themes -->
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.35"/>
     </filter>
-
-    <filter id="softGlow" x="-120%" y="-120%" width="340%" height="340%">
-      <feGaussianBlur stdDeviation="2.2" result="blur2"/>
-      <feMerge>
-        <feMergeNode in="blur2"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <!-- Drop shadow for the tile itself -->
-    <filter id="tileShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
-    </filter>
-
-    <clipPath id="tileClip">
-      <rect x="16" y="16" width="480" height="480" rx="96" ry="96"/>
-    </clipPath>
   </defs>
 
-  <!-- App icon tile -->
-  <g filter="url(#tileShadow)">
-    <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bgGrad)"/>
-    <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#topSheen)"/>
-    <rect x="17.5" y="17.5" width="477" height="477" rx="94.5" ry="94.5"
-          fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="3"/>
-  </g>
+  <g filter="url(#iconShadow)">
+    <!-- Central White Light Glow -->
+    <circle cx="256" cy="256" r="115" fill="url(#centerWhiteLight)"/>
 
-  <g clip-path="url(#tileClip)">
-    <!-- Node coordinates -->
-    <!-- top:(256,150) upperLeft:(172,196) upperRight:(340,196)
-         left:(130,270) right:(382,270) center:(256,270)
-         lowerLeft:(172,344) lowerRight:(340,344) small:(256,388) -->
-
-    <!-- Connecting lines -->
-    <g stroke="#cfe9ec" stroke-opacity="0.5" stroke-width="1.6" filter="url(#softGlow)">
-      <line x1="256" y1="150" x2="172" y2="196"/>
-      <line x1="256" y1="150" x2="340" y2="196"/>
-      <line x1="172" y1="196" x2="130" y2="270"/>
-      <line x1="340" y1="196" x2="382" y2="270"/>
-      <line x1="130" y1="270" x2="172" y2="344"/>
-      <line x1="382" y1="270" x2="340" y2="344"/>
-      <line x1="172" y1="344" x2="340" y2="344"/>
-      <line x1="172" y1="196" x2="340" y2="344"/>
-      <line x1="340" y1="196" x2="172" y2="344"/>
-      <line x1="256" y1="150" x2="172" y2="344"/>
-      <line x1="256" y1="150" x2="340" y2="344"/>
-      <line x1="130" y1="270" x2="382" y2="270"/>
-
-      <!-- center hub connections -->
-      <line x1="256" y1="270" x2="256" y2="150"/>
-      <line x1="256" y1="270" x2="172" y2="196"/>
-      <line x1="256" y1="270" x2="340" y2="196"/>
-      <line x1="256" y1="270" x2="130" y2="270"/>
-      <line x1="256" y1="270" x2="382" y2="270"/>
-      <line x1="256" y1="270" x2="172" y2="344"/>
-      <line x1="256" y1="270" x2="340" y2="344"/>
+    <!-- Interlocking Kinetic Ring 1 (0 Deg) -->
+    <g transform="rotate(0 256 256)">
+      <ellipse cx="256" cy="256" rx="64" ry="188" fill="none" stroke="url(#orangeGrad1)" stroke-width="34"/>
+      <ellipse cx="256" cy="256" rx="64" ry="188" fill="none" stroke="url(#rimHighlight)" stroke-width="5" opacity="0.7"/>
     </g>
 
-    <!-- Nodes -->
-    <g filter="url(#glow)">
-      <circle cx="256" cy="150" r="11" fill="url(#nodeGrad)"/>
-      <circle cx="172" cy="196" r="11" fill="url(#nodeGrad)"/>
-      <circle cx="340" cy="196" r="11" fill="url(#nodeGrad)"/>
-      <circle cx="130" cy="270" r="9" fill="url(#nodeGrad)"/>
-      <circle cx="382" cy="270" r="9" fill="url(#nodeGrad)"/>
-      <circle cx="172" cy="344" r="11" fill="url(#nodeGrad)"/>
-      <circle cx="340" cy="344" r="11" fill="url(#nodeGrad)"/>
-      <circle cx="256" cy="270" r="16" fill="url(#nodeGrad)"/>
-      <circle cx="256" cy="392" r="7" fill="url(#nodeGrad)"/>
+    <!-- Interlocking Kinetic Ring 2 (60 Deg) -->
+    <g transform="rotate(60 256 256)">
+      <ellipse cx="256" cy="256" rx="64" ry="188" fill="none" stroke="url(#orangeGrad2)" stroke-width="34"/>
+      <ellipse cx="256" cy="256" rx="64" ry="188" fill="none" stroke="url(#rimHighlight)" stroke-width="5" opacity="0.7"/>
     </g>
 
-    <!-- Wordmark -->
-    <text x="256" y="450" text-anchor="middle"
-          font-family="'Futura','Century Gothic','Trebuchet MS',sans-serif"
-          font-size="46" letter-spacing="10" fill="#f4f6f7">LUSAN</text>
+    <!-- Interlocking Kinetic Ring 3 (120 Deg) -->
+    <g transform="rotate(120 256 256)">
+      <ellipse cx="256" cy="256" rx="64" ry="188" fill="none" stroke="url(#orangeGrad1)" stroke-width="34"/>
+      <ellipse cx="256" cy="256" rx="64" ry="188" fill="none" stroke="url(#rimHighlight)" stroke-width="5" opacity="0.7"/>
+    </g>
+
+    <!-- Pure White Central Core Emitter -->
+    <circle cx="256" cy="256" r="30" fill="#FFFFFF"/>
+    <circle cx="256" cy="256" r="44" fill="none" stroke="#FFE0B2" stroke-width="5" opacity="0.85"/>
   </g>
 </svg>

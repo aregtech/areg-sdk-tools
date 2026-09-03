@@ -7,198 +7,37 @@ set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 set(APP_NAME lusan)
 
-project("${PROJECT_NAME}" 
-        VERSION "${PROJECT_VERSION}" 
-        DESCRIPTION "The user interface tools for Areg communication framework" 
-        HOMEPAGE_URL "https://areg.tech" 
+project("${PROJECT_NAME}"
+        VERSION "${PROJECT_VERSION}"
+        DESCRIPTION "The user interface tools for Areg communication framework"
+        HOMEPAGE_URL "https://areg.tech"
         LANGUAGES CXX
 )
 
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
+# The application assembly, shared with any project that builds a Lusan application from these
+# sources. Included unconditionally: CMake functions are global, so a consumer gets them by
+# adding this directory.
+include("${CMAKE_CURRENT_LIST_DIR}/conf/cmake/application.cmake")
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(LUSAN_ROOT          "${CMAKE_CURRENT_LIST_DIR}")
-set(LUSAN_CMAKE_CONFIG  "${LUSAN_ROOT}/conf/cmake")
-set(LUSAN_BASE          "${LUSAN_ROOT}/sources")
-set(LUSAN_THIRDPARTY    "${LUSAN_ROOT}/thirdparty")
-
-set(LUSAN_SRC)
-set(LUSAN_HDR)
-set(LUSAN_RES)
-set(LUSAN_UI)
-set(LUSAN_TRANS)
-
-include("${LUSAN_CMAKE_CONFIG}/setup.cmake")
-
-if(NOT ${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    message(FATAL_ERROR "LUSAN: >>> You should use QT version 6 or newer to compile this project")
+# Fetched or added as a subdirectory, this file defines the functions above and builds nothing.
+# The consumer creates its own application target instead.
+if (NOT PROJECT_IS_TOP_LEVEL)
+    return()
 endif()
 
-include_directories(${LUSAN_BASE})
-include_directories(${LUSAN_THIRDPARTY})
+lusan_setup_dependencies()
+
 include("${LUSAN_BASE}/CMakeLists.txt")
 
-# Per-platform application icon source: an .rc embedding the .ico on Windows, and the .icns
-# bundled into Resources on macOS. Linux uses the runtime QIcon plus an installed .desktop
-# entry and hicolor icons (see the install rules below). All are baked from res/logo/lusan.svg
-# by res/logo/make-icons.py.
-set(LUSAN_APP_ICON)
-if (WIN32)
-    enable_language(RC)
-    set(LUSAN_APP_ICON "${LUSAN_BASE}/lusan/res/logo/lusan.rc")
-elseif (APPLE)
-    set(LUSAN_APP_ICON "${LUSAN_BASE}/lusan/res/logo/lusan.icns")
-    set_source_files_properties("${LUSAN_APP_ICON}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-endif()
+lusan_add_application(${APP_NAME})
 
-list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUSAN_HDR}" "${LUSAN_SRC}")
-if (LUSAN_APP_ICON)
-    list(APPEND PROJECT_SOURCES "${LUSAN_APP_ICON}")
-endif()
-
-qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
-qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
-target_compile_definitions(${APP_NAME} PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
-target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::aregextend areg::areglogger aregsqlite3 ${LUSAN_ADS_TARGET})
-
-# copying log and router init files to 'bin/config'
-add_custom_command( TARGET ${APP_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy ${LUSAN_BASE}/lusan/res/lusan.init ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config/lusan.init
-                    VERBATIM)
-
-# Qt and ADS are LGPL and distributed as shared libraries, ship their license texts.
-add_custom_command(TARGET ${APP_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${LUSAN_ROOT}/licenses" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/licenses"
-    COMMENT "Copying third-party license notices"
-    VERBATIM)
-
-# The document schemas travel with the Areg SDK. An SDK built before they existed does not carry
-# them, and Lusan must build and run either way, so their absence is a status line and nothing more.
-if (EXISTS "${AREG_SDK_ROOT}/tools/schema")
-    message(STATUS ">>> Document schemas found at '${AREG_SDK_ROOT}/tools/schema', copying beside the executable")
-    add_custom_command(TARGET ${APP_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${AREG_SDK_ROOT}/tools/schema" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/schema"
-        COMMENT "Copying document schemas"
-        VERBATIM)
-else()
-    message(STATUS ">>> No document schemas at '${AREG_SDK_ROOT}/tools/schema', the built-in format description is used")
-endif()
-
-# ADS is a shared library (see conf/cmake/setup.cmake); look for it next to the
-# executable at runtime, and copy it there after each build, the same way the
-# Qt runtime libraries are deployed below.
-set_target_properties(${APP_NAME} PROPERTIES
-    BUILD_RPATH   "$ORIGIN;@loader_path"
-    INSTALL_RPATH "$ORIGIN;@loader_path"
-)
-add_custom_command(TARGET ${APP_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" "$<TARGET_FILE_DIR:${APP_NAME}>"
-    COMMENT "Copying ADS shared library next to the executable"
-    VERBATIM)
-if (UNIX)
-    add_custom_command(TARGET ${APP_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_SONAME_FILE:${LUSAN_ADS_TARGET}>" "$<TARGET_FILE_DIR:${APP_NAME}>"
-        VERBATIM)
-endif()
-
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
-if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.aregtech.${APP_NAME})
-endif()
-
-set_target_properties(${APP_NAME} PROPERTIES
-    ${BUNDLE_ID_OPTION}
-    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE_ICON_FILE lusan.icns
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
-)
-
-get_target_property(_qt_bin_dir Qt6::qmake IMPORTED_LOCATION)
-get_filename_component(_qt_bin_dir "${_qt_bin_dir}" DIRECTORY)
-if (WIN32)
-    add_custom_command(TARGET lusan POST_BUILD
-        COMMAND "${_qt_bin_dir}/windeployqt.exe"
-            --no-opengl-sw
-            --no-compiler-runtime
-            --no-translations
-            --no-system-dxc-compiler
-            --no-quick-import
-            --no-ffmpeg
-            "$<TARGET_FILE:${APP_NAME}>"
-        COMMENT "Deploying Qt runtime libraries for Win32"
-    )
-elseif (APPLE)
-    # macdeployqt has its own command line, the .app bundle directory must come first
-    add_custom_command(TARGET lusan POST_BUILD
-        COMMAND "${_qt_bin_dir}/macdeployqt"
-            "$<TARGET_BUNDLE_DIR:${APP_NAME}>"
-            -always-overwrite
-        COMMENT "Deploying Qt runtime libraries for macOS"
-        VERBATIM
-    )
-else()
-    message(STATUS "Qt deployment skipped on Linux (handled by system packaging)")
-endif()
-
-
-if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(${APP_NAME})
-endif()
-
-# Linux desktop integration: install the launcher entry and hicolor icons so the app icon
-# shows up in the application menu (the running window's icon comes from QIcon at runtime).
-if (UNIX AND NOT APPLE)
-    include(GNUInstallDirs)
-    install(TARGETS ${APP_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(FILES "$<TARGET_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(FILES "$<TARGET_SONAME_FILE:${LUSAN_ADS_TARGET}>" DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(DIRECTORY "${LUSAN_ROOT}/licenses" DESTINATION ${CMAKE_INSTALL_BINDIR})
-    if (EXISTS "${AREG_SDK_ROOT}/tools/schema")
-        install(DIRECTORY "${AREG_SDK_ROOT}/tools/schema" DESTINATION ${CMAKE_INSTALL_BINDIR})
-    endif()
-    install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan-256.png"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps" RENAME lusan.png)
-    install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.svg"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps" RENAME lusan.svg)
-    install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.desktop"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
-endif()
+message(STATUS "-------------------- CMakeLists Status Report Begin --------------------")
+message(STATUS "LUSAN: >>> Edition = \'${LUSAN_EDITION}\', version = \'${PROJECT_VERSION}\'")
+message(STATUS "LUSAN: >>> Sources = \'${LUSAN_BASE}\'")
+message(STATUS "-------------------- CMakeLists Status Report End ----------------------")
 
 # Opt-in unit tests (additive; the default application build is unaffected).
 option(LUSAN_BUILD_TESTS "Build Lusan unit tests" OFF)
 if(LUSAN_BUILD_TESTS)
     include("${LUSAN_ROOT}/tests/CMakeLists.txt")
-
-    # The tests that drive real widgets run on the offscreen platform. windeployqt installs the
-    # plugins the application itself needs and the offscreen one is not among them, so without
-    # this copy those tests abort before main behind a modal dialog that names no test.
-    #
-    # Copied while configuring rather than after a build: windeployqt resets the plugin directory
-    # whenever it runs, and a step tied to the application target does not run when only the test
-    # targets are rebuilt.
-    if (WIN32)
-        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-            set(LUSAN_OFFSCREEN_PLUGIN "qoffscreend.dll")
-        else()
-            set(LUSAN_OFFSCREEN_PLUGIN "qoffscreen.dll")
-        endif()
-
-        set(LUSAN_QT_PLUGIN_SOURCE "${_qt_bin_dir}/../plugins/platforms/${LUSAN_OFFSCREEN_PLUGIN}")
-        if (EXISTS "${LUSAN_QT_PLUGIN_SOURCE}")
-            file(COPY "${LUSAN_QT_PLUGIN_SOURCE}"
-                 DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/platforms")
-            message(STATUS "LUSAN: >>> ${LUSAN_OFFSCREEN_PLUGIN} placed beside the executable for the widget tests")
-        else()
-            message(WARNING "LUSAN: ${LUSAN_QT_PLUGIN_SOURCE} was not found. The widget tests abort "
-                            "before main until it is placed beside the executable.")
-        endif()
-    endif()
 endif()
