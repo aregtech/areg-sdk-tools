@@ -28,6 +28,7 @@
 #include <QStyle>
 #include <QStyleFactory>
 #include <QStyleHints>
+#include <QWidget>
 
 namespace
 {
@@ -175,14 +176,20 @@ namespace
             "ads--CDockOverlayCross"
             "{ qproperty-iconColors: \"Frame=#ff2f6fed Background=#ffffffff Overlay=#ff2f6fed"
             " Arrow=#ff2f6fed Shadow=#ff000000\"; }"
-            // The dock resize grip is invisible with the stock style; mark it with a seam
-            // line that lights up on hover (see the matching rule in theme-template.qss).
             "ads--CDockSplitter::handle:horizontal"
             "{ width: 6px; border-left: 1px solid palette(mid); }"
             "ads--CDockSplitter::handle:vertical"
             "{ height: 6px; border-top: 1px solid palette(mid); }"
             "ads--CDockSplitter::handle:hover"
             "{ background: #ff2f6fed; }");
+    }
+
+    //!< The palette the desktop started the application with. Latches on the first call,
+    //!< which happens before any theme has replaced it.
+    const QPalette& defaultPalette()
+    {
+        static const QPalette _palette{ QApplication::palette() };
+        return _palette;
     }
 
     const QString& defaultStyleName()
@@ -197,17 +204,38 @@ namespace
         static QString _applied;
         return _applied;
     }
+
+    //!< The style sheet of the theme in force. Empty until the first theme is applied.
+    QString& activeStyleSheet()
+    {
+        static QString _sheet;
+        return _sheet;
+    }
+
+    //!< Hands the sheet to every window that carries its own style chain.
+    void installStyleSheet(const QString& sheet)
+    {
+        const QWidgetList tops{ QApplication::topLevelWidgets() };
+        for (QWidget* top : tops)
+        {
+            if ((top != nullptr) && (top->parentWidget() == nullptr))
+            {
+                top->setStyleSheet(sheet);
+            }
+        }
+    }
 }
 
 QList<OptionsManager::eAppTheme> NEAppThemes::allThemes()
 {
     return QList<OptionsManager::eAppTheme>
     {
-          OptionsManager::eAppTheme::SystemDefault
-        , OptionsManager::eAppTheme::ModernLight
+          OptionsManager::eAppTheme::ModernLight
         , OptionsManager::eAppTheme::ModernDark
         , OptionsManager::eAppTheme::MidnightBlue
         , OptionsManager::eAppTheme::Nord
+        , OptionsManager::eAppTheme::SystemFusion
+        , OptionsManager::eAppTheme::SystemDefault
     };
 }
 
@@ -217,12 +245,14 @@ QString NEAppThemes::themeDisplayName(OptionsManager::eAppTheme theme)
     {
     case OptionsManager::eAppTheme::SystemDefault:
         return QCoreApplication::translate("NEAppThemes", "System (Default)");
+    case OptionsManager::eAppTheme::SystemFusion:
+        return QCoreApplication::translate("NEAppThemes", "System (Fusion)");
     case OptionsManager::eAppTheme::ModernLight:
-        return QCoreApplication::translate("NEAppThemes", "Modern Light");
+        return QCoreApplication::translate("NEAppThemes", "Light");
     case OptionsManager::eAppTheme::ModernDark:
-        return QCoreApplication::translate("NEAppThemes", "Modern Dark");
+        return QCoreApplication::translate("NEAppThemes", "Dark");
     case OptionsManager::eAppTheme::MidnightBlue:
-        return QCoreApplication::translate("NEAppThemes", "Midnight Blue");
+        return QCoreApplication::translate("NEAppThemes", "Blue");
     case OptionsManager::eAppTheme::Nord:
         return QCoreApplication::translate("NEAppThemes", "Nord");
     default:
@@ -236,15 +266,12 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
     if (app == nullptr)
         return;
 
-    // Read unconditionally: it latches the style the desktop started the application with,
-    // and it has to latch before the first theme replaces that style.
     const QString& systemStyle = defaultStyleName();
-    const bool system{ theme == OptionsManager::eAppTheme::SystemDefault };
-    const QString wanted{ system ? systemStyle : QStringLiteral("Fusion") };
+    const QPalette& systemPalette = defaultPalette();
+    const bool native{ theme == OptionsManager::eAppTheme::SystemDefault };
+    const bool system{ native || (theme == OptionsManager::eAppTheme::SystemFusion) };
+    const QString wanted{ native ? systemStyle : QStringLiteral("Fusion") };
 
-    // Installing a style walks and repolishes every widget of the application through the
-    // style sheet that is still on, which costs about as much as the sheet itself. The four
-    // built-in themes all run on Fusion, so the style is only swapped when it really changes.
     if (wanted != appliedStyleName())
     {
         QApplication::setStyle(QStyleFactory::create(wanted));
@@ -256,10 +283,8 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
 #endif
-        QApplication::setPalette(QApplication::style()->standardPalette());
-        app->setStyleSheet(baseStyleSheet());
-        // The system theme takes its colours from the desktop, so the ink of the icons is
-        // read back from the palette that was just installed.
+        QApplication::setPalette(native ? QApplication::style()->standardPalette() : systemPalette);
+        activeStyleSheet() = baseStyleSheet();
         NELusanCommon::setIconsForDarkTheme(QApplication::palette().color(QPalette::ColorRole::Window).lightness() < 128);
     }
     else
@@ -270,6 +295,16 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
         app->styleHints()->setColorScheme(colors.isDark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light);
 #endif
         QApplication::setPalette(themePalette(colors));
-        app->setStyleSheet(themeStyleSheet(colors));
+        activeStyleSheet() = themeStyleSheet(colors);
+    }
+
+    installStyleSheet(activeStyleSheet());
+}
+
+void NEAppThemes::applyThemeToWindow(QWidget& window)
+{
+    if (window.parentWidget() == nullptr)
+    {
+        window.setStyleSheet(activeStyleSheet());
     }
 }

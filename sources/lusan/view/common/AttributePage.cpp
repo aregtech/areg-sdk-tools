@@ -105,6 +105,8 @@ AttributePage::AttributePage(AttributeModel& model, const QString& headline, QWi
     , mNotifyNames      (new QStringListModel(notificationNames(), this))
     , mTableCell        (nullptr)
     , mNameCounter      (0)
+    , mListPending      (false)
+    , mTypesPending     (false)
 {
     buildUi(headline);
     setupSignals();
@@ -141,9 +143,6 @@ void AttributePage::buildUi(const QString& headline)
 
     root->addLayout(columns, 1);
 
-    // Every column is editable in the list as well as in the details panel, so a row can be filled
-    // in without leaving the keyboard. The third column opens a picker where it holds a
-    // notification kind, and a plain editor where it holds a value.
     QTreeWidget* table = mList->ctrlTableList();
     const int colExtra = static_cast<int>(AttributeListView::eColumn::ColExtra);
     QList<QAbstractItemModel*> pickers{ mTypeNames };
@@ -154,15 +153,11 @@ void AttributePage::buildUi(const QString& headline)
         pickerColumns.append(colExtra);
     }
 
-    // The inline editors commit when the edit is done, not per keystroke: a commit rebuilds the
-    // list, which would tear the open editor down after the first character typed.
     mTableCell = new TableCell(pickers, pickerColumns, table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(AttributeListView::eColumn::ColName), TableCell::eCellValidation::Identifier);
 
     if (hasValueColumn())
     {
-        // A structure or a container carries no literal, so its value cell stays closed, exactly
-        // as the details Value field is disabled for those types.
         mTableCell->setEditableCheck([this, colExtra](const QModelIndex& index) -> bool
             {
                 if (index.column() != colExtra)
@@ -189,8 +184,6 @@ void AttributePage::buildUi(const QString& headline)
 
     if (hasValueColumn() == false)
     {
-        // Both the details combo and the inline picker read the same canonical strings the entry
-        // stores, so neither can offer a spelling the other refuses.
         QComboBox* notify = mDetails->ctrlNotification();
         const QSignalBlocker blocker(notify);
         notify->setModel(mNotifyNames);
@@ -362,8 +355,6 @@ void AttributePage::updateValueControl(const AttributeEntry* entry)
 
     const QString typeName = entry->getType();
     DataTypeCustom* custom = findCustomType(typeName);
-    // Imported is deliberately excluded: the type is defined elsewhere and opaque to Lusan, so any
-    // literal the user types is accepted as-is rather than rejected outright.
     const bool hasNoLiteral = (custom != nullptr)
         && ((custom->getCategory() == DataTypeBase::eCategory::Structure)
          || (custom->getCategory() == DataTypeBase::eCategory::Container));
@@ -396,8 +387,6 @@ void AttributePage::updateValueControl(const AttributeEntry* entry)
 
 QString AttributePage::valueValidationReason(const QString& typeName, const QString& value) const
 {
-    // The same answer the validation engine gives, so the hint under the field and the finding
-    // in the results panel can never disagree.
     return DocRuleChecks::literalReason(mModel.getDocument().getDataTypeSection(), typeName, value);
 }
 
@@ -518,6 +507,10 @@ uint32_t AttributePage::currentAttributeId(void) const
 
 void AttributePage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
+    // The list may be waiting for a rebuild the page put off while it was hidden, and what
+    // is revealed has to be the row the model holds now.
+    flushPendingRefresh();
+
     if (selectAttribute(id) == false)
     {
         return;
@@ -536,8 +529,6 @@ void AttributePage::revealElement(uint32_t id, eIssueField field /*= eIssueField
 void AttributePage::dataTypesChanged(void)
 {
     populateTypes();
-    // Every attribute keeps a resolved pointer to its declared type beside the type name, and a
-    // type that is gone, renamed or converted leaves that pointer wrong.
     mModel.resolveDeclaredTypes();
     refreshAll();
 }
@@ -841,10 +832,50 @@ bool AttributePage::selectAttribute(uint32_t id)
 
 void AttributePage::onNotifierChanged(void)
 {
+    if (isVisible() == false)
+    {
+        mListPending = true;
+        return;
+    }
+
+    mListPending = false;
     refreshAll();
 }
 
+void AttributePage::flushPendingRefresh(void)
+{
+    if (mTypesPending)
+    {
+        mTypesPending = false;
+        applyDataTypesChanged();
+    }
+
+    if (mListPending)
+    {
+        mListPending = false;
+        refreshAll();
+    }
+}
+
+void AttributePage::showEvent(QShowEvent* event)
+{
+    QScrollArea::showEvent(event);
+    flushPendingRefresh();
+}
+
 void AttributePage::onDataTypesChanged(void)
+{
+    if (isVisible() == false)
+    {
+        mTypesPending = true;
+        return;
+    }
+
+    mTypesPending = false;
+    applyDataTypesChanged();
+}
+
+void AttributePage::applyDataTypesChanged(void)
 {
     dataTypesChanged();
 }

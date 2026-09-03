@@ -26,14 +26,13 @@
 #include <QSortFilterProxyModel>
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
 #include "areg/logging/areg_log.h"
 #include <QMap>
 #include <QSet>
 #include <QString>
 #include <QRegularExpression>
 
-
-class LoggingModelBase;
 
 /**
  * \brief   Filter proxy model for the log viewer to enable filtering of log messages.
@@ -107,18 +106,19 @@ public:
 public slots:
     /**
      * \brief   Sets combo box filter for a specific column.
-     * \param   logicalColumn   The logical column index to filter.
-     * \param   filters         The list of selected items to filter by.
+     * \param   column      The column to filter, named by the column and not by the place
+     *                      it holds in the table, so a hidden column filters as well.
+     * \param   filters     The list of selected items to filter by.
      **/
-    void setComboFilter(int logicalColumn, const NELusanCommon::FilterList& filters);
+    void setComboFilter(LoggingModelBase::eColumn column, const NELusanCommon::FilterList& filters);
 
     /**
      * \brief   Sets text filter for a specific column.
-     * \param   logicalColumn   The logical column index to filter.
-     * \param   text           The text to filter by.
+     * \param   column      The column to filter, not the place it holds in the table.
+     * \param   text        The text to filter by.
      **/
-    void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
-    void setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter);
+    void setTextFilter(LoggingModelBase::eColumn column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
+    void setTextFilter(LoggingModelBase::eColumn column, const NELusanCommon::FilterString& filter);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes

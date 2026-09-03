@@ -23,7 +23,6 @@
 #include <QAction>
 #include <QFileSystemWatcher>
 #include <QHash>
-#include <QVariantAnimation>
 #include <QSize>
 
 #include "lusan/view/common/MdiArea.hpp"
@@ -847,7 +846,6 @@ private:
     QAction*        mActNavOfflineLogs; //!< Shows/hides the Offline Logs tab.
     QAction*        mActNavLabels;      //!< Shows/hides the captions under the rail icons.
     QAction*        mActNavCollapse;    //!< Collapses the navigation panel to its rail.
-    QVariantAnimation* mNaviWidthAnimation; //!< Runs the navigation dock area width on collapse.
     int             mNaviExpandedWidth; //!< Width the navigation dock area returns to.
     QAction*        mActNavToolbar;     //!< Places the drawing toolbar in the Navigation Window.
     QAction*        mActNavProperties;  //!< Places the Properties panel in the Navigation Window.

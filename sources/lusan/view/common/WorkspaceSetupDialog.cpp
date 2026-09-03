@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/WorkspaceSetupDialog.hpp"
+#include "lusan/app/NEAppThemes.hpp"
 #include "lusan/view/common/OptionPageProjectDirs.hpp"
 #include "ui/ui_WorkspaceSetupDialog.h"
 
@@ -29,6 +30,8 @@ WorkspaceSetupDialog::WorkspaceSetupDialog()
     , mUi               (new Ui::WorkspaceSetupDialog())
     , mOptionProjectDirs(nullptr)
 {
+    // Opened before the main window on a first run, so it carries the theme itself.
+    NEAppThemes::applyThemeToWindow(*this);
     mUi->setupUi(this);
     mOptionProjectDirs = new OptionPageProjectDirs(this);
     QSize size{mOptionProjectDirs->size()};

@@ -63,7 +63,7 @@ OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
     , mLogs                 ( )
     , mThemeCombo           ( nullptr )
     , mThemeLabel           ( nullptr )
-    , mInitialTheme         ( static_cast<int>(OptionsManager::eAppTheme::SystemDefault) )
+    , mInitialTheme         ( static_cast<int>(OptionsManager::eAppTheme::ModernLight) )
 {
     setupWidgets();
     setupUi();

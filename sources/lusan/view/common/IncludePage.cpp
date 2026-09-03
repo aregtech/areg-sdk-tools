@@ -68,6 +68,7 @@ IncludePage::IncludePage(IncludeModel& model, const IncludeTypeConfig& config, c
     , mDetails      (new IncludeDetailsView(this))
     , mTableCell    (nullptr)
     , mNameCounter  (0)
+    , mListPending  (false)
 {
     buildUi(headline);
     setupSignals();
@@ -345,6 +346,10 @@ uint32_t IncludePage::currentIncludeId(void) const
 
 bool IncludePage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
+    // The list may be waiting for a rebuild the page put off while it was hidden, and what
+    // is revealed has to be the row the model holds now.
+    flushPendingRefresh();
+
     QTreeWidgetItem* item = mList->findRow(id);
     if (item == nullptr)
     {
@@ -613,5 +618,30 @@ void IncludePage::onUpdateClicked(void)
 
 void IncludePage::onNotifierChanged(void)
 {
+    // One edit reaches every page of the document. A page the user is not looking at
+    // rebuilds its list when it comes forward, so the cost of an edit follows what the
+    // user sees and not how many pages the document has.
+    if (isVisible() == false)
+    {
+        mListPending = true;
+        return;
+    }
+
+    mListPending = false;
     refreshAll();
+}
+
+void IncludePage::flushPendingRefresh(void)
+{
+    if (mListPending)
+    {
+        mListPending = false;
+        refreshAll();
+    }
+}
+
+void IncludePage::showEvent(QShowEvent* event)
+{
+    QScrollArea::showEvent(event);
+    flushPendingRefresh();
 }

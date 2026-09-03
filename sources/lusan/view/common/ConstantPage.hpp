@@ -143,6 +143,11 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
+     * \brief   Rebuilds what a model change asked for while the page was hidden.
+     **/
+    virtual void showEvent(QShowEvent* event) override;
+
+    /**
      * \brief   Asks whether the constant may be deleted. The base page always agrees; a document
      *          that can tell where a constant is used warns about the references first.
      * \param   id  The document ID of the constant about to be deleted.
@@ -205,6 +210,12 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 protected:
+    //!< Runs a rebuild the page put off while it was hidden, if one is waiting.
+    void flushPendingRefresh(void);
+
+    //!< Refills the type lists the page offers from the model.
+    void applyDataTypesChanged(void);
+
     //!< Puts the caret in the selected constant's Name field with its text selected.
     void focusNameField(void);
 
@@ -259,6 +270,8 @@ private:
     QStringListModel*       mTypeNames;     //!< The type names offered by the inline type editor.
     TableCell*              mTableCell;     //!< The inline editors of the list.
     uint32_t                mNameCounter;   //!< The counter behind the generated names.
+    bool                    mListPending;   //!< A change reached this page while it was hidden; its list is stale.
+    bool                    mTypesPending;  //!< A data type change reached this page while it was hidden.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

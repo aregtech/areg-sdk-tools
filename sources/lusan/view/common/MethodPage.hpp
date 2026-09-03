@@ -146,6 +146,11 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
+     * \brief   Rebuilds what a model change asked for while the page was hidden.
+     **/
+    virtual void showEvent(QShowEvent* event) override;
+
+    /**
      * \brief   Asks whether the method may be deleted. The base page always agrees; a document
      *          that can tell where a method is used warns about the references first.
      * \param   id  The document ID of the method about to be deleted.
@@ -237,6 +242,12 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 protected:
+    //!< Runs a rebuild the page put off while it was hidden, if one is waiting.
+    void flushPendingRefresh(void);
+
+    //!< Refills the type lists the page offers from the model.
+    void applyDataTypesChanged(void);
+
     //!< The model this page edits.
     inline MethodModel& getModel(void) const;
 
@@ -325,6 +336,8 @@ private:
     QStandardItemModel*     mKindModel;         //!< The method kinds the type cell offers, marked
                                                 //!< with the same icons the details radios carry.
     uint32_t                mMethodNameCounter; //!< The counter behind the generated names.
+    bool                    mListPending;       //!< A change reached this page while it was hidden; its list is stale.
+    bool                    mTypesPending;      //!< A data type change reached this page while it was hidden.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

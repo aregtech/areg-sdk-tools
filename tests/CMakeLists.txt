@@ -1000,6 +1000,8 @@ set_target_properties(lusan_doc_schema_tests PROPERTIES WIN32_EXECUTABLE OFF)
 qt_add_executable(lusan_theme_icon_tests
     ${LUSAN}/common/NELusanCommon.cpp
     ${LUSAN}/common/NETimeUnits.cpp
+    ${LUSAN}/view/common/MdiArea.cpp
+    ${LUSAN}/view/common/MdiArea.hpp
     ${LUSAN_ROOT}/tests/common/ThemeIconTests.cpp
     ${LUSAN}/res/lusan.qrc
 )

@@ -216,7 +216,7 @@ protected:
     //!< Keeps the marks in place when the field changes width.
     void resizeEvent(QResizeEvent* event) override;
 
-    //!< Answers Enter, F3 and Escape.
+    //!< Answers Enter and F3. Escape is left to the window that holds the field.
     void keyPressEvent(QKeyEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////

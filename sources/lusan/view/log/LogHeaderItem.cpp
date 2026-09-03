@@ -81,7 +81,7 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
         connect(mWidget, &LogFilterBase::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
                 const QList<NELusanCommon::FilterData> picked{ widget->getSelectedData() };
                 markFiltered(picked.isEmpty() == false);
-                emit mHeader.signalComboFilterChanged(fromColumnToIndex(), picked);
+                emit mHeader.signalComboFilterChanged(mColumn, picked);
             });
     }
     else if (mType == eType::Text)
@@ -93,12 +93,12 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
                 if ((phrase == nullptr) || phrase->text.isEmpty())
                 {
                     markFiltered(false);
-                    emit mHeader.signalTextFilterChanged(fromColumnToIndex(), QString(), false, false, false);
+                    emit mHeader.signalTextFilterChanged(mColumn, QString(), false, false, false);
                 }
                 else
                 {
                     markFiltered(true);
-                    emit mHeader.signalTextFilterChanged(fromColumnToIndex(), phrase->text, phrase->isCaseSensitive, phrase->isWholeWord, phrase->isWildCard);
+                    emit mHeader.signalTextFilterChanged(mColumn, phrase->text, phrase->isCaseSensitive, phrase->isWholeWord, phrase->isWildCard);
                 }
             });
     }

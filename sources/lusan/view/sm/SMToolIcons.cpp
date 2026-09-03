@@ -20,12 +20,18 @@
 #include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QApplication>
+#include <QGuiApplication>
+#include <QHash>
+#include <QIconEngine>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPalette>
 #include <QPen>
 #include <QPixmap>
 #include <QPolygonF>
+#include <QScreen>
+#include <QStyle>
+#include <QStyleOption>
 
 #include <cmath>
 
@@ -568,19 +574,111 @@ namespace
 
         }
     }
+
+    /**
+     * \brief   Draws one toolbar glyph in the text colour the application palette holds
+     *          when the icon is painted, so a theme change reaches icons already handed
+     *          to an action or a button.
+     **/
+    class ToolIconEngine : public QIconEngine
+    {
+    public:
+        explicit ToolIconEngine(SMToolIcons::eIcon kind)
+            : QIconEngine   ( )
+            , mKind         (kind)
+            , mCache        ( )
+        {
+        }
+
+        void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override
+        {
+            const qreal ratio{ painter->device() != nullptr ? painter->device()->devicePixelRatioF() : 1.0 };
+            const QPixmap ready{ scaledPixmap(rect.size(), mode, state, ratio) };
+            if (ready.isNull())
+                return;
+
+            const QSize extent{ ready.deviceIndependentSize().toSize() };
+            painter->drawPixmap(QStyle::alignedRect(Qt::LayoutDirection::LeftToRight, Qt::AlignmentFlag::AlignCenter, extent, rect), ready);
+        }
+
+        QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+        {
+            const QScreen* screen{ QGuiApplication::primaryScreen() };
+            return scaledPixmap(size, mode, state, screen != nullptr ? screen->devicePixelRatio() : 1.0);
+        }
+
+        QPixmap scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::State state, qreal scale) override
+        {
+            Q_UNUSED(state);
+            const QColor color{ QApplication::palette().color(QPalette::ColorRole::WindowText) };
+            const quint64 key{ cacheKey(size, mode, scale, color) };
+            const auto found = mCache.constFind(key);
+            if (found != mCache.constEnd())
+                return found.value();
+
+            const int extent{ qMax(1, qMin(size.width(), size.height())) };
+            const int pixels{ qMax(1, qRound(extent * scale)) };
+            QPixmap ready(pixels, pixels);
+            ready.fill(Qt::GlobalColor::transparent);
+            ready.setDevicePixelRatio(scale);
+
+            QPainter painter(&ready);
+            painter.setRenderHint(QPainter::RenderHint::Antialiasing, true);
+            painter.scale(pixels / static_cast<qreal>(IconSize), pixels / static_cast<qreal>(IconSize));
+            drawGlyph(painter, mKind, color);
+            painter.end();
+
+            if (mode != QIcon::Mode::Normal)
+            {
+                QStyleOption option;
+                option.palette = QApplication::palette();
+                ready = QApplication::style()->generatedIconPixmap(mode, ready, &option);
+            }
+
+            mCache.insert(key, ready);
+            return ready;
+        }
+
+        QSize actualSize(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+        {
+            Q_UNUSED(mode);
+            Q_UNUSED(state);
+            const int extent{ qMax(1, qMin(size.width(), size.height())) };
+            return QSize(extent, extent);
+        }
+
+        bool isNull(void) override
+        {
+            return false;
+        }
+
+        QString key(void) const override
+        {
+            return QStringLiteral("LusanSMToolIcon");
+        }
+
+        QIconEngine* clone(void) const override
+        {
+            return new ToolIconEngine(mKind);
+        }
+
+    private:
+        //!< Packs everything that makes two renders of one glyph differ into a single number.
+        //!< The lookup runs on every paint, so it allocates nothing.
+        static quint64 cacheKey(const QSize& size, QIcon::Mode mode, qreal scale, const QColor& color)
+        {
+            const quint64 extent{ static_cast<quint64>(qBound(0, qMin(size.width(), size.height()), 0xFFFF)) };
+            const quint64 ratio { static_cast<quint64>(qBound(0, qRound(scale * 100.0), 0xFFF)) };
+            const quint64 ink   { static_cast<quint64>(color.rgba()) };
+            return (ink << 32) | (extent << 16) | (ratio << 4) | static_cast<quint64>(mode);
+        }
+
+        SMToolIcons::eIcon      mKind;   //!< The glyph this engine draws.
+        QHash<quint64, QPixmap> mCache;  //!< Ready pixmaps, keyed by extent, ratio, mode and ink.
+    };
 }
 
 QIcon SMToolIcons::icon(eIcon kind)
 {
-    const QColor color = QApplication::palette().color(QPalette::WindowText);
-
-    QPixmap pixmap(IconSize, IconSize);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    drawGlyph(painter, kind, color);
-    painter.end();
-
-    return QIcon(pixmap);
+    return QIcon(new ToolIconEngine(kind));
 }

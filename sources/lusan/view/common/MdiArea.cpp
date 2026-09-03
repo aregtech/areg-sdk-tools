@@ -18,6 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/common/MdiArea.hpp"
+
+#include <QApplication>
+#include <QEvent>
+#include <QPalette>
 #include <QVBoxLayout>
 
 MdiArea::MdiArea(QWidget* parent /*= nullptr*/)
@@ -30,4 +34,23 @@ MdiArea::MdiArea(QWidget* parent /*= nullptr*/)
     setTabsMovable(true);
     setTabShape(QTabWidget::TabShape::Rounded);
     setTabPosition(QTabWidget::TabPosition::North);
+    applyThemeBackground();
+}
+
+void MdiArea::changeEvent(QEvent* event)
+{
+    QMdiArea::changeEvent(event);
+    if (event != nullptr)
+    {
+        const QEvent::Type type{ event->type() };
+        if ((type == QEvent::Type::PaletteChange) || (type == QEvent::Type::ApplicationPaletteChange))
+        {
+            applyThemeBackground();
+        }
+    }
+}
+
+inline void MdiArea::applyThemeBackground(void)
+{
+    setBackground(QApplication::palette().brush(QPalette::ColorRole::Dark));
 }

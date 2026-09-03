@@ -24,6 +24,8 @@
 #include <QList>
 #include <QString>
 
+class QWidget;
+
 /**
  * \namespace   NEAppThemes
  * \brief       Application visual themes: style, palette and stylesheet management.
@@ -47,6 +49,15 @@ namespace NEAppThemes
      * \param   theme   The theme to apply.
      **/
     void applyTheme(OptionsManager::eAppTheme theme);
+
+    /**
+     * \brief   Puts the style sheet of the active theme on a window that stands on its own.
+     *          A widget takes the style sheet of its parent chain, so a window created with a
+     *          parent is already covered by that parent and this does nothing for it. Call it
+     *          from the constructor of every window that is created without one.
+     * \param   window  The window to hand the active theme's style sheet to.
+     **/
+    void applyThemeToWindow(QWidget& window);
 }
 
 #endif // LUSAN_APPLICATION_NEAPPTHEMES_HPP

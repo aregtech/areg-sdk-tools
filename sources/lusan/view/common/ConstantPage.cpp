@@ -91,6 +91,8 @@ ConstantPage::ConstantPage(ConstantModel& model, const QString& headline, QWidge
     , mTypeNames    (new QStringListModel(this))
     , mTableCell    (nullptr)
     , mNameCounter  (0)
+    , mListPending  (false)
+    , mTypesPending (false)
 {
     buildUi(headline);
     setupSignals();
@@ -127,11 +129,7 @@ void ConstantPage::buildUi(const QString& headline)
 
     root->addLayout(columns, 1);
 
-    // Name, type and value are editable in the list as well as in the details panel, so a row can
-    // be filled in without leaving the keyboard.
     QTreeWidget* table = mList->ctrlTableList();
-    // The inline editors commit when the edit is done, not per keystroke: a commit rebuilds the
-    // list, which would tear the open editor down after the first character typed.
     mTableCell = new TableCell(QList<QAbstractItemModel*>{ mTypeNames }, QList<int>{ static_cast<int>(eColumn::ColType) }, table, this, true);
     mTableCell->setColumnValidation(static_cast<int>(eColumn::ColName), TableCell::eCellValidation::Identifier);
     table->setItemDelegateForColumn(static_cast<int>(eColumn::ColName) , mTableCell);
@@ -157,8 +155,6 @@ void ConstantPage::setupSignals(void)
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &ConstantPage::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &ConstantPage::onMoveDownClicked);
 
-    // List keys, each doing what the matching toolbar button does: Delete removes the selected
-    // constant, Insert adds one, F2 puts the caret in its name.
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
     QShortcut* scRename = new QShortcut(QKeySequence(Qt::Key_F2), table);
@@ -292,8 +288,6 @@ void ConstantPage::updateValueControl(const ConstantEntry* entry)
 
     const QString typeName = entry->getType();
     DataTypeCustom* custom = findCustomType(typeName);
-    // Imported is deliberately excluded: the type is defined elsewhere and opaque to Lusan,
-    // so any literal the user types is accepted as-is rather than rejected outright.
     const bool hasNoLiteral = (custom != nullptr)
         && ((custom->getCategory() == DataTypeBase::eCategory::Structure)
          || (custom->getCategory() == DataTypeBase::eCategory::Container));
@@ -435,6 +429,8 @@ uint32_t ConstantPage::currentConstantId(void) const
 
 void ConstantPage::revealElement(uint32_t id, eIssueField field /*= eIssueField::None*/)
 {
+    flushPendingRefresh();
+
     if (selectConstant(id) == false)
     {
         return;
@@ -737,10 +733,50 @@ bool ConstantPage::selectConstant(uint32_t id)
 
 void ConstantPage::onNotifierChanged(void)
 {
+    if (isVisible() == false)
+    {
+        mListPending = true;
+        return;
+    }
+
+    mListPending = false;
     refreshAll();
 }
 
+void ConstantPage::flushPendingRefresh(void)
+{
+    if (mTypesPending)
+    {
+        mTypesPending = false;
+        applyDataTypesChanged();
+    }
+
+    if (mListPending)
+    {
+        mListPending = false;
+        refreshAll();
+    }
+}
+
+void ConstantPage::showEvent(QShowEvent* event)
+{
+    QScrollArea::showEvent(event);
+    flushPendingRefresh();
+}
+
 void ConstantPage::onDataTypesChanged(void)
+{
+    if (isVisible() == false)
+    {
+        mTypesPending = true;
+        return;
+    }
+
+    mTypesPending = false;
+    applyDataTypesChanged();
+}
+
+void ConstantPage::applyDataTypesChanged(void)
 {
     populateTypes();
     updateValueControl(mModel.findConstant(currentConstantId()));

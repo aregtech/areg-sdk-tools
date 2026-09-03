@@ -510,22 +510,23 @@ int main(int argc, char* argv[])
         model.clearRefusedScopes();
         CHECK(filter.rowCount() == 4);
 
-        // The message column filter, and the phrase that matches nothing.
-        const int messageIndex{ model.fromColumnToIndex(LoggingModelBase::eColumn::LogColumnMessage) };
-        CHECK(messageIndex >= 0);
+        // The message column filter, and the phrase that matches nothing. The proxy is told
+        // the column, so it holds a filter whether or not the table shows that column.
+        const LoggingModelBase::eColumn messageColumn{ LoggingModelBase::eColumn::LogColumnMessage };
+        CHECK(model.getActiveColumns().contains(messageColumn));
 
         NELusanCommon::FilterString phrase;
         phrase.text = QStringLiteral("alpha");
-        filter.setTextFilter(messageIndex, phrase);
+        filter.setTextFilter(messageColumn, phrase);
         CHECK(filter.rowCount() == 2);
         CHECK(filter.hasColumnFilters());
 
         phrase.text = QStringLiteral("nothing matches this");
-        filter.setTextFilter(messageIndex, phrase);
+        filter.setTextFilter(messageColumn, phrase);
         CHECK(filter.rowCount() == 0);
 
         phrase.text = QString();
-        filter.setTextFilter(messageIndex, phrase);
+        filter.setTextFilter(messageColumn, phrase);
         CHECK(filter.rowCount() == 4);
         CHECK(filter.hasColumnFilters() == false);
     }
@@ -627,7 +628,7 @@ int main(int argc, char* argv[])
         LogViewerFilter filter(&model);
         CHECK(filter.rowCount() == rows);
 
-        const int message{ model.fromColumnToIndex(LoggingModelBase::eColumn::LogColumnMessage) };
+        const LoggingModelBase::eColumn message{ LoggingModelBase::eColumn::LogColumnMessage };
         QElapsedTimer clock;
 
         // The row count is asked for inside the measure. A proxy that drops its mapping does
