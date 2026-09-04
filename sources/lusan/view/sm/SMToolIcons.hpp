@@ -41,6 +41,7 @@ namespace SMToolIcons
     {
           AddState
         , AddFinalState
+        , AddHistoryState
         , AddTransition
         , AddInternal      //!< An internal transition: a loop that never leaves its state box.
         , AddNote

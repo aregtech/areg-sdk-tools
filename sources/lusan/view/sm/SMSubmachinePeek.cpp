@@ -176,6 +176,18 @@ void SMSubmachinePeek::paintEvent(QPaintEvent* /*event*/)
                 painter.drawEllipse(inner);
             }
         }
+        else if (shape.kind == SMStateEntry::eStateKind::History)
+        {
+            // A small dot inside the pill: at peek scale a legible "H"/"H*" would not fit, so
+            // the landmark is a distinct filled center instead of Start's and Final's rings.
+            painter.drawRoundedRect(box, 2.0, 2.0);
+            const QPointF center = box.center();
+            const double  dotR   = std::max(std::min(box.width(), box.height()) * 0.18, 1.0);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(NESMDesign::contrastTextColor(pal.color(QPalette::ToolTipBase)));
+            painter.drawEllipse(center, dotR, dotR);
+            painter.setBrush(Qt::NoBrush);
+        }
         else
         {
             painter.drawRoundedRect(box, 2.0, 2.0);

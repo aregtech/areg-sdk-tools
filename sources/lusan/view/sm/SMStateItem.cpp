@@ -246,6 +246,7 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     , mName             ( )
     , mKind             (SMStateEntry::eStateKind::Normal)
     , mHistory          (SMStateEntry::eHistory::None)
+    , mHistoryDepth     (SMStateEntry::eHistoryDepth::Shallow)
     , mComposite        (false)
     , mImported         (false)
     , mSubmachine       ( )
@@ -368,14 +369,7 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
         paintMarker(painter, box, palette);
         if (mHasNote)
         {
-            QColor fill{ mColorName };
-            if (fill.isValid() == false)
-            {
-                fill = (mKind == SMStateEntry::eStateKind::Start)
-                        ? NESMDesign::startStateColor(palette) : NESMDesign::finalStateColor(palette);
-            }
-
-            paintNoteBadge(painter, NESMDesign::contrastTextColor(fill));
+            paintNoteBadge(painter, NESMDesign::contrastTextColor(markerFillColor(palette)));
         }
     }
     else
@@ -434,15 +428,29 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
     }
 }
 
+QColor SMStateItem::markerFillColor(const QPalette& palette) const
+{
+    QColor fill{ mColorName };
+    if (fill.isValid())
+    {
+        return fill;
+    }
+
+    switch (mKind)
+    {
+    case SMStateEntry::eStateKind::Start:      return NESMDesign::startStateColor(palette);
+    case SMStateEntry::eStateKind::History:    return NESMDesign::historyStateColor(palette);
+    case SMStateEntry::eStateKind::Final:
+    default:                                   return NESMDesign::finalStateColor(palette);
+    }
+}
+
 void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalette& palette)
 {
-    const bool start = (mKind == SMStateEntry::eStateKind::Start);
+    const bool start   = (mKind == SMStateEntry::eStateKind::Start);
+    const bool history = (mKind == SMStateEntry::eStateKind::History);
 
-    QColor fill{ mColorName };
-    if (fill.isValid() == false)
-    {
-        fill = (start ? NESMDesign::startStateColor(palette) : NESMDesign::finalStateColor(palette));
-    }
+    const QColor fill = markerFillColor(palette);
 
     const double radius = boxCornerRadius();
     QPainterPath path;
@@ -453,7 +461,7 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
     painter->drawPath(path);
 
     const QColor textColor = NESMDesign::contrastTextColor(fill);
-    if (start == false)
+    if ((start == false) && (history == false))
     {
         // Final: the classic double border (an inner ring inside the pill).
         QColor ring{ textColor };
@@ -464,14 +472,21 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
         painter->drawRoundedRect(inner, ir, ir);
     }
 
-    // The glyph and the name, centered together: Start = play triangle, Final = bullseye.
+    // The glyph and the name, centered together: Start = play triangle, Final = bullseye,
+    // History = a circled H (Shallow) or H* (Deep), the same mark the composite header badge
+    // draws for the legacy History attribute.
     // The marker pill is compact, so its label uses a slightly smaller font than the header.
     QFont nameFont = painter->font();
     nameFont.setBold(true);
     nameFont.setPointSizeF(std::max(nameFont.pointSizeF() * 0.85, 6.5));
     const QFontMetricsF metrics{ nameFont };
 
-    const double glyphW  = 9.0;
+    QFont glyphFont = nameFont;
+    glyphFont.setPointSizeF(std::max(nameFont.pointSizeF() * 0.8, 5.5));
+    const QString historyMark = QString::fromLatin1(mHistoryDepth == SMStateEntry::eHistoryDepth::Deep ? "H*" : "H");
+    const double glyphW = history
+            ? std::max(QFontMetricsF{ glyphFont }.horizontalAdvance(historyMark) + 6.0, 12.0)
+            : 9.0;
     const double gap     = 4.0;
     // The marker pill is only four grid cells wide, so a tight padding keeps "Start" and "Final"
     // un-elided. The centered text never reaches the rounded corners.
@@ -493,6 +508,15 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
         painter->setPen(Qt::NoPen);
         painter->setBrush(textColor);
         painter->drawPath(glyph);
+    }
+    else if (history)
+    {
+        const QRectF glyphBox{ left, midY - glyphW / 2.0, glyphW, glyphW };
+        painter->setPen(QPen(textColor, 1.2));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawEllipse(glyphBox);
+        painter->setFont(glyphFont);
+        painter->drawText(glyphBox, Qt::AlignCenter, historyMark);
     }
     else
     {
@@ -1044,6 +1068,7 @@ void SMStateItem::updateFromModel()
     mName      = state->getName();
     mKind      = state->getKind();
     mHistory   = state->getHistory();
+    mHistoryDepth = state->getHistoryDepth();
     // A submachine counts as composite only when it owns at least one Normal state. One holding
     // just its Start marker is never persisted, so the box must not advertise it.
     mComposite = state->hasNestedStates() && state->getNestedStates()->hasRealState();

@@ -858,6 +858,13 @@ void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetSt
         return;
     }
 
+    // A History marker is reached only from outside its own level; a reconnect can only offer
+    // states drawn on the current level, so a History target here is the same-level (illegal) case.
+    if (target->isHistoryMarker())
+    {
+        return;
+    }
+
     // One undo step: persist the drop geometry, then retarget. Geometry first, so the retarget's
     // refresh reads the final anchor and there is no flash back to the old endpoint.
     const QString text = QCoreApplication::translate("SMScene", "Reconnect transition");
@@ -896,6 +903,12 @@ void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateI
         return;
     }
 
+    // A History marker owns no transitions (rule 54): never reparent one onto it.
+    if (newSource->isHistoryMarker())
+    {
+        return;
+    }
+
     // One undo step: persist the drop geometry under the old id first, then reparent, so the begin
     // anchor lands at the release position and the edge never flashes back to its old source.
     const QString text = QCoreApplication::translate("SMScene", "Reconnect transition source");
@@ -903,6 +916,11 @@ void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateI
     new SMSetEdgeGeometryCommand(data, mModel.getNotifier(), transitionId, SMMoveNodeCommand::takeNextGesture(), geometry, text, command);
     new SMReparentTransitionCommand(data, mModel.getNotifier(), *oldSource, *newSource, transitionId, text, command);
     mModel.getUndoStack().push(command);
+}
+
+bool SMScene::isRootLevel() const
+{
+    return (mModel.getData().findLevel(getLevelId()) == &mModel.getData().getStates());
 }
 
 uint32_t SMScene::placeNewState(SMStateEntry::eStateKind kind, const QRectF& box)

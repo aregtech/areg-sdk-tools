@@ -87,7 +87,8 @@ public:
 
     static constexpr const char* const  XML_FORMAT_100      { "1.0.0" };
     static constexpr const char* const  XML_FORMAT_110      { "1.1.0" };
-    static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_FORMAT_110 };
+    static constexpr const char* const  XML_FORMAT_120      { "1.2.0" };
+    static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_FORMAT_120 };
 
     /**
      * \struct  IdRepair
@@ -345,10 +346,18 @@ private:
     bool writeToPathAtomicConst(const QString& path) const;
     
     bool migrateFromVersion(const VersionNumber& sourceVersion);
-    
+
     bool migrateTo100(const VersionNumber& sourceVersion);
 
     bool migrateTo110(const VersionNumber& sourceVersion);
+
+    /**
+     * \brief   True when any state anywhere in the machine is a Kind="History" pseudo-state.
+     *          Decides the FormatVersion this document writes: 1.2.0 when true, 1.1.0
+     *          otherwise, recomputed on every save so removing the last History marker saves
+     *          the document back down to 1.1.0.
+     **/
+    bool usesHistoryPseudoState() const;
 
     //!< Reads a pre-1.1.0 `<ImportList>` and folds each `MachineImport` into the include list.
     void readLegacyImportList(QXmlStreamReader& xml);

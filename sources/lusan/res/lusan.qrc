@@ -116,10 +116,8 @@
         <file alias="app-logo-128.png">logo/app-logo-128.png</file>
         <file alias="app-logo-256.png">logo/app-logo-256.png</file>
     </qresource>
-    <qresource prefix="/data">
-        <file alias="Predefined Types">datatype.xml</file>
-    </qresource>
     <qresource prefix="/schema">
+        <file alias="Predefined Types">schema/datatype.xml</file>
         <file alias="fsml.xsd">schema/fsml.xsd</file>
         <file alias="siml.xsd">schema/siml.xsd</file>
         <file alias="dtml.xsd">schema/dtml.xsd</file>

@@ -514,6 +514,7 @@ namespace
     void Ctx::validateLevel(const LevelInfo& info)
     {
         int startCount = 0;
+        int historyCount = 0;
         SMStateEntry* firstStart = nullptr;
         for (SMStateEntry* state : info.level->getElements())
         {
@@ -525,6 +526,16 @@ namespace
                 else
                     add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_START_STATE,
                         vtr("More than one Start state on this machine level"));
+            }
+            else if ((state != nullptr) && (state->getKind() == SMStateEntry::eStateKind::History))
+            {
+                ++historyCount;
+                if (historyCount > 1)
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_HISTORY_DUPLICATE,
+                        vtr("More than one History state on this machine level"));
+                if (info.isRoot)
+                    add(state->getId(), eDocElementKind::State, eSeverity::Error, DocRules::RULE_HISTORY_ROOT,
+                        vtr("A History state is not allowed at the root level"));
             }
         }
 
@@ -567,6 +578,12 @@ namespace
 
             validatePseudoStart(state, isRootLevel);
         }
+        else if (state.isHistoryMarker())
+        {
+            if (state.hasOperations() || state.getTransitions().hasElements() || state.hasNestedStates())
+                add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_HISTORY_SHAPE,
+                    vtr("A History state cannot have operations, transitions or a nested StateList"));
+        }
 
         // A painted submachine and an imported one are mutually exclusive, neither belongs on
         // a Start or Final state, and history/completion hooks need a composite to act on.
@@ -576,6 +593,18 @@ namespace
             add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("A Submachine is not allowed on a Start or Final state"));
         if ((state.getHistory() != SMStateEntry::eHistory::None) && (composite == false))
             add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("History is only allowed on a composite state"));
+        if ((state.getHistory() != SMStateEntry::eHistory::None) && composite && (state.getNestedStates() != nullptr))
+        {
+            for (SMStateEntry* child : state.getNestedStates()->getElements())
+            {
+                if ((child != nullptr) && (child->getKind() == SMStateEntry::eStateKind::History))
+                {
+                    add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_HISTORY_CONFLICT,
+                        vtr("A state cannot carry both its own History attribute and a Kind=\"History\" child"));
+                    break;
+                }
+            }
+        }
         if ((state.getOnFinal().isEmpty() == false) && (composite == false))
             add(id, eDocElementKind::State, eSeverity::Error, DocRules::RULE_STATE_SHAPE, vtr("OnFinal is only allowed on a composite state"));
 
@@ -752,9 +781,12 @@ namespace
                 const SMStateEntry* target = mData.findStateById(targetId);
                 if (target == nullptr)
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND, vtr("Transition target does not resolve"));
-                else
+                else if (target->isHistoryMarker() == false)
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TARGET_SIBLING
                        , vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
+                // else: a History pseudo-state reached from outside its own level is the one
+                // legal exception to RULE_TARGET_SIBLING -- reaching this branch already proves
+                // the target is not a member of `level` (`sibling` above resolved to nullptr).
             }
             else if (sibling->isPseudoStart())
             {
@@ -765,6 +797,11 @@ namespace
                 else
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_PSEUDO_START
                        , vtr("Transition targets the Start state '%1'; a Start is a marker the machine never occupies").arg(sibling->getName()));
+            }
+            else if (sibling->isHistoryMarker())
+            {
+                add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_HISTORY_SIBLING
+                   , vtr("Transition targets History state '%1' from inside its own level; it is reached only from outside the composite it resumes").arg(sibling->getName()));
             }
         }
 
@@ -2157,7 +2194,7 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
     case DocRules::RULE_UNRESOLVED_ELEMENT:
         return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
     case DocRules::RULE_TARGET_SIBLING:
-        return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
+        return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent -- except a History pseudo-state, which is reached exactly by a transition from outside its level.");
     case DocRules::RULE_MISSING_VERSION:
         return vtr("The version is generated into the code and tells a client which contract it was built against. Give the document one.");
     case DocRules::RULE_FINAL_STATE:
@@ -2182,6 +2219,16 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return vtr("A boolean test reads its operand as true or false, and this operand is of a type that carries neither.");
     case DocRules::RULE_STATE_SHAPE:
         return vtr("A submachine belongs on a composite state; Start and Final cannot carry one.");
+    case DocRules::RULE_HISTORY_SHAPE:
+        return vtr("A History state is a pseudo-state: the machine never occupies it, so it owns no operations, no transitions and no nested StateList.");
+    case DocRules::RULE_HISTORY_DUPLICATE:
+        return vtr("Only one History state may mark a level's re-entry point. A second one would leave two markers naming the same decision.");
+    case DocRules::RULE_HISTORY_ROOT:
+        return vtr("A History state resumes a composite. The root level is not a composite, so there is nothing for it to resume.");
+    case DocRules::RULE_HISTORY_SIBLING:
+        return vtr("A History state is reached only by a transition entering its level from outside. From inside the same level it is an ordinary, unreachable target.");
+    case DocRules::RULE_HISTORY_CONFLICT:
+        return vtr("The composite's own History attribute and a Kind=\"History\" child both decide what re-entry does. Keep one; they disagree if both are written.");
     case DocRules::RULE_CONDITION_BODY:
         return vtr("An Embedded condition is the code it carries. Write the body, or make it a condition of another kind.");
     case DocRules::RULE_PARAMETERIZED_COND:

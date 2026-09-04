@@ -87,6 +87,15 @@ namespace
             p.drawEllipse(QPointF(16.0, 16.0), 4.0, 4.0);
             break;
 
+        case SMToolIcons::eIcon::AddHistoryState:
+            // The marker pill, with an "H" struck in three lines -- the same mnemonic the
+            // canvas and the properties panel draw for a History pseudo-state.
+            p.drawRoundedRect(QRectF(4.0, 11.0, 24.0, 10.0), 5.0, 5.0);
+            p.drawLine(QPointF(11.0, 12.5), QPointF(11.0, 19.5));
+            p.drawLine(QPointF(21.0, 12.5), QPointF(21.0, 19.5));
+            p.drawLine(QPointF(11.0, 16.0), QPointF(21.0, 16.0));
+            break;
+
         case SMToolIcons::eIcon::AddTransition:
             p.setBrush(color);
             p.drawEllipse(QPointF(6.0, 23.0), 2.2, 2.2);

@@ -76,6 +76,13 @@ QColor NESMDesign::finalStateColor(const QPalette& palette)
     return (dark ? QColor(0xB5, 0x4A, 0x45) : QColor(0x9A, 0x31, 0x2F));
 }
 
+QColor NESMDesign::historyStateColor(const QPalette& palette)
+{
+    // A violet "recall" fill, distinct from Start's green and Final's red.
+    const bool dark = (palette.color(QPalette::Base).lightnessF() < 0.5);
+    return (dark ? QColor(0x7E, 0x57, 0xC2) : QColor(0x5E, 0x35, 0xB1));
+}
+
 QColor NESMDesign::stateBorderColor(const QPalette& palette)
 {
     QColor result{ palette.color(QPalette::WindowText) };

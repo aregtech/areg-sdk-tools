@@ -198,6 +198,11 @@ public:
     inline SMStateEntry::eHistory getHistoryBadge() const;
 
     /**
+     * \brief   The depth a Kind="History" state restores. Meaningless on any other kind.
+     **/
+    inline SMStateEntry::eHistoryDepth getHistoryDepth() const;
+
+    /**
      * \brief   The box geometry (position and size) in scene coordinates. This is the STORED
      *          geometry -- the one the Node layout entry keeps -- so it holds the full body
      *          height even while the body is collapsed away.
@@ -366,10 +371,17 @@ private:
     inline bool isMarker() const;
 
     /**
-     * \brief   Paints the compact Start / Final marker box: a pill with the kind's
-     *          fill color, a glyph, and the centered name (Final adds an inner ring).
+     * \brief   Paints the compact Start / Final / History marker box: a pill with the
+     *          kind's fill color, a glyph, and the centered name (Final adds an inner
+     *          ring, History draws a circled H / H*).
      **/
     void paintMarker(QPainter* painter, const QRectF& box, const QPalette& palette);
+
+    /**
+     * \brief   The marker's fill color: the state's own override if it has one, otherwise
+     *          the kind's default (Start green, Final red, History violet).
+     **/
+    QColor markerFillColor(const QPalette& palette) const;
 
     /**
      * \brief   Applies an interactive resize drag to the given scene position.
@@ -421,6 +433,7 @@ private:
     QString                     mName;          //!< The state name.
     SMStateEntry::eStateKind    mKind;          //!< The state kind.
     SMStateEntry::eHistory      mHistory;       //!< The history badge mode.
+    SMStateEntry::eHistoryDepth mHistoryDepth;  //!< The depth a Kind="History" state restores.
     bool                        mComposite;     //!< The state owns painted substates.
     bool                        mImported;      //!< The state hosts an imported submachine.
     QString                     mSubmachine;    //!< The hosted import alias, shown on the badge.
@@ -481,6 +494,11 @@ inline bool SMStateItem::isExpanded() const
 inline SMStateEntry::eHistory SMStateItem::getHistoryBadge() const
 {
     return mHistory;
+}
+
+inline SMStateEntry::eHistoryDepth SMStateItem::getHistoryDepth() const
+{
+    return mHistoryDepth;
 }
 
 #endif  // LUSAN_VIEW_SM_SMSTATEITEM_HPP

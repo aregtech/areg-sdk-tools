@@ -241,6 +241,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActRedo      (nullptr)
     , mActAddState  (nullptr)
     , mActAddFinal  (nullptr)
+    , mActAddHistory(nullptr)
     , mActAddTransition(nullptr)
     , mActAddNote   (nullptr)
     , mActDelete    (nullptr)
@@ -734,6 +735,9 @@ void SMDesign::setupActions()
     mActAddFinal = placementAction(tr("Add Final State"), QKeySequence(Qt::Key_F)
                                    , NESMDesign::eCanvasTool::AddFinalState);
 
+    mActAddHistory = placementAction(tr("Add History State"), QKeySequence(Qt::Key_H)
+                                     , NESMDesign::eCanvasTool::AddHistoryState);
+
     mActAddTransition = placementAction(tr("Add Transition"), QKeySequence(Qt::Key_T)
                                         , NESMDesign::eCanvasTool::AddTransition);
 
@@ -873,6 +877,7 @@ void SMDesign::setupActions()
     using SMToolIcons::eIcon;
     mActAddState->setIcon(SMToolIcons::icon(eIcon::AddState));
     mActAddFinal->setIcon(SMToolIcons::icon(eIcon::AddFinalState));
+    mActAddHistory->setIcon(SMToolIcons::icon(eIcon::AddHistoryState));
     mActAddTransition->setIcon(SMToolIcons::icon(eIcon::AddTransition));
     mActAddNote->setIcon(SMToolIcons::icon(eIcon::AddNote));
     mActStateColor->setIcon(SMToolIcons::icon(eIcon::StateColor));
@@ -1107,7 +1112,7 @@ QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
 
     // Ordered by importance
     QList<ToolGroup> groups;
-    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddInternal, mActAddNote, mActAddFinal } });
+    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddInternal, mActAddNote, mActAddFinal, mActAddHistory } });
     groups.append(ToolGroup{ tr("Declare"),   declareActions() });
     groups.append(ToolGroup{ tr("Alignment"), { mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
                                                , mActDistributeH, mActDistributeV } });
@@ -1135,7 +1140,8 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
                                               , make(eIcon::AddTransition, tr("Add Transition"))
                                               , make(eIcon::AddInternal, tr("Add Internal Transition"))
                                               , make(eIcon::AddNote, tr("Add Note"))
-                                              , make(eIcon::AddFinalState, tr("Add Final State")) } });
+                                              , make(eIcon::AddFinalState, tr("Add Final State"))
+                                              , make(eIcon::AddHistoryState, tr("Add History State")) } });
     groups.append(ToolGroup{ tr("Declare"),   { make(eIcon::NewTrigger, tr("New Trigger"))
                                               , make(eIcon::NewAction, tr("New Action"))
                                               , make(eIcon::NewCondition, tr("New Condition"))
@@ -1176,6 +1182,7 @@ void SMDesign::populateDesignMenu(QMenu& menu)
 {
     menu.addAction(mActAddState);
     menu.addAction(mActAddFinal);
+    menu.addAction(mActAddHistory);
     menu.addAction(mActAddTransition);
     menu.addAction(mActAddInternal);
     menu.addAction(mActAddNote);
@@ -1230,6 +1237,7 @@ bool SMDesign::placementToolFor(QAction* action, NESMDesign::eCanvasTool& toolOu
 {
     if (action == mActAddState)           { toolOut = NESMDesign::eCanvasTool::AddState;      return true; }
     if (action == mActAddFinal)           { toolOut = NESMDesign::eCanvasTool::AddFinalState; return true; }
+    if (action == mActAddHistory)         { toolOut = NESMDesign::eCanvasTool::AddHistoryState; return true; }
     if (action == mActAddTransition)      { toolOut = NESMDesign::eCanvasTool::AddTransition; return true; }
     if (action == mActAddNote)            { toolOut = NESMDesign::eCanvasTool::AddNote;       return true; }
     return false;
@@ -2643,6 +2651,7 @@ void SMDesign::onToolChanged(NESMDesign::eCanvasTool tool)
 
     sync(mActAddState     , NESMDesign::eCanvasTool::AddState);
     sync(mActAddFinal     , NESMDesign::eCanvasTool::AddFinalState);
+    sync(mActAddHistory   , NESMDesign::eCanvasTool::AddHistoryState);
     sync(mActAddTransition, NESMDesign::eCanvasTool::AddTransition);
     sync(mActAddNote      , NESMDesign::eCanvasTool::AddNote);
 

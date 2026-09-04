@@ -80,6 +80,13 @@ public:
     inline uint32_t getLevelId() const;
 
     /**
+     * \brief   True when this scene displays the document's root level (not a composite's
+     *          nested level). A History pseudo-state has no root to resume, so it may be
+     *          placed only where this is false.
+     **/
+    bool isRootLevel() const;
+
+    /**
      * \brief   Returns the document facade.
      **/
     inline StateMachineModel& getModel() const;

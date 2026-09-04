@@ -220,6 +220,47 @@ void SMSetHistoryCommand::undo()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SMSetHistoryDepthCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetHistoryDepthCommand::SMSetHistoryDepthCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                    , uint32_t stateId, SMStateEntry::eHistoryDepth depth
+                                                    , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mId       (stateId)
+    , mNew      (depth)
+    , mOld      (SMStateEntry::eHistoryDepth::Shallow)
+{
+}
+
+void SMSetHistoryDepthCommand::apply(SMStateEntry::eHistoryDepth depth)
+{
+    SMStateEntry* state = data().findStateById(mId);
+    if (state != nullptr)
+    {
+        state->setHistoryDepth(depth);
+        notifier().notifyElementChanged(mId, eDocElementKind::State);
+    }
+}
+
+void SMSetHistoryDepthCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMStateEntry* state = data().findStateById(mId);
+        mOld = (state != nullptr ? state->getHistoryDepth() : SMStateEntry::eHistoryDepth::Shallow);
+        mCaptured = true;
+    }
+
+    apply(mNew);
+}
+
+void SMSetHistoryDepthCommand::undo()
+{
+    apply(mOld);
+}
+
+//////////////////////////////////////////////////////////////////////////
 // SMSetSubmachineCommand
 //////////////////////////////////////////////////////////////////////////
 

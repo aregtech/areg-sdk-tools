@@ -243,7 +243,7 @@ void DataTypeFactory::_initPredefined()
     // a Lusan with no predefined types is not a reduced Lusan, it is a broken one.
     const QString directory = DocSchemaReader::deliveryDirectory();
     const QString delivered = directory.isEmpty() ? QString() : (directory + QStringLiteral("/datatype.xml"));
-    const QString builtIn(QStringLiteral(":/data/Predefined Types"));
+    const QString builtIn(QStringLiteral(":/schema/Predefined Types"));
 
     QString path = builtIn;
     if ((delivered.isEmpty() == false) && QFile::exists(delivered))

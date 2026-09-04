@@ -145,6 +145,7 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeLocation      { "Location" };
     constexpr QLatin1StringView xmlSMAttributeKind          { "Kind" };
     constexpr QLatin1StringView xmlSMAttributeHistory       { "History" };
+    constexpr QLatin1StringView xmlSMAttributeHistoryDepth  { "HistoryDepth" };
     constexpr QLatin1StringView xmlSMAttributeSubmachine    { "Submachine" };
     constexpr QLatin1StringView xmlSMAttributeOnFinal       { "OnFinal" };
     constexpr QLatin1StringView xmlSMAttributeStimulusKind  { "StimulusKind" };

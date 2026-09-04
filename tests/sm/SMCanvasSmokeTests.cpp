@@ -1743,7 +1743,8 @@ int main(int argc, char* argv[])
         CHECK(groups.at(0).title == QStringLiteral("Design"));
         const QList<QAction*> designOrder{ page.actionAddState(), page.actionAddTransition()
                                          , page.actionAddInternal()
-                                         , page.actionAddNote(), page.actionAddFinalState() };
+                                         , page.actionAddNote(), page.actionAddFinalState()
+                                         , page.actionAddHistoryState() };
         CHECK(groups.at(0).actions == designOrder);
         CHECK(groups.at(1).title == QStringLiteral("Declare"));
         CHECK(groups.at(1).actions == page.declareActions());

@@ -53,6 +53,7 @@ namespace NESMDesign
           Select        //!< Default pointer: select, multi-select, move.
         , AddState      //!< Place a normal state.
         , AddFinalState //!< Place a final state.
+        , AddHistoryState //!< Place a History pseudo-state, inside a composite level only.
         , AddTransition //!< Draw a transition between states.
         , Waypoint      //!< Insert / remove edge waypoints.
         , AddNote       //!< Place a text annotation.
@@ -117,6 +118,7 @@ namespace NESMDesign
     {
         return (tool == eCanvasTool::AddState)
             || (tool == eCanvasTool::AddFinalState)
+            || (tool == eCanvasTool::AddHistoryState)
             || (tool == eCanvasTool::AddTransition);
     }
 
@@ -405,6 +407,11 @@ namespace NESMDesign
      * \brief   Returns the fill color of a Final state's marker box ("stop" red).
      **/
     QColor finalStateColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the fill color of a History state's marker box ("recall" violet).
+     **/
+    QColor historyStateColor(const QPalette& palette);
 
     /**
      * \brief   Returns the state border color of the given palette.

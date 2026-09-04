@@ -564,7 +564,11 @@ namespace
         StateMachineData doc;
         CHECK(doc.readFromFile(olderPath));
         CHECK(doc.openSucceeded());
-        CHECK(doc.getFormatVersion().toString() == StateMachineData::XML_FORMAT_DEFAULT);
+        // The migration chain only ever brings a document up to 1.1.0 -- 1.2.0 (the History
+        // pseudo-state) is purely additive and is never a migration target, so it reads as
+        // 1.1.0 in memory here even though the build's own read ceiling (XML_FORMAT_DEFAULT)
+        // has since moved to 1.2.0.
+        CHECK(doc.getFormatVersion().toString() == StateMachineData::XML_FORMAT_110);
 
         const QByteArray afterOpen = readAllBytes(olderPath);
         CHECK(beforeOpen == afterOpen);
@@ -580,10 +584,12 @@ namespace
         const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
         CHECK(original.isEmpty() == false);
 
+        // 1.2.0 (the History pseudo-state) is a real, current format now, so the fixture for
+        // "the reader has not caught up yet" needs a minor newer than that instead.
         QByteArray future = original;
         CHECK(replaceOnce(future,
                           "<StateMachine FormatVersion=\"1.1.0\">",
-                          "<StateMachine FormatVersion=\"1.2.0\">"));
+                          "<StateMachine FormatVersion=\"1.3.0\">"));
 
         const QString inPath = outFile("sm03_future_minor_in.fsml");
         CHECK(writeAllBytes(inPath, future));

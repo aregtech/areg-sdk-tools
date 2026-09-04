@@ -20,7 +20,7 @@
  ************************************************************************/
 
 //////////////////////////////////////////////////////////////////////////
-// Generated from sources/lusan/res/rules/rules.xml. Do not edit by hand:
+// Generated from sources/lusan/res/schema/rules.xml. Do not edit by hand:
 // the build regenerates this file and fails when the two disagree. Change
 // the rule there, and both this tool and the code generator follow.
 //////////////////////////////////////////////////////////////////////////
@@ -70,7 +70,12 @@ namespace DocRules
     /**
      * \brief   A declaration nothing in the document uses, or an included document it takes
      *          nothing from. Never an error -- code that nothing reaches still generates -- so
-     *          the bare number is reserved and only the banded ids are ever reported.
+     *          the bare number is reserved and only the banded ids are ever reported. The
+     *          warning is for a document that can answer the question, because what it declares
+     *          is its own. A data type document is judged against the documents that include it
+     *          instead; one run sees only the consumers it was pointed at, so a type none of
+     *          them names is information and not a warning, and a data type document generated
+     *          with no consumer at all says nothing.
      **/
     constexpr int RULE_UNREFERENCED         { 26 };
 
@@ -97,7 +102,11 @@ namespace DocRules
     constexpr int RULE_UNRESOLVED_TYPE      {  6 };
 
     /**
-     * \brief   A transition target that is not a sibling of the state it leaves.
+     * \brief   A transition target that is not a sibling of the state it leaves. One exception:
+     *          a transition from outside a composite targeting that composite's Kind="History"
+     *          pseudo-state is legal even though the pseudo-state is not a sibling either -- the
+     *          same target reached from inside its own level is refused instead, as
+     *          RULE_HISTORY_SIBLING (error 57).
      **/
     constexpr int RULE_TARGET_SIBLING       {  7 };
 
@@ -287,10 +296,11 @@ namespace DocRules
 
     /**
      * \brief   A reference to a declared element that is not there: a trigger, an event, a
-     *          timer, an action, an attribute, a constant, a condition, a parameter, or the
-     *          alias of a hosted machine. The field to correct is the name that was written,
-     *          which is what tells it apart from a data type that answers to nothing (\a
-     *          RULE_UNRESOLVED_TYPE).
+     *          timer, an action, an attribute, a constant, a condition, a parameter, the alias
+     *          of a hosted machine, or the state a transition names as its target. The field to
+     *          correct is the name that was written, which is what tells it apart from a data
+     *          type that answers to nothing (\a RULE_UNRESOLVED_TYPE) and from a target that
+     *          does exist but sits on another level (\a RULE_TARGET_SIBLING).
      **/
     constexpr int RULE_UNRESOLVED_ELEMENT   { 46 };
 
@@ -333,6 +343,17 @@ namespace DocRules
     constexpr int RULE_FILE_NAME_MISMATCH   { 49 };
 
     /**
+     * \brief   The document states a FormatVersion the reader does not know. An error when the
+     *          document is newer in any of the three numbers: everything a reader does not
+     *          understand it drops in silence, so it would generate code describing a document
+     *          nobody wrote. A warning when the document is older by a MAJOR, which is a
+     *          migration and not a fault -- it is read as it stands, never rewritten, and the
+     *          generated files carry the format the tool reads. An older minor or patch is
+     *          readable by design and says nothing.
+     **/
+    constexpr int RULE_FORMAT_VERSION       { 50 };
+
+    /**
      * \brief   A request whose Response names nothing, or names a method the document declares
      *          as something other than a response. The field to correct is the response the
      *          request is answered by.
@@ -359,6 +380,40 @@ namespace DocRules
      *          before it happens.
      **/
     constexpr int RULE_DROPPED_ELEMENT      { 53 };
+
+    /**
+     * \brief   A Kind="History" state carrying an EntryList, an ExitList, a TransitionList or a
+     *          nested StateList. It is a pseudo-state, not a state: the machine never occupies
+     *          it, so it owns none of the things a state owns.
+     **/
+    constexpr int RULE_HISTORY_SHAPE        { 54 };
+
+    /**
+     * \brief   More than one Kind="History" state on one level. At most one per level -- a
+     *          second one would leave two markers naming the same re-entry.
+     **/
+    constexpr int RULE_HISTORY_DUPLICATE    { 55 };
+
+    /**
+     * \brief   A Kind="History" state at the root level. There is no composite there to resume,
+     *          so the marker names nothing.
+     **/
+    constexpr int RULE_HISTORY_ROOT         { 56 };
+
+    /**
+     * \brief   A transition targeting a Kind="History" state from inside its own level. The
+     *          marker is reached only by a transition entering the composite from outside (\a
+     *          RULE_TARGET_SIBLING, widened); from inside, the state it names is an ordinary
+     *          non-sibling target.
+     **/
+    constexpr int RULE_HISTORY_SIBLING      { 57 };
+
+    /**
+     * \brief   A composite carrying both its own History attribute and a Kind="History" child.
+     *          Two spellings of one decision, disagreeing about what the composite does on
+     *          re-entry.
+     **/
+    constexpr int RULE_HISTORY_CONFLICT     { 58 };
 
 //////////////////////////////////////////////////////////////////////////
 // Rules that exist only in a band
@@ -487,7 +542,11 @@ namespace DocRules
         , { RULE_UNREFERENCED        , BandWarning | BandInformation, DocDataType | DocInterface | DocStateMachine
           , "A declaration nothing in the document uses, or an included document it takes nothing from. Never "
             "an error -- code that nothing reaches still generates -- so the bare number is reserved and only "
-            "the banded ids are ever reported." }
+            "the banded ids are ever reported. The warning is for a document that can answer the question, "
+            "because what it declares is its own. A data type document is judged against the documents that "
+            "include it instead; one run sees only the consumers it was pointed at, so a type none of them "
+            "names is information and not a warning, and a data type document generated with no consumer at "
+            "all says nothing." }
         , { RULE_MISSING_VERSION     , BandError, DocDataType | DocInterface | DocStateMachine
           , "A document that declares no version. The version reaches the generated code and tells a client "
             "which contract it was built against. Every document kind carries one, so the fault is shared "
@@ -501,7 +560,10 @@ namespace DocRules
             "a structure field, or a container key or value. The field to correct is the type itself, which "
             "is what tells it apart from a reference to a declared element (RULE_UNRESOLVED_ELEMENT)." }
         , { RULE_TARGET_SIBLING      , BandError, DocStateMachine
-          , "A transition target that is not a sibling of the state it leaves." }
+          , "A transition target that is not a sibling of the state it leaves. One exception: a transition "
+            "from outside a composite targeting that composite's Kind=\"History\" pseudo-state is legal even "
+            "though the pseudo-state is not a sibling either -- the same target reached from inside its own "
+            "level is refused instead, as RULE_HISTORY_SIBLING (error 57)." }
         , { RULE_FINAL_STATE         , BandError, DocStateMachine
           , "A 'Final' state with outgoing transitions, or with substates." }
         , { RULE_START_SUBSTATES     , BandError, DocStateMachine
@@ -534,7 +596,7 @@ namespace DocRules
         , { RULE_STATE_SHAPE         , BandError, DocStateMachine
           , "A state both painted and imported, a 'Submachine' on a 'Start' or a 'Final' state, 'History' or "
             "'OnFinal' on a state that is not composite, and an import that carries no alias." }
-        , { RULE_BROKEN_IMPORT       , BandError, DocInterface | DocStateMachine
+        , { RULE_BROKEN_IMPORT       , BandError | BandWarning | BandInformation, DocInterface | DocStateMachine
           , "An include that does not resolve: no file named, the file missing, unreadable, a cycle, or "
             "nested too deep. An included data type document that could not be read is the same fault -- "
             "every type it was to contribute is missing. The editor always refuses; the code generator "
@@ -591,9 +653,10 @@ namespace DocRules
             "ever banded." }
         , { RULE_UNRESOLVED_ELEMENT  , BandError, DocStateMachine
           , "A reference to a declared element that is not there: a trigger, an event, a timer, an action, an "
-            "attribute, a constant, a condition, a parameter, or the alias of a hosted machine. The field to "
-            "correct is the name that was written, which is what tells it apart from a data type that answers "
-            "to nothing (RULE_UNRESOLVED_TYPE)." }
+            "attribute, a constant, a condition, a parameter, the alias of a hosted machine, or the state a "
+            "transition names as its target. The field to correct is the name that was written, which is what "
+            "tells it apart from a data type that answers to nothing (RULE_UNRESOLVED_TYPE) and from a target "
+            "that does exist but sits on another level (RULE_TARGET_SIBLING)." }
         , { RULE_NOT_A_HEADER        , BandError, DocDataType
           , "A data type document whose include list names another document. It declares types and nothing "
             "else, and its include list carries C++ headers." }
@@ -612,6 +675,13 @@ namespace DocRules
         , { RULE_FILE_NAME_MISMATCH  , BandInformation, DocDataType | DocInterface | DocStateMachine
           , "The document declares one name and lives in a file called another. Both are allowed -- the "
             "generated files follow the declared name -- but worth saying." }
+        , { RULE_FORMAT_VERSION      , BandError | BandWarning, DocDataType | DocInterface | DocStateMachine
+          , "The document states a FormatVersion the reader does not know. An error when the document is "
+            "newer in any of the three numbers: everything a reader does not understand it drops in silence, "
+            "so it would generate code describing a document nobody wrote. A warning when the document is "
+            "older by a MAJOR, which is a migration and not a fault -- it is read as it stands, never "
+            "rewritten, and the generated files carry the format the tool reads. An older minor or patch is "
+            "readable by design and says nothing." }
         , { RULE_RESPONSE_LINK       , BandError, DocInterface
           , "A request whose Response names nothing, or names a method the document declares as something "
             "other than a response. The field to correct is the response the request is answered by." }
@@ -648,6 +718,23 @@ namespace DocRules
         , { RULE_DROPPED_ELEMENT     , BandWarning, DocDataType | DocInterface | DocStateMachine
           , "An element block the format does not place, kept while the document is open and dropped when it "
             "is saved. Reported beside the fault itself so the loss is stated before it happens." }
+        , { RULE_HISTORY_SHAPE       , BandError, DocStateMachine
+          , "A Kind=\"History\" state carrying an EntryList, an ExitList, a TransitionList or a nested "
+            "StateList. It is a pseudo-state, not a state: the machine never occupies it, so it owns none of "
+            "the things a state owns." }
+        , { RULE_HISTORY_DUPLICATE   , BandError, DocStateMachine
+          , "More than one Kind=\"History\" state on one level. At most one per level -- a second one would "
+            "leave two markers naming the same re-entry." }
+        , { RULE_HISTORY_ROOT        , BandError, DocStateMachine
+          , "A Kind=\"History\" state at the root level. There is no composite there to resume, so the marker "
+            "names nothing." }
+        , { RULE_HISTORY_SIBLING     , BandError, DocStateMachine
+          , "A transition targeting a Kind=\"History\" state from inside its own level. The marker is reached "
+            "only by a transition entering the composite from outside (RULE_TARGET_SIBLING, widened); from "
+            "inside, the state it names is an ordinary non-sibling target." }
+        , { RULE_HISTORY_CONFLICT    , BandError, DocStateMachine
+          , "A composite carrying both its own History attribute and a Kind=\"History\" child. Two spellings of "
+            "one decision, disagreeing about what the composite does on re-entry." }
     };
 
     /**

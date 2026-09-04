@@ -115,7 +115,7 @@ public:
 
 /**
  * \class   SMPlaceStateTool
- * \brief   The Add State / Add Start State / Add Final State tool: a click places a
+ * \brief   The Add State / Add Final State / Add History State tool: a click places a
  *          default-sized state of the tool's kind at the (snapped) click position;
  *          press-drag-release draws the state's rectangle between the press and release
  *          positions (a minimum size is enforced so the resize handles stay usable). Either

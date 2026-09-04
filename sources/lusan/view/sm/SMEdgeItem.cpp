@@ -2082,17 +2082,22 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
                 const SMStateEntry::eStateKind overKind =
                         (overState != nullptr ? overState->getKind() : SMStateEntry::eStateKind::Normal);
                 const bool rejectEnd   = (drag == eDrag::End)   && (overKind == SMStateEntry::eStateKind::Start);
+                // A History marker is reached only from outside its own level; this drag can only
+                // ever be dropped on a state drawn on the current level, so a History target here
+                // is by construction the same-level (illegal) case.
+                const bool rejectHistory = (drag == eDrag::End) && (overKind == SMStateEntry::eStateKind::History);
                 // A Start is a source only for its own initial transitions, so the begin endpoint
                 // may neither land on a Start nor leave one.
                 const bool startSource = (overKind == SMStateEntry::eStateKind::Start) || mSourceIsStart;
                 const bool rejectBegin = (drag == eDrag::Begin)
                                       && ((overKind == SMStateEntry::eStateKind::Final) || startSource);
-                if (rejectEnd || rejectBegin)
+                if (rejectEnd || rejectHistory || rejectBegin)
                 {
                     updateFromModel();      // snap the endpoint back to the unchanged connection
                     const QList<QGraphicsView*> viewList = canvas->views();
                     const QString reason = rejectEnd
                             ? translate("A transition cannot enter a Start state.")
+                            : rejectHistory ? translate("A History state is reached only from outside the composite it resumes.")
                             : (startSource ? translate("An initial transition belongs to its Start state and cannot be moved.")
                                            : translate("A transition cannot leave a Final state."));
                     QToolTip::showText(QCursor::pos(), reason, (viewList.isEmpty() ? nullptr : viewList.first()));
