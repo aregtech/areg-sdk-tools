@@ -158,6 +158,17 @@ namespace NESMDesign
     //!< 4 x 2 default grid cells (issue #514), so the marker spans whole grid squares.
     constexpr double    MarkerStateWidth    { 64.0 };
     constexpr double    MarkerStateHeight   { 32.0 };
+    //!< The default box size of a History marker. Square, so the drawn rounded box is a circle:
+    //!< states on the canvas are rectangles, and a round node reads at once as not one of them.
+    constexpr double    HistoryMarkerSize   { 32.0 };
+    //!< The band under a History marker that carries its name, so the letter and the name do not
+    //!< share one line.
+    constexpr double    HistoryCaptionHeight{ 14.0 };
+    //!< The room that caption is given, so a name wider than the circle still reads whole.
+    constexpr double    HistoryCaptionWidth { 120.0 };
+    //!< The dashed lead-in drawn into a History marker; it says the marker is entered from outside
+    //!< the level, which is the only way it can be reached.
+    constexpr double    HistoryLeadInLength { 16.0 };
     //!< The smallest box a marker (Start / Final) can be resized to (a marker pill is
     //!< intentionally compact, so it may go smaller than a normal state box).
     constexpr double    MarkerStateMinWidth { 52.0 };
@@ -213,6 +224,13 @@ namespace NESMDesign
     //!< The arrowhead length and half-width at the target border.
     constexpr double    EdgeArrowLength     { 10.0 };
     constexpr double    EdgeArrowHalfWidth  { 4.0 };
+    //!< The diameter of the `H` mark an edge draws where it lands on a History pseudo-state, and
+    //!< the width of the same mark when the target restores deep history (`H*`). The mark carries
+    //!< a letter, so its floor is legibility: below this it is a colored speck, not a symbol.
+    constexpr double    EdgeHistoryMarkSize { 14.0 };
+    constexpr double    EdgeHistoryDeepWidth{ 22.0 };
+    //!< The pixel size of the letter drawn inside that mark.
+    constexpr int       EdgeHistoryMarkFont { 10 };
     //!< The drawn width of an edge line (a little narrower than a full 2px stroke so the
     //!< transition reads as a fine line, not a rule).
     constexpr double    EdgeLineWidth       { 1.0 };

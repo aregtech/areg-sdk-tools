@@ -368,6 +368,25 @@ SMLayoutNode& SMLayoutData::addNode(uint32_t owner)
     return mNodes.last();
 }
 
+QList<uint32_t> SMLayoutData::setNodes(const QList<SMLayoutNode>& nodes)
+{
+    QList<uint32_t> owners;
+    owners.reserve(nodes.size());
+    for (const SMLayoutNode& node : nodes)
+    {
+        SMLayoutNode* entry = findNode(node.owner);
+        if (entry == nullptr)
+        {
+            entry = &addNode(node.owner);
+        }
+
+        *entry = node;
+        owners.append(node.owner);
+    }
+
+    return owners;
+}
+
 SMLayoutEdge& SMLayoutData::addEdge(uint32_t owner)
 {
     SMLayoutEdge edge;

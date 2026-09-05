@@ -159,6 +159,14 @@ public:
     SMLayoutEdge& addEdge(uint32_t owner);
 
     /**
+     * \brief   Writes the given Node entries: an owner that already has an entry gets it
+     *          replaced, an owner that has none gets one added.
+     * \param   nodes   The entries to write, each carrying its own owner.
+     * \return  The owners written, in the order they were given.
+     **/
+    QList<uint32_t> setNodes(const QList<SMLayoutNode>& nodes);
+
+    /**
      * \brief   Adds a note at the given level, allocating its ID from the document counter.
      * \param   level   The owning level's element ID (0 for the root level).
      * \param   owner   The bound state/transition ID, or 0 for a free (unowned) note.

@@ -543,6 +543,52 @@ SMStateEntry* SMStateData::findStateByIdRecursive(uint32_t id) const
     return nullptr;
 }
 
+SMStateEntry* SMStateData::findAncestorOfRecursive(uint32_t id) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        if (state->getId() == id)
+        {
+            return state;
+        }
+
+        if (state->hasNestedStates() && (state->getNestedStates()->findStateByIdRecursive(id) != nullptr))
+        {
+            return state;
+        }
+    }
+
+    return nullptr;
+}
+
+SMStateEntry* SMStateData::findOwnerOfRecursive(uint32_t id) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        SMStateData* nested = state->hasNestedStates() ? state->getNestedStates() : nullptr;
+        if (nested == nullptr)
+        {
+            continue;
+        }
+
+        for (SMStateEntry* child : nested->getElements())
+        {
+            if (child->getId() == id)
+            {
+                return state;
+            }
+        }
+
+        SMStateEntry* deeper = nested->findOwnerOfRecursive(id);
+        if (deeper != nullptr)
+        {
+            return deeper;
+        }
+    }
+
+    return nullptr;
+}
+
 bool SMStateData::hasHistoryStateRecursive() const
 {
     for (SMStateEntry* state : getElements())

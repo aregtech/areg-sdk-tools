@@ -228,8 +228,11 @@ bool SMPlaceStateTool::mouseRelease(QGraphicsSceneMouseEvent* event)
     else
     {
         // A plain click: a default-sized box centered on the click position.
-        const QSizeF size = isMarkerKind() ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
-                                          : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight);
+        // A History marker is square, so its rounded box draws as the circle the symbol needs.
+        const QSizeF size = (mKind == NESMDesign::eCanvasTool::AddHistoryState)
+                            ? QSizeF(NESMDesign::HistoryMarkerSize, NESMDesign::HistoryMarkerSize)
+                            : (isMarkerKind() ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
+                                              : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight));
         const QPointF topLeft = getScene().snappedPosition(cursor - QPointF(size.width() / 2.0, size.height() / 2.0));
         placeState(QRectF(topLeft, size));
     }

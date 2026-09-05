@@ -1831,6 +1831,25 @@ namespace
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Lost"));
             CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
         }
+        {   // W1 negative: a History marker owns no transition and is entered only by a transition
+            // coming from outside its level, so its own level never targets it and it is not orphaned.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            SMStateEntry* outer = addReachedState(doc, s, "Outer", "go");
+            SMStateData* inner = outer->getOrCreateNestedStates();
+            SMStateEntry* innerStart = inner->createState("InnerStart", eKind::Start);
+            SMStateEntry* leaf = inner->createState("Leaf", eKind::Normal);
+            innerStart->getTransitions().createTransition(eStim::Trigger, QString(), leaf->getId(), eTrans::Initial);
+            SMStateEntry* marker = inner->createState("Resume", eKind::History);
+            marker->setHistoryDepth(SMStateEntry::eHistoryDepth::Shallow);
+            CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
+
+            // ...and the marker reached from a sibling of the composite stays clean.
+            SMStateEntry* held = addReachedState(doc, outer, "Held", "pause");
+            doc.getMethods().createMethod("resume", NEMethod::SmTrigger);
+            held->getTransitions().createTransition(eStim::Trigger, "resume", marker->getId());
+            CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
+        }
         {   // W2: a reachable Normal state with no outgoing transition; negative once it has one.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);

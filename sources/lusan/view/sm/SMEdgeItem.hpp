@@ -314,6 +314,13 @@ private:
     QRectF stateBoxRect(uint32_t stateId) const;
 
     /**
+     * \brief   Resolves a state ID to the ID actually drawn on this edge's level: itself when it
+     *          has a live box here, otherwise its nearest visible ancestor (a History marker
+     *          resolves to the composite that hosts it).
+     **/
+    uint32_t visibleAncestorId(uint32_t stateId) const;
+
+    /**
      * \brief   The origin (top-left of \ref stateBoxRect) a state's anchor is measured from.
      **/
     QPointF anchorFrame(uint32_t stateId) const;
@@ -422,6 +429,22 @@ private:
     void paintArrowHead(QPainter* painter, const QPointF& from, const QPointF& tip, const QColor& color);
 
     /**
+     * \brief   Paints the `H` / `H*` mark straddling the target border at \p tip.
+     **/
+    void paintHistoryMark(QPainter* painter, const QPointF& from, const QPointF& tip, const QPalette& palette) const;
+
+    /**
+     * \brief   Half the width of that mark: wider for a deep target, which carries `H*`.
+     **/
+    double historyMarkHalfWidth() const;
+
+    /**
+     * \brief   How far the mark reaches from the border point along \p dir, a unit vector.
+     *          The arrowhead is drawn short by this much so the mark does not cover it.
+     **/
+    double historyMarkInset(const QPointF& dir) const;
+
+    /**
      * \brief   The stroke color for the current state (theme, selection, or highlight).
      **/
     QColor strokeColor(const QPalette& palette) const;
@@ -519,6 +542,8 @@ private:
     uint32_t                mTargetId;      //!< The target state ID (== source for self).
     QString                 mTargetName;    //!< The target state name (`To`).
     bool                    mSelfLoop;      //!< The transition targets its own source.
+    bool                    mTargetIsHistory;//!< The target is a Kind="History" pseudo-state.
+    bool                    mTargetHistoryDeep;//!< The target History pseudo-state is a deep one (`H*`).
     bool                    mValid;         //!< The transition resolved to an external edge.
     SMLayoutEdge::eShape    mShape;         //!< The edge shape (Line or Arc).
     double                  mBulge;         //!< The arc bulge factor.

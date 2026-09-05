@@ -2594,8 +2594,10 @@ void SMDesign::autoPlaceMissingNodes()
     const QList<SMLayoutNode> nodes{ SMAutoPlacer::missingNodes(mModel.getData()) };
     if (nodes.isEmpty() == false)
     {
-        mModel.getUndoStack().push(new SMAutoPlaceNodesCommand(  mModel.getData(), mModel.getNotifier()
-                                                               , nodes, tr("Auto-place elements")));
+        // Geometry a document does not carry is generated, not authored. It is written straight
+        // into the layout, so opening a file nobody edited leaves it unmodified and saves nothing.
+        const QList<uint32_t> owners{ mModel.getData().getLayout().setNodes(nodes) };
+        mModel.getNotifier().notifyLayoutChanged(owners);
     }
 }
 

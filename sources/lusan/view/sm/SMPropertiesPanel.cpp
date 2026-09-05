@@ -1012,9 +1012,26 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
                 continue;
             }
 
-            if (sibling->isPseudoStart() == false)
+            // A History marker is never an ordinary same-level target (rule 57: it is reached
+            // only from outside its own level), so it is excluded here the same way Start is --
+            // and offered instead, below, under the sibling composite that owns it.
+            if ((sibling->isPseudoStart() == false) && (sibling->isHistoryMarker() == false))
             {
                 mTarget->addItem(sibling->getName(), sibling->getId());
+            }
+
+            // The one legal exception to "target a sibling": a History marker one level inside a
+            // sibling composite, reached from this (outside) level. At most one per level (rule
+            // 55), so there is at most one to offer per composite sibling.
+            if (sibling->hasNestedStates())
+            {
+                for (SMStateEntry* nested : sibling->getNestedStates()->getElements())
+                {
+                    if ((nested != nullptr) && (nested->isHistoryMarker()))
+                    {
+                        mTarget->addItem(tr("History of %1").arg(sibling->getName()), nested->getId());
+                    }
+                }
             }
 
             // A Start is offered as a source only when it already owns this transition: moving an

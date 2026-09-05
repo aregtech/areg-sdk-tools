@@ -128,6 +128,8 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mTargetId     (0)
     , mTargetName   ( )
     , mSelfLoop     (false)
+    , mTargetIsHistory(false)
+    , mTargetHistoryDeep(false)
     , mValid        (false)
     , mShape        (SMLayoutEdge::eShape::Line)
     , mBulge        (0.0)
@@ -195,6 +197,12 @@ QRectF SMEdgeItem::stateBoxRect(uint32_t stateId) const
         return item->getBoxGeometry();
     }
 
+    const uint32_t ancestorId = visibleAncestorId(stateId);
+    if (ancestorId != stateId)
+    {
+        return stateBoxRect(ancestorId);
+    }
+
     const SMLayoutNode* node = canvas->getModel().getData().getLayout().findNode(stateId);
     if (node != nullptr)
     {
@@ -204,6 +212,19 @@ QRectF SMEdgeItem::stateBoxRect(uint32_t stateId) const
     }
 
     return QRectF();
+}
+
+uint32_t SMEdgeItem::visibleAncestorId(uint32_t stateId) const
+{
+    SMScene* canvas = getCanvas();
+    if ((canvas == nullptr) || (stateId == 0) || (canvas->stateItem(stateId) != nullptr))
+    {
+        return stateId;
+    }
+
+    const SMStateData* level = canvas->getModel().getData().findLevel(canvas->getLevelId());
+    const SMStateEntry* ancestor = (level != nullptr) ? level->findAncestorOfRecursive(stateId) : nullptr;
+    return (ancestor != nullptr) ? ancestor->getId() : stateId;
 }
 
 QRectF SMEdgeItem::stateRect(uint32_t stateId) const
@@ -348,6 +369,8 @@ void SMEdgeItem::updateFromModel()
     const SMStateEntry* target = data.findStateById(mTargetId);
     mTargetName  = (target != nullptr ? target->getName() : QString());
     mSelfLoop    = (mTargetId != 0) && (mTargetId == mSourceId);
+    mTargetIsHistory   = (target != nullptr) && (target->getKind() == SMStateEntry::eStateKind::History);
+    mTargetHistoryDeep = mTargetIsHistory && (target->getHistoryDepth() == SMStateEntry::eHistoryDepth::Deep);
 
     // Show the guard next to the stimulus (`stimulus[summary]`) and the full guard as the tooltip.
     // Without a guard the stimulus stands alone, and the label takes the guard severity color.
@@ -422,6 +445,18 @@ void SMEdgeItem::updateFromModel()
         }
 
         setToolTip(tip);
+    }
+
+    if (mTargetIsHistory)
+    {
+        // The mark on the border is one letter, so the tooltip says what it does in words.
+        const SMStateEntry* owner = data.getStates().findOwnerOfRecursive(mTargetId);
+        const QString composite = (owner != nullptr) ? owner->getName() : mTargetName;
+        const QString what = mTargetHistoryDeep
+                             ? translate("Resumes %1 on the whole path that was active last time")
+                             : translate("Resumes %1 at the substate that was active last time");
+        const QString tip = toolTip();
+        setToolTip(tip.isEmpty() ? what.arg(composite) : (tip + QChar('\n') + what.arg(composite)));
     }
 
     // An action or event with unmapped arguments warns on the canvas, so a method edit shows its
@@ -1030,6 +1065,55 @@ void SMEdgeItem::paintArrowHead(QPainter* painter, const QPointF& from, const QP
     painter->drawPath(head);
 }
 
+void SMEdgeItem::paintHistoryMark(QPainter* painter, const QPointF& from, const QPointF& tip, const QPalette& palette) const
+{
+    QPointF dir = tip - from;
+    const double len = std::hypot(dir.x(), dir.y());
+    if (len < 1e-6)
+    {
+        return;
+    }
+
+    dir /= len;
+
+    // Straddles the border at the arrow tip, half in / half out: this is where UML draws the
+    // pseudo-state the arrow terminates on. The box stays upright whatever way the edge runs,
+    // because the letter has to stay readable.
+    const double halfW = historyMarkHalfWidth();
+    const double halfH = NESMDesign::EdgeHistoryMarkSize / 2.0;
+    const QRectF mark{ tip.x() - halfW, tip.y() - halfH, halfW * 2.0, halfH * 2.0 };
+    const QColor fill = NESMDesign::historyStateColor(palette);
+
+    // A hairline in the canvas color keeps the mark off the target's own border line.
+    painter->setPen(QPen(palette.color(QPalette::Base), 1.2));
+    painter->setBrush(fill);
+    painter->drawRoundedRect(mark, halfH, halfH);
+
+    QFont font{ painter->font() };
+    font.setBold(true);
+    font.setPixelSize(NESMDesign::EdgeHistoryMarkFont);
+    painter->setFont(font);
+    painter->setPen(NESMDesign::contrastTextColor(fill));
+    painter->drawText(mark, Qt::AlignCenter, QString::fromLatin1(mTargetHistoryDeep ? "H*" : "H"));
+}
+
+double SMEdgeItem::historyMarkHalfWidth() const
+{
+    return (mTargetHistoryDeep ? NESMDesign::EdgeHistoryDeepWidth : NESMDesign::EdgeHistoryMarkSize) / 2.0;
+}
+
+double SMEdgeItem::historyMarkInset(const QPointF& dir) const
+{
+    // How far the mark reaches from its center along the edge, treating the upright box as the
+    // ellipse through its corners. The arrowhead stops there instead of being buried under it.
+    const double a  = historyMarkHalfWidth();
+    const double b  = NESMDesign::EdgeHistoryMarkSize / 2.0;
+    const double px = dir.x() / a;
+    const double py = dir.y() / b;
+    const double d  = std::sqrt(px * px + py * py);
+    return (d > 1e-6 ? 1.0 / d : b);
+}
+
 void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/, QWidget* widget)
 {
     if ((mValid == false) || (mPath.size() < 2))
@@ -1065,7 +1149,20 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
     painter->setBrush(color);
     painter->drawEllipse(mBegin, beginDot, beginDot);
 
-    paintArrowHead(painter, mPath.at(mPath.size() - 2), mEnd, color);
+    const QPointF last = mPath.at(mPath.size() - 2);
+    if (mTargetIsHistory)
+    {
+        // The head keeps the direction readable, so it is drawn short of the mark, not under it.
+        QPointF dir = mEnd - last;
+        const double len = std::hypot(dir.x(), dir.y());
+        const QPointF head = (len > 1e-6) ? (mEnd - (dir / len) * historyMarkInset(dir / len)) : mEnd;
+        paintArrowHead(painter, last, head, color);
+        paintHistoryMark(painter, last, mEnd, palette);
+    }
+    else
+    {
+        paintArrowHead(painter, last, mEnd, color);
+    }
 
     // The labels (stimulus, guard, action summary) and the note badge are painted by the scene's
     // foreground pass (paintLabels), so they stay above the state boxes and readable.
@@ -2074,7 +2171,9 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
             const uint32_t ownId  = (drag == eDrag::End ? mTargetId : mSourceId);
             const uint32_t tid    = getElementId();
             const QRectF   ownBox = stateRect(ownId);
-            if ((overId != 0) && (overId != ownId))
+            // A History target draws on its parent composite's box (see stateBoxRect), so a drop
+            // back onto that same box must read as "unchanged," not as a reconnect onto the composite.
+            if ((overId != 0) && (overId != visibleAncestorId(ownId)))
             {
                 // No transition may end on a Start or begin on a Final. Reject the drop: restore
                 // the stored geometry and warn briefly at the cursor.

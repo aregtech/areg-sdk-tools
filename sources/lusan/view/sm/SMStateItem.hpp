@@ -231,6 +231,12 @@ public:
      **/
     double boxCornerRadius() const;
 
+    /**
+     * \brief   The smallest box this state's kind may take: a normal box, a compact marker pill,
+     *          or the square a History marker keeps so it draws as a circle.
+     **/
+    QSizeF minimumBoxSize() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -376,6 +382,12 @@ private:
      *          ring, History draws a circled H / H*).
      **/
     void paintMarker(QPainter* painter, const QRectF& box, const QPalette& palette);
+
+    /**
+     * \brief   Paints a History marker: the letter inside the circle, the name as a caption below
+     *          it, and the dashed lead-in that says it is entered from outside the level.
+     **/
+    void paintHistoryMarker(QPainter* painter, const QRectF& box, const QPalette& palette, const QColor& textColor);
 
     /**
      * \brief   The marker's fill color: the state's own override if it has one, otherwise

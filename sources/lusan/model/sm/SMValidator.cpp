@@ -1958,9 +1958,9 @@ namespace
                 noteOps(st->getEntryList());
                 noteOps(st->getExitList());
 
-                // Unreachable: nothing at this level targets it, and the level's Start does not
-                // descend into it. A warning, never an error, since a half-drawn machine is normal.
-                if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
+                // Unreachable: nothing at this level targets it and no Start descends into it. A Start
+                // is the level's own marker and a History marker is entered from outside, so both skip.
+                if ((st->isPseudoStart() == false) && (st->isHistoryMarker() == false) && (targets.contains(sid) == false))
                 {
                     const SMStateEntry* owner = (info.isRoot ? nullptr : mData.findStateById(info.ownerId));
                     const QString where = (owner != nullptr ? QLatin1Char('\'') + owner->getName() + QLatin1Char('\'')

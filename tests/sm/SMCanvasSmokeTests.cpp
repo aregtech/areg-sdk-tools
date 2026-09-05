@@ -38,6 +38,7 @@
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
@@ -1271,7 +1272,10 @@ int main(int argc, char* argv[])
 
         StateMachineData& blank = stripped.getData();
         CHECK(levelsArePlaced(blank.getStates(), blank.getLayout()));
-        CHECK(stripped.getUndoStack().count() >= 1);
+        // Generated geometry is not an edit: nothing reaches the stack and the document that was
+        // only opened stays clean, so closing it asks nothing.
+        CHECK(stripped.getUndoStack().count() == 0);
+        CHECK(stripped.isDirty() == false);
 
         // Every root box exists, is non-empty, and sits where its Node entry says.
         SMScene& blankScene = page.getScene();
@@ -1289,9 +1293,10 @@ int main(int argc, char* argv[])
         CHECK(boxesVisible);
         grab(page, "g13-auto-placed");
 
-        // The placement is an ordinary edit: rolling the stack back leaves the document bare.
+        // There is nothing to roll back, so the boxes the canvas draws on cannot be undone away.
         stripped.getUndoStack().setIndex(0);
-        CHECK(blank.getLayout().getNodes().isEmpty());
+        CHECK(blank.getLayout().getNodes().isEmpty() == false);
+        CHECK(stripped.isDirty() == false);
     }
 
     std::printf("sect: SM-16 delete/undo layout identity\n");
@@ -3607,6 +3612,108 @@ int main(int argc, char* argv[])
         CHECK(composite->getHistory() != SMStateEntry::eHistory::Deep);
         SMStateItem* again = canvas.stateItem(composite->getId());
         CHECK((again != nullptr) && (again->getHistoryBadge() != SMStateEntry::eHistory::Deep));
+    }
+
+    // --- CG-1: the Target picker offers a History marker only from outside its own level ---
+    std::printf("sect: CG-1 history marker in the Target picker -- offered from outside, excluded from inside\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        SMPropertiesPanel props(doc);
+        props.resize(320, 600);
+        props.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMStateEntry* lightOn = d.findState("LightOn");
+        CHECK((lightOn != nullptr) && lightOn->hasNestedStates());
+        if ((lightOn != nullptr) && lightOn->hasNestedStates())
+        {
+            // A History marker beside Initialize/Function, inside LightOn's own level.
+            SMCreateStateCommand* create = new SMCreateStateCommand(d, doc.getNotifier(), *lightOn->getNestedStates()
+                                                                    , QStringLiteral("LightOnHistory"), SMStateEntry::eStateKind::History
+                                                                    , QRectF(64.0, 232.0, NESMDesign::HistoryMarkerSize, NESMDesign::HistoryMarkerSize)
+                                                                    , QStringLiteral("Add history marker"));
+            doc.getUndoStack().push(create);
+            const uint32_t markerId = create->getStateId();
+            CHECK(markerId != 0);
+
+            // Outside LightOn: LightOff's own "power_on" transition (fixture ID 27) sits one level
+            // above the marker -- the one legal case. It must be offered, clearly labeled. The
+            // Target list is built from the level the canvas is currently drilled into, not from
+            // the transition's own owner, so the root has to be the active level here.
+            doc.getSelectionModel().setActiveLevel(d.getOverview().getId());
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+            QApplication::processEvents();
+            CHECK(props.currentPage() == SMPropertiesPanel::PageTransition);
+            QComboBox* target = props.targetCombo();
+            CHECK(target != nullptr);
+            int outsideRow = -1;
+            if (target != nullptr)
+            {
+                outsideRow = target->findData(markerId);
+                CHECK(outsideRow >= 0);
+                CHECK((outsideRow >= 0) && (target->itemText(outsideRow) == QStringLiteral("History of LightOn")));
+            }
+
+            // Inside LightOn's own level: Initialize's "start_traffic_control" transition (fixture
+            // ID 32) sits beside the marker -- rule 57's refused case. It must not be offered, and
+            // the marker must not appear as a plain, unlabeled sibling either. Drill into LightOn
+            // first, the way double-clicking it on the canvas would.
+            doc.getSelectionModel().setActiveLevel(lightOn->getId());
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ 32u });
+            QApplication::processEvents();
+            CHECK(props.currentPage() == SMPropertiesPanel::PageTransition);
+            QComboBox* insideTarget = props.targetCombo();
+            CHECK(insideTarget != nullptr);
+            CHECK((insideTarget != nullptr) && (insideTarget->findData(markerId) < 0));
+
+            // Picking it from outside actually commits, and the result validates clean -- no
+            // RULE_TARGET_SIBLING, no RULE_HISTORY_SIBLING.
+            doc.getSelectionModel().setActiveLevel(d.getOverview().getId());
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+            QApplication::processEvents();
+            if ((target != nullptr) && (outsideRow >= 0))
+            {
+                target->setCurrentIndex(outsideRow);
+                QMetaObject::invokeMethod(target, "activated", Q_ARG(int, outsideRow));
+            }
+            const SMTransitionEntry* powerOn = d.findTransitionById(27u);
+            CHECK((powerOn != nullptr) && (powerOn->getToId() == markerId));
+
+            const QList<SMIssue> issues = SMValidator::validate(d);
+            bool wrongRuleFired = false;
+            for (const SMIssue& issue : issues)
+            {
+                if ((issue.rule == DocRules::RULE_TARGET_SIBLING) || (issue.rule == DocRules::RULE_HISTORY_SIBLING))
+                {
+                    wrongRuleFired = true;
+                }
+            }
+            CHECK(wrongRuleFired == false);
+
+            // The marker paints its name below the circle and its lead-in to the left, so the item
+            // has to reserve room outside its own box or both are clipped away.
+            CHECK(page.getSceneManager().navigateTo(lightOn->getId()));
+            QApplication::processEvents();
+            grab(page, "g23-history-inside");
+            SMStateItem* markerItem = page.getScene().stateItem(markerId);
+            CHECK(markerItem != nullptr);
+            if (markerItem != nullptr)
+            {
+                const QRectF bounds = markerItem->boundingRect();
+                const double boxBottom = markerItem->getBoxGeometry().height();
+                CHECK(bounds.bottom() > (boxBottom + NESMDesign::HistoryCaptionHeight));
+                CHECK(bounds.left() <= -NESMDesign::HistoryLeadInLength);
+            }
+
+            CHECK(page.getSceneManager().navigateTo(page.getSceneManager().getRootLevel()));
+            QApplication::processEvents();
+            grab(page, "g24-history-edge");
+        }
     }
 
     // --- SM-29-EXT: one control, three meanings, and the label says which ---

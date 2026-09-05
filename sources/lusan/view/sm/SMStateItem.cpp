@@ -315,6 +315,19 @@ bool SMStateItem::isBorderDragZone(const QPointF& scenePos) const
     return outer.contains(p) && (inner.contains(p) == false);
 }
 
+QSizeF SMStateItem::minimumBoxSize() const
+{
+    if (mKind == SMStateEntry::eStateKind::History)
+    {
+        // Square, so the box stays the circle the symbol needs.
+        return QSizeF(NESMDesign::HistoryMarkerSize, NESMDesign::HistoryMarkerSize);
+    }
+
+    // A Start or Final marker is a compact pill and goes smaller than a normal state box.
+    return (isMarker() ? QSizeF(NESMDesign::MarkerStateMinWidth, NESMDesign::MarkerStateMinHeight)
+                       : QSizeF(NESMDesign::StateMinWidth, NESMDesign::StateMinHeight));
+}
+
 double SMStateItem::boxCornerRadius() const
 {
     return (isMarker() ? std::min(visibleHeight(), mSize.width()) / 2.0 : NESMDesign::StateCornerRadius);
@@ -337,7 +350,16 @@ double SMStateItem::visibleHeight() const
 QRectF SMStateItem::boundingRect() const
 {
     const double margin = NESMDesign::HandleSize;
-    return QRectF(-margin, -margin, mSize.width() + 2.0 * margin, visibleHeight() + 2.0 * margin);
+    const QRectF rect(-margin, -margin, mSize.width() + 2.0 * margin, visibleHeight() + 2.0 * margin);
+    if (mKind != SMStateEntry::eStateKind::History)
+    {
+        return rect;
+    }
+
+    // A History marker also paints its name below the circle and its lead-in to the left.
+    const double side = std::max((NESMDesign::HistoryCaptionWidth - mSize.width()) / 2.0, 0.0);
+    return rect.adjusted(-std::max(side, NESMDesign::HistoryLeadInLength), 0.0
+                         , side, NESMDesign::HistoryCaptionHeight + 2.0);
 }
 
 QPainterPath SMStateItem::shape() const
@@ -461,7 +483,13 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
     painter->drawPath(path);
 
     const QColor textColor = NESMDesign::contrastTextColor(fill);
-    if ((start == false) && (history == false))
+    if (history)
+    {
+        paintHistoryMarker(painter, box, palette, textColor);
+        return;
+    }
+
+    if (start == false)
     {
         // Final: the classic double border (an inner ring inside the pill).
         QColor ring{ textColor };
@@ -472,21 +500,13 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
         painter->drawRoundedRect(inner, ir, ir);
     }
 
-    // The glyph and the name, centered together: Start = play triangle, Final = bullseye,
-    // History = a circled H (Shallow) or H* (Deep), the same mark the composite header badge
-    // draws for the legacy History attribute.
-    // The marker pill is compact, so its label uses a slightly smaller font than the header.
+    // The glyph and the label, centered together: Start = play triangle, Final = bullseye.
     QFont nameFont = painter->font();
     nameFont.setBold(true);
     nameFont.setPointSizeF(std::max(nameFont.pointSizeF() * 0.85, 6.5));
     const QFontMetricsF metrics{ nameFont };
 
-    QFont glyphFont = nameFont;
-    glyphFont.setPointSizeF(std::max(nameFont.pointSizeF() * 0.8, 5.5));
-    const QString historyMark = QString::fromLatin1(mHistoryDepth == SMStateEntry::eHistoryDepth::Deep ? "H*" : "H");
-    const double glyphW = history
-            ? std::max(QFontMetricsF{ glyphFont }.horizontalAdvance(historyMark) + 6.0, 12.0)
-            : 9.0;
+    const double glyphW  = 9.0;
     const double gap     = 4.0;
     // The marker pill is only four grid cells wide, so a tight padding keeps "Start" and "Final"
     // un-elided. The centered text never reaches the rounded corners.
@@ -509,15 +529,6 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
         painter->setBrush(textColor);
         painter->drawPath(glyph);
     }
-    else if (history)
-    {
-        const QRectF glyphBox{ left, midY - glyphW / 2.0, glyphW, glyphW };
-        painter->setPen(QPen(textColor, 1.2));
-        painter->setBrush(Qt::NoBrush);
-        painter->drawEllipse(glyphBox);
-        painter->setFont(glyphFont);
-        painter->drawText(glyphBox, Qt::AlignCenter, historyMark);
-    }
     else
     {
         const QPointF center{ left + glyphW / 2.0, midY };
@@ -533,6 +544,55 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
     painter->setPen(textColor);
     const QRectF nameRect{ left + glyphW + gap, box.top(), textW + 2.0, box.height() };
     painter->drawText(nameRect, Qt::AlignVCenter | Qt::AlignLeft, elided);
+}
+
+void SMStateItem::paintHistoryMarker(QPainter* painter, const QRectF& box, const QPalette& palette, const QColor& textColor)
+{
+    const QColor accent = NESMDesign::historyStateColor(palette);
+
+    // The lead-in says the marker is entered from outside this level, which is the only way it can
+    // be reached. Without it a node that owns no edge on its own level reads as leftover debris.
+    QColor lead{ accent };
+    lead.setAlphaF(0.75);
+    QPen leadPen{ lead, 1.4 };
+    leadPen.setDashPattern(QList<qreal>{ 2.4, 1.8 });
+    const double midY  = box.center().y();
+    const double stubX = box.left() - NESMDesign::HistoryLeadInLength;
+    painter->setPen(leadPen);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawLine(QPointF(stubX, midY), QPointF(box.left() - 5.0, midY));
+
+    QPainterPath head;
+    head.moveTo(box.left(), midY);
+    head.lineTo(box.left() - 6.0, midY - 3.2);
+    head.lineTo(box.left() - 6.0, midY + 3.2);
+    head.closeSubpath();
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(lead);
+    painter->drawPath(head);
+
+    // The letter fills the circle: it is the symbol, and it needs no name beside it to be read.
+    QFont letter = painter->font();
+    letter.setBold(true);
+    letter.setPixelSize(static_cast<int>(std::max(std::min(box.width(), box.height()) * 0.5, 9.0)));
+    painter->setFont(letter);
+    painter->setPen(textColor);
+    painter->drawText(box, Qt::AlignCenter
+                      , QString::fromLatin1(mHistoryDepth == SMStateEntry::eHistoryDepth::Deep ? "H*" : "H"));
+
+    // The name goes under the circle, muted and un-elided, the way a pseudo-state is labelled.
+    // On one line with the letter it only fought the symbol for room and lost.
+    QFont caption = painter->font();
+    caption.setBold(false);
+    caption.setPixelSize(static_cast<int>(NESMDesign::HistoryCaptionHeight * 0.72));
+    QColor captionColor{ palette.color(QPalette::WindowText) };
+    captionColor.setAlphaF(0.75);
+    const double captionW = std::max(box.width(), NESMDesign::HistoryCaptionWidth);
+    const QRectF captionBox{ box.center().x() - captionW / 2.0, box.bottom() + 2.0
+                           , captionW, NESMDesign::HistoryCaptionHeight };
+    painter->setFont(caption);
+    painter->setPen(captionColor);
+    painter->drawText(captionBox, Qt::AlignHCenter | Qt::AlignTop, mName);
 }
 
 void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const QColor& headerColor)
@@ -1069,6 +1129,32 @@ void SMStateItem::updateFromModel()
     mKind      = state->getKind();
     mHistory   = state->getHistory();
     mHistoryDepth = state->getHistoryDepth();
+    // The header badge reads as "this level's re-entry remembers history," regardless of which
+    // of the two mutually-exclusive mechanisms (rule 58) provides it: the legacy attribute, or a
+    // nested Kind="History" marker one level in.
+    if ((mHistory == SMStateEntry::eHistory::None) && state->hasNestedStates())
+    {
+        for (SMStateEntry* nested : state->getNestedStates()->getElements())
+        {
+            if ((nested != nullptr) && nested->isHistoryMarker())
+            {
+                mHistory = (nested->getHistoryDepth() == SMStateEntry::eHistoryDepth::Deep)
+                         ? SMStateEntry::eHistory::Deep : SMStateEntry::eHistory::Shallow;
+                break;
+            }
+        }
+    }
+    if (mKind == SMStateEntry::eStateKind::History)
+    {
+        // The marker owns no edge on its own level, so the tooltip is where it says what it does
+        // and which composite it resumes.
+        const SMStateEntry* owner = data.getStates().findOwnerOfRecursive(getElementId());
+        const QString composite = (owner != nullptr) ? owner->getName() : mName;
+        setToolTip(translate(mHistoryDepth == SMStateEntry::eHistoryDepth::Deep
+                             ? "Entered from outside %1. Restores the whole path that was active last time."
+                             : "Entered from outside %1. Restores the substate that was active last time.").arg(composite));
+    }
+
     // A submachine counts as composite only when it owns at least one Normal state. One holding
     // just its Start marker is never persisted, so the box must not advertise it.
     mComposite = state->hasNestedStates() && state->getNestedStates()->hasRealState();
@@ -1092,11 +1178,9 @@ void SMStateItem::updateFromModel()
     const SMLayoutNode* node = data.getLayout().findNode(getElementId());
     if (node != nullptr)
     {
-        // Markers (Start / Final) are compact pills and clamp to a smaller minimum than a
-        // normal state box; mKind is already set above, so isMarker() is valid here.
-        const double minW = (isMarker() ? NESMDesign::MarkerStateMinWidth : NESMDesign::StateMinWidth);
-        const double minH = (isMarker() ? NESMDesign::MarkerStateMinHeight : NESMDesign::StateMinHeight);
-        mSize = QSizeF(std::max(node->width, minW), std::max(node->height, minH));
+        // mKind is already set above, so the kind-dependent minimum is valid here.
+        const QSizeF minimum = minimumBoxSize();
+        mSize = QSizeF(std::max(node->width, minimum.width()), std::max(node->height, minimum.height()));
         // Marker boxes have no collapsible body; they always paint at full height.
         mExpanded        = (isMarker() ? true : (node->hasExpanded ? node->expanded : true));
         mColorName       = node->color;
@@ -1544,9 +1628,9 @@ void SMStateItem::applyResizeDrag(const QPointF& scenePos)
     const bool top    = (mResizeHandle == eHandle::TopLeft) || (mResizeHandle == eHandle::Top) || (mResizeHandle == eHandle::TopRight);
     const bool bottom = (mResizeHandle == eHandle::BottomLeft) || (mResizeHandle == eHandle::Bottom) || (mResizeHandle == eHandle::BottomRight);
 
-    // Markers (Start / Final) are compact pills and may be resized smaller than a normal box.
-    const double minW = (isMarker() ? NESMDesign::MarkerStateMinWidth : NESMDesign::StateMinWidth);
-    const double minH = (isMarker() ? NESMDesign::MarkerStateMinHeight : NESMDesign::StateMinHeight);
+    const QSizeF minimum = minimumBoxSize();
+    const double minW = minimum.width();
+    const double minH = minimum.height();
 
     if (left)
     {

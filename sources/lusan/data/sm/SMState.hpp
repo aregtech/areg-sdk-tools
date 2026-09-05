@@ -302,6 +302,18 @@ public:
     SMStateEntry* findStateByIdRecursive(uint32_t id) const;
 
     /**
+     * \brief   Finds the direct child of this level that either is the given element ID or
+     *          owns it somewhere in its nested levels.
+     **/
+    SMStateEntry* findAncestorOfRecursive(uint32_t id) const;
+
+    /**
+     * \brief   Finds the state that directly owns the level the given element sits on. Returns
+     *          null when the element sits on this level itself, which has no owning state.
+     **/
+    SMStateEntry* findOwnerOfRecursive(uint32_t id) const;
+
+    /**
      * \brief   True when this level or any nested level owns a Kind="History" pseudo-state.
      *          Decides whether the document needs FormatVersion 1.2.0 to be saved.
      **/
