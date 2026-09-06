@@ -343,13 +343,15 @@ namespace DocRules
     constexpr int RULE_FILE_NAME_MISMATCH   { 49 };
 
     /**
-     * \brief   The document states a FormatVersion the reader does not know. An error when the
-     *          document is newer in any of the three numbers: everything a reader does not
-     *          understand it drops in silence, so it would generate code describing a document
-     *          nobody wrote. A warning when the document is older by a MAJOR, which is a
-     *          migration and not a fault -- it is read as it stands, never rewritten, and the
-     *          generated files carry the format the tool reads. An older minor or patch is
-     *          readable by design and says nothing.
+     * \brief   The document states a FormatVersion the reader does not know. An error only when
+     *          the document is newer by a MAJOR, which says the document is shaped differently
+     *          and would generate code describing a document nobody wrote. A warning when the
+     *          document is newer by a MINOR or a PATCH: a minor only adds, and anything the
+     *          reader does not recognise -- a section, an element, an attribute, a value the
+     *          schema beside it does not allow -- is refused where it is met rather than dropped
+     *          in silence, so the document is read as it stands and the difference is said
+     *          aloud. A warning too when the document is older by a MAJOR, which is a migration
+     *          and not a fault. An older minor or patch is readable by design and says nothing.
      **/
     constexpr int RULE_FORMAT_VERSION       { 50 };
 
@@ -676,12 +678,14 @@ namespace DocRules
           , "The document declares one name and lives in a file called another. Both are allowed -- the "
             "generated files follow the declared name -- but worth saying." }
         , { RULE_FORMAT_VERSION      , BandError | BandWarning, DocDataType | DocInterface | DocStateMachine
-          , "The document states a FormatVersion the reader does not know. An error when the document is "
-            "newer in any of the three numbers: everything a reader does not understand it drops in silence, "
-            "so it would generate code describing a document nobody wrote. A warning when the document is "
-            "older by a MAJOR, which is a migration and not a fault -- it is read as it stands, never "
-            "rewritten, and the generated files carry the format the tool reads. An older minor or patch is "
-            "readable by design and says nothing." }
+          , "The document states a FormatVersion the reader does not know. An error only when the document is "
+            "newer by a MAJOR, which says the document is shaped differently and would generate code "
+            "describing a document nobody wrote. A warning when the document is newer by a MINOR or a PATCH: "
+            "a minor only adds, and anything the reader does not recognise -- a section, an element, an "
+            "attribute, a value the schema beside it does not allow -- is refused where it is met rather than "
+            "dropped in silence, so the document is read as it stands and the difference is said aloud. A "
+            "warning too when the document is older by a MAJOR, which is a migration and not a fault. An "
+            "older minor or patch is readable by design and says nothing." }
         , { RULE_RESPONSE_LINK       , BandError, DocInterface
           , "A request whose Response names nothing, or names a method the document declares as something "
             "other than a response. The field to correct is the response the request is answered by." }

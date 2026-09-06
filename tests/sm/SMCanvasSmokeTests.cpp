@@ -71,7 +71,9 @@
 #include <QHBoxLayout>
 #include <QGraphicsPathItem>
 #include <QGraphicsProxyWidget>
+#include <QImage>
 #include <QKeyEvent>
+#include <QPainter>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -184,6 +186,15 @@ namespace
         QMouseEvent release2(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, modifiers);
         QApplication::sendEvent(view.viewport(), &release2);
         QApplication::processEvents();
+    }
+
+    //!< Posts one arrow key to a scene and returns the edge's end anchor after it.
+    QPointF pressArrow(SMScene& scene, Qt::Key key, Qt::KeyboardModifiers modifiers, const SMEdgeItem& edge)
+    {
+        QKeyEvent press(QEvent::KeyPress, key, modifiers);
+        QApplication::sendEvent(&scene, &press);
+        QApplication::processEvents();
+        return edge.getPath().last();
     }
 
     //!< Posts a key press/release pair directly to a graphics scene.
@@ -3713,6 +3724,174 @@ int main(int argc, char* argv[])
             CHECK(page.getSceneManager().navigateTo(page.getSceneManager().getRootLevel()));
             QApplication::processEvents();
             grab(page, "g24-history-edge");
+
+            // The end of a transition into a History marker is drawn on the composite's box, so it
+            // slides along that border like any other endpoint. It used to stay pinned to the middle
+            // of the side it sat on, because the marker's own radius was measured on the composite's
+            // box and turned it into a stadium with no span left to move within.
+            SMEdgeItem* histEdge = dynamic_cast<SMEdgeItem*>(page.getScene().findCanvasItem(27u));
+            SMStateItem* histBox = page.getScene().stateItem(lightOn->getId());
+            CHECK((histEdge != nullptr) && (histBox != nullptr));
+            if ((histEdge != nullptr) && (histBox != nullptr) && (histEdge->getPath().size() >= 2))
+            {
+                page.getScene().clearSelection();
+                histEdge->setSelected(true);
+                QApplication::processEvents();
+
+                // A quarter of the way down the left side: on the border, well clear of the corners
+                // and far enough from the middle that a grid snap cannot account for the result.
+                const QRectF  box       = histBox->getVisibleGeometry();
+                const QPointF endBefore = histEdge->getPath().last();
+                const QPointF drop{ box.left(), box.top() + box.height() / 4.0 };
+
+                dragScene(page.getView(), endBefore, drop);
+                const QPointF endAfter = histEdge->getPath().last();
+                CHECK(std::abs(endAfter.x() - box.left()) < 1.0);            // stayed on the left side
+                CHECK(std::abs(endAfter.y() - drop.y()) < 12.0);             // landed where it was dropped
+                CHECK(std::abs(endAfter.y() - box.center().y()) > 1.0);      // not pinned to the middle
+
+                // The arrow keys carry on from there, so the endpoint has a span to move within.
+                // Every step size has to advance it: a plain step lands on the next border
+                // position, Ctrl on the next whole cell, Shift one unit off the grid entirely.
+                CHECK(histEdge->hasActiveEnd());
+                const QPointF plain  = pressArrow(page.getScene(), Qt::Key_Up, Qt::NoModifier, *histEdge);
+                CHECK(plain.y() < endAfter.y());
+                const QPointF coarse = pressArrow(page.getScene(), Qt::Key_Up, Qt::ControlModifier, *histEdge);
+                CHECK(coarse.y() < plain.y());
+                const QPointF pixel  = pressArrow(page.getScene(), Qt::Key_Down, Qt::ShiftModifier, *histEdge);
+                CHECK(std::abs((pixel.y() - coarse.y()) - 1.0) < 1e-6);
+
+                doc.getUndoStack().undo();
+                doc.getUndoStack().undo();
+                doc.getUndoStack().undo();
+                doc.getUndoStack().undo();
+                page.getScene().clearSelection();
+                QApplication::processEvents();
+            }
+        }
+    }
+
+    // --- CG-2: a transition pointed at the History marker of its own source ---
+    std::printf("sect: CG-2 a transition retargeted onto its own History loops, and keeps its H\n");
+    {
+        // Source and target then draw on one and the same box, which left the line with no
+        // direction at all: it collapsed into a bare dot and the H mark went with it. It has to
+        // come back as the bracket that leaves one side of the box and returns to it.
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMStateEntry* lightOn  = d.findState("LightOn");
+        SMStateEntry* lightOff = d.findState("LightOff");
+        CHECK((lightOn != nullptr) && (lightOff != nullptr) && lightOn->hasNestedStates());
+        if ((lightOn != nullptr) && (lightOff != nullptr) && lightOn->hasNestedStates())
+        {
+            SMCreateStateCommand* marker = new SMCreateStateCommand(d, doc.getNotifier(), *lightOn->getNestedStates()
+                                                                    , QStringLiteral("OnHistory"), SMStateEntry::eStateKind::History
+                                                                    , QRectF(64.0, 232.0, NESMDesign::HistoryMarkerSize, NESMDesign::HistoryMarkerSize)
+                                                                    , QStringLiteral("Add history marker"));
+            doc.getUndoStack().push(marker);
+            const uint32_t markerId = marker->getStateId();
+            CHECK(markerId != 0);
+
+            // LightOn's own transition, the way `pause` belongs to the composite it pauses.
+            SMCreateTransitionCommand* make = new SMCreateTransitionCommand(d, doc.getNotifier(), *lightOn
+                                                                            , SMTransitionEntry::eStimulusKind::Trigger
+                                                                            , QStringLiteral("pause"), lightOff->getId()
+                                                                            , QList<QPointF>(), QStringLiteral("Add transition"));
+            doc.getUndoStack().push(make);
+            const uint32_t txId = make->getTransitionId();
+            QApplication::processEvents();
+
+            SMEdgeItem*  edge   = dynamic_cast<SMEdgeItem*>(page.getScene().findCanvasItem(txId));
+            SMStateItem* onItem = page.getScene().stateItem(lightOn->getId());
+            CHECK((edge != nullptr) && (onItem != nullptr));
+            if ((edge != nullptr) && (onItem != nullptr))
+            {
+                CHECK(edge->getPath().size() == 2);         // a plain line between two boxes
+
+                doc.getUndoStack().push(new SMSetTransitionTargetCommand(d, doc.getNotifier(), txId, markerId
+                                                                        , QStringLiteral("Set target")));
+                QApplication::processEvents();
+                CHECK(d.findTransitionById(txId)->getToId() == markerId);
+
+                const QRectF         box  = onItem->getVisibleGeometry();
+                const QList<QPointF> loop = edge->getPath();
+                const auto same = [](double a, double b) -> bool { return std::abs(a - b) < 0.5; };
+                CHECK(loop.size() == 4);                    // begin, two corners, end
+                if (loop.size() == 4)
+                {
+                    CHECK(std::hypot(loop.first().x() - loop.last().x()
+                                   , loop.first().y() - loop.last().y()) > 1.0);   // not a dot
+                    CHECK(same(loop.first().y(), box.top()));                      // both ends on one side
+                    CHECK(same(loop.last().y() , box.top()));
+                    CHECK(same(loop.at(1).x(), loop.first().x()));                 // the leg out is square
+                    CHECK(same(loop.at(2).x(), loop.last().x()));                  // so is the leg back
+                    CHECK(same(loop.at(1).y(), box.top() - NESMDesign::EdgeSelfLoopStandoff));
+                    CHECK(same(loop.at(2).y(), box.top() - NESMDesign::EdgeSelfLoopStandoff));
+                }
+
+                // The H mark is what says the target is a History, so it has to be on the line
+                // whatever shape the line takes. Look for the marker fill around the arrow tip.
+                const QPointF tip = edge->getPath().last();
+                const QColor  ink = NESMDesign::historyStateColor(NESMDesign::canvasPalette());
+                QImage shot(64, 64, QImage::Format_ARGB32);
+                shot.fill(Qt::transparent);
+                QPainter painter(&shot);
+                page.getScene().render(&painter, QRectF(0.0, 0.0, 64.0, 64.0)
+                                       , QRectF(tip.x() - 32.0, tip.y() - 32.0, 64.0, 64.0));
+                painter.end();
+
+                int inkPixels = 0;
+                for (int y = 0; y < shot.height(); ++y)
+                {
+                    for (int x = 0; x < shot.width(); ++x)
+                    {
+                        inkPixels += (QColor(shot.pixel(x, y)).rgb() == ink.rgb()) ? 1 : 0;
+                    }
+                }
+
+                CHECK(inkPixels > 0);
+                grab(page, "g25-history-self-loop");
+            }
+
+            // The same target reached with both anchors already on one border point -- what a
+            // document with no stored layout ends up with. That pair is what used to draw the dot,
+            // so it has to open into a loop of its own and carry the mark too.
+            SMStateItem* pinItem = page.getScene().stateItem(lightOn->getId());
+            CHECK(pinItem != nullptr);
+            if (pinItem != nullptr)
+            {
+                const QPointF pin(pinItem->getVisibleGeometry().right(), pinItem->getVisibleGeometry().center().y());
+                SMCreateTransitionCommand* pinned = new SMCreateTransitionCommand(d, doc.getNotifier(), *lightOn
+                                                                                  , SMTransitionEntry::eStimulusKind::Trigger
+                                                                                  , QStringLiteral("resume"), markerId
+                                                                                  , QList<QPointF>{ pin, pin }, QStringLiteral("Add transition"));
+                doc.getUndoStack().push(pinned);
+                QApplication::processEvents();
+
+                SMEdgeItem* tight = dynamic_cast<SMEdgeItem*>(page.getScene().findCanvasItem(pinned->getTransitionId()));
+                CHECK(tight != nullptr);
+                if (tight != nullptr)
+                {
+                    const QList<QPointF> path = tight->getPath();
+                    CHECK(path.size() == 4);
+                    if (path.size() == 4)
+                    {
+                        // The side the anchors were pinned to is kept: the bracket stands off the
+                        // right border, it does not jump back to the default one on top.
+                        CHECK(std::abs(path.first().x() - pin.x()) < 0.5);
+                        CHECK(std::abs(path.last().x()  - pin.x()) < 0.5);
+                        CHECK(std::abs(path.first().y() - path.last().y()) > 1.0);
+                        CHECK(std::abs((path.at(1).x() - pin.x()) - NESMDesign::EdgeSelfLoopStandoff) < 0.5);
+                        CHECK(std::abs((path.at(2).x() - pin.x()) - NESMDesign::EdgeSelfLoopStandoff) < 0.5);
+                    }
+                }
+            }
         }
     }
 

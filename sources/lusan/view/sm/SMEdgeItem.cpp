@@ -79,7 +79,7 @@ namespace
 
     //!< Moves one coordinate by a single keyboard step. A pixel-wise step moves one unit, otherwise
     //!< the result snaps to the next multiple of \a base beyond the current value in \a dir.
-    double nudgeAxis(double value, int dir, int base, bool pixelWise)
+    double nudgeAxis(double value, int dir, double base, bool pixelWise)
     {
         if (dir == 0)
         {
@@ -92,10 +92,10 @@ namespace
         }
 
         constexpr double eps = 1e-6;
-        const double cells = value / static_cast<double>(base);
+        const double cells = value / base;
         const double target = (dir > 0) ? (std::floor(cells + eps) + 1.0)
                                         : (std::ceil (cells - eps) - 1.0);
-        return target * static_cast<double>(base);
+        return target * base;
     }
 
     //!< Two points less than a thousandth of a scene unit apart are the same point. The anchors are
@@ -128,6 +128,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mTargetId     (0)
     , mTargetName   ( )
     , mSelfLoop     (false)
+    , mOneBox       (false)
     , mTargetIsHistory(false)
     , mTargetHistoryDeep(false)
     , mValid        (false)
@@ -320,7 +321,7 @@ void SMEdgeItem::setAnchorPoint(bool begin, const QPointF& point)
 
     // Re-measure both against their boxes: the seeding above may have written the other one too.
     mAnchorBeginRel  = mAnchorBegin - anchorFrame(mSourceId);
-    mAnchorEndRel    = mAnchorEnd   - anchorFrame(mSelfLoop ? mSourceId : mTargetId);
+    mAnchorEndRel    = mAnchorEnd   - anchorFrame(mOneBox ? mSourceId : mTargetId);
     mAnchorsMeasured = true;
 }
 
@@ -336,6 +337,14 @@ double SMEdgeItem::stateRadius(uint32_t stateId, const QRectF& rect) const
     if (item != nullptr)
     {
         return item->boxCornerRadius();
+    }
+
+    // A state with no box of its own is drawn on the box of its visible ancestor, so the radius
+    // has to be measured on that ancestor rather than on the requested state.
+    const uint32_t boxId = visibleAncestorId(stateId);
+    if (boxId != stateId)
+    {
+        return stateRadius(boxId, rect);
     }
 
     const SMStateEntry* state = canvas->getModel().getData().findStateById(stateId);
@@ -579,6 +588,7 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
         return;
     }
 
+    mOneBox = drawnOnOneBox();
     QRectF src = stateRect(mSourceId);
     if ((src.width() <= 0.0) || (src.height() <= 0.0))
     {
@@ -586,7 +596,7 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
     }
 
     const QPointF sc = src.center();
-    QRectF tgt = (mSelfLoop ? src : stateRect(mTargetId));
+    QRectF tgt = (mOneBox ? src : stateRect(mTargetId));
     if ((tgt.width() <= 0.0) || (tgt.height() <= 0.0))
     {
         // Dangling target: draw toward a placeholder box beside the source.
@@ -598,7 +608,7 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
     // The anchors live in their boxes, not in the scene: measure them once against the stored box,
     // then re-derive them from wherever the box stands now.
     const QPointF srcFrame = anchorFrame(mSourceId);
-    const QPointF tgtFrame = anchorFrame(mSelfLoop ? mSourceId : mTargetId);
+    const QPointF tgtFrame = anchorFrame(mOneBox ? mSourceId : mTargetId);
     if (mHasAnchors)
     {
         if (mAnchorsMeasured == false)
@@ -659,17 +669,34 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
         mHasOrigins = true;
     }
 
-    // A self-loop with no stored waypoints gets a default loop above the box. An arc gets none: its
-    // anchors and bulge already describe it, and a seeded waypoint would be written to the layout.
-    if (mSelfLoop && mWaypoints.isEmpty() && (mShape != SMLayoutEdge::eShape::Arc))
+    const double srcRad = stateRadius(mSourceId, src);
+    const double tgtRad = (mOneBox ? srcRad : stateRadius(mTargetId, tgt));
+
+    // A loop takes its ends from its own anchors, or from the symmetric default pair on the top
+    // border, and opens them up when they land on one another.
+    QPointF loopBegin;
+    QPointF loopEnd;
+    if (mOneBox)
     {
-        const double off = NESMDesign::EdgeSelfLoopStandoff;
-        mWaypoints.append(QPointF(src.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, src.top() - off));
-        mWaypoints.append(QPointF(src.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, src.top() - off));
+        if (mHasAnchors)
+        {
+            loopBegin = borderAnchorPoint(mSourceId, src, mAnchorBegin);
+            loopEnd   = borderAnchorPoint(mSourceId, tgt, mAnchorEnd);
+        }
+        else
+        {
+            selfLoopEnds(src, loopBegin, loopEnd);
+        }
+
+        spreadLoopEnds(src, loopBegin, loopEnd);
     }
 
-    const double srcRad = stateRadius(mSourceId, src);
-    const double tgtRad = (mSelfLoop ? srcRad : stateRadius(mTargetId, tgt));
+    // A loop with no stored waypoints gets the bracket that leaves the border, runs alongside it
+    // and comes back, on whichever side its ends sit. An arc gets none.
+    if (mOneBox && mWaypoints.isEmpty() && (mShape != SMLayoutEdge::eShape::Arc))
+    {
+        mWaypoints = loopCorners(src, loopBegin, loopEnd);
+    }
 
     // A never-dragged endpoint sticks to the border facing the other box, and with snap-to-grid on
     // it lands on a grid-aligned border position, so it stops jittering as either box moves.
@@ -684,22 +711,13 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
 
     if (mShape == SMLayoutEdge::eShape::Arc)
     {
-        // A self-loop faces no other box, so center-to-center gives no direction at all: without
-        // anchors of its own it falls back to the symmetric default pair on its top border.
-        QPointF loopBegin;
-        QPointF loopEnd;
-        if (mSelfLoop && (mHasAnchors == false))
-        {
-            selfLoopEnds(src, loopBegin, loopEnd);
-        }
-
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
+               : mOneBox     ? loopBegin
                : mHasAnchors ? borderAnchorPoint(mSourceId, src, mAnchorBegin)
-               : mSelfLoop   ? loopBegin
                              : defaultBorder(src, srcRad, tc);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
-               : mHasAnchors ? borderAnchorPoint((mSelfLoop ? mSourceId : mTargetId), tgt, mAnchorEnd)
-               : mSelfLoop   ? loopEnd
+               : mOneBox     ? loopEnd
+               : mHasAnchors ? borderAnchorPoint(mTargetId, tgt, mAnchorEnd)
                              : defaultBorder(tgt, tgtRad, sc);
         mPath  = NESMDesign::arcPolyline(mBegin, mEnd, mBulge, NESMDesign::EdgeArcSamples);
     }
@@ -711,11 +729,13 @@ void SMEdgeItem::rebuildPath(bool followBoxes /*= false*/)
         const QPointF beginRef = poly ? mWaypoints.first() : tc;
         const QPointF endRef   = poly ? mWaypoints.last()  : sc;
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
+               : mOneBox     ? loopBegin
                : mHasAnchors ? borderAnchorPoint(mSourceId, src, mAnchorBegin)
                : poly        ? NESMDesign::polylineBorderPoint(src, srcRad, beginRef)
                              : defaultBorder(src, srcRad, beginRef);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
-               : mHasAnchors ? borderAnchorPoint((mSelfLoop ? mSourceId : mTargetId), tgt, mAnchorEnd)
+               : mOneBox     ? loopEnd
+               : mHasAnchors ? borderAnchorPoint(mTargetId, tgt, mAnchorEnd)
                : poly        ? NESMDesign::polylineBorderPoint(tgt, tgtRad, endRef)
                              : defaultBorder(tgt, tgtRad, endRef);
 
@@ -1065,17 +1085,8 @@ void SMEdgeItem::paintArrowHead(QPainter* painter, const QPointF& from, const QP
     painter->drawPath(head);
 }
 
-void SMEdgeItem::paintHistoryMark(QPainter* painter, const QPointF& from, const QPointF& tip, const QPalette& palette) const
+void SMEdgeItem::paintHistoryMark(QPainter* painter, const QPointF& tip, const QPalette& palette) const
 {
-    QPointF dir = tip - from;
-    const double len = std::hypot(dir.x(), dir.y());
-    if (len < 1e-6)
-    {
-        return;
-    }
-
-    dir /= len;
-
     // Straddles the border at the arrow tip, half in / half out: this is where UML draws the
     // pseudo-state the arrow terminates on. The box stays upright whatever way the edge runs,
     // because the letter has to stay readable.
@@ -1157,7 +1168,7 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
         const double len = std::hypot(dir.x(), dir.y());
         const QPointF head = (len > 1e-6) ? (mEnd - (dir / len) * historyMarkInset(dir / len)) : mEnd;
         paintArrowHead(painter, last, head, color);
-        paintHistoryMark(painter, last, mEnd, palette);
+        paintHistoryMark(painter, mEnd, palette);
     }
     else
     {
@@ -1484,7 +1495,7 @@ double SMEdgeItem::bulgeFor(const QPointF& point) const
     const QPointF normal{ -chord.y() / c, chord.x() / c };
     const QPointF fromMid = point - ((mBegin + mEnd) / 2.0);
     const double  sagitta = (fromMid.x() * normal.x()) + (fromMid.y() * normal.y());
-    const double  limit   = (mSelfLoop ? NESMDesign::EdgeArcSelfBulgeMax : NESMDesign::EdgeArcBulgeMax);
+    const double  limit   = (mOneBox ? NESMDesign::EdgeArcSelfBulgeMax : NESMDesign::EdgeArcBulgeMax);
     return std::clamp(2.0 * sagitta / c, -limit, limit);
 }
 
@@ -1492,6 +1503,49 @@ void SMEdgeItem::selfLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) c
 {
     begin = QPointF(box.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, box.top());
     end   = QPointF(box.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, box.top());
+}
+
+bool SMEdgeItem::drawnOnOneBox() const
+{
+    if (mSelfLoop)
+    {
+        return true;
+    }
+
+    // A History marker, and any other state that lives deeper than the level shown, has no box of
+    // its own and is drawn on the box of its nearest visible ancestor.
+    const uint32_t srcBox = visibleAncestorId(mSourceId);
+    return (srcBox != 0) && (mTargetId != 0) && (srcBox == visibleAncestorId(mTargetId));
+}
+
+void SMEdgeItem::spreadLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) const
+{
+    const QPointF normal = NESMDesign::borderOutwardNormal(box, begin);
+    if ((normal != NESMDesign::borderOutwardNormal(box, end))
+        || (distance(begin, end) >= NESMDesign::EdgeSelfLoopHalfSpan))
+    {
+        return;
+    }
+
+    // Half a span either way from where the two stand, along the side they share.
+    const QPointF along { -normal.y(), normal.x() };
+    const QPointF middle = (begin + end) / 2.0;
+    const double  span   = NESMDesign::EdgeSelfLoopHalfSpan;
+    const double  radius = stateRadius(mSourceId, box);
+    begin = NESMDesign::nearestBorderPoint(box, radius, middle - (along * span));
+    end   = NESMDesign::nearestBorderPoint(box, radius, middle + (along * span));
+}
+
+QList<QPointF> SMEdgeItem::loopCorners(const QRectF& box, const QPointF& begin, const QPointF& end) const
+{
+    QList<QPointF> corners;
+    if ((box.width() > 0.0) && (box.height() > 0.0))
+    {
+        corners.append(begin + (NESMDesign::borderOutwardNormal(box, begin) * NESMDesign::EdgeSelfLoopStandoff));
+        corners.append(end   + (NESMDesign::borderOutwardNormal(box, end)   * NESMDesign::EdgeSelfLoopStandoff));
+    }
+
+    return corners;
 }
 
 void SMEdgeItem::adoptSelfLoopEnds()
@@ -1502,10 +1556,7 @@ void SMEdgeItem::adoptSelfLoopEnds()
         return;
     }
 
-    if (distance(mBegin, mEnd) < 1e-3)
-    {
-        selfLoopEnds(box, mBegin, mEnd);    // a chord of zero length is not a curve
-    }
+    spreadLoopEnds(box, mBegin, mEnd);      // too short a chord is not a curve
 
     // Pin them: without anchors the arc branch would re-derive the endpoints and lose the side of
     // the box the user had the loop leaving from.
@@ -1533,16 +1584,7 @@ double SMEdgeItem::selfLoopBulge() const
 
 QList<QPointF> SMEdgeItem::selfLoopCorners() const
 {
-    QList<QPointF> corners;
-    const QRectF box = stateRect(mSourceId);
-    if ((box.width() <= 0.0) || (box.height() <= 0.0))
-    {
-        return corners;
-    }
-
-    corners.append(mBegin + (NESMDesign::borderOutwardNormal(box, mBegin) * NESMDesign::EdgeSelfLoopStandoff));
-    corners.append(mEnd   + (NESMDesign::borderOutwardNormal(box, mEnd)   * NESMDesign::EdgeSelfLoopStandoff));
-    return corners;
+    return loopCorners(stateRect(mSourceId), mBegin, mEnd);
 }
 
 void SMEdgeItem::setShape(SMLayoutEdge::eShape shape)
@@ -1561,7 +1603,7 @@ void SMEdgeItem::setShape(SMLayoutEdge::eShape shape)
         // on a curve. This mirrors the Arc -> Line downgrade that adding a waypoint performs.
         mWaypoints.clear();
         setSelectedPoint(-1);
-        if (mSelfLoop)
+        if (mOneBox)
         {
             adoptSelfLoopEnds();
         }
@@ -1569,16 +1611,16 @@ void SMEdgeItem::setShape(SMLayoutEdge::eShape shape)
         if (std::abs(mBulge) < 1e-6)
         {
             // A zero bulge would still draw straight.
-            mBulge = (mSelfLoop ? selfLoopBulge() : NESMDesign::EdgeArcBulgeDefault);
+            mBulge = (mOneBox ? selfLoopBulge() : NESMDesign::EdgeArcBulgeDefault);
         }
     }
     else
     {
         mBulge = 0.0;
-        if (mSelfLoop && mWaypoints.isEmpty())
+        if (mOneBox && mWaypoints.isEmpty())
         {
-            // Both anchors of a self-loop sit on the same box, so a two-point run has nothing to
-            // draw. Straightening gives it the rectangle the arc stood in.
+            // Both anchors of a loop sit on the same box, so a two-point run has nothing to draw.
+            // Straightening gives it the rectangle the arc stood in.
             mWaypoints = selfLoopCorners();
         }
     }
@@ -1670,7 +1712,7 @@ bool SMEdgeItem::nudgeGeometry(const QPointF& delta)
     }
 
     const QRectF srcBox = stateRect(mSourceId);
-    const QRectF tgtBox = (mSelfLoop ? srcBox : stateRect(mTargetId));
+    const QRectF tgtBox = (mOneBox ? srcBox : stateRect(mTargetId));
     if ((srcBox.width() <= 0.0) || (srcBox.height() <= 0.0))
     {
         return false;
@@ -1691,7 +1733,7 @@ bool SMEdgeItem::nudgeGeometry(const QPointF& delta)
     };
 
     const QPointF begin = slide(mSourceId, srcBox, mHasAnchors ? mAnchorBegin : mBegin);
-    const QPointF end   = slide((mSelfLoop ? mSourceId : mTargetId), tgtBox, mHasAnchors ? mAnchorEnd : mEnd);
+    const QPointF end   = slide((mOneBox ? mSourceId : mTargetId), tgtBox, mHasAnchors ? mAnchorEnd : mEnd);
 
     prepareGeometryChange();
     for (QPointF& point : mWaypoints)
@@ -1870,13 +1912,21 @@ bool SMEdgeItem::nudgeActiveEnd(int dx, int dy, bool coarse, bool pixelWise)
         anchor = (begin ? mBegin : mEnd);    // first manual endpoint move: start from the drawn path
     }
 
-    const int base = (coarse ? 10 : 5);
+    SMScene*   canvas = getCanvas();
+    const int  grid   = (canvas != nullptr) ? canvas->getGridSize() : NESMDesign::GridSizeDefault;
+    const bool snap   = (canvas != nullptr) && canvas->isSnapToGrid() && (pixelWise == false);
+
+    // With snapping on, the border only accepts half-grid positions, so the step has to be that
+    // same lattice: a shorter one is rounded back and the endpoint never moves. A coarse step
+    // takes a whole cell.
+    const double half = std::max(static_cast<double>(grid) / 2.0, 1.0);
+    const double base = snap ? (coarse ? half * 2.0 : half) : (coarse ? 10.0 : 5.0);
     anchor.setX(nudgeAxis(anchor.x(), dx, base, pixelWise));
     anchor.setY(nudgeAxis(anchor.y(), dy, base, pixelWise));
 
-    SMScene* canvas = getCanvas();
-    const int grid  = (canvas != nullptr) ? canvas->getGridSize() : NESMDesign::GridSizeDefault;
-    const QPointF glued = NESMDesign::gridAlignedBorderPoint(box, stateRadius(stateId, box), anchor, grid);
+    const double  radius = stateRadius(stateId, box);
+    const QPointF glued  = snap ? NESMDesign::gridAlignedBorderPoint(box, radius, anchor, grid)
+                                : NESMDesign::nearestBorderPoint(box, radius, anchor);
 
     if (mHasAnchors && (glued == (begin ? mAnchorBegin : mAnchorEnd)))
     {
