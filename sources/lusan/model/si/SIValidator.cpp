@@ -335,16 +335,23 @@ namespace
             if (response == nullptr)
                 continue;
 
-            bool bound = false;
+            int senders = 0;
             for (MethodEntry* request : requests)
             {
-                bound = bound || ((request != nullptr) && (request->getReply() == response->getName()));
+                if ((request != nullptr) && (request->getReply() == response->getName()))
+                    ++ senders;
             }
 
-            if (bound == false)
+            if (senders == 0)
             {
                 add(response->getId(), eDocElementKind::Method, eSeverity::Warning, DocRules::RULE_UNBOUND_RESPONSE
                    , vtr("Response '%1' is not the answer to any request").arg(response->getName()));
+            }
+            else if (senders > 1)
+            {
+                // Legal and sometimes meant, so it is said once and never as a warning.
+                add(response->getId(), eDocElementKind::Method, eSeverity::Info, DocRules::RULE_SHARED_RESPONSE
+                   , vtr("Response '%1' answers %2 requests").arg(response->getName()).arg(senders));
             }
         }
     }
@@ -496,6 +503,8 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
         case DocRules::RULE_UNBOUND_RESPONSE:
             return QCoreApplication::translate("SIValidator", "A response is what a request answers with. Connect it to the request it belongs to, or remove it.");
+        case DocRules::RULE_SHARED_RESPONSE:
+            return QCoreApplication::translate("SIValidator", "Several requests answer with this one response, so a caller cannot tell from the reply which request it belongs to. Legal, and worth a second look.");
         case DocRules::RULE_EMPTY_DOCUMENT:
             return QCoreApplication::translate("SIValidator", "A client reaches an interface through its attributes and methods. Until there is one, there is nothing to generate.");
         case DocRules::RULE_DEPRECATED:

@@ -1981,6 +1981,21 @@ namespace
                 if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (repeats.contains(sid) == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, DocRules::RULE_UNUSED_HISTORY, vtr("History on '%1' is never re-entered").arg(st->getName()));
 
+                // The entry operations of a nested Final run as it is entered, with the machine
+                // still inside the composite. OnFinal only queues its event, so the composite is
+                // left later. A Final at the root level has no composite to wait for.
+                if ((st->getKind() == SMStateEntry::eStateKind::Final) && (info.isRoot == false)
+                    && (st->getEntryList().isEmpty() == false))
+                {
+                    const SMStateEntry* holder = mData.findStateById(info.ownerId);
+                    if ((holder != nullptr) && (holder->getOnFinal().isEmpty() == false))
+                    {
+                        add(sid, eDocElementKind::State, eSeverity::Warning, DocRules::RULE_FINAL_ENTRY_ORDER
+                           , vtr("Entry operations on '%1' run while the machine is still inside the composite; move them to the transition '%2' takes on '%3'")
+                                .arg(st->getName(), holder->getName(), holder->getOnFinal()));
+                    }
+                }
+
                 QSet<QString> unconditionalStimuli;
                 for (SMTransitionEntry* tr : st->getTransitions().getElements())
                 {
@@ -2157,6 +2172,8 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
             return vtr("Both sides of the comparison are fixed before the machine runs, so the result is always the same. Compare against something the machine changes.");
         case DocRules::RULE_UNUSED_HISTORY:
             return vtr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
+        case DocRules::RULE_FINAL_ENTRY_ORDER:
+            return vtr("The Final state ends its level, it does not leave the composite. Its entry operations run first and the composite is left afterwards, when the queued OnFinal event is dispatched. Put the work on the transition the composite takes on that event and keep the Final empty.");
         case DocRules::RULE_IMPORT_PATCH:
             return vtr("The imported document has moved on since the version recorded here. Accept the new version, or pin the import to the file you mean.");
         case DocRules::RULE_ARGUMENT_TYPE:

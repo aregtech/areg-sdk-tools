@@ -2091,6 +2091,43 @@ namespace
             action->getElements()[0].setDescription("How many");
             CHECK(countInfo(SMValidator::validate(doc), 14) == 0);
         }
+        {   // W8: an operation on a nested Final under a composite that raises OnFinal. The
+            // operation runs as the Final is entered and the composite is left only later,
+            // when the queued event is dispatched. Empty Final, no finding.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getEvents().createEvent("Done");
+            doc.getMethods().createMethod("report", NEMethod::SmAction);
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            SMStateData* inner = comp->getOrCreateNestedStates();
+            inner->createState("Inner", eKind::Start);
+            SMStateEntry* over = inner->createState("Over", eKind::Final);
+            comp->setOnFinal("Done");
+            CHECK(countWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER) == 0);
+
+            over->getEntryList().addOperation(new SMActionCall(0, "report"));
+            CHECK(hasWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER, SMIssue::eSeverity::Warning));
+        }
+        {   // W8 negative: no OnFinal on the composite, so nothing reports the level as
+            // finished and there is no later transition to move the operation to.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("report", NEMethod::SmAction);
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            SMStateData* inner = comp->getOrCreateNestedStates();
+            inner->createState("Inner", eKind::Start);
+            inner->createState("Over", eKind::Final)->getEntryList().addOperation(new SMActionCall(0, "report"));
+            CHECK(countWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER) == 0);
+        }
+        {   // W8 negative: a Final of the root level ends the whole machine. It has no composite
+            // around it, so its EntryList is the only place an operation can go.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("report", NEMethod::SmAction);
+            doc.getStates().createState("Over", eKind::Final)->getEntryList().addOperation(new SMActionCall(0, "report"));
+            CHECK(countWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER) == 0);
+        }
     }
 }
 
