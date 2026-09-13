@@ -1120,6 +1120,36 @@ namespace
             CHECK(namesIt(issues, unbound, QStringLiteral("'stopped'")));
         }
 
+        {   // Two requests answering with one response. Legal and sometimes meant, so it is
+            // information and never a warning -- the same finding the code generator reports.
+            const QString source = QStringLiteral(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                "<ServiceInterface FormatVersion=\"1.1.0\">"
+                "  <Overview ID=\"1\" Name=\"Shared\" Version=\"1.0.0\" isRemote=\"true\"/>"
+                "  <MethodList>"
+                "    <Method ID=\"2\" Name=\"start\" MethodType=\"request\" Response=\"done\"/>"
+                "    <Method ID=\"3\" Name=\"stop\" MethodType=\"request\" Response=\"done\"/>"
+                "    <Method ID=\"4\" Name=\"done\" MethodType=\"response\"/>"
+                "  </MethodList>"
+                "</ServiceInterface>");
+
+            ServiceInterfaceData doc;
+            QXmlStreamReader reader(source);
+            while (reader.readNextStartElement())
+            {
+                CHECK(doc.readFromXml(reader));
+                break;
+            }
+
+            const int shared  = DocRuleChecks::INFORMATION_RULE_BASE + DocRules::RULE_SHARED_RESPONSE;
+            const int unbound = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNBOUND_RESPONSE;
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, shared) == 1);
+            CHECK(namesIt(issues, shared, QStringLiteral("'done'")));
+            CHECK(countRule(issues, unbound) == 0);
+            CHECK(countRule(issues, DocRules::RULE_RESPONSE_LINK) == 0);
+        }
+
         {   // Every finding reaches the results panel with a reason attached.
             ServiceInterfaceData doc;
             makeUsable(doc);

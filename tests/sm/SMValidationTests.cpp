@@ -1831,6 +1831,25 @@ namespace
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Lost"));
             CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
         }
+        {   // W1 negative: a History marker owns no transition and is entered only by a transition
+            // coming from outside its level, so its own level never targets it and it is not orphaned.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            SMStateEntry* outer = addReachedState(doc, s, "Outer", "go");
+            SMStateData* inner = outer->getOrCreateNestedStates();
+            SMStateEntry* innerStart = inner->createState("InnerStart", eKind::Start);
+            SMStateEntry* leaf = inner->createState("Leaf", eKind::Normal);
+            innerStart->getTransitions().createTransition(eStim::Trigger, QString(), leaf->getId(), eTrans::Initial);
+            SMStateEntry* marker = inner->createState("Resume", eKind::History);
+            marker->setHistoryDepth(SMStateEntry::eHistoryDepth::Shallow);
+            CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
+
+            // ...and the marker reached from a sibling of the composite stays clean.
+            SMStateEntry* held = addReachedState(doc, outer, "Held", "pause");
+            doc.getMethods().createMethod("resume", NEMethod::SmTrigger);
+            held->getTransitions().createTransition(eStim::Trigger, "resume", marker->getId());
+            CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
+        }
         {   // W2: a reachable Normal state with no outgoing transition; negative once it has one.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
@@ -2071,6 +2090,43 @@ namespace
             action->setDescription("What it runs");
             action->getElements()[0].setDescription("How many");
             CHECK(countInfo(SMValidator::validate(doc), 14) == 0);
+        }
+        {   // W8: an operation on a nested Final under a composite that raises OnFinal. The
+            // operation runs as the Final is entered and the composite is left only later,
+            // when the queued event is dispatched. Empty Final, no finding.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getEvents().createEvent("Done");
+            doc.getMethods().createMethod("report", NEMethod::SmAction);
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            SMStateData* inner = comp->getOrCreateNestedStates();
+            inner->createState("Inner", eKind::Start);
+            SMStateEntry* over = inner->createState("Over", eKind::Final);
+            comp->setOnFinal("Done");
+            CHECK(countWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER) == 0);
+
+            over->getEntryList().addOperation(new SMActionCall(0, "report"));
+            CHECK(hasWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER, SMIssue::eSeverity::Warning));
+        }
+        {   // W8 negative: no OnFinal on the composite, so nothing reports the level as
+            // finished and there is no later transition to move the operation to.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("report", NEMethod::SmAction);
+            SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
+            SMStateData* inner = comp->getOrCreateNestedStates();
+            inner->createState("Inner", eKind::Start);
+            inner->createState("Over", eKind::Final)->getEntryList().addOperation(new SMActionCall(0, "report"));
+            CHECK(countWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER) == 0);
+        }
+        {   // W8 negative: a Final of the root level ends the whole machine. It has no composite
+            // around it, so its EntryList is the only place an operation can go.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("report", NEMethod::SmAction);
+            doc.getStates().createState("Over", eKind::Final)->getEntryList().addOperation(new SMActionCall(0, "report"));
+            CHECK(countWarn(SMValidator::validate(doc), DocRules::RULE_FINAL_ENTRY_ORDER) == 0);
         }
     }
 }

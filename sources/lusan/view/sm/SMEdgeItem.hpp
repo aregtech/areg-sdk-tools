@@ -212,9 +212,10 @@ public:
     bool nudgeLabel(int dx, int dy, bool coarse, bool pixelWise);
 
     /**
-     * \brief   Moves the active begin/end endpoint by one keyboard step along the state border,
-     *          re-sticking it to the nearest grid-aligned border position, and commits one undo
-     *          step. Steps match \ref nudgeSelectedPoint.
+     * \brief   Moves the active begin/end endpoint by one keyboard step along the state border
+     *          and commits one undo step. With snapping on the step is one border position (half
+     *          a grid cell, Ctrl a whole one); otherwise it matches \ref nudgeSelectedPoint.
+     *          A pixel step (Shift) moves one unit and ignores the grid.
      * \return  True when an endpoint was active and moved (the event is consumed).
      **/
     bool nudgeActiveEnd(int dx, int dy, bool coarse, bool pixelWise);
@@ -312,6 +313,13 @@ private:
      *          the endpoint came from.
      **/
     QRectF stateBoxRect(uint32_t stateId) const;
+
+    /**
+     * \brief   Resolves a state ID to the ID actually drawn on this edge's level: itself when it
+     *          has a live box here, otherwise its nearest visible ancestor (a History marker
+     *          resolves to the composite that hosts it).
+     **/
+    uint32_t visibleAncestorId(uint32_t stateId) const;
 
     /**
      * \brief   The origin (top-left of \ref stateBoxRect) a state's anchor is measured from.
@@ -422,6 +430,23 @@ private:
     void paintArrowHead(QPainter* painter, const QPointF& from, const QPointF& tip, const QColor& color);
 
     /**
+     * \brief   Paints the `H` / `H*` mark straddling the target border at \p tip. Drawn whatever
+     *          the line does, so a History target is always announced.
+     **/
+    void paintHistoryMark(QPainter* painter, const QPointF& tip, const QPalette& palette) const;
+
+    /**
+     * \brief   Half the width of that mark: wider for a deep target, which carries `H*`.
+     **/
+    double historyMarkHalfWidth() const;
+
+    /**
+     * \brief   How far the mark reaches from the border point along \p dir, a unit vector.
+     *          The arrowhead is drawn short by this much so the mark does not cover it.
+     **/
+    double historyMarkInset(const QPointF& dir) const;
+
+    /**
      * \brief   The stroke color for the current state (theme, selection, or highlight).
      **/
     QColor strokeColor(const QPalette& palette) const;
@@ -462,9 +487,33 @@ private:
     void selfLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) const;
 
     /**
-     * \brief   Pins the current drawn endpoints as this self-loop's anchors, so curving it keeps
-     *          where the loop already left and re-entered its box. Falls back to \ref selfLoopEnds
-     *          when the two coincide, because a curve needs two distinct points.
+     * \brief   True when the source and the target of this transition are drawn on one and the same
+     *          box on the level the canvas shows: a plain self-loop, or a target that has no box of
+     *          its own and is represented by an ancestor, such as a History marker of the source.
+     **/
+    bool drawnOnOneBox() const;
+
+    /**
+     * \brief   Pushes the two ends of a loop half a \ref NESMDesign::EdgeSelfLoopHalfSpan either
+     *          way of their midpoint, along the border they share. Leaves them alone when they sit
+     *          on different sides or are already that far apart.
+     * \param   box     The box both ends sit on, in scene coordinates.
+     * \param   begin   [in,out] The point the loop leaves from.
+     * \param   end     [in,out] The point the loop re-enters at.
+     **/
+    void spreadLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) const;
+
+    /**
+     * \brief   The two waypoints that turn a loop between \p begin and \p end into a bracket: one
+     *          standing \ref NESMDesign::EdgeSelfLoopStandoff off each of them, straight out from
+     *          the border side that end sits on.
+     **/
+    QList<QPointF> loopCorners(const QRectF& box, const QPointF& begin, const QPointF& end) const;
+
+    /**
+     * \brief   Pins the current drawn endpoints as this loop's anchors, so curving it keeps where
+     *          the loop already left and re-entered its box. Spreads them first when they sit on
+     *          one another, because a curve needs two distinct points.
      **/
     void adoptSelfLoopEnds();
 
@@ -519,6 +568,9 @@ private:
     uint32_t                mTargetId;      //!< The target state ID (== source for self).
     QString                 mTargetName;    //!< The target state name (`To`).
     bool                    mSelfLoop;      //!< The transition targets its own source.
+    bool                    mOneBox;        //!< Source and target are drawn on the same box (see drawnOnOneBox).
+    bool                    mTargetIsHistory;//!< The target is a Kind="History" pseudo-state.
+    bool                    mTargetHistoryDeep;//!< The target History pseudo-state is a deep one (`H*`).
     bool                    mValid;         //!< The transition resolved to an external edge.
     SMLayoutEdge::eShape    mShape;         //!< The edge shape (Line or Arc).
     double                  mBulge;         //!< The arc bulge factor.

@@ -26,6 +26,7 @@
 #include "lusan/model/common/IEDocumentModel.hpp"
 
 #include <QAction>
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QClipboard>
 #include <QLabel>
@@ -56,6 +57,12 @@ namespace
      **/
     constexpr int RoleIsFinding{ Qt::UserRole + 5 };
 
+    /**
+     * Marks the row that carries the corrective action. It is a child of the finding and stands
+     * for the same element, so activating it does what activating the finding does.
+     **/
+    constexpr int RoleIsExplain{ Qt::UserRole + 6 };
+
     //!< Table columns: what it is, where it is, what is wrong, and why that is wrong.
     constexpr int ColumnSeverity{ 0 };
     constexpr int ColumnWhere   { 1 };
@@ -63,6 +70,17 @@ namespace
     constexpr int ColumnDetail  { 3 };
 
     using eSev = DocIssue::eSeverity;
+
+    //!< The band a reported id was written in, which the rule text is keyed by along with the number.
+    DocRules::eBand bandOf(int ruleId)
+    {
+        if (ruleId >= DocRuleChecks::INFORMATION_RULE_BASE)
+            return DocRules::BandInformation;
+        else if (ruleId >= DocRuleChecks::WARNING_RULE_BASE)
+            return DocRules::BandWarning;
+        else
+            return DocRules::BandError;
+    }
 
     QString severityWord(eSev severity)
     {
@@ -422,11 +440,27 @@ void DocValidationPanel::step(int delta)
 
 void DocValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
 {
+    // The corrective action stands for the finding above it, so activating it is activating
+    // the finding. Everything below then runs once, against the row that carries the element.
+    if ((item != nullptr) && item->data(ColumnSeverity, RoleIsExplain).toBool())
+    {
+        item = item->parent();
+    }
+
     // A document heading carries no element, and only the rows tagged as findings do. Depth is
     // not the test: a single open document is listed flat, and its findings have no parent.
     if ((item == nullptr) || (item->data(ColumnSeverity, RoleIsFinding).toBool() == false))
     {
         return;
+    }
+
+    // Activating a finding opens what to change and puts it in view, so the reader is shown the
+    // answer without having to look for it. The finding keeps the selection: stepping the list
+    // walks findings, and a child that took it would stop the next step where it stands.
+    if (item->childCount() > 0)
+    {
+        item->setExpanded(true);
+        mList->scrollToItem(item->child(0), QAbstractItemView::EnsureVisible);
     }
 
     const uint32_t elementId = item->data(ColumnSeverity, RoleElementId).toUInt();
@@ -578,6 +612,20 @@ void DocValidationPanel::rebuild()
             for (int column = ColumnSeverity; column <= ColumnDetail; ++column)
             {
                 item->setToolTip(column, whole);
+            }
+
+            // What to change, from the rule the finding was reported under. A rule with nothing
+            // to say adds no row rather than an empty one.
+            const QString advice = QString::fromUtf8(
+                DocRules::fixOf(DocRuleChecks::bareRule(row.rule), bandOf(row.rule)));
+            if (advice.isEmpty() == false)
+            {
+                QTreeWidgetItem* help = new QTreeWidgetItem(item);
+                help->setText(ColumnSeverity, tr("Explain"));
+                help->setText(ColumnMessage, advice);
+                help->setToolTip(ColumnMessage, advice);
+                help->setData(ColumnSeverity, RoleIsExplain, true);
+                help->setFirstColumnSpanned(false);
             }
         }
     }

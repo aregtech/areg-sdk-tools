@@ -33,6 +33,8 @@ SMStateEntry::eStateKind SMStateEntry::fromKindString(const QString& kind)
         return eStateKind::Start;
     else if (kind.compare(STR_KIND_FINAL, Qt::CaseInsensitive) == 0)
         return eStateKind::Final;
+    else if (kind.compare(STR_KIND_HISTORY, Qt::CaseInsensitive) == 0)
+        return eStateKind::History;
     else
         return eStateKind::Normal;
 }
@@ -43,6 +45,7 @@ const char* SMStateEntry::toString(SMStateEntry::eStateKind kind)
     {
     case eStateKind::Start:     return STR_KIND_START;
     case eStateKind::Final:     return STR_KIND_FINAL;
+    case eStateKind::History:   return STR_KIND_HISTORY;
     case eStateKind::Normal:
     default:                    return STR_KIND_NORMAL;
     }
@@ -69,6 +72,24 @@ const char* SMStateEntry::toString(SMStateEntry::eHistory history)
     }
 }
 
+SMStateEntry::eHistoryDepth SMStateEntry::fromHistoryDepthString(const QString& depth)
+{
+    if (depth.compare(STR_HISTORY_DEEP, Qt::CaseInsensitive) == 0)
+        return eHistoryDepth::Deep;
+    else
+        return eHistoryDepth::Shallow;
+}
+
+const char* SMStateEntry::toString(SMStateEntry::eHistoryDepth depth)
+{
+    switch (depth)
+    {
+    case eHistoryDepth::Deep:      return STR_HISTORY_DEEP;
+    case eHistoryDepth::Shallow:
+    default:                       return STR_HISTORY_SHALLOW;
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 // SMStateEntry implementation
 //////////////////////////////////////////////////////////////////////////
@@ -78,6 +99,7 @@ SMStateEntry::SMStateEntry(ElementBase* parent /*= nullptr*/)
     , mName         ( )
     , mKind         (eStateKind::Normal)
     , mHistory      (eHistory::None)
+    , mHistoryDepth (eHistoryDepth::Shallow)
     , mSubmachine   ( )
     , mOnFinal      ( )
     , mDescription  ( )
@@ -93,6 +115,7 @@ SMStateEntry::SMStateEntry(uint32_t id, const QString& name, eStateKind kind, El
     , mName         (name)
     , mKind         (kind)
     , mHistory      (eHistory::None)
+    , mHistoryDepth (eHistoryDepth::Shallow)
     , mSubmachine   ( )
     , mOnFinal      ( )
     , mDescription  ( )
@@ -108,6 +131,7 @@ SMStateEntry::SMStateEntry(const SMStateEntry& src)
     , mName         (src.mName)
     , mKind         (src.mKind)
     , mHistory      (src.mHistory)
+    , mHistoryDepth (src.mHistoryDepth)
     , mSubmachine   (src.mSubmachine)
     , mOnFinal      (src.mOnFinal)
     , mDescription  (src.mDescription)
@@ -130,6 +154,7 @@ SMStateEntry::SMStateEntry(SMStateEntry&& src) noexcept
     , mName         (std::move(src.mName))
     , mKind         (src.mKind)
     , mHistory      (src.mHistory)
+    , mHistoryDepth (src.mHistoryDepth)
     , mSubmachine   (std::move(src.mSubmachine))
     , mOnFinal      (std::move(src.mOnFinal))
     , mDescription  (std::move(src.mDescription))
@@ -162,6 +187,7 @@ SMStateEntry& SMStateEntry::operator = (const SMStateEntry& other)
         mName        = other.mName;
         mKind        = other.mKind;
         mHistory     = other.mHistory;
+        mHistoryDepth = other.mHistoryDepth;
         mSubmachine  = other.mSubmachine;
         mOnFinal     = other.mOnFinal;
         mDescription = other.mDescription;
@@ -192,6 +218,7 @@ SMStateEntry& SMStateEntry::operator = (SMStateEntry&& other) noexcept
         mName        = std::move(other.mName);
         mKind        = other.mKind;
         mHistory     = other.mHistory;
+        mHistoryDepth = other.mHistoryDepth;
         mSubmachine  = std::move(other.mSubmachine);
         mOnFinal     = std::move(other.mOnFinal);
         mDescription = std::move(other.mDescription);
@@ -300,6 +327,9 @@ bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
     mHistory = attributes.hasAttribute(XmlSM::xmlSMAttributeHistory)
                     ? fromHistoryString(attributes.value(XmlSM::xmlSMAttributeHistory).toString())
                     : eHistory::None;
+    mHistoryDepth = attributes.hasAttribute(XmlSM::xmlSMAttributeHistoryDepth)
+                    ? fromHistoryDepthString(attributes.value(XmlSM::xmlSMAttributeHistoryDepth).toString())
+                    : eHistoryDepth::Shallow;
     if (attributes.hasAttribute(XmlSM::xmlSMAttributeSubmachine))
     {
         setSubmachine(attributes.value(XmlSM::xmlSMAttributeSubmachine).toString());
@@ -354,6 +384,10 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     if ((mHistory != eHistory::None) && (droppingNested == false))
     {
         xml.writeAttribute(XmlSM::xmlSMAttributeHistory, SMStateEntry::toString(mHistory));
+    }
+    if (mKind == eStateKind::History)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeHistoryDepth, SMStateEntry::toString(mHistoryDepth));
     }
     if (mSubmachine.isEmpty() == false)
     {
@@ -507,6 +541,70 @@ SMStateEntry* SMStateData::findStateByIdRecursive(uint32_t id) const
     }
 
     return nullptr;
+}
+
+SMStateEntry* SMStateData::findAncestorOfRecursive(uint32_t id) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        if (state->getId() == id)
+        {
+            return state;
+        }
+
+        if (state->hasNestedStates() && (state->getNestedStates()->findStateByIdRecursive(id) != nullptr))
+        {
+            return state;
+        }
+    }
+
+    return nullptr;
+}
+
+SMStateEntry* SMStateData::findOwnerOfRecursive(uint32_t id) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        SMStateData* nested = state->hasNestedStates() ? state->getNestedStates() : nullptr;
+        if (nested == nullptr)
+        {
+            continue;
+        }
+
+        for (SMStateEntry* child : nested->getElements())
+        {
+            if (child->getId() == id)
+            {
+                return state;
+            }
+        }
+
+        SMStateEntry* deeper = nested->findOwnerOfRecursive(id);
+        if (deeper != nullptr)
+        {
+            return deeper;
+        }
+    }
+
+    return nullptr;
+}
+
+bool SMStateData::hasHistoryStateRecursive() const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        if (state->getKind() == SMStateEntry::eStateKind::History)
+        {
+            return true;
+        }
+
+        if (state->hasNestedStates() && state->getNestedStates()->hasHistoryStateRecursive())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 SMStateEntry* SMStateData::getStartState() const

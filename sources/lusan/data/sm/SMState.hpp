@@ -54,11 +54,12 @@ public:
           Start     //!< The level's entry PSEUDO-state; exactly one per level.
         , Normal    //!< A regular state.
         , Final     //!< The terminal state of its level.
+        , History   //!< The level's history PSEUDO-state (FormatVersion 1.2.0); at most one per level.
     };
 
     /**
      * \enum    eHistory
-     * \brief   Composite-state history mode.
+     * \brief   Composite-state history mode, the legacy `State/@History` attribute.
      **/
     enum class eHistory
     {
@@ -67,9 +68,21 @@ public:
         , Deep      //!< Re-entry restores the entire last active path to the leaf.
     };
 
+    /**
+     * \enum    eHistoryDepth
+     * \brief   The depth a `Kind="History"` pseudo-state restores. Unlike \ref eHistory there
+     *          is no `None`: the pseudo-state's presence already says history is wanted.
+     **/
+    enum class eHistoryDepth
+    {
+          Shallow   //!< Re-entry activates the last active direct substate.
+        , Deep      //!< Re-entry restores the entire last active path to the leaf.
+    };
+
     static constexpr const char* const  STR_KIND_START      { "Start"   };
     static constexpr const char* const  STR_KIND_NORMAL     { "Normal"  };
     static constexpr const char* const  STR_KIND_FINAL      { "Final"   };
+    static constexpr const char* const  STR_KIND_HISTORY    { "History" };
     static constexpr const char* const  STR_HISTORY_NONE    { "None"    };
     static constexpr const char* const  STR_HISTORY_SHALLOW { "Shallow" };
     static constexpr const char* const  STR_HISTORY_DEEP    { "Deep"    };
@@ -78,6 +91,8 @@ public:
     static const char* toString(SMStateEntry::eStateKind kind);
     static SMStateEntry::eHistory fromHistoryString(const QString& history);
     static const char* toString(SMStateEntry::eHistory history);
+    static SMStateEntry::eHistoryDepth fromHistoryDepthString(const QString& depth);
+    static const char* toString(SMStateEntry::eHistoryDepth depth);
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -116,6 +131,16 @@ public:
     inline bool isPseudoStart() const;
 
     /**
+     * \brief   True when this is a level's `History` PSEUDO-state.
+     *
+     *          Like `Start`, a `History` marker is not a state: the machine never occupies it,
+     *          it carries no operations, no transitions and no nested StateList, and it may be
+     *          targeted only by a transition entering its level from outside. It carries
+     *          \ref getHistoryDepth instead of entry/exit behaviour.
+     **/
+    inline bool isHistoryMarker() const;
+
+    /**
      * \brief   True when the state carries any entry or exit operation.
      **/
     inline bool hasOperations() const;
@@ -132,6 +157,12 @@ public:
 
     inline eHistory getHistory() const;
     inline void setHistory(eHistory history);
+
+    /**
+     * \brief   The depth a `Kind="History"` state restores. Meaningless on any other kind.
+     **/
+    inline eHistoryDepth getHistoryDepth() const;
+    inline void setHistoryDepth(eHistoryDepth depth);
 
     /**
      * \brief   The imported-submachine alias (empty when not imported). Setting it clears
@@ -209,6 +240,7 @@ private:
     QString             mName;          //!< The state name (document-unique.
     eStateKind          mKind;          //!< The state kind.
     eHistory            mHistory;       //!< The history mode (composite states).
+    eHistoryDepth       mHistoryDepth;  //!< The depth a Kind="History" state restores.
     QString             mSubmachine;    //!< The imported-submachine alias (or empty).
     QString             mOnFinal;       //!< The completion-hook event (or empty).
     QString             mDescription;   //!< The description text.
@@ -268,6 +300,24 @@ public:
      * \brief   Finds a state by element ID across this level and every nested level.
      **/
     SMStateEntry* findStateByIdRecursive(uint32_t id) const;
+
+    /**
+     * \brief   Finds the direct child of this level that either is the given element ID or
+     *          owns it somewhere in its nested levels.
+     **/
+    SMStateEntry* findAncestorOfRecursive(uint32_t id) const;
+
+    /**
+     * \brief   Finds the state that directly owns the level the given element sits on. Returns
+     *          null when the element sits on this level itself, which has no owning state.
+     **/
+    SMStateEntry* findOwnerOfRecursive(uint32_t id) const;
+
+    /**
+     * \brief   True when this level or any nested level owns a Kind="History" pseudo-state.
+     *          Decides whether the document needs FormatVersion 1.2.0 to be saved.
+     **/
+    bool hasHistoryStateRecursive() const;
 
     /**
      * \brief   Returns the single Start state of this level, or nullptr if none.
@@ -336,6 +386,11 @@ inline bool SMStateEntry::isPseudoStart() const
     return (mKind == eStateKind::Start);
 }
 
+inline bool SMStateEntry::isHistoryMarker() const
+{
+    return (mKind == eStateKind::History);
+}
+
 inline bool SMStateEntry::hasOperations() const
 {
     return ((mEntryList.isEmpty() == false) || (mExitList.isEmpty() == false));
@@ -349,6 +404,16 @@ inline SMStateEntry::eHistory SMStateEntry::getHistory() const
 inline void SMStateEntry::setHistory(eHistory history)
 {
     mHistory = history;
+}
+
+inline SMStateEntry::eHistoryDepth SMStateEntry::getHistoryDepth() const
+{
+    return mHistoryDepth;
+}
+
+inline void SMStateEntry::setHistoryDepth(eHistoryDepth depth)
+{
+    mHistoryDepth = depth;
 }
 
 inline const QString& SMStateEntry::getSubmachine() const

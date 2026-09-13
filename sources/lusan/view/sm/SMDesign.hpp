@@ -266,6 +266,7 @@ public:
      **/
     inline QAction* actionAddState() const;
     inline QAction* actionAddFinalState() const;
+    inline QAction* actionAddHistoryState() const;
     inline QAction* actionAddTransition() const;
     inline QAction* actionAddNote() const;
     inline QAction* actionDelete() const;
@@ -973,6 +974,7 @@ private:
     QAction*            mActRedo;       //!< Redo (no shortcut; the Edit menu owns Ctrl+Y).
     QAction*            mActAddState;   //!< Activate the Add State tool.
     QAction*            mActAddFinal;   //!< Activate the Add Final State tool.
+    QAction*            mActAddHistory; //!< Activate the Add History State tool.
     QAction*            mActAddTransition; //!< Activate the Add Transition tool.
     QAction*            mActAddNote;    //!< Activate the Add Note tool.
     QAction*            mActDelete;     //!< Delete the selection with confirmation.
@@ -1121,6 +1123,11 @@ inline QAction* SMDesign::actionAddState() const
 inline QAction* SMDesign::actionAddFinalState() const
 {
     return mActAddFinal;
+}
+
+inline QAction* SMDesign::actionAddHistoryState() const
+{
+    return mActAddHistory;
 }
 
 inline QAction* SMDesign::actionAddTransition() const

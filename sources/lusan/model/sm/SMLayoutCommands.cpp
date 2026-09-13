@@ -380,18 +380,7 @@ SMAutoPlaceNodesCommand::SMAutoPlaceNodesCommand(  StateMachineData& data, DocMo
 
 void SMAutoPlaceNodesCommand::redo()
 {
-    SMLayoutData& layout = data().getLayout();
-    for (const SMLayoutNode& node : mNodes)
-    {
-        SMLayoutNode* entry = layout.findNode(node.owner);
-        if (entry == nullptr)
-        {
-            entry = &layout.addNode(node.owner);
-        }
-
-        *entry = node;
-    }
-
+    data().getLayout().setNodes(mNodes);
     notifier().notifyLayoutChanged(mIds);
 }
 

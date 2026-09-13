@@ -137,6 +137,7 @@ public:
 
     inline QLineEdit* stateNameEdit() const;
     inline QComboBox* stateHistoryCombo() const;
+    inline QComboBox* stateHistoryDepthCombo() const;
     inline QComboBox* stateSubmachineCombo() const;
     inline QComboBox* stateOnFinalCombo() const;
     inline QListWidget* transitionList() const;
@@ -186,6 +187,7 @@ private slots:
 
     void onStateNameCommit();
     void onStateHistoryCommit();
+    void onStateHistoryDepthCommit();
     void onStateSubmachineCommit();
     void onStateOnFinalCommit();
     void onStateDescriptionCommit();
@@ -281,6 +283,7 @@ private:
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
     QComboBox*          mStateHistory;  //!< The history mode; only a composite may carry one.
+    QComboBox*          mStateHistoryDepth; //!< The depth a Kind="History" state restores.
     QComboBox*          mStateSubmachine;   //!< The hosted import alias; empty means no import.
     QComboBox*          mStateOnFinal;      //!< The event sent when the submachine finishes.
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
@@ -340,6 +343,11 @@ inline QLineEdit* SMPropertiesPanel::stateNameEdit() const
 inline QComboBox* SMPropertiesPanel::stateHistoryCombo() const
 {
     return mStateHistory;
+}
+
+inline QComboBox* SMPropertiesPanel::stateHistoryDepthCombo() const
+{
+    return mStateHistoryDepth;
 }
 
 inline QComboBox* SMPropertiesPanel::stateSubmachineCombo() const

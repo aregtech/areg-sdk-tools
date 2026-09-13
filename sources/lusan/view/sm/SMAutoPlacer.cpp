@@ -67,12 +67,17 @@ namespace
 
         QList<QRectF>               occupied;
         QList<const SMStateEntry*>  missing;
+        QRectF                      startBox;
         for (const SMStateEntry* state : states)
         {
             const SMLayoutNode* node = layout.findNode(state->getId());
             if (node != nullptr)
             {
                 occupied.append(boxOf(*node));
+                if (state->getKind() == SMStateEntry::eStateKind::Start)
+                {
+                    startBox = occupied.last();
+                }
             }
             else if (state->getKind() == SMStateEntry::eStateKind::Start)
             {
@@ -90,29 +95,61 @@ namespace
         const double cellHeight = NESMDesign::StateDefaultHeight + PlacementGap;
         const int    columns    = std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(states.size())))));
 
+        // The History marker is placed right after the Start it belongs beside, so no later state
+        // can take the cell reserved for it.
+        for (int i = 1; i < missing.size(); ++i)
+        {
+            if (missing.at(i)->getKind() == SMStateEntry::eStateKind::History)
+            {
+                const SMStateEntry* historyMarker = missing.takeAt(i);
+                const bool startFirst = (missing.isEmpty() == false)
+                                        && (missing.first()->getKind() == SMStateEntry::eStateKind::Start);
+                missing.insert(startFirst ? 1 : 0, historyMarker);
+                break;
+            }
+        }
+
         int cell = 0;
         for (const SMStateEntry* state : missing)
         {
-            // Start / Final marker states use the compact pill box size.
-            const bool   marker = (state->getKind() != SMStateEntry::eStateKind::Normal);
-            const double width  = (marker ? NESMDesign::MarkerStateWidth  : NESMDesign::StateDefaultWidth);
-            const double height = (marker ? NESMDesign::MarkerStateHeight : NESMDesign::StateDefaultHeight);
+            // Start / Final marker states use the compact pill box size; a History marker is square.
+            const bool   marker  = (state->getKind() != SMStateEntry::eStateKind::Normal);
+            const bool   history = (state->getKind() == SMStateEntry::eStateKind::History);
+            const double width   = history ? NESMDesign::HistoryMarkerSize
+                                           : (marker ? NESMDesign::MarkerStateWidth  : NESMDesign::StateDefaultWidth);
+            const double height  = history ? NESMDesign::HistoryMarkerSize
+                                           : (marker ? NESMDesign::MarkerStateHeight : NESMDesign::StateDefaultHeight);
 
             QRectF box;
-            while (cell < PlacementCellLimit)
+            if (history && (startBox.isNull() == false))
+            {
+                // Under the level's entry point: Start and the marker answer the same question,
+                // how this level begins -- fresh, or resumed where it left off.
+                const QRectF docked{ NESMDesign::snapValue(startBox.center().x() - width / 2.0, gridSize)
+                                   , NESMDesign::snapValue(startBox.bottom() + PlacementGap, gridSize)
+                                   , width, height };
+                if (isFree(occupied, docked))
+                {
+                    box = docked;
+                }
+            }
+
+            bool placed = (box.isNull() == false);
+            while ((placed == false) && (cell < PlacementCellLimit))
             {
                 const double x = NESMDesign::snapValue(PlacementOriginX + (cell % columns) * cellWidth, gridSize);
                 const double y = NESMDesign::snapValue(PlacementOriginY + (cell / columns) * cellHeight, gridSize);
                 ++cell;
 
                 box = QRectF(x, y, width, height);
-                if (isFree(occupied, box))
-                {
-                    break;
-                }
+                placed = isFree(occupied, box);
             }
 
             occupied.append(box);
+            if (state->getKind() == SMStateEntry::eStateKind::Start)
+            {
+                startBox = box;
+            }
 
             SMLayoutNode node;
             node.owner  = state->getId();

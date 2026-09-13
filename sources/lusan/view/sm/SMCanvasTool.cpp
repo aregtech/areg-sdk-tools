@@ -228,8 +228,11 @@ bool SMPlaceStateTool::mouseRelease(QGraphicsSceneMouseEvent* event)
     else
     {
         // A plain click: a default-sized box centered on the click position.
-        const QSizeF size = isMarkerKind() ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
-                                          : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight);
+        // A History marker is square, so its rounded box draws as the circle the symbol needs.
+        const QSizeF size = (mKind == NESMDesign::eCanvasTool::AddHistoryState)
+                            ? QSizeF(NESMDesign::HistoryMarkerSize, NESMDesign::HistoryMarkerSize)
+                            : (isMarkerKind() ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
+                                              : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight));
         const QPointF topLeft = getScene().snappedPosition(cursor - QPointF(size.width() / 2.0, size.height() / 2.0));
         placeState(QRectF(topLeft, size));
     }
@@ -250,10 +253,23 @@ void SMPlaceStateTool::placeState(const QRectF& box)
     SMScene& canvas = getScene();
 
     // A level's Start state comes with the level and cannot be removed, so it is never placed
-    // by hand: this tool makes a Normal or a Final state only.
+    // by hand: this tool makes a Normal, a Final or a History state.
     const SMStateEntry::eStateKind kind = (mKind == NESMDesign::eCanvasTool::AddFinalState)
                                             ? SMStateEntry::eStateKind::Final
+                                         : (mKind == NESMDesign::eCanvasTool::AddHistoryState)
+                                            ? SMStateEntry::eStateKind::History
                                             : SMStateEntry::eStateKind::Normal;
+
+    // A History state resumes a composite; the root level has no composite to resume, so
+    // placement there is refused with a hint rather than silently accepted or armed forever.
+    if ((mKind == NESMDesign::eCanvasTool::AddHistoryState) && canvas.isRootLevel())
+    {
+        const QList<QGraphicsView*> views = canvas.views();
+        QToolTip::showText(QCursor::pos()
+                         , QCoreApplication::translate("SMPlaceStateTool", "A History state cannot be placed at the root level.")
+                         , (views.isEmpty() ? nullptr : views.first()));
+        return;
+    }
 
     const uint32_t stateId = canvas.placeNewState(kind, box);
 
@@ -596,13 +612,24 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         return;
     }
 
-    // A Start is the entry point of its level, so no transition may enter it. Reject the target,
-    // keep the gesture armed, and hint briefly at the cursor.
+    // A Start is the entry point of its level, so no transition may enter it. A History marker
+    // is reached only from outside its own level -- the canvas can only ever hit-test a state
+    // actually drawn on the current level, so any History target found here is by construction
+    // the same-level (illegal) case. Reject the target, keep the gesture armed, and hint
+    // briefly at the cursor.
     if (target->getKind() == SMStateEntry::eStateKind::Start)
     {
         const QList<QGraphicsView*> views = canvas.views();
         QToolTip::showText(QCursor::pos()
                          , QCoreApplication::translate("SMTransitionTool", "A transition cannot enter a Start state.")
+                         , (views.isEmpty() ? nullptr : views.first()));
+        return;
+    }
+    if (target->isHistoryMarker())
+    {
+        const QList<QGraphicsView*> views = canvas.views();
+        QToolTip::showText(QCursor::pos()
+                         , QCoreApplication::translate("SMTransitionTool", "A History state is reached only from outside the composite it resumes.")
                          , (views.isEmpty() ? nullptr : views.first()));
         return;
     }
@@ -787,6 +814,7 @@ std::unique_ptr<SMCanvasTool> createCanvasTool(NESMDesign::eCanvasTool tool, SMS
         return std::make_unique<SMSelectTool>(scene);
     case NESMDesign::eCanvasTool::AddState:
     case NESMDesign::eCanvasTool::AddFinalState:
+    case NESMDesign::eCanvasTool::AddHistoryState:
         return std::make_unique<SMPlaceStateTool>(scene, tool);
     case NESMDesign::eCanvasTool::AddTransition:
         return std::make_unique<SMTransitionTool>(scene);

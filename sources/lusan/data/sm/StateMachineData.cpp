@@ -666,10 +666,19 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     return true;
 }
 
+bool StateMachineData::usesHistoryPseudoState() const
+{
+    return mStates.hasHistoryStateRecursive();
+}
+
 void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSM::xmlSMElementStateMachine);
-    xml.writeAttribute(XmlSM::xmlSMAttributeFormatVersion, mFormatVersion.toString());
+    // Recomputed from content on every save, not carried from the version the document was
+    // read at: a document written before the History pseudo-state stays 1.1.0 byte-for-byte,
+    // and one that removes its only History marker saves back down to 1.1.0 as well.
+    const VersionNumber formatVersion(usesHistoryPseudoState() ? XML_FORMAT_120 : XML_FORMAT_110);
+    xml.writeAttribute(XmlSM::xmlSMAttributeFormatVersion, formatVersion.toString());
 
     mOverview.writeToXml(xml);
     mDataTypes.writeToXml(xml);
@@ -779,7 +788,11 @@ bool StateMachineData::migrateFromVersion(const VersionNumber& sourceVersion)
         working = VersionNumber(XML_FORMAT_110);
     }
 
-    mFormatVersion = VersionNumber(XML_FORMAT_DEFAULT);
+    // The migration chain above only ever brings a document up to 1.1.0 -- 1.2.0 adds the History
+    // pseudo-state and needs no data transformation, so it is never a migration target. Stamping
+    // XML_FORMAT_DEFAULT (the build's read ceiling) here would mark every ordinary document as
+    // 1.2.0 in memory the moment it is opened, regardless of what it actually contains.
+    mFormatVersion = VersionNumber(XML_FORMAT_110);
     return true;
 }
 

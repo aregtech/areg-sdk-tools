@@ -120,6 +120,33 @@ private:
 };
 
 /**
+ * \class   SMSetHistoryDepthCommand
+ * \brief   Sets the depth a Kind="History" pseudo-state restores. The state is looked up by ID
+ *          on every redo and undo, so the command survives a subtree that was detached and
+ *          re-attached in between. Whether the state is a History marker at all is the caller's
+ *          call, the same way SMSetHistoryCommand leaves "may this carry history" to the editor.
+ **/
+class SMSetHistoryDepthCommand : public SMCommand
+{
+public:
+    SMSetHistoryDepthCommand(  StateMachineData& data, DocModelNotifier& notifier
+                             , uint32_t stateId, SMStateEntry::eHistoryDepth depth
+                             , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(SMStateEntry::eHistoryDepth depth);
+
+private:
+    uint32_t                     mId;    //!< The History state's ID.
+    SMStateEntry::eHistoryDepth  mNew;   //!< The requested depth.
+    SMStateEntry::eHistoryDepth  mOld;   //!< The previous depth, captured on the first redo.
+    bool                         mCaptured { false };
+};
+
+/**
  * \class   SMSetSubmachineCommand
  * \brief   Points a state at a registered import, or unlinks it. Clearing the alias also clears
  *          `History` and `OnFinal` in the same step: both only mean something on a composite, and

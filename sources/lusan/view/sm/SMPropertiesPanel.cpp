@@ -205,6 +205,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateHistory (nullptr)
+    , mStateHistoryDepth(nullptr)
     , mStateSubmachine(nullptr)
     , mStateOnFinal (nullptr)
     , mStateDesc    (nullptr)
@@ -322,6 +323,12 @@ void SMPropertiesPanel::buildStatePage()
     mStateHistory->addItem(tr("Deep"), static_cast<int>(SMStateEntry::eHistory::Deep));
     mStateHistory->setItemData(1, tr("Coming back activates the substate that was active last time"), Qt::ToolTipRole);
     mStateHistory->setItemData(2, tr("Coming back restores the whole path that was active last time, down to the leaf"), Qt::ToolTipRole);
+    mStateHistoryDepth = new QComboBox(this);
+    mStateHistoryDepth->setObjectName(QStringLiteral("smStateHistoryDepth"));
+    mStateHistoryDepth->addItem(tr("Shallow"), static_cast<int>(SMStateEntry::eHistoryDepth::Shallow));
+    mStateHistoryDepth->addItem(tr("Deep"), static_cast<int>(SMStateEntry::eHistoryDepth::Deep));
+    mStateHistoryDepth->setItemData(0, tr("Re-entry activates the substate that was active last time"), Qt::ToolTipRole);
+    mStateHistoryDepth->setItemData(1, tr("Re-entry restores the whole path that was active last time, down to the leaf"), Qt::ToolTipRole);
     mStateSubmachine = new QComboBox(this);
     mStateSubmachine->setObjectName(QStringLiteral("smStateSubmachine"));
     mStateOnFinal = new QComboBox(this);
@@ -346,6 +353,7 @@ void SMPropertiesPanel::buildStatePage()
     form->addRow(tr("Submachine:"), mStateSubmachine);
     form->addRow(tr("On Final:"), mStateOnFinal);
     form->addRow(tr("History:"), mStateHistory);
+    form->addRow(tr("History Depth:"), mStateHistoryDepth);
     form->addRow(tr("Description:"), mStateDesc);
 
     mStateGeneral = new SMSectionChrome(this);
@@ -397,6 +405,7 @@ void SMPropertiesPanel::buildStatePage()
         }
     });
     connect(mStateHistory, &QComboBox::activated, this, &SMPropertiesPanel::onStateHistoryCommit);
+    connect(mStateHistoryDepth, &QComboBox::activated, this, &SMPropertiesPanel::onStateHistoryDepthCommit);
     connect(mStateSubmachine, &QComboBox::activated, this, &SMPropertiesPanel::onStateSubmachineCommit);
     connect(mStateOnFinal, &QComboBox::activated, this, &SMPropertiesPanel::onStateOnFinalCommit);
     connect(mTransitions, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { onTransitionActivated(); });
@@ -737,29 +746,36 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mStateName->setReadOnly(state->isPseudoStart());
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
 
-    // A Start is a pseudo-state that the machine never occupies, so it cannot act. The activity
-    // tabs and the rows only a real state can use are hidden rather than left disabled.
+    // A Start or a History marker is a pseudo-state the machine never occupies, so neither can
+    // act. The activity tabs and the rows only a real state can use are hidden rather than left
+    // disabled.
     const bool pseudoStart = state->isPseudoStart();
+    const bool historyMarker = state->isHistoryMarker();
+    const bool hidesActivity = pseudoStart || historyMarker;
     for (const ActionSlot& slot : mActionSlots)
     {
-        mStateTabs->setTabVisible(slot.tabIndex, pseudoStart == false);
+        mStateTabs->setTabVisible(slot.tabIndex, hidesActivity == false);
     }
 
-    // Everything a Start owns is an initial transition, so it has no internal one to edit either.
+    // Everything a Start owns is an initial transition, and a History marker owns none at all, so
+    // neither has an internal one to edit either.
     if (mInternalTab >= 0)
     {
-        mStateTabs->setTabVisible(mInternalTab, pseudoStart == false);
+        mStateTabs->setTabVisible(mInternalTab, hidesActivity == false);
     }
 
     if (mStateForm != nullptr)
     {
-        mStateForm->setRowVisible(mStateSubmachine, pseudoStart == false);
-        mStateForm->setRowVisible(mStateOnFinal, pseudoStart == false);
-        mStateForm->setRowVisible(mStateHistory, pseudoStart == false);
-        mStateForm->setRowVisible(mStateDesc, pseudoStart == false);
+        mStateForm->setRowVisible(mStateSubmachine, hidesActivity == false);
+        mStateForm->setRowVisible(mStateOnFinal, hidesActivity == false);
+        mStateForm->setRowVisible(mStateHistory, hidesActivity == false);
+        // The legacy History row means "this composite's own re-entry mode"; a History marker
+        // carries HistoryDepth instead, so the two rows are never shown together.
+        mStateForm->setRowVisible(mStateHistoryDepth, historyMarker);
+        mStateForm->setRowVisible(mStateDesc, hidesActivity == false);
     }
 
-    if (pseudoStart)
+    if (hidesActivity)
     {
         mStateTabs->setCurrentIndex(0);
     }
@@ -818,6 +834,7 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mStateHistory->setToolTip(composite
                               ? tr("What happens when the machine comes back to this state")
                               : tr("Only a state with a submachine can remember where it was"));
+    mStateHistoryDepth->setCurrentIndex(mStateHistoryDepth->findData(static_cast<int>(state->getHistoryDepth())));
     mStateDesc->setPlainText(state->getDescription());
     // Entry/exit operations have no transition scope, so the Param source is not offered here. The
     // Actions sections are bound from the slot table.
@@ -995,9 +1012,26 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
                 continue;
             }
 
-            if (sibling->isPseudoStart() == false)
+            // A History marker is never an ordinary same-level target (rule 57: it is reached
+            // only from outside its own level), so it is excluded here the same way Start is --
+            // and offered instead, below, under the sibling composite that owns it.
+            if ((sibling->isPseudoStart() == false) && (sibling->isHistoryMarker() == false))
             {
                 mTarget->addItem(sibling->getName(), sibling->getId());
+            }
+
+            // The one legal exception to "target a sibling": a History marker one level inside a
+            // sibling composite, reached from this (outside) level. At most one per level (rule
+            // 55), so there is at most one to offer per composite sibling.
+            if (sibling->hasNestedStates())
+            {
+                for (SMStateEntry* nested : sibling->getNestedStates()->getElements())
+                {
+                    if ((nested != nullptr) && (nested->isHistoryMarker()))
+                    {
+                        mTarget->addItem(tr("History of %1").arg(sibling->getName()), nested->getId());
+                    }
+                }
             }
 
             // A Start is offered as a source only when it already owns this transition: moving an
@@ -1141,6 +1175,29 @@ void SMPropertiesPanel::onStateHistoryCommit()
     }
 
     mModel.getUndoStack().push(new SMSetHistoryCommand(data, mModel.getNotifier(), mCurrentId, history, tr("Set history mode")));
+}
+
+void SMPropertiesPanel::onStateHistoryDepthCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    const SMStateEntry::eHistoryDepth depth = static_cast<SMStateEntry::eHistoryDepth>(mStateHistoryDepth->currentData().toInt());
+    if ((depth == state->getHistoryDepth()) || (state->isHistoryMarker() == false))
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetHistoryDepthCommand(data, mModel.getNotifier(), mCurrentId, depth, tr("Set history depth")));
 }
 
 void SMPropertiesPanel::onStateSubmachineCommit()
