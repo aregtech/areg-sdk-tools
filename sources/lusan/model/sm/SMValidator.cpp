@@ -1269,7 +1269,12 @@ namespace
         for (MethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr) continue;
-            checkIdentifier(m->getId(), eDocElementKind::Method, m->getName(), vtr("The %1").arg(m->kind().label.toLower()));
+            // An action is generated behind 'action_', so a word C++ owns still compiles as one.
+            // A trigger and a condition keep the document spelling and do not.
+            if (NESMMethod::isAction(m))
+                mChecks.checkIdentifierShape(m->getId(), eDocElementKind::Method, m->getName(), vtr("The %1").arg(m->kind().label.toLower()));
+            else
+                checkIdentifier(m->getId(), eDocElementKind::Method, m->getName(), vtr("The %1").arg(m->kind().label.toLower()));
             // An embedded condition owns its body and must supply one; every other method has none.
             const bool embedded = NESMMethod::isCondition(m) && (m->getImplement() == MethodEntry::eImplement::Embedded);
             if (embedded && m->getBody().trimmed().isEmpty())
@@ -1283,22 +1288,39 @@ namespace
                 checkConditionCallableName(*m);
             }
             for (const MethodParameter& p : m->getElements())
+            {
+                // The generated signature carries the parameter name as the document spells it.
+                checkIdentifier(p.getId(), eDocElementKind::Method, p.getName()
+                               , vtr("Parameter '%1' of %2 '%3'").arg(p.getName(), m->kind().label.toLower(), m->getName()));
                 checkDataType(p.getId(), eDocElementKind::Method, p.getType());
+            }
+
             checkDefaultOrder(*m, eDocElementKind::Method, m->getName());
         }
         for (SMEventEntry* e : mData.getEvents().getElements())
         {
             if (e == nullptr) continue;
-            checkIdentifier(e->getId(), eDocElementKind::Event, e->getName(), vtr("The event"));
+            // An event is generated behind 'EVENT_', 'on_event_' and 'send_event_', so a word C++
+            // owns still compiles as one.
+            mChecks.checkIdentifierShape(e->getId(), eDocElementKind::Event, e->getName(), vtr("The event"));
             for (const MethodParameter& p : e->getElements())
+            {
+                checkIdentifier(p.getId(), eDocElementKind::Event, p.getName()
+                               , vtr("Parameter '%1' of event '%2'").arg(p.getName(), e->getName()));
                 checkDataType(p.getId(), eDocElementKind::Event, p.getType());
+            }
+
             checkDefaultOrder(*e, eDocElementKind::Event, e->getName());
         }
         for (const SMTimerEntry& t : mData.getTimers().getElements())
             checkIdentifier(t.getId(), eDocElementKind::Timer, t.getName(), vtr("The timer"));
+        DocAccessorSet accessors(mChecks, eDocElementKind::Attribute);
         for (const AttributeEntry& a : mData.getAttributes().getElements())
         {
-            checkIdentifier(a.getId(), eDocElementKind::Attribute, a.getName(), vtr("The attribute"));
+            // The name itself only has to have the shape: what the generated class declares is
+            // the converted name, and that is what the accessor set judges.
+            mChecks.checkIdentifierShape(a.getId(), eDocElementKind::Attribute, a.getName(), vtr("The attribute"));
+            accessors.claim(a.getId(), a.getName());
             checkDataType(a.getId(), eDocElementKind::Attribute, a.getType());
         }
         for (const ConstantEntry& c : mData.getConstants().getElements())
@@ -1328,6 +1350,9 @@ namespace
                                   , mData.getOverview().getDeprecateHint());
         }
 
+        checkIdentifier(mData.getOverview().getId(), eDocElementKind::Overview
+                       , mData.getOverview().getName(), vtr("The state machine"));
+
         mChecks.noteFileNameMismatch(mData.getOverview().getId(), mData.getOverview().getName()
                                     , mData.getFilePath(), DocRules::RULE_FILE_NAME_MISMATCH);
 
@@ -1341,16 +1366,18 @@ namespace
             {
                 for (const FieldEntry& f : static_cast<const DataTypeStructure*>(d)->getElements())
                 {
-                    mChecks.noteDeprecatedElement(f, eDocElementKind::DataType
-                                                 , vtr("Field '%1' of structure '%2'").arg(f.getName(), d->getName()));
+                    const QString where = vtr("Field '%1' of structure '%2'").arg(f.getName(), d->getName());
+                    checkIdentifier(d->getId(), eDocElementKind::DataType, f.getName(), where);
+                    mChecks.noteDeprecatedElement(f, eDocElementKind::DataType, where);
                 }
             }
             else if (d->isEnumeration())
             {
                 for (const EnumEntry& e : static_cast<const DataTypeEnum*>(d)->getElements())
                 {
-                    mChecks.noteDeprecatedElement(e, eDocElementKind::DataType
-                                                 , vtr("Value '%1' of enumeration '%2'").arg(e.getName(), d->getName()));
+                    const QString where = vtr("Value '%1' of enumeration '%2'").arg(e.getName(), d->getName());
+                    checkIdentifier(d->getId(), eDocElementKind::DataType, e.getName(), where);
+                    mChecks.noteDeprecatedElement(e, eDocElementKind::DataType, where);
                 }
             }
 

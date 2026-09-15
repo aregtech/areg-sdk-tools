@@ -123,6 +123,11 @@ namespace
             add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
                , vtr("'%1' cannot be a namespace, so the document has to be renamed").arg(name));
         }
+        else if (DocRuleChecks::isKeyword(name))
+        {
+            add(overview.getId(), eDocElementKind::Overview, eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+               , vtr("'%1' is a C++ keyword and becomes the namespace of the generated header, so the document has to be renamed").arg(name));
+        }
 
         mChecks.noteFileNameMismatch(overview.getId(), name, mData.getFilePath(), DocRules::RULE_FILE_NAME_MISMATCH);
 

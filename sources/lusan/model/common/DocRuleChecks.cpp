@@ -30,10 +30,54 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QRegularExpression>
+#include <QSet>
 #include <QStringList>
 
 namespace
 {
+    //!< Every word C++ owns, in one table. The C++17 keywords, the alternative tokens and the
+    //!< words C++20 added, because generated code may be compiled as C++20. The code generator
+    //!< carries the same list, so the two tools refuse the same names.
+    const QSet<QString>& cppKeywords(void)
+    {
+        static const QSet<QString> _keywords
+        {
+              QStringLiteral("alignas")     , QStringLiteral("alignof")     , QStringLiteral("and")
+            , QStringLiteral("and_eq")      , QStringLiteral("asm")         , QStringLiteral("auto")
+            , QStringLiteral("bitand")      , QStringLiteral("bitor")       , QStringLiteral("bool")
+            , QStringLiteral("break")       , QStringLiteral("case")        , QStringLiteral("catch")
+            , QStringLiteral("char")        , QStringLiteral("char8_t")     , QStringLiteral("char16_t")
+            , QStringLiteral("char32_t")    , QStringLiteral("class")       , QStringLiteral("compl")
+            , QStringLiteral("concept")     , QStringLiteral("const")       , QStringLiteral("const_cast")
+            , QStringLiteral("constexpr")   , QStringLiteral("constinit")   , QStringLiteral("continue")
+            , QStringLiteral("co_await")    , QStringLiteral("co_return")   , QStringLiteral("co_yield")
+            , QStringLiteral("decltype")    , QStringLiteral("default")     , QStringLiteral("delete")
+            , QStringLiteral("do")          , QStringLiteral("double")      , QStringLiteral("dynamic_cast")
+            , QStringLiteral("else")        , QStringLiteral("enum")        , QStringLiteral("explicit")
+            , QStringLiteral("export")      , QStringLiteral("extern")      , QStringLiteral("false")
+            , QStringLiteral("float")       , QStringLiteral("for")         , QStringLiteral("friend")
+            , QStringLiteral("goto")        , QStringLiteral("if")          , QStringLiteral("inline")
+            , QStringLiteral("int")         , QStringLiteral("long")        , QStringLiteral("mutable")
+            , QStringLiteral("namespace")   , QStringLiteral("new")         , QStringLiteral("noexcept")
+            , QStringLiteral("not")         , QStringLiteral("not_eq")      , QStringLiteral("nullptr")
+            , QStringLiteral("operator")    , QStringLiteral("or")          , QStringLiteral("or_eq")
+            , QStringLiteral("private")     , QStringLiteral("protected")   , QStringLiteral("public")
+            , QStringLiteral("register")    , QStringLiteral("reinterpret_cast")
+            , QStringLiteral("requires")    , QStringLiteral("return")      , QStringLiteral("short")
+            , QStringLiteral("signed")      , QStringLiteral("sizeof")      , QStringLiteral("static")
+            , QStringLiteral("static_assert"), QStringLiteral("static_cast"), QStringLiteral("struct")
+            , QStringLiteral("switch")      , QStringLiteral("template")    , QStringLiteral("this")
+            , QStringLiteral("thread_local"), QStringLiteral("throw")       , QStringLiteral("true")
+            , QStringLiteral("try")         , QStringLiteral("typedef")     , QStringLiteral("typeid")
+            , QStringLiteral("typename")    , QStringLiteral("union")       , QStringLiteral("unsigned")
+            , QStringLiteral("using")       , QStringLiteral("virtual")     , QStringLiteral("void")
+            , QStringLiteral("volatile")    , QStringLiteral("wchar_t")     , QStringLiteral("while")
+            , QStringLiteral("xor")         , QStringLiteral("xor_eq")
+        };
+
+        return _keywords;
+    }
+
     //!< The separators of a templated declared type, such as `NEMap<String, Record>`.
     const QRegularExpression& typeFragmentSeparator(void)
     {
@@ -53,6 +97,28 @@ bool DocRuleChecks::isIdentifier(const QString& name)
     return NELusanCommon::isValidIdentifier(name);
 }
 
+bool DocRuleChecks::isKeyword(const QString& name)
+{
+    return cppKeywords().contains(name);
+}
+
+QString DocRuleChecks::toSnakeCase(const QString& name)
+{
+    // The conversion the code generator applies, step for step. A name that already carries an
+    // underscore is taken as written and only lower-cased, which is why `my_Value` and
+    // `my_value` reach one function.
+    if (name.isEmpty() || name.contains(QLatin1Char('_')))
+        return name.toLower();
+
+    static const QRegularExpression _acronym{ QStringLiteral("([A-Z]+)([A-Z][a-z])") };
+    static const QRegularExpression _word   { QStringLiteral("([a-z0-9])([A-Z])") };
+
+    QString result{ name };
+    result.replace(_acronym, QStringLiteral("\\1_\\2"));
+    result.replace(_word   , QStringLiteral("\\1_\\2"));
+    return result.toLower();
+}
+
 QString DocRuleChecks::explainShape(eShape shape)
 {
     switch (shape)
@@ -63,6 +129,15 @@ QString DocRuleChecks::explainShape(eShape shape)
     case eShape::InvalidIdentifier:
         return tr("Names must be usable in generated code: a letter or underscore first, then letters, digits or underscores, and no more than %1 characters.")
                     .arg(NELusanCommon::MAX_IDENTIFIER_LENGTH);
+
+    case eShape::KeywordName:
+        return tr("The generated code spells this name the way the document writes it, so a word C++ owns lands where a declaration has to stand and the file does not compile. Rename the declaration.");
+
+    case eShape::KeywordAccessor:
+        return tr("An attribute is reached through functions named after it, and the name is converted rather than copied. Rename the attribute so the converted name is not a word C++ owns.");
+
+    case eShape::DuplicateAccessor:
+        return tr("An attribute name is converted rather than copied, so two spellings can reach one function the generated class then declares twice. Rename the later attribute until the two converted names differ.");
 
     case eShape::DuplicateName:
         return tr("Two declarations of the same kind reach one generated name this way, and the build then refuses whichever comes second. Names are unique per kind, so declarations of different kinds may share one.");
@@ -216,6 +291,18 @@ void DocRuleChecks::add(uint32_t id, eDocElementKind kind, DocIssue::eSeverity s
 }
 
 void DocRuleChecks::checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what)
+{
+    checkIdentifierShape(id, kind, name, what);
+
+    if (isKeyword(name))
+    {
+        add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+           , tr("'%1' is a C++ keyword, and the generated code spells this name as written").arg(name)
+           , explainShape(eShape::KeywordName));
+    }
+}
+
+void DocRuleChecks::checkIdentifierShape(uint32_t id, eDocElementKind kind, const QString& name, const QString& what)
 {
     if (name.isEmpty())
     {
@@ -492,6 +579,49 @@ DocNameSet::DocNameSet(DocRuleChecks& checks, eDocElementKind kind, DocIssue::eS
     , mSeverity (severity)
     , mTaken    ( )
 {
+}
+
+DocAccessorSet::DocAccessorSet(DocRuleChecks& checks, eDocElementKind kind)
+    : mChecks   (checks)
+    , mKind     (kind)
+    , mTaken    ( )
+{
+}
+
+bool DocAccessorSet::claim(uint32_t id, const QString& name)
+{
+    // A name that is not an identifier at all is reported where the attribute name itself is
+    // judged; converting it would name a function nothing generates.
+    if (DocRuleChecks::isIdentifier(name) == false)
+        return true;
+
+    const QString accessor = DocRuleChecks::toSnakeCase(name);
+    bool result = true;
+
+    if (DocRuleChecks::isKeyword(accessor))
+    {
+        mChecks.add(id, mKind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                   , DocRuleChecks::tr("Attribute '%1' generates the accessor %2(), and '%2' is a C++ keyword").arg(name, accessor)
+                   , DocRuleChecks::explainShape(DocRuleChecks::eShape::KeywordAccessor));
+        result = false;
+    }
+
+    // Two attributes spelled the same are an ordinary duplicate and are reported as one; only
+    // two different spellings meeting in the accessor belong here.
+    const auto found = mTaken.constFind(accessor);
+    if ((found != mTaken.constEnd()) && (found.value() != name))
+    {
+        mChecks.add(id, mKind, DocIssue::eSeverity::Error, DocRules::RULE_DUPLICATE_NAME
+                   , DocRuleChecks::tr("Attribute '%1' and attribute '%2' both generate the accessor %3()").arg(name, found.value(), accessor)
+                   , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateAccessor));
+        result = false;
+    }
+    else
+    {
+        mTaken.insert(accessor, name);
+    }
+
+    return result;
 }
 
 bool DocNameSet::claim(uint32_t id, const QString& name, const QString& subject)

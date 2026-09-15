@@ -28,6 +28,7 @@
 #include "lusan/model/common/DocRules.hpp"
 
 #include <QCoreApplication>
+#include <QHash>
 #include <QList>
 #include <QSet>
 #include <QString>
@@ -66,6 +67,9 @@ public:
     {
           MissingName
         , InvalidIdentifier
+        , KeywordName
+        , KeywordAccessor
+        , DuplicateAccessor
         , DuplicateName
         , UnresolvedType
         , BadLiteral
@@ -118,6 +122,20 @@ public:
      * \brief   True when the text is a name the generated code can carry.
      **/
     static bool isIdentifier(const QString& name);
+
+    /**
+     * \brief   True when the word is one C++ owns: the C++17 keywords, the alternative
+     *          tokens and the C++20 additions alike. Generated code may be compiled as C++20,
+     *          so a name accepted today has to still compile then.
+     **/
+    static bool isKeyword(const QString& name);
+
+    /**
+     * \brief   The function name an attribute of this name generates. An attribute name is
+     *          converted rather than copied, so `Count` and `count` both answer `count`, and a
+     *          name that already holds an underscore is only lower-cased.
+     **/
+    static QString toSnakeCase(const QString& name);
 
     /**
      * \brief   Why a finding of the given shape is a finding, and what resolves it.
@@ -179,6 +197,13 @@ public:
      *                  name is missing, which is the case a name cannot describe itself.
      **/
     void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
+
+    /**
+     * \brief   The shape half of \a checkIdentifier on its own, for a kind whose generated name
+     *          carries a prefix. A request, a response, a broadcast, an action and an event are
+     *          written behind one, so a word C++ owns still compiles there.
+     **/
+    void checkIdentifierShape(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
 
     /**
      * \brief   The declared type has to exist, and every fragment of a templated one with it.
@@ -367,6 +392,54 @@ private:
     DocNameSet(void) = delete;
     DocNameSet(const DocNameSet& /*src*/) = delete;
     DocNameSet& operator = (const DocNameSet& /*src*/) = delete;
+};
+
+/**
+ * \class   DocAccessorSet
+ * \brief   The functions the attributes of one document generate, claimed one attribute at a
+ *          time.
+ *
+ *          An attribute is the one declaration whose name is converted rather than copied, so
+ *          two faults live in the conversion and neither is visible in the document: the
+ *          converted name may be a word C++ owns, and two attributes of different spellings
+ *          may reach one function the generated class then declares twice.
+ **/
+class DocAccessorSet
+{
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    DocAccessorSet(DocRuleChecks& checks, eDocElementKind kind);
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Judges the accessor the attribute generates and claims it. Files the identifier
+     *          rule when the accessor is a word C++ owns, and the duplicate rule when another
+     *          attribute already reached the same function.
+     * \param   name    The attribute name as the document spells it.
+     * \return  False when either rule was filed.
+     **/
+    bool claim(uint32_t id, const QString& name);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocRuleChecks&          mChecks;
+    eDocElementKind         mKind;
+    QHash<QString, QString> mTaken;     //!< The accessor, and the attribute that first reached it.
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocAccessorSet(void) = delete;
+    DocAccessorSet(const DocAccessorSet& /*src*/) = delete;
+    DocAccessorSet& operator = (const DocAccessorSet& /*src*/) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////

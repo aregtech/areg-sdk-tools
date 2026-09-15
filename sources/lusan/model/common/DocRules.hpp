@@ -63,7 +63,10 @@ namespace DocRules
      *          repeated parameter name, or a stimulus name claimed by a trigger, an event and a
      *          timer at once. Reported on every entry after the first, so the finding names the
      *          copy the author has to rename. The code generator reports it for two included
-     *          documents that declare one name.
+     *          documents that declare one name. Two attributes of one interface or one machine
+     *          whose generated accessors are one function are the same fault: an attribute name
+     *          is converted to snake_case rather than copied, so `Count` and `count`, and
+     *          `my_Value` and `my_value`, each pair reaches one `count()` and one `my_value()`.
      **/
     constexpr int RULE_DUPLICATE_NAME       {  4 };
 
@@ -89,7 +92,14 @@ namespace DocRules
     /**
      * \brief   A name the generated code could not carry: it must start with a letter or an
      *          underscore and continue with letters, digits or underscores. A declaration with
-     *          no name at all is the same fault and carries the same number.
+     *          no name at all is the same fault and carries the same number. A name that is a
+     *          word C++ owns is the same fault wherever the generated code spells the name as
+     *          the document writes it: a document, an interface, a machine, a type, an
+     *          enumerator, a field, a constant, a parameter, a state, a trigger, a condition or
+     *          a timer. A request, a response, a broadcast, an action and an event are written
+     *          behind a prefix, so a keyword is accepted there. An attribute is judged by the
+     *          accessor it generates instead of by its spelling: `Class` produces `class()`,
+     *          which is a keyword.
      **/
     constexpr int RULE_INVALID_IDENTIFIER   {  5 };
 
@@ -565,9 +575,14 @@ namespace DocRules
           , "A name that is already taken: two entries of the same kind in one registry, a repeated parameter "
             "name, or a stimulus name claimed by a trigger, an event and a timer at once. Reported on every "
             "entry after the first, so the finding names the copy the author has to rename. The code "
-            "generator reports it for two included documents that declare one name."
+            "generator reports it for two included documents that declare one name. Two attributes of one "
+            "interface or one machine whose generated accessors are one function are the same fault: an "
+            "attribute name is converted to snake_case rather than copied, so 'Count' and 'count', and "
+            "'my_Value' and 'my_value', each pair reaches one 'count()' and one 'my_value()'."
           , "Rename the later declaration. A stimulus name is shared by triggers, events and timers, so a "
-            "trigger may not carry the name of an event or a timer." }
+            "trigger may not carry the name of an event or a timer. Two attributes collide on what they "
+            "generate rather than on what they are called, so rename the later one until the two converted "
+            "names differ." }
         , { RULE_UNREFERENCED        , BandWarning | BandInformation, DocDataType | DocInterface | DocStateMachine
           , "A declaration nothing in the document uses, or an included document it takes nothing from. Never "
             "an error -- code that nothing reaches still generates -- so the bare number is reserved and only "
@@ -587,9 +602,17 @@ namespace DocRules
         , { RULE_INVALID_IDENTIFIER  , BandError, DocDataType | DocInterface | DocStateMachine
           , "A name the generated code could not carry: it must start with a letter or an underscore and "
             "continue with letters, digits or underscores. A declaration with no name at all is the same "
-            "fault and carries the same number."
+            "fault and carries the same number. A name that is a word C++ owns is the same fault wherever the "
+            "generated code spells the name as the document writes it: a document, an interface, a machine, a "
+            "type, an enumerator, a field, a constant, a parameter, a state, a trigger, a condition or a "
+            "timer. A request, a response, a broadcast, an action and an event are written behind a prefix, "
+            "so a keyword is accepted there. An attribute is judged by the accessor it generates instead of "
+            "by its spelling: 'Class' produces 'class()', which is a keyword."
           , "Rewrite the name as a C++ identifier: a letter or an underscore first, then letters, digits or "
-            "underscores. No spaces, dots or dashes." }
+            "underscores. No spaces, dots or dashes. A name that is a C++ keyword is renamed to something "
+            "that is not one, because the generated file it lands in is not a file its author may edit. For "
+            "an attribute the name to change is the one the accessor is built from: 'Class' becomes "
+            "'ClassName', and the accessor becomes 'class_name()'." }
         , { RULE_UNRESOLVED_TYPE     , BandError, DocDataType | DocInterface | DocStateMachine
           , "A declared data type that answers to nothing: the type of an attribute, a parameter, a constant, "
             "a structure field, or a container key or value. The field to correct is the type itself, which "

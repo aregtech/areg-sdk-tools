@@ -420,6 +420,45 @@ void testValidatorDocumentName()
     }
 }
 
+void testValidatorCppNameRules()
+{
+    std::printf("[dt] a name the compiler already owns\n");
+
+    {   // The document name becomes the namespace of the generated header.
+        DataTypeDocumentData doc;
+        makeUsable(doc);
+        doc.getOverviewData().setName(QStringLiteral("union"));
+        const QList<DocIssue> issues = DTValidator::validate(doc);
+        CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        CHECK(namesIt(issues, DocRules::RULE_INVALID_IDENTIFIER, QStringLiteral("keyword")));
+    }
+
+    {   // A structure, its field, an enumeration and its enumerator all reach the header as
+        // the document spells them.
+        DataTypeDocumentData doc;
+        makeUsable(doc);
+        DataTypeStructure* record = doc.getDataTypeData().addStructure(QStringLiteral("class"));
+        CHECK(record != nullptr);
+        record->addField(QStringLiteral("int"))->setType(QStringLiteral("uint32"));
+
+        DataTypeEnum* unit = doc.getDataTypeData().addEnum(QStringLiteral("Unit"));
+        CHECK(unit != nullptr);
+        unit->addField(QStringLiteral("delete"));
+
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 3);
+    }
+
+    {   // The control: a document whose every name is its own.
+        DataTypeDocumentData doc;
+        makeUsable(doc);
+        DataTypeEnum* unit = doc.getDataTypeData().addEnum(QStringLiteral("Unit"));
+        CHECK(unit != nullptr);
+        unit->addField(QStringLiteral("Celsius"));
+
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 0);
+    }
+}
+
 void testValidatorIncludes()
 {
     std::printf("[dt] a data type document is a leaf\n");
@@ -542,6 +581,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testValidatorDeprecation();
     testValidatorTypes();
     testValidatorDocumentName();
+    testValidatorCppNameRules();
     testValidatorIncludes();
     testFieldOfRule();
     testShippedFixture();
