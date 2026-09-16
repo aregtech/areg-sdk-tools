@@ -263,6 +263,75 @@ static void testHostTypeShadowsImport()
     CHECK((imported != nullptr) && (imported->getQualifiedName() == QStringLiteral("Shared::Unit")));
 }
 
+//!< A field of an included structure names a type of that document, even when the host declares
+//!< a type of the same name.
+static void testImportedKeyFields()
+{
+    std::printf("[imported key fields]\n");
+    resetCache();
+
+    QTemporaryDir dir;
+    CHECK(dir.isValid());
+
+    const QString keys =
+        QStringLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                       "<DataTypeDocument FormatVersion=\"1.0.0\">\n"
+                       "    <Overview ID=\"50\" Name=\"Keys\" Version=\"1.0.0\" IsDeprecated=\"false\"/>\n"
+                       "    <DataTypeList>\n"
+                       "        <DataType ID=\"51\" Name=\"Blob\" Type=\"Structure\">\n"
+                       "            <FieldList><Field ID=\"52\" Name=\"data\" DataType=\"BinaryBuffer\"/></FieldList>\n"
+                       "        </DataType>\n"
+                       "        <DataType ID=\"53\" Name=\"Plain\" Type=\"Structure\">\n"
+                       "            <FieldList><Field ID=\"54\" Name=\"value\" DataType=\"uint32\"/></FieldList>\n"
+                       "        </DataType>\n"
+                       "        <DataType ID=\"55\" Name=\"Bad\" Type=\"Structure\">\n"
+                       "            <FieldList><Field ID=\"56\" Name=\"inner\" DataType=\"Blob\"/></FieldList>\n"
+                       "        </DataType>\n"
+                       "        <DataType ID=\"57\" Name=\"Good\" Type=\"Structure\">\n"
+                       "            <FieldList><Field ID=\"58\" Name=\"inner\" DataType=\"Plain\"/></FieldList>\n"
+                       "        </DataType>\n"
+                       "    </DataTypeList>\n"
+                       "</DataTypeDocument>\n");
+    CHECK(writeFile(dir.filePath(QStringLiteral("Keys.dtml")), keys));
+
+    // The host's own Blob hashes and its own Plain does not: the opposite of the included ones.
+    const QString ownTypes =
+        QStringLiteral("        <DataType ID=\"2\" Name=\"Blob\" Type=\"Structure\">\n"
+                       "            <FieldList><Field ID=\"3\" Name=\"value\" DataType=\"uint32\"/></FieldList>\n"
+                       "        </DataType>\n"
+                       "        <DataType ID=\"4\" Name=\"Plain\" Type=\"Structure\">\n"
+                       "            <FieldList><Field ID=\"5\" Name=\"data\" DataType=\"BinaryBuffer\"/></FieldList>\n"
+                       "        </DataType>\n"
+                       "        <DataType ID=\"6\" Name=\"ByBad\" Type=\"Container\">\n"
+                       "            <Container>HashMap</Container>\n"
+                       "            <BaseTypeValue>uint32</BaseTypeValue>\n"
+                       "            <BaseTypeKey>Keys::Bad</BaseTypeKey>\n"
+                       "        </DataType>\n"
+                       "        <DataType ID=\"7\" Name=\"ByGood\" Type=\"Container\">\n"
+                       "            <Container>HashMap</Container>\n"
+                       "            <BaseTypeValue>uint32</BaseTypeValue>\n"
+                       "            <BaseTypeKey>Keys::Good</BaseTypeKey>\n"
+                       "        </DataType>\n");
+
+    const QString host = dir.filePath(QStringLiteral("Sensor.siml"));
+    CHECK(writeFile(host, interfaceXml(QStringLiteral("uint32"), { QStringLiteral("./Keys.dtml") }, ownTypes)));
+
+    ServiceInterfaceData data;
+    CHECK(data.readFromFile(host));
+
+    const QList<DocIssue> issues = SIValidator::validate(data);
+    CHECK(countRule(issues, DocRules::RULE_CONTAINER_KEY) == 1);
+    bool namesBad = false;
+    for (const DocIssue& issue : issues)
+    {
+        namesBad = namesBad || ((issue.rule == DocRules::RULE_CONTAINER_KEY)
+                                && issue.message.contains(QStringLiteral("'ByBad'"))
+                                && issue.message.contains(QStringLiteral("whose field 'inner' is 'Blob', whose field 'data' is 'BinaryBuffer'")));
+    }
+
+    CHECK(namesBad);
+}
+
 //!< Two included documents of one base name would generate one namespace twice.
 static void testDuplicateNamespace()
 {
@@ -517,6 +586,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testQualifiedResolution();
     testUnresolvedQualifiedName();
     testHostTypeShadowsImport();
+    testImportedKeyFields();
     testDuplicateNamespace();
     testBrokenImport();
     testUnusedImport();

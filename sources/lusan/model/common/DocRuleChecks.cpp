@@ -103,15 +103,19 @@ namespace
             || ((hash == false) && (name == QStringLiteral("DateTime")));
     }
 
-    //!< The type a structure field names. A structure of an included document spells its field
-    //!< types the way that document does, so the name is also tried under its namespace.
+    //!< The type a structure field names. A custom field type of an included structure resolves
+    //!< only under that document's namespace, never to a type of the host document.
     const DataTypeBase* fieldType(const DataTypeDataSection& types, const DataTypeStructure& owner, const FieldEntry& field)
     {
-        const DataTypeBase* result = types.findDataType(field.getType());
-        const qsizetype separator = owner.getName().lastIndexOf(QStringLiteral("::"));
-        if ((result == nullptr) && (separator > 0))
+        const QString& space = owner.getImportSpace();
+        if (space.isEmpty())
+            return types.findDataType(field.getType());
+
+        const DataTypeBase* result = types.findDataType(space + QStringLiteral("::") + field.getType());
+        if (result == nullptr)
         {
-            result = types.findDataType(owner.getName().left(separator + 2) + field.getType());
+            result = types.findDataType(field.getType());
+            result = ((result != nullptr) && result->isCustomDefined()) ? nullptr : result;
         }
 
         return result;
