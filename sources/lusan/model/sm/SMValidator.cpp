@@ -473,8 +473,12 @@ namespace
         DocNameSet dataTypes(mChecks, eDocElementKind::DataType);
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {
-            if (d != nullptr)
-                dataTypes.claim(d->getId(), d->getName(), vtr("Data type '%1'").arg(d->getName()));
+            if (d == nullptr)
+                continue;
+
+            dataTypes.claim(d->getId(), d->getName(), vtr("Data type '%1'").arg(d->getName()));
+            if (d->getCategory() == DataTypeBase::eCategory::Container)
+                mChecks.checkContainerKey(d->getId(), eDocElementKind::DataType, *static_cast<DataTypeContainer*>(d));
         }
 
         // The shared stimulus name space: a name used by more than one of trigger/event/timer

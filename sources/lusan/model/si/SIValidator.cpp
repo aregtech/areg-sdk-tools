@@ -272,6 +272,7 @@ namespace
                 if (container->canHaveKey())
                 {
                     checkType(id, eDocElementKind::DataType, container->getKey(), vtr("The key of container '%1'").arg(name));
+                    mChecks.checkContainerKey(id, eDocElementKind::DataType, *container);
                 }
             }
         }

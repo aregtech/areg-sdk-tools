@@ -20,10 +20,13 @@
 #include "lusan/model/common/DocRuleChecks.hpp"
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
@@ -83,6 +86,67 @@ namespace
     {
         static const QRegularExpression _separator{ QStringLiteral("[<>,]") };
         return _separator;
+    }
+
+    //!< True when a type that is not a structure can be a key: one with a hash when hash is
+    //!< true, one with an ordering otherwise.
+    bool isKeyLeaf(const DataTypeBase& type, bool hash)
+    {
+        if (type.isPrimitive() || type.isEnumeration())
+            return true;
+
+        if (type.isBasicObject() == false)
+            return false;
+
+        const QString& name = type.getName();
+        return (name == QStringLiteral("String")) || (name == QStringLiteral("WideString"))
+            || ((hash == false) && (name == QStringLiteral("DateTime")));
+    }
+
+    //!< The type a structure field names. A structure of an included document spells its field
+    //!< types the way that document does, so the name is also tried under its namespace.
+    const DataTypeBase* fieldType(const DataTypeDataSection& types, const DataTypeStructure& owner, const FieldEntry& field)
+    {
+        const DataTypeBase* result = types.findDataType(field.getType());
+        const qsizetype separator = owner.getName().lastIndexOf(QStringLiteral("::"));
+        if ((result == nullptr) && (separator > 0))
+        {
+            result = types.findDataType(owner.getName().left(separator + 2) + field.getType());
+        }
+
+        return result;
+    }
+
+    //!< True when something stops the type from being a key. The path then names the field chain
+    //!< down to the type that stops it, and stays empty when the type itself does.
+    bool keyObstacle(const DataTypeDataSection& types, const DataTypeBase* type, bool hash
+                    , QList<const DataTypeBase*>& visited, QString& path)
+    {
+        if (type == nullptr)
+            return false;
+
+        if (type->isStructure() == false)
+            return (isKeyLeaf(*type, hash) == false);
+
+        if (visited.contains(type))
+            return true;
+
+        visited.append(type);
+        const DataTypeStructure& structure = static_cast<const DataTypeStructure&>(*type);
+        bool result{ false };
+        for (const FieldEntry& field : structure.getElements())
+        {
+            QString inner;
+            if (keyObstacle(types, fieldType(types, structure, field), hash, visited, inner))
+            {
+                path = DocRuleChecks::tr(", whose field '%1' is '%2'").arg(field.getName(), field.getType()) + inner;
+                result = true;
+                break;
+            }
+        }
+
+        visited.removeOne(type);
+        return result;
     }
 }
 
@@ -179,6 +243,9 @@ QString DocRuleChecks::explainShape(eShape shape)
 
     case eShape::DroppedElement:
         return tr("The block is kept only while the document is open. Take what you need out of it before saving, or open the document in a build that defines the element.");
+
+    case eShape::ContainerKey:
+        return tr("A HashMap needs a key with a hash and a Map needs a key with an ordering. A primitive, an enumeration, String and WideString have both, DateTime has only an ordering, BinaryBuffer and a container have neither, and a structure has what all of its fields have. Change the key, or the field that stops it.");
 
     default:
         return QString();
@@ -416,6 +483,27 @@ void DocRuleChecks::checkEnumeratorValues(eDocElementKind kind, const QString& t
 
         next = value + 1;
     }
+}
+
+void DocRuleChecks::checkContainerKey(uint32_t id, eDocElementKind kind, const DataTypeContainer& container)
+{
+    const bool hash{ container.getContainer() == QStringLiteral("HashMap") };
+    if ((hash == false) && (container.getContainer() != QStringLiteral("Map")))
+        return;
+
+    const DataTypeBase* keyType = mTypes.findDataType(container.getKey());
+    if ((keyType == nullptr) || keyType->isImported())
+        return;
+
+    QList<const DataTypeBase*> visited;
+    QString path;
+    if (keyObstacle(mTypes, keyType, hash, visited, path) == false)
+        return;
+
+    add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_CONTAINER_KEY
+       , hash ? tr("Container '%1' cannot hash its key '%2'%3; a HashMap finds a key by its hash").arg(container.getName(), container.getKey(), path)
+              : tr("Container '%1' cannot order its key '%2'%3; a Map keeps its keys ordered").arg(container.getName(), container.getKey(), path)
+       , explainShape(eShape::ContainerKey));
 }
 
 void DocRuleChecks::noteDeprecated(uint32_t id, eDocElementKind kind, const QString& subject

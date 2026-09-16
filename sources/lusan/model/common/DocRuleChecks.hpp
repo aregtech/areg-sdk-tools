@@ -37,6 +37,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class DataTypeContainer;
 class DataTypeDataSection;
 
 /**
@@ -83,6 +84,7 @@ public:
         , RetiredElement
         , UnknownAttribute
         , DroppedElement
+        , ContainerKey
     };
 
     /**
@@ -248,6 +250,13 @@ public:
      * \param   entries     Its enumerators, in declaration order.
      **/
     void checkEnumeratorValues(eDocElementKind kind, const QString& typeName, const QList<EnumEntry>& entries);
+
+    /**
+     * \brief   Refuses a HashMap whose key has no hash and a Map whose key has no ordering. A key
+     *          of a type declared as imported, and a key that does not resolve, are not judged.
+     * \param   container   The container whose key is judged.
+     **/
+    void checkContainerKey(uint32_t id, eDocElementKind kind, const DataTypeContainer& container);
 
     /**
      * \brief   Notes a declaration its author marked deprecated, so what still uses it is worth

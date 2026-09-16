@@ -433,6 +433,16 @@ namespace DocRules
      **/
     constexpr int RULE_HISTORY_CONFLICT     { 58 };
 
+    /**
+     * \brief   A HashMap or a Map whose key type cannot be a key. A HashMap finds a key by its
+     *          hash and a Map keeps its keys ordered, so the key has to hash or to order. A
+     *          primitive, an enumeration, `String` and `WideString` do both; `DateTime` orders
+     *          and does not hash; `BinaryBuffer` and a container do neither; a structure does
+     *          what every one of its fields does, and an empty structure does both. A type
+     *          declared with Type="Imported" is the author's own C++ type and is not judged.
+     **/
+    constexpr int RULE_CONTAINER_KEY        { 59 };
+
 //////////////////////////////////////////////////////////////////////////
 // Rules that exist only in a band
 //
@@ -939,6 +949,15 @@ namespace DocRules
             "one decision, disagreeing about what the composite does on re-entry."
           , "The composite says the same thing twice. Keep the marker and remove the History attribute, or "
             "remove the marker and keep the attribute." }
+        , { RULE_CONTAINER_KEY       , BandError, DocDataType | DocInterface | DocStateMachine
+          , "A HashMap or a Map whose key type cannot be a key. A HashMap finds a key by its hash and a Map "
+            "keeps its keys ordered, so the key has to hash or to order. A primitive, an enumeration, "
+            "'String' and 'WideString' do both; 'DateTime' orders and does not hash; 'BinaryBuffer' and a "
+            "container do neither; a structure does what every one of its fields does, and an empty structure "
+            "does both. A type declared with Type=\"Imported\" is the author's own C++ type and is not judged."
+          , "Change the key type, or change the structure field that stops it: a 'BinaryBuffer', a container, "
+            "a field of a type declared Type=\"Imported\", or a 'DateTime' in the key of a HashMap. A key that "
+            "has to carry a 'DateTime' can be the key of a Map instead." }
     };
 
     /**
