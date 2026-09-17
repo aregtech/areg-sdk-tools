@@ -28,6 +28,7 @@
 #include "lusan/model/common/DocRules.hpp"
 
 #include <QCoreApplication>
+#include <QHash>
 #include <QList>
 #include <QSet>
 #include <QString>
@@ -36,6 +37,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class DataTypeContainer;
 class DataTypeDataSection;
 
 /**
@@ -66,6 +68,9 @@ public:
     {
           MissingName
         , InvalidIdentifier
+        , KeywordName
+        , KeywordAccessor
+        , DuplicateAccessor
         , DuplicateName
         , UnresolvedType
         , BadLiteral
@@ -79,6 +84,7 @@ public:
         , RetiredElement
         , UnknownAttribute
         , DroppedElement
+        , ContainerKey
     };
 
     /**
@@ -118,6 +124,20 @@ public:
      * \brief   True when the text is a name the generated code can carry.
      **/
     static bool isIdentifier(const QString& name);
+
+    /**
+     * \brief   True when the word is one C++ owns: the C++17 keywords, the alternative
+     *          tokens and the C++20 additions alike. Generated code may be compiled as C++20,
+     *          so a name accepted today has to still compile then.
+     **/
+    static bool isKeyword(const QString& name);
+
+    /**
+     * \brief   The function name an attribute of this name generates. An attribute name is
+     *          converted rather than copied, so `Count` and `count` both answer `count`, and a
+     *          name that already holds an underscore is only lower-cased.
+     **/
+    static QString toSnakeCase(const QString& name);
 
     /**
      * \brief   Why a finding of the given shape is a finding, and what resolves it.
@@ -181,6 +201,13 @@ public:
     void checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
 
     /**
+     * \brief   The shape half of \a checkIdentifier on its own, for a kind whose generated name
+     *          carries a prefix. A request, a response, a broadcast, an action and an event are
+     *          written behind one, so a word C++ owns still compiles there.
+     **/
+    void checkIdentifierShape(uint32_t id, eDocElementKind kind, const QString& name, const QString& what);
+
+    /**
      * \brief   The declared type has to exist, and every fragment of a templated one with it.
      * \param   required    True when the declaration cannot be left without a type.
      * \return  The fragment that answered to nothing, or an empty string.
@@ -223,6 +250,13 @@ public:
      * \param   entries     Its enumerators, in declaration order.
      **/
     void checkEnumeratorValues(eDocElementKind kind, const QString& typeName, const QList<EnumEntry>& entries);
+
+    /**
+     * \brief   Refuses a HashMap whose key has no hash and a Map whose key has no ordering. A key
+     *          of a type declared as imported, and a key that does not resolve, are not judged.
+     * \param   container   The container whose key is judged.
+     **/
+    void checkContainerKey(uint32_t id, eDocElementKind kind, const DataTypeContainer& container);
 
     /**
      * \brief   Notes a declaration its author marked deprecated, so what still uses it is worth
@@ -367,6 +401,54 @@ private:
     DocNameSet(void) = delete;
     DocNameSet(const DocNameSet& /*src*/) = delete;
     DocNameSet& operator = (const DocNameSet& /*src*/) = delete;
+};
+
+/**
+ * \class   DocAccessorSet
+ * \brief   The functions the attributes of one document generate, claimed one attribute at a
+ *          time.
+ *
+ *          An attribute is the one declaration whose name is converted rather than copied, so
+ *          two faults live in the conversion and neither is visible in the document: the
+ *          converted name may be a word C++ owns, and two attributes of different spellings
+ *          may reach one function the generated class then declares twice.
+ **/
+class DocAccessorSet
+{
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    DocAccessorSet(DocRuleChecks& checks, eDocElementKind kind);
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Judges the accessor the attribute generates and claims it. Files the identifier
+     *          rule when the accessor is a word C++ owns, and the duplicate rule when another
+     *          attribute already reached the same function.
+     * \param   name    The attribute name as the document spells it.
+     * \return  False when either rule was filed.
+     **/
+    bool claim(uint32_t id, const QString& name);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocRuleChecks&          mChecks;
+    eDocElementKind         mKind;
+    QHash<QString, QString> mTaken;     //!< The accessor, and the attribute that first reached it.
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    DocAccessorSet(void) = delete;
+    DocAccessorSet(const DocAccessorSet& /*src*/) = delete;
+    DocAccessorSet& operator = (const DocAccessorSet& /*src*/) = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////

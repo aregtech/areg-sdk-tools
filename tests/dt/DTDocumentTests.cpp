@@ -398,6 +398,62 @@ void testValidatorTypes()
     }
 }
 
+void testValidatorContainerKeys()
+{
+    std::printf("[dt] a HashMap key has to hash and a Map key has to order\n");
+
+    auto keyed = [](DataTypeDocumentData& doc, const QString& name, const QString& kind, const QString& key)
+    {
+        DataTypeContainer* container = doc.getDataTypeData().addContainer(name);
+        CHECK(container != nullptr);
+        container->setContainer(kind);
+        container->setKey(key);
+        container->setValue(QStringLiteral("uint32"));
+    };
+
+    DataTypeDocumentData doc;
+    makeUsable(doc);
+    doc.getDataTypeData().addStructure(QStringLiteral("Blob"))->addField(QStringLiteral("data"))->setType(QStringLiteral("BinaryBuffer"));
+    DataTypeStructure* stamp = doc.getDataTypeData().addStructure(QStringLiteral("Stamp"));
+    CHECK(stamp != nullptr);
+    stamp->addField(QStringLiteral("id"))->setType(QStringLiteral("uint32"));
+    stamp->addField(QStringLiteral("when"))->setType(QStringLiteral("DateTime"));
+    doc.getDataTypeData().addStructure(QStringLiteral("Holder"))->addField(QStringLiteral("inner"))->setType(QStringLiteral("Blob"));
+    CHECK(doc.getDataTypeData().addStructure(QStringLiteral("Nothing")) != nullptr);
+    CHECK(doc.getDataTypeData().addImported(QStringLiteral("Legacy")) != nullptr);
+    DataTypeContainer* numbers = doc.getDataTypeData().addContainer(QStringLiteral("Numbers"));
+    CHECK(numbers != nullptr);
+    numbers->setContainer(QStringLiteral("Array"));
+    numbers->setValue(QStringLiteral("uint32"));
+
+    {   // Keys that hash or order as their container needs.
+        keyed(doc, QStringLiteral("ByPoint"), QStringLiteral("HashMap"), QStringLiteral("Point"));
+        keyed(doc, QStringLiteral("SortedPoint"), QStringLiteral("Map"), QStringLiteral("Point"));
+        keyed(doc, QStringLiteral("ByNothing"), QStringLiteral("HashMap"), QStringLiteral("Nothing"));
+        keyed(doc, QStringLiteral("SortedStamp"), QStringLiteral("Map"), QStringLiteral("Stamp"));
+        keyed(doc, QStringLiteral("SortedTime"), QStringLiteral("Map"), QStringLiteral("DateTime"));
+        keyed(doc, QStringLiteral("ByName"), QStringLiteral("HashMap"), QStringLiteral("String"));
+        keyed(doc, QStringLiteral("ByLegacy"), QStringLiteral("HashMap"), QStringLiteral("Legacy"));
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_CONTAINER_KEY) == 0);
+    }
+
+    {   // Keys that do not: each is refused once and names what stops it.
+        keyed(doc, QStringLiteral("ByBlob"), QStringLiteral("HashMap"), QStringLiteral("Blob"));
+        keyed(doc, QStringLiteral("ByStamp"), QStringLiteral("HashMap"), QStringLiteral("Stamp"));
+        keyed(doc, QStringLiteral("SortedHolder"), QStringLiteral("Map"), QStringLiteral("Holder"));
+        keyed(doc, QStringLiteral("ByTime"), QStringLiteral("HashMap"), QStringLiteral("DateTime"));
+        keyed(doc, QStringLiteral("ByNumbers"), QStringLiteral("HashMap"), QStringLiteral("Numbers"));
+
+        const QList<DocIssue> issues = DTValidator::validate(doc);
+        CHECK(countRule(issues, DocRules::RULE_CONTAINER_KEY) == 5);
+        CHECK(namesIt(issues, DocRules::RULE_CONTAINER_KEY, QStringLiteral("whose field 'data' is 'BinaryBuffer'")));
+        CHECK(namesIt(issues, DocRules::RULE_CONTAINER_KEY, QStringLiteral("whose field 'when' is 'DateTime'")));
+        CHECK(namesIt(issues, DocRules::RULE_CONTAINER_KEY, QStringLiteral("whose field 'inner' is 'Blob', whose field 'data'")));
+        CHECK(namesIt(issues, DocRules::RULE_CONTAINER_KEY, QStringLiteral("'ByNumbers' cannot hash its key 'Numbers';")));
+        CHECK(explains(issues, DocRules::RULE_CONTAINER_KEY, DocRuleChecks::eShape::ContainerKey));
+    }
+}
+
 void testValidatorDocumentName()
 {
     std::printf("[dt] the document name becomes a namespace\n");
@@ -417,6 +473,45 @@ void testValidatorDocumentName()
         doc.getOverviewData().setVersion(1, 0, 0);
         const QList<DocIssue> issues = DTValidator::validate(doc);
         CHECK(countRule(issues, ADVISORY + DocRules::RULE_EMPTY_DOCUMENT) == 1);
+    }
+}
+
+void testValidatorCppNameRules()
+{
+    std::printf("[dt] a name the compiler already owns\n");
+
+    {   // The document name becomes the namespace of the generated header.
+        DataTypeDocumentData doc;
+        makeUsable(doc);
+        doc.getOverviewData().setName(QStringLiteral("union"));
+        const QList<DocIssue> issues = DTValidator::validate(doc);
+        CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        CHECK(namesIt(issues, DocRules::RULE_INVALID_IDENTIFIER, QStringLiteral("keyword")));
+    }
+
+    {   // A structure, its field, an enumeration and its enumerator all reach the header as
+        // the document spells them.
+        DataTypeDocumentData doc;
+        makeUsable(doc);
+        DataTypeStructure* record = doc.getDataTypeData().addStructure(QStringLiteral("class"));
+        CHECK(record != nullptr);
+        record->addField(QStringLiteral("int"))->setType(QStringLiteral("uint32"));
+
+        DataTypeEnum* unit = doc.getDataTypeData().addEnum(QStringLiteral("Unit"));
+        CHECK(unit != nullptr);
+        unit->addField(QStringLiteral("delete"));
+
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 3);
+    }
+
+    {   // The control: a document whose every name is its own.
+        DataTypeDocumentData doc;
+        makeUsable(doc);
+        DataTypeEnum* unit = doc.getDataTypeData().addEnum(QStringLiteral("Unit"));
+        CHECK(unit != nullptr);
+        unit->addField(QStringLiteral("Celsius"));
+
+        CHECK(countRule(DTValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 0);
     }
 }
 
@@ -541,7 +636,9 @@ int main(int /*argc*/, char* /*argv*/[])
     testValidatorDuplicateEnumValue();
     testValidatorDeprecation();
     testValidatorTypes();
+    testValidatorContainerKeys();
     testValidatorDocumentName();
+    testValidatorCppNameRules();
     testValidatorIncludes();
     testFieldOfRule();
     testShippedFixture();

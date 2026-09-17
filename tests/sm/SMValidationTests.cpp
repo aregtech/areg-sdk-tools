@@ -98,6 +98,18 @@ namespace
         return n;
     }
 
+    //!< True when at least one finding of the rule carries the text.
+    bool namesRule(const QList<SMIssue>& issues, int rule, const QString& text)
+    {
+        for (const SMIssue& issue : issues)
+        {
+            if ((issue.rule == rule) && issue.message.contains(text))
+                return true;
+        }
+
+        return false;
+    }
+
     bool hasRule(const QList<SMIssue>& issues, int rule)
     {
         return countRule(issues, rule) > 0;
@@ -155,9 +167,20 @@ namespace
         return true;
     }
 
+    //!< Names the machine, which a document read from a file always carries. Without it every
+    //!< document built here answers the identifier rule with a missing name of its own.
+    void nameMachine(StateMachineData& doc)
+    {
+        if (doc.getOverview().getName().isEmpty())
+        {
+            doc.getOverview().setName(QStringLiteral("TestMachine"));
+        }
+    }
+
     //!< A minimal single-level machine with one Start state, valid on its own.
     SMStateEntry* addStart(StateMachineData& doc, const QString& name = "Idle")
     {
+        nameMachine(doc);
         return doc.getStates().createState(name, eKind::Start);
     }
 
@@ -167,6 +190,7 @@ namespace
     //!< check about stimulus resolution or parameter scope cannot be hung off one.
     SMStateEntry* addWorkingState(StateMachineData& doc, const QString& name = "Work")
     {
+        nameMachine(doc);
         SMStateEntry* start = doc.getStates().getStartState();
         if (start == nullptr)
         {
@@ -573,6 +597,113 @@ namespace
             StateMachineData doc;
             addStart(doc, "Good_Name1");
             CHECK(countRule(SMValidator::validate(doc), 5) == 0);
+        }
+    }
+
+    //!< The C++ name rules, the state machine half. The pair of the service interface section
+    //!< in SICommandTests: the rule lives in the reader both formats share, so a fixture on one
+    //!< side only proves half of it.
+    void testCppNameRules()
+    {
+        std::printf("- C++ keywords and the accessors an attribute generates\n");
+
+        {   // The machine name becomes the namespace and the stem of every generated class.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getOverview().setName(QStringLiteral("struct"));
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A state name becomes an enumerator of the generated state enumeration.
+            StateMachineData doc;
+            addStart(doc, "switch");
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A trigger and a condition keep the document spelling.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("return", NEMethod::SmTrigger);
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A timer name becomes an enumerator of the generated timer enumeration.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getTimers().createTimer(QStringLiteral("throw"));
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A constant and a parameter are written as they stand.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getConstants().createConstant(QStringLiteral("static"))->setType(QStringLiteral("uint32"));
+            MethodEntry* trigger = doc.getMethods().createMethod("Advance", NEMethod::SmTrigger);
+            CHECK(trigger != nullptr);
+            trigger->addElement(MethodParameter(doc.getNextId(), "operator", "uint32"), true);
+
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 2);
+        }
+
+        {   // A declared type, its field and its enumerator all reach the header as written.
+            StateMachineData doc;
+            addStart(doc);
+            DataTypeStructure* record = doc.getDataTypes().addStructure(QStringLiteral("union"));
+            CHECK(record != nullptr);
+            FieldEntry* field = record->addField(QStringLiteral("signed"));
+            CHECK(field != nullptr);
+            field->setType(QStringLiteral("uint32"));
+
+            DataTypeEnum* unit = doc.getDataTypes().addEnum(QStringLiteral("Unit"));
+            CHECK(unit != nullptr);
+            unit->addField(QStringLiteral("friend"));
+
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 3);
+        }
+
+        {   // An action is written behind 'action_' and an event behind 'EVENT_', so a keyword
+            // still compiles as one of them.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("delete", NEMethod::SmAction);
+            doc.getEvents().createEvent(QStringLiteral("export"));
+
+            CHECK(countRule(SMValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 0);
+        }
+
+        {   // An attribute is judged by the accessor it generates.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute(QStringLiteral("Class"))->setType(QStringLiteral("uint32"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
+            CHECK(namesRule(issues, DocRules::RULE_INVALID_IDENTIFIER, QStringLiteral("class()")));
+        }
+
+        {   // Two spellings that convert to one function.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute(QStringLiteral("Count"))->setType(QStringLiteral("uint32"));
+            doc.getAttributes().createAttribute(QStringLiteral("count"))->setType(QStringLiteral("uint32"));
+            doc.getAttributes().createAttribute(QStringLiteral("my_Value"))->setType(QStringLiteral("uint32"));
+            doc.getAttributes().createAttribute(QStringLiteral("my_value"))->setType(QStringLiteral("uint32"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 2);
+            CHECK(namesRule(issues, DocRules::RULE_DUPLICATE_NAME, QStringLiteral("count()")));
+            CHECK(namesRule(issues, DocRules::RULE_DUPLICATE_NAME, QStringLiteral("my_value()")));
+        }
+
+        {   // The control: a machine whose every name is its own.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getAttributes().createAttribute(QStringLiteral("Count"))->setType(QStringLiteral("uint32"));
+            doc.getAttributes().createAttribute(QStringLiteral("Total"))->setType(QStringLiteral("uint32"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 0);
+            CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 0);
         }
     }
 }
@@ -3168,6 +3299,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testNameCollisions();
     testDeclarationCollisions();
     testIdentifiers();
+    testCppNameRules();
     testReferences();
     testFinalStart();
     testPseudoStartRules();

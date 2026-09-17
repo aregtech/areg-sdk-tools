@@ -1169,6 +1169,115 @@ namespace
     //!< The rule shapes both document engines share now come from one place: the same answer,
     //!< the same wording and the same explanation, filed under the number this engine has
     //!< always used. The state machine side asserts the same explanations.
+    //!< The C++ name rules the code generator refuses a document for: a keyword where the
+    //!< generated code spells the name as written, and two attributes whose generated
+    //!< accessors are one function.
+    void testValidatorNameRules()
+    {
+        {   // The conversion an attribute name goes through, which is what the generated class
+            // declares. The same function the code generator calls, so the two cannot drift.
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("my_Value")) == QStringLiteral("my_value"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("_Private")) == QStringLiteral("_private"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("HTTPServer")) == QStringLiteral("http_server"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("XMLParser")) == QStringLiteral("xml_parser"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("StringOnChange")) == QStringLiteral("string_on_change"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("Value2D")) == QStringLiteral("value2_d"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("TCPIPPort")) == QStringLiteral("tcpip_port"));
+            CHECK(DocRuleChecks::toSnakeCase(QStringLiteral("aBc")) == QStringLiteral("a_bc"));
+
+            CHECK(DocRuleChecks::isKeyword(QStringLiteral("class")));
+            CHECK(DocRuleChecks::isKeyword(QStringLiteral("co_await")));
+            CHECK(DocRuleChecks::isKeyword(QStringLiteral("xor_eq")));
+            CHECK(DocRuleChecks::isKeyword(QStringLiteral("Class")) == false);
+            CHECK(DocRuleChecks::isKeyword(QStringLiteral("speed")) == false);
+        }
+
+        {   // The interface name becomes the namespace and the stem of every generated class.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getOverviewData().setName(QStringLiteral("class"));
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A constant, a declared type, its field and its enumerator all reach the header as
+            // the document spells them.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getConstantData().createConstant(QStringLiteral("static"))->setType(QStringLiteral("uint32"));
+
+            DataTypeStructure* record = doc.getDataTypeData().addStructure(QStringLiteral("union"));
+            CHECK(record != nullptr);
+            FieldEntry* field = record->addField(QStringLiteral("signed"));
+            CHECK(field != nullptr);
+            field->setType(QStringLiteral("uint32"));
+
+            DataTypeEnum* unit = doc.getDataTypeData().addEnum(QStringLiteral("Unit"));
+            CHECK(unit != nullptr);
+            unit->addField(QStringLiteral("friend"));
+
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 4);
+        }
+
+        {   // A parameter of a request is written into the generated signature as it stands.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            MethodEntry* request = doc.getMethodData().createMethod(QStringLiteral("Start"), NEMethod::SiRequest);
+            CHECK(request != nullptr);
+            MethodParameter* param = request->addParam(QStringLiteral("operator"));
+            CHECK(param != nullptr);
+            param->setType(QStringLiteral("uint32"));
+
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 1);
+        }
+
+        {   // A request, a response and a broadcast are written behind a prefix, so a keyword
+            // still compiles as one of them.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getMethodData().createMethod(QStringLiteral("delete"), NEMethod::SiRequest);
+            doc.getMethodData().createMethod(QStringLiteral("delete"), NEMethod::SiResponse);
+            doc.getMethodData().createMethod(QStringLiteral("export"), NEMethod::SiBroadcast);
+
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_INVALID_IDENTIFIER) == 0);
+        }
+
+        {   // An attribute is judged by the accessor it generates, not by its spelling.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getAttributeData().createAttribute(QStringLiteral("Class"))->setType(QStringLiteral("uint32"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_INVALID_IDENTIFIER, QStringLiteral("class()")));
+        }
+
+        {   // Two spellings that convert to one function. The document shows two names and the
+            // generated class declares one accessor twice.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getAttributeData().createAttribute(QStringLiteral("Count"))->setType(QStringLiteral("uint32"));
+            doc.getAttributeData().createAttribute(QStringLiteral("count"))->setType(QStringLiteral("uint32"));
+            doc.getAttributeData().createAttribute(QStringLiteral("my_Value"))->setType(QStringLiteral("uint32"));
+            doc.getAttributeData().createAttribute(QStringLiteral("my_value"))->setType(QStringLiteral("uint32"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 2);
+            CHECK(namesIt(issues, DocRules::RULE_DUPLICATE_NAME, QStringLiteral("count()")));
+            CHECK(namesIt(issues, DocRules::RULE_DUPLICATE_NAME, QStringLiteral("my_value()")));
+        }
+
+        {   // The control: nothing here converts onto anything else.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            doc.getAttributeData().createAttribute(QStringLiteral("Count"))->setType(QStringLiteral("uint32"));
+            doc.getAttributeData().createAttribute(QStringLiteral("Total"))->setType(QStringLiteral("uint32"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 0);
+            CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 0);
+        }
+    }
+
     void testValidatorSharedShapes()
     {
         {   // A declared enumeration has a literal form of its own: its enumerators. Before the
@@ -1277,6 +1386,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testValidatorUnusedImport();
     testValidatorDeclarations();
     testValidatorSharedShapes();
+    testValidatorNameRules();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

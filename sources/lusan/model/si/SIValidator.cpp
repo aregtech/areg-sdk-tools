@@ -272,6 +272,7 @@ namespace
                 if (container->canHaveKey())
                 {
                     checkType(id, eDocElementKind::DataType, container->getKey(), vtr("The key of container '%1'").arg(name));
+                    mChecks.checkContainerKey(id, eDocElementKind::DataType, *container);
                 }
             }
         }
@@ -280,12 +281,16 @@ namespace
     void Ctx::checkAttributes()
     {
         DocNameSet names(mChecks, eDocElementKind::Attribute);
+        DocAccessorSet accessors(mChecks, eDocElementKind::Attribute);
         for (const AttributeEntry& attribute : mData.getAttributeData().getElements())
         {
             const uint32_t id = attribute.getId();
             const QString name = attribute.getName();
             const QString where = vtr("Attribute '%1'").arg(name);
-            checkName(id, eDocElementKind::Attribute, name, vtr("The attribute"));
+            // The name itself only has to have the shape: what the generated class declares is
+            // the converted name, and that is what the accessor set judges.
+            mChecks.checkIdentifierShape(id, eDocElementKind::Attribute, name, vtr("The attribute"));
+            accessors.claim(id, name);
             checkType(id, eDocElementKind::Attribute, attribute.getType(), where);
             names.claim(id, name, where);
             mChecks.noteDeprecatedElement(attribute, eDocElementKind::Attribute, where);
@@ -305,7 +310,9 @@ namespace
             const uint32_t id = method->getId();
             const QString name = method->getName();
             const QString kindWord = methodKindWord(*method);
-            checkName(id, eDocElementKind::Method, name, vtr("The %1").arg(kindWord.toLower()));
+            // A request, a response and a broadcast are generated behind 'request_', 'response_'
+            // and 'broadcast_', so a word C++ owns still compiles as one of them.
+            mChecks.checkIdentifierShape(id, eDocElementKind::Method, name, vtr("The %1").arg(kindWord.toLower()));
             checkParameters(*method);
             names.claimKeyed(id, QString::number(method->getKind()) + QLatin1Char(':') + name
                             , vtr("%1 '%2'").arg(kindWord, name));

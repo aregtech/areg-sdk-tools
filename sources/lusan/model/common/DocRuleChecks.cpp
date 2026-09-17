@@ -20,25 +20,137 @@
 #include "lusan/model/common/DocRuleChecks.hpp"
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeDataSection.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/model/common/DocRules.hpp"
 #include "lusan/model/common/LiteralValidator.hpp"
 
 #include <QFileInfo>
 #include <QHash>
 #include <QRegularExpression>
+#include <QSet>
 #include <QStringList>
 
 namespace
 {
+    //!< Every word C++ owns, in one table. The C++17 keywords, the alternative tokens and the
+    //!< words C++20 added, because generated code may be compiled as C++20. The code generator
+    //!< carries the same list, so the two tools refuse the same names.
+    const QSet<QString>& cppKeywords(void)
+    {
+        static const QSet<QString> _keywords
+        {
+              QStringLiteral("alignas")     , QStringLiteral("alignof")     , QStringLiteral("and")
+            , QStringLiteral("and_eq")      , QStringLiteral("asm")         , QStringLiteral("auto")
+            , QStringLiteral("bitand")      , QStringLiteral("bitor")       , QStringLiteral("bool")
+            , QStringLiteral("break")       , QStringLiteral("case")        , QStringLiteral("catch")
+            , QStringLiteral("char")        , QStringLiteral("char8_t")     , QStringLiteral("char16_t")
+            , QStringLiteral("char32_t")    , QStringLiteral("class")       , QStringLiteral("compl")
+            , QStringLiteral("concept")     , QStringLiteral("const")       , QStringLiteral("const_cast")
+            , QStringLiteral("constexpr")   , QStringLiteral("constinit")   , QStringLiteral("continue")
+            , QStringLiteral("co_await")    , QStringLiteral("co_return")   , QStringLiteral("co_yield")
+            , QStringLiteral("decltype")    , QStringLiteral("default")     , QStringLiteral("delete")
+            , QStringLiteral("do")          , QStringLiteral("double")      , QStringLiteral("dynamic_cast")
+            , QStringLiteral("else")        , QStringLiteral("enum")        , QStringLiteral("explicit")
+            , QStringLiteral("export")      , QStringLiteral("extern")      , QStringLiteral("false")
+            , QStringLiteral("float")       , QStringLiteral("for")         , QStringLiteral("friend")
+            , QStringLiteral("goto")        , QStringLiteral("if")          , QStringLiteral("inline")
+            , QStringLiteral("int")         , QStringLiteral("long")        , QStringLiteral("mutable")
+            , QStringLiteral("namespace")   , QStringLiteral("new")         , QStringLiteral("noexcept")
+            , QStringLiteral("not")         , QStringLiteral("not_eq")      , QStringLiteral("nullptr")
+            , QStringLiteral("operator")    , QStringLiteral("or")          , QStringLiteral("or_eq")
+            , QStringLiteral("private")     , QStringLiteral("protected")   , QStringLiteral("public")
+            , QStringLiteral("register")    , QStringLiteral("reinterpret_cast")
+            , QStringLiteral("requires")    , QStringLiteral("return")      , QStringLiteral("short")
+            , QStringLiteral("signed")      , QStringLiteral("sizeof")      , QStringLiteral("static")
+            , QStringLiteral("static_assert"), QStringLiteral("static_cast"), QStringLiteral("struct")
+            , QStringLiteral("switch")      , QStringLiteral("template")    , QStringLiteral("this")
+            , QStringLiteral("thread_local"), QStringLiteral("throw")       , QStringLiteral("true")
+            , QStringLiteral("try")         , QStringLiteral("typedef")     , QStringLiteral("typeid")
+            , QStringLiteral("typename")    , QStringLiteral("union")       , QStringLiteral("unsigned")
+            , QStringLiteral("using")       , QStringLiteral("virtual")     , QStringLiteral("void")
+            , QStringLiteral("volatile")    , QStringLiteral("wchar_t")     , QStringLiteral("while")
+            , QStringLiteral("xor")         , QStringLiteral("xor_eq")
+        };
+
+        return _keywords;
+    }
+
     //!< The separators of a templated declared type, such as `NEMap<String, Record>`.
     const QRegularExpression& typeFragmentSeparator(void)
     {
         static const QRegularExpression _separator{ QStringLiteral("[<>,]") };
         return _separator;
+    }
+
+    //!< True when a type that is not a structure can be a key: one with a hash when hash is
+    //!< true, one with an ordering otherwise.
+    bool isKeyLeaf(const DataTypeBase& type, bool hash)
+    {
+        if (type.isPrimitive() || type.isEnumeration())
+            return true;
+
+        if (type.isBasicObject() == false)
+            return false;
+
+        const QString& name = type.getName();
+        return (name == QStringLiteral("String")) || (name == QStringLiteral("WideString"))
+            || ((hash == false) && (name == QStringLiteral("DateTime")));
+    }
+
+    //!< The type a structure field names. A custom field type of an included structure resolves
+    //!< only under that document's namespace, never to a type of the host document.
+    const DataTypeBase* fieldType(const DataTypeDataSection& types, const DataTypeStructure& owner, const FieldEntry& field)
+    {
+        const QString& space = owner.getImportSpace();
+        if (space.isEmpty())
+            return types.findDataType(field.getType());
+
+        const DataTypeBase* result = types.findDataType(space + QStringLiteral("::") + field.getType());
+        if (result == nullptr)
+        {
+            result = types.findDataType(field.getType());
+            result = ((result != nullptr) && result->isCustomDefined()) ? nullptr : result;
+        }
+
+        return result;
+    }
+
+    //!< True when something stops the type from being a key. The path then names the field chain
+    //!< down to the type that stops it, and stays empty when the type itself does.
+    bool keyObstacle(const DataTypeDataSection& types, const DataTypeBase* type, bool hash
+                    , QList<const DataTypeBase*>& visited, QString& path)
+    {
+        if (type == nullptr)
+            return false;
+
+        if (type->isStructure() == false)
+            return (isKeyLeaf(*type, hash) == false);
+
+        if (visited.contains(type))
+            return true;
+
+        visited.append(type);
+        const DataTypeStructure& structure = static_cast<const DataTypeStructure&>(*type);
+        bool result{ false };
+        for (const FieldEntry& field : structure.getElements())
+        {
+            QString inner;
+            if (keyObstacle(types, fieldType(types, structure, field), hash, visited, inner))
+            {
+                path = DocRuleChecks::tr(", whose field '%1' is '%2'").arg(field.getName(), field.getType()) + inner;
+                result = true;
+                break;
+            }
+        }
+
+        visited.removeOne(type);
+        return result;
     }
 }
 
@@ -53,6 +165,28 @@ bool DocRuleChecks::isIdentifier(const QString& name)
     return NELusanCommon::isValidIdentifier(name);
 }
 
+bool DocRuleChecks::isKeyword(const QString& name)
+{
+    return cppKeywords().contains(name);
+}
+
+QString DocRuleChecks::toSnakeCase(const QString& name)
+{
+    // The conversion the code generator applies, step for step. A name that already carries an
+    // underscore is taken as written and only lower-cased, which is why `my_Value` and
+    // `my_value` reach one function.
+    if (name.isEmpty() || name.contains(QLatin1Char('_')))
+        return name.toLower();
+
+    static const QRegularExpression _acronym{ QStringLiteral("([A-Z]+)([A-Z][a-z])") };
+    static const QRegularExpression _word   { QStringLiteral("([a-z0-9])([A-Z])") };
+
+    QString result{ name };
+    result.replace(_acronym, QStringLiteral("\\1_\\2"));
+    result.replace(_word   , QStringLiteral("\\1_\\2"));
+    return result.toLower();
+}
+
 QString DocRuleChecks::explainShape(eShape shape)
 {
     switch (shape)
@@ -63,6 +197,15 @@ QString DocRuleChecks::explainShape(eShape shape)
     case eShape::InvalidIdentifier:
         return tr("Names must be usable in generated code: a letter or underscore first, then letters, digits or underscores, and no more than %1 characters.")
                     .arg(NELusanCommon::MAX_IDENTIFIER_LENGTH);
+
+    case eShape::KeywordName:
+        return tr("The generated code spells this name the way the document writes it, so a word C++ owns lands where a declaration has to stand and the file does not compile. Rename the declaration.");
+
+    case eShape::KeywordAccessor:
+        return tr("An attribute is reached through functions named after it, and the name is converted rather than copied. Rename the attribute so the converted name is not a word C++ owns.");
+
+    case eShape::DuplicateAccessor:
+        return tr("An attribute name is converted rather than copied, so two spellings can reach one function the generated class then declares twice. Rename the later attribute until the two converted names differ.");
 
     case eShape::DuplicateName:
         return tr("Two declarations of the same kind reach one generated name this way, and the build then refuses whichever comes second. Names are unique per kind, so declarations of different kinds may share one.");
@@ -104,6 +247,9 @@ QString DocRuleChecks::explainShape(eShape shape)
 
     case eShape::DroppedElement:
         return tr("The block is kept only while the document is open. Take what you need out of it before saving, or open the document in a build that defines the element.");
+
+    case eShape::ContainerKey:
+        return tr("A HashMap needs a key with a hash and a Map needs a key with an ordering. A primitive, an enumeration, String and WideString have both, DateTime has only an ordering, BinaryBuffer and a container have neither, and a structure has what all of its fields have. Change the key, or the field that stops it.");
 
     default:
         return QString();
@@ -217,6 +363,18 @@ void DocRuleChecks::add(uint32_t id, eDocElementKind kind, DocIssue::eSeverity s
 
 void DocRuleChecks::checkIdentifier(uint32_t id, eDocElementKind kind, const QString& name, const QString& what)
 {
+    checkIdentifierShape(id, kind, name, what);
+
+    if (isKeyword(name))
+    {
+        add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+           , tr("'%1' is a C++ keyword, and the generated code spells this name as written").arg(name)
+           , explainShape(eShape::KeywordName));
+    }
+}
+
+void DocRuleChecks::checkIdentifierShape(uint32_t id, eDocElementKind kind, const QString& name, const QString& what)
+{
     if (name.isEmpty())
     {
         add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
@@ -329,6 +487,27 @@ void DocRuleChecks::checkEnumeratorValues(eDocElementKind kind, const QString& t
 
         next = value + 1;
     }
+}
+
+void DocRuleChecks::checkContainerKey(uint32_t id, eDocElementKind kind, const DataTypeContainer& container)
+{
+    const bool hash{ container.getContainer() == QStringLiteral("HashMap") };
+    if ((hash == false) && (container.getContainer() != QStringLiteral("Map")))
+        return;
+
+    const DataTypeBase* keyType = mTypes.findDataType(container.getKey());
+    if ((keyType == nullptr) || keyType->isImported())
+        return;
+
+    QList<const DataTypeBase*> visited;
+    QString path;
+    if (keyObstacle(mTypes, keyType, hash, visited, path) == false)
+        return;
+
+    add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_CONTAINER_KEY
+       , hash ? tr("Container '%1' cannot hash its key '%2'%3; a HashMap finds a key by its hash").arg(container.getName(), container.getKey(), path)
+              : tr("Container '%1' cannot order its key '%2'%3; a Map keeps its keys ordered").arg(container.getName(), container.getKey(), path)
+       , explainShape(eShape::ContainerKey));
 }
 
 void DocRuleChecks::noteDeprecated(uint32_t id, eDocElementKind kind, const QString& subject
@@ -492,6 +671,49 @@ DocNameSet::DocNameSet(DocRuleChecks& checks, eDocElementKind kind, DocIssue::eS
     , mSeverity (severity)
     , mTaken    ( )
 {
+}
+
+DocAccessorSet::DocAccessorSet(DocRuleChecks& checks, eDocElementKind kind)
+    : mChecks   (checks)
+    , mKind     (kind)
+    , mTaken    ( )
+{
+}
+
+bool DocAccessorSet::claim(uint32_t id, const QString& name)
+{
+    // A name that is not an identifier at all is reported where the attribute name itself is
+    // judged; converting it would name a function nothing generates.
+    if (DocRuleChecks::isIdentifier(name) == false)
+        return true;
+
+    const QString accessor = DocRuleChecks::toSnakeCase(name);
+    bool result = true;
+
+    if (DocRuleChecks::isKeyword(accessor))
+    {
+        mChecks.add(id, mKind, DocIssue::eSeverity::Error, DocRules::RULE_INVALID_IDENTIFIER
+                   , DocRuleChecks::tr("Attribute '%1' generates the accessor %2(), and '%2' is a C++ keyword").arg(name, accessor)
+                   , DocRuleChecks::explainShape(DocRuleChecks::eShape::KeywordAccessor));
+        result = false;
+    }
+
+    // Two attributes spelled the same are an ordinary duplicate and are reported as one; only
+    // two different spellings meeting in the accessor belong here.
+    const auto found = mTaken.constFind(accessor);
+    if ((found != mTaken.constEnd()) && (found.value() != name))
+    {
+        mChecks.add(id, mKind, DocIssue::eSeverity::Error, DocRules::RULE_DUPLICATE_NAME
+                   , DocRuleChecks::tr("Attribute '%1' and attribute '%2' both generate the accessor %3()").arg(name, found.value(), accessor)
+                   , DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateAccessor));
+        result = false;
+    }
+    else
+    {
+        mTaken.insert(accessor, name);
+    }
+
+    return result;
 }
 
 bool DocNameSet::claim(uint32_t id, const QString& name, const QString& subject)
