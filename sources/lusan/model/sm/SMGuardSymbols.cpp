@@ -32,6 +32,22 @@
 
 #include <QHash>
 
+QString SMGuardSymbols::scopedTypeName(const StateMachineData& data, const QStringList& parts)
+{
+    // A type read out of an included data type document is spelled `Space::Name`, so the type is
+    // the longest leading run of parts that names one, and what is left of the chain is the member.
+    for (qsizetype take = parts.size() - 1; take >= 1; --take)
+    {
+        const DataTypeCustom* type = data.getDataTypes().findCustomDataType(parts.mid(0, take).join(QStringLiteral("::")));
+        if (type != nullptr)
+        {
+            return type->getQualifiedName();
+        }
+    }
+
+    return QString();
+}
+
 SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data, const QStringList& parts, QString& typeNameOut)
 {
     typeNameOut.clear();
@@ -40,13 +56,14 @@ SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data
         return eScoped::NoType;
     }
 
-    const DataTypeCustom* type = data.getDataTypes().findCustomDataType(parts.first());
+    typeNameOut = scopedTypeName(data, parts);
+    const DataTypeCustom* type = data.getDataTypes().findCustomDataType(typeNameOut);
     if (type == nullptr)
     {
+        typeNameOut.clear();
         return eScoped::NoType;
     }
 
-    typeNameOut = type->getName();
     if (type->isImported())
     {
         // An imported type is a name borrowed from a foreign header: the document declares that the
@@ -56,7 +73,8 @@ SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data
 
     // Only one level is ours to check: `Enum::value` and `Struct::field`. A deeper chain reaches
     // into a member's own type, which the registry does not model.
-    if (parts.size() > 2)
+    const QStringList members = parts.mid(typeNameOut.count(QStringLiteral("::")) + 1);
+    if (members.size() != 1)
     {
         return eScoped::NoMember;
     }
@@ -64,13 +82,13 @@ SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data
     if (type->isEnumeration())
     {
         const DataTypeEnum* enumType = static_cast<const DataTypeEnum*>(type);
-        return enumType->hasElement(parts.at(1)) ? eScoped::Ok : eScoped::NoMember;
+        return enumType->hasElement(members.first()) ? eScoped::Ok : eScoped::NoMember;
     }
 
     if (type->isStructure())
     {
         const DataTypeStructure* structType = static_cast<const DataTypeStructure*>(type);
-        return structType->hasElement(parts.at(1)) ? eScoped::Ok : eScoped::NoMember;
+        return structType->hasElement(members.first()) ? eScoped::Ok : eScoped::NoMember;
     }
 
     return eScoped::NoMember;

@@ -269,7 +269,7 @@ QString DocRuleChecks::literalReason(const DataTypeDataSection& types, const QSt
     switch (custom->getCategory())
     {
     case DataTypeBase::eCategory::Enumeration:
-        return (static_cast<DataTypeEnum*>(custom)->findElement(literal) != nullptr)
+        return (static_cast<const DataTypeEnum*>(custom)->enumeratorOf(literal).isEmpty() == false)
                     ? QString()
                     : tr("'%1' is not an enumerator of '%2'").arg(literal, typeName);
 
@@ -611,10 +611,19 @@ void DocRuleChecks::checkImportedDocuments(eDocElementKind kind, int rule)
         switch (group.state)
         {
         case DataTypeDataSection::eImportState::NotFound:
+        {
+            QString detail{ explainShape(eShape::BrokenImport) };
+            if (group.triedPaths.isEmpty() == false)
+            {
+                detail += QLatin1Char('\n') + tr("Looked for it at:") + QLatin1Char('\n')
+                        + group.triedPaths.join(QLatin1Char('\n'));
+            }
+
             add(group.id, kind, DocIssue::eSeverity::Error, rule
                , tr("The data type document '%1' is not there").arg(group.location)
-               , explainShape(eShape::BrokenImport));
+               , detail);
             break;
+        }
 
         case DataTypeDataSection::eImportState::ParseFailed:
             add(group.id, kind, DocIssue::eSeverity::Error, rule

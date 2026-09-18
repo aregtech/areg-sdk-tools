@@ -42,6 +42,7 @@ const MethodConfig& NEMethod::serviceInterface()
         , QString()
         , false
         , false
+        , false
     };
 
     return _config;
@@ -60,6 +61,7 @@ const MethodConfig& NEMethod::stateMachine()
         , QString::fromLatin1(MethodEntry::DEFAULT_RETURN)
         , true
         , true
+        , true
     };
 
     return _config;
@@ -73,6 +75,7 @@ MethodDataSection::MethodDataSection(const MethodConfig& config, ElementBase* pa
     : TEDataContainer<MethodEntry*, DocumentElem>(parent)
     , mConfig(config)
 {
+    setIdReordering(config.idReferenced == false);
 }
 
 MethodDataSection::~MethodDataSection()

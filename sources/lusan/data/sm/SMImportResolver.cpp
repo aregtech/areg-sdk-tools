@@ -50,9 +50,9 @@ namespace
 
     //!< Absolute, cleaned path of a stored location. A location is written against a workspace
     //!< root; documents written before that spell it against their own folder, and both resolve.
-    QString makeAbsolute(const QString& directory, const QString& location)
+    QString makeAbsolute(const QString& directory, const QString& location, QStringList* tried = nullptr)
     {
-        return NELusanCommon::resolveLocation(directory, location);
+        return NELusanCommon::resolveLocation(directory, location, tried);
     }
 
     int depthOf(const QString& absoluteFilePath, int limit, QSet<QString>& onPath, QStringList& chain)
@@ -120,10 +120,12 @@ SMImportResolver::Resolution SMImportResolver::resolve(const StateMachineData& h
         return result;
     }
 
-    result.absolutePath = absolutePath(host, entry.getLocation());
+    QStringList tried;
+    result.absolutePath = makeAbsolute(hostDirectory(host), entry.getLocation(), &tried);
     if (result.absolutePath.isEmpty() || (QFileInfo(result.absolutePath).isFile() == false))
     {
-        result.state = eState::NotFound;
+        result.state      = eState::NotFound;
+        result.triedPaths = std::move(tried);
         return result;
     }
 

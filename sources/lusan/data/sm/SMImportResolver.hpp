@@ -78,6 +78,8 @@ namespace SMImportResolver
     {
         eState                                  state { eState::NoLocation };
         QString                                 absolutePath;   //!< Empty unless the location could be made absolute.
+        QStringList                             triedPaths;     //!< Every path the location was measured against;
+                                                                //!< filled only when none of them held the file.
         std::shared_ptr<const StateMachineData> document;       //!< Null unless \a state is Resolved.
         VersionNumber                           actualVersion;  //!< The imported `Overview@Version`; invalid unless resolved.
 

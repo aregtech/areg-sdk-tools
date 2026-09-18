@@ -47,12 +47,14 @@ namespace DataTypeImportResolver
 {
     /**
      * \brief   The absolute path a stored location denotes. A relative location is measured from
-     *          the host document's own directory; an absolute one is returned cleaned. An unsaved
-     *          host has no directory, so a relative location yields an empty string there.
+     *          the search roots, then from the host document's own directory and its parents; an
+     *          absolute one is returned cleaned. An unsaved host has no directory, so a relative
+     *          location yields an empty string there.
      * \param   hostFilePath    The file the reading document lives in, empty when unsaved.
      * \param   location        The location as the document stores it.
+     * \param   tried           When not null, receives every path that was looked at.
      **/
-    QString absolutePath(const QString& hostFilePath, const QString& location);
+    QString absolutePath(const QString& hostFilePath, const QString& location, QStringList* tried = nullptr);
 
     /**
      * \brief   The location to store for a file the author picked. Relative to the host's own

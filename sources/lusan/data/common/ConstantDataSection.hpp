@@ -36,6 +36,7 @@
  ************************************************************************/
 class DataTypeBase;
 class DataTypeCustom;
+class DataTypeDataSection;
 
 /**
  * \class   ConstantDataSection
@@ -91,6 +92,7 @@ public:
      * \param   customTypes     The document's custom data types.
      **/
     void validate(const QList<DataTypeCustom*>& customTypes);
+
 
     /**
      * \brief   Creates a new constant appended at the end of the list.

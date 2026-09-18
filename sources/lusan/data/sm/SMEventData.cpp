@@ -118,6 +118,8 @@ SMEventEntry::SMEventEntry(ElementBase* parent /*= nullptr*/)
     , mIsDeprecated (false)
     , mDeprecateHint( )
 {
+    // A guard reaches an event parameter by its ID, so the list must not renumber itself.
+    setIdReordering(false);
 }
 
 SMEventEntry::SMEventEntry(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
@@ -125,6 +127,7 @@ SMEventEntry::SMEventEntry(uint32_t id, const QString& name, ElementBase* parent
     , mIsDeprecated (false)
     , mDeprecateHint( )
 {
+    setIdReordering(false);
 }
 
 SMEventEntry::SMEventEntry(const SMEventEntry& src)

@@ -541,7 +541,9 @@ namespace
         //!< Names what the type does declare, so the fix is in the message and not one panel away.
         QString memberMessage(const QString& typeName, const QStringList& parts) const
         {
-            const QString member  = parts.mid(1).join(QStringLiteral("::"));
+            const QString text    = parts.join(QStringLiteral("::"));
+            const QString prefix  = typeName + QStringLiteral("::");
+            const QString member  = text.startsWith(prefix) ? text.mid(prefix.size()) : parts.last();
             QString message = QStringLiteral("'%1' is not a value of '%2'").arg(member, typeName);
 
             constexpr int MAX_LISTED = 5;

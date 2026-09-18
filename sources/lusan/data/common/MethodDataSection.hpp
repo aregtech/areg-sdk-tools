@@ -164,6 +164,7 @@ public:
      **/
     void validate(const DataTypeDataSection& dataTypes);
 
+
     /**
      * \brief   Repoints every parameter declared with the old data type to the new one.
      * \return  The IDs of the methods that changed.
