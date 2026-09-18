@@ -153,6 +153,13 @@ public:
     static QString literalReason(const DataTypeDataSection& types, const QString& typeName, const QString& literal);
 
     /**
+     * \brief   Why the value of a declaration does not fit its declared type, or an empty string
+     *          when it fits or is written as a C++ expression. An enumeration judges a value
+     *          written as a name, every other type judges a value written as a literal.
+     **/
+    static QString declaredValueReason(const DataTypeDataSection& types, const QString& typeName, const QString& value);
+
+    /**
      * \brief   True when the name fragment is a predefined type, a declared one, or not a plain
      *          name at all -- this is a registry lookup, not a C++ parser.
      **/
@@ -216,7 +223,7 @@ public:
                              , const QString& what, bool required);
 
     /**
-     * \brief   The value has to read as a value of the declared type.
+     * \brief   Warns about the value of a declaration that does not read as its declared type.
      * \param   what    The subject of the message. Empty where the call site has none, and the
      *                  message then names the type instead.
      **/

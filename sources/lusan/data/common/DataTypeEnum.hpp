@@ -130,7 +130,15 @@ public:
      * \return  Returns the created field object.
      **/
     EnumEntry* insertField(int position, const QString& name);
-    
+
+    /**
+     * \brief   The enumerator the given literal names, or an empty string when it names none.
+     *          An enumerator is written bare, or qualified by the spelling the document uses
+     *          for the type: `Name` for a declared type, `Space::Name` for an imported one.
+     * \param   literal     The value as a document spells it.
+     **/
+    QString enumeratorOf(const QString& literal) const;
+
     inline const QString& getDerived() const;
 
     /**

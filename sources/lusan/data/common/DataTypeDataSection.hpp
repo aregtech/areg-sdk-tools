@@ -29,6 +29,7 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 #include <memory>
 
@@ -92,6 +93,8 @@ public:
         uint32_t                                    id { 0 };   //!< The include row that brought the group in.
         QString                                     location;   //!< The location as the document stores it.
         QString                                     absolutePath;
+        QStringList                                 triedPaths; //!< Every path the location was measured
+                                                                //!< against; empty unless none held the file.
         QString                                     space;      //!< The namespace: the name the included
                                                                 //!< document declares, its file's base name
                                                                 //!< while the file could not be read.

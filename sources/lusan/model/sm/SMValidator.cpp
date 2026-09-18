@@ -142,9 +142,10 @@ namespace
         case SMGuardNode::eKind::Lit:
         {
             // `PowerState::On` names its enumeration as plainly as a declaration does, and for a
-            // type used nowhere else the guard literal is the only thing keeping it alive.
-            const int sep = static_cast<int>(node->getText().indexOf(QStringLiteral("::")));
-            if (sep > 0) out.types.insert(node->getText().left(sep));
+            // type used nowhere else the guard literal is the only thing keeping it alive. An
+            // imported type carries its namespace, so the type is more than the first segment.
+            const QString typeName = SMGuardSymbols::scopedTypeName(data, node->getText().split(QStringLiteral("::")));
+            if (typeName.isEmpty() == false) out.types.insert(typeName);
             break;
         }
         default:
@@ -1456,7 +1457,10 @@ namespace
 
             case SMImportResolver::eState::NotFound:
                 add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
-                    , vtr("Import '%1' points at a file that does not exist: %2").arg(name, entry.getLocation()));
+                    , vtr("Import '%1' points at a file that does not exist: %2").arg(name, entry.getLocation())
+                    , resolution.triedPaths.isEmpty()
+                        ? QString()
+                        : vtr("Looked for it at:") + QLatin1Char('\n') + resolution.triedPaths.join(QLatin1Char('\n')));
                 brokenAliases.insert(name);
                 continue;
 

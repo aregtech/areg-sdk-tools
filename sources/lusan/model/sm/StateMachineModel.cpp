@@ -302,7 +302,16 @@ void StateMachineModel::refreshTypeReferences()
         }
     }
 
+    for (MethodEntry* method : mData->getMethods().getElements())
+    {
+        if (method != nullptr)
+        {
+            method->invalidate();
+        }
+    }
+
     mData->getAttributes().validate(types);
+    mData->getMethods().validate(types);
     mData->getConstants().validate(types.getResolutionTypes());
     for (SMEventEntry* event : mData->getEvents().getElements())
     {

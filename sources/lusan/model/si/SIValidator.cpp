@@ -486,7 +486,7 @@ eIssueField SIValidator::fieldOfRule(int rule)
     case DocRules::RULE_UNRESOLVED_TYPE:
         return eIssueField::Type;
 
-    case DocRules::RULE_BAD_LITERAL:
+    case DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL:
     case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return eIssueField::Value;
 
@@ -508,6 +508,8 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
             return QCoreApplication::translate("SIValidator", "The type generates an empty declaration. Give it its members, or remove it.");
         case DocRules::RULE_UNREFERENCED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
+        case DocRules::RULE_BAD_LITERAL:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
         case DocRules::RULE_UNBOUND_RESPONSE:
             return QCoreApplication::translate("SIValidator", "A response is what a request answers with. Connect it to the request it belongs to, or remove it.");
         case DocRules::RULE_SHARED_RESPONSE:
@@ -529,8 +531,6 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
     case DocRules::RULE_UNRESOLVED_TYPE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
-    case DocRules::RULE_BAD_LITERAL:
-        return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
     case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case DocRules::RULE_RESPONSE_LINK:

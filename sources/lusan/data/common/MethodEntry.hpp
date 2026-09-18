@@ -63,6 +63,8 @@ struct MethodConfig
     QString             defaultReturn;              //!< What a returning kind starts with.
     bool                paramDefaultAsAttribute;    //!< A parameter default is an attribute.
     bool                omitEmptyDescription;       //!< A method with no description writes none.
+    //!< A method or a parameter is referenced by its ID, so neither list renumbers itself.
+    bool                idReferenced;
 };
 
 /**

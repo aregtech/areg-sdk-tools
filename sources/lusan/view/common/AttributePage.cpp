@@ -387,7 +387,7 @@ void AttributePage::updateValueControl(const AttributeEntry* entry)
 
 QString AttributePage::valueValidationReason(const QString& typeName, const QString& value) const
 {
-    return DocRuleChecks::literalReason(mModel.getDocument().getDataTypeSection(), typeName, value);
+    return DocRuleChecks::declaredValueReason(mModel.getDocument().getDataTypeSection(), typeName, value);
 }
 
 void AttributePage::updateValueValidation(const QString& typeName, const QString& value)

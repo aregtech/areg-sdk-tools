@@ -177,6 +177,21 @@ EnumEntry* DataTypeEnum::insertField(int position, const QString& name)
     return result;
 }
 
+QString DataTypeEnum::enumeratorOf(const QString& literal) const
+{
+    static const QString _scope{ QStringLiteral("::") };
+
+    const qsizetype cut = literal.lastIndexOf(_scope);
+    if (cut == 0)
+        return QString();
+
+    if ((cut > 0) && (hasTypeName(literal.left(cut)) == false))
+        return QString();
+
+    const QString member{ (cut > 0) ? literal.mid(cut + _scope.size()) : literal };
+    return (findElement(member) != nullptr) ? member : QString();
+}
+
 bool DataTypeEnum::isValid() const
 {
     return (getName().isEmpty() == false);

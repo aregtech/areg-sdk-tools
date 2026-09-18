@@ -112,11 +112,19 @@ namespace SMGuardSymbols
     // ---- Forward lookups (name -> ID), used by the parser -----------------
 
     /**
+     * \brief   The type a scope-qualified operand names, or an empty string when none of its
+     *          leading segments name one. A type an included data type document contributes is
+     *          spelled `Space::Name`, so more than the first segment may belong to the type.
+     * \param   parts   The `::`-separated segments, head first.
+     **/
+    QString scopedTypeName(const StateMachineData& data, const QStringList& parts);
+
+    /**
      * \brief   Resolves a scope-qualified operand -- `Numbers::Zero` -- against the data type
      *          registry: an enumeration checks its enumerators, a structure its fields, and an
      *          imported type accepts anything (only the imported name itself is ours to know).
      * \param   parts       The `::`-separated segments, head first; at least two.
-     * \param   typeNameOut Receives the head type's name when it is declared (the operand's type).
+     * \param   typeNameOut Receives the type's full name when it is declared (the operand's type).
      **/
     eScoped scopedValue(const StateMachineData& data, const QStringList& parts, QString& typeNameOut);
 

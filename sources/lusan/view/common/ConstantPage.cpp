@@ -322,7 +322,7 @@ QString ConstantPage::valueValidationReason(const QString& typeName, const QStri
 {
     // The same answer the validation engine gives, so the hint under the field and the finding
     // in the results panel can never disagree.
-    return DocRuleChecks::literalReason(mModel.getDocument().getDataTypeSection(), typeName, value);
+    return DocRuleChecks::declaredValueReason(mModel.getDocument().getDataTypeSection(), typeName, value);
 }
 
 void ConstantPage::updateValueValidation(const QString& typeName, const QString& value)
