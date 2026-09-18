@@ -684,7 +684,11 @@ namespace DocRules
             "generator reports one in a service interface or a data type document as a warning and generates "
             "the value as written."
           , "Write the value the way its declared type reads: a number for a numeric type, true or false for "
-            "bool, and an enumerator this enumeration declares." }
+            "bool, and an enumerator this enumeration declares. In a service interface or a data type "
+            "document the value may instead be a C++ expression -- a constant an included header declares, a "
+            "call, an arithmetic expression -- which reaches the generated code as written and is not judged "
+            "here; never replace one with a number to silence a warning. A state machine resolves its own "
+            "guard and argument values, so there a name it does not declare is a refusal." }
         , { RULE_BOOLEAN_OPERAND     , BandError, DocStateMachine
           , "A predicate operand tested on its own that is not 'bool'."
           , "A predicate tested on its own is bool, and this operand is not: C++ would convert it silently "
