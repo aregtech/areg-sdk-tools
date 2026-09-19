@@ -444,6 +444,13 @@ namespace DocRules
      **/
     constexpr int RULE_CONTAINER_KEY        { 59 };
 
+    /**
+     * \brief   A parameter name that a response and a broadcast of one service interface declare
+     *          with two different types. The generated proxy keeps one member per parameter name
+     *          for every answer and every broadcast, so the two cannot both be carried.
+     **/
+    constexpr int RULE_PARAM_TWO_TYPES      { 60 };
+
 //////////////////////////////////////////////////////////////////////////
 // Rules that exist only in a band
 //
@@ -965,6 +972,12 @@ namespace DocRules
           , "Change the key type, or change the structure field that stops it: a 'BinaryBuffer', a container, "
             "a field of a type declared Type=\"Imported\", or a 'DateTime' in the key of a HashMap. A key that "
             "has to carry a 'DateTime' can be the key of a Map instead." }
+        , { RULE_PARAM_TWO_TYPES     , BandError, DocInterface
+          , "A parameter name that a response and a broadcast of one service interface declare with two "
+            "different types. The generated proxy keeps one member per parameter name for every answer and "
+            "every broadcast, so the two cannot both be carried."
+          , "Answers and broadcasts of one interface share their parameter names. Give the two parameters the "
+            "same type, or rename one of them." }
     };
 
     /**

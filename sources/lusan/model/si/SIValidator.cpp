@@ -38,6 +38,7 @@
 #include <QRegularExpression>
 #include <QSet>
 #include <QStringList>
+#include <QHash>
 
 namespace
 {
@@ -361,6 +362,34 @@ namespace
                    , vtr("Response '%1' answers %2 requests").arg(response->getName()).arg(senders));
             }
         }
+
+        // The generated proxy keeps one member per parameter name for every response and broadcast,
+        // so a name they share must keep one type.
+        QHash<QString, const MethodParameter*> firstParam;
+        QHash<QString, const MethodEntry*> firstMethod;
+        for (MethodEntry* method : mData.getMethodData().getElements())
+        {
+            if ((method == nullptr) || ((method->getKind() != NEMethod::SiResponse) && (method->getKind() != NEMethod::SiBroadcast)))
+                continue;
+
+            for (const MethodParameter& param : method->getElements())
+            {
+                const MethodParameter* seen = firstParam.value(param.getName(), nullptr);
+                if (seen == nullptr)
+                {
+                    firstParam.insert(param.getName(), &param);
+                    firstMethod.insert(param.getName(), method);
+                }
+                else if (seen->getType() != param.getType())
+                {
+                    const MethodEntry* other = firstMethod.value(param.getName());
+                    add(method->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_PARAM_TWO_TYPES
+                       , vtr("Parameter '%1' of %2 '%3' is '%4', and of %5 '%6' it is '%7'")
+                            .arg(param.getName(), methodKindWord(*method).toLower(), method->getName(), param.getType()
+                               , methodKindWord(*other).toLower(), other->getName(), seen->getType()));
+                }
+            }
+        }
     }
 
     void Ctx::checkConstants()
@@ -539,6 +568,8 @@ QString SIValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return QCoreApplication::translate("SIValidator", "The version is generated into the interface and tells a client which contract it was built against. Give the document one.");
     case DocRules::RULE_DEFAULT_ORDER:
         return QCoreApplication::translate("SIValidator", "A caller may only leave out trailing arguments, so every parameter after a defaulted one needs a default too.");
+    case DocRules::RULE_PARAM_TWO_TYPES:
+        return QCoreApplication::translate("SIValidator", "Responses and broadcasts of one interface share their parameter names. Give the two parameters the same type, or rename one of them.");
     case DocRules::RULE_BROKEN_IMPORT:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::BrokenImport);
     case DocRules::RULE_UNKNOWN_ELEMENT:

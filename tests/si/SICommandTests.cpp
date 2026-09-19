@@ -994,6 +994,46 @@ namespace
         }
     }
 
+    //!< A parameter name that responses and broadcasts declare with two types is an error; a
+    //!< request parameter of the same name, and one name of one type, are not.
+    void testValidatorParamTwoTypes()
+    {
+        auto addParam = [](MethodEntry* method, const QString& name, const QString& type)
+        {
+            MethodParameter* param = method->addParam(name);
+            CHECK(param != nullptr);
+            param->setType(type);
+        };
+
+        {
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            MethodEntry* request = doc.getMethodData().createMethod(QStringLiteral("Get"), NEMethod::SiRequest);
+            MethodEntry* response = doc.getMethodData().createMethod(QStringLiteral("Got"), NEMethod::SiResponse);
+            MethodEntry* broadcast = doc.getMethodData().createMethod(QStringLiteral("Alarm"), NEMethod::SiBroadcast);
+            CHECK((request != nullptr) && (response != nullptr) && (broadcast != nullptr));
+            addParam(request, QStringLiteral("result"), QStringLiteral("String"));
+            addParam(response, QStringLiteral("result"), QStringLiteral("int32"));
+            addParam(broadcast, QStringLiteral("result"), QStringLiteral("bool"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_PARAM_TWO_TYPES) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_PARAM_TWO_TYPES, QStringLiteral("'result'")));
+            CHECK(namesIt(issues, DocRules::RULE_PARAM_TWO_TYPES, QStringLiteral("'Alarm'")));
+        }
+
+        {
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            MethodEntry* response = doc.getMethodData().createMethod(QStringLiteral("Got"), NEMethod::SiResponse);
+            MethodEntry* broadcast = doc.getMethodData().createMethod(QStringLiteral("Alarm"), NEMethod::SiBroadcast);
+            CHECK((response != nullptr) && (broadcast != nullptr));
+            addParam(response, QStringLiteral("result"), QStringLiteral("int32"));
+            addParam(broadcast, QStringLiteral("result"), QStringLiteral("int32"));
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_PARAM_TWO_TYPES) == 0);
+        }
+    }
+
     //!< What the engine says about a `.dtml` row. The rows here point at files that are not on
     //!< disk, which is the broken-import shape; a row that does resolve, and the advisory on one
     //!< nothing declares with, are exercised over real files by the import tests.
@@ -1428,6 +1468,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testLegacyTypeNames();
     testTypeReferenceRefresh();
     testValidatorUnreferenced();
+    testValidatorParamTwoTypes();
     testValidatorUnusedImport();
     testValidatorDeclarations();
     testValidatorSharedShapes();

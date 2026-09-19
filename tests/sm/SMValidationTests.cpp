@@ -1082,6 +1082,34 @@ namespace
             return session->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
         };
 
+        {   // Rule 7 names the pair of states one level holds: into the composite it names the
+            // composite to target and the event its start state takes on; out of it, the
+            // composite to draw the transition from.
+            StateMachineData doc;
+            shadowDoc(doc);
+            auto byName = [](const SMStateData& level, const QString& name) -> SMStateEntry*
+            {
+                for (SMStateEntry* state : level.getElements())
+                {
+                    if (state->getName() == name)
+                        return state;
+                }
+
+                return nullptr;
+            };
+
+            SMStateEntry* session = byName(doc.getStates(), QStringLiteral("Session"));
+            SMStateEntry* other   = byName(doc.getStates(), QStringLiteral("Other"));
+            CHECK((session != nullptr) && (other != nullptr));
+            SMStateEntry* step2   = byName(*session->getNestedStates(), QStringLiteral("Step2"));
+            CHECK(step2 != nullptr);
+            other->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), step2->getId());
+            step2->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 2);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("target 'Session', which holds 'Step2' and enters at its start state")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("draw it from 'Session', which holds 'Step2' on the level of 'Other'")));
+        }
         {   // The override is legal and nothing reports it. A stimulus is searched from the active
             // leaf upwards, so `Step1` answers `poke` while it is active and `Session` answers it
             // from everywhere else. Both are reachable, neither is dead, and no error is raised --
