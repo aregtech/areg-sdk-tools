@@ -123,10 +123,10 @@
             <Implemented Lusan="true" Codegen="false"/>
         </Rule>
 
-        <Rule Number="15" Name="RULE_BAD_LITERAL" Section="shared" Bands="error" Documents="dtml siml fsml">
-            <Summary>A value that does not read as its declared type: a malformed literal, a name that is not an enumerator of its enumeration, or a literal on a type that has no literal form.</Summary>
-            <Fix>Write the value the way its declared type reads: a number for a numeric type, true or false for bool, and an enumerator this enumeration declares.</Fix>
-            <Implemented Lusan="true" Codegen="true" CodegenName="RULE_BAD_LITERAL"/>
+        <Rule Number="15" Name="RULE_BAD_LITERAL" Section="shared" Bands="error warning" Documents="dtml siml fsml">
+            <Summary>A value that does not read as its declared type: a malformed literal, a name that is not an enumerator of its enumeration, or a literal on a type that has no literal form. The code generator reports one in a service interface or a data type document as a warning and generates the value as written.</Summary>
+            <Fix>Write the value the way its declared type reads: a number for a numeric type, true or false for bool, and an enumerator this enumeration declares. In a service interface or a data type document the value may instead be a C++ expression -- a constant an included header declares, a call, an arithmetic expression -- which reaches the generated code as written and is not judged here; never replace one with a number to silence a warning. A state machine resolves its own guard and argument values, so there a name it does not declare is a refusal.</Fix>
+            <Implemented Lusan="true" Codegen="true" CodegenName="RULE_BAD_LITERAL" CodegenBands="error warning"/>
         </Rule>
 
         <Rule Number="16" Name="RULE_BOOLEAN_OPERAND" Section="shared" Bands="error" Documents="fsml">
@@ -435,6 +435,12 @@
             <Summary>A HashMap or a Map whose key type cannot be a key. A HashMap finds a key by its hash and a Map keeps its keys ordered, so the key has to hash or to order. A primitive, an enumeration, `String` and `WideString` do both; `DateTime` orders and does not hash; `BinaryBuffer` and a container do neither; a structure does what every one of its fields does, and an empty structure does both. A type declared with Type="Imported" is the author's own C++ type and is not judged.</Summary>
             <Fix>Change the key type, or change the structure field that stops it: a `BinaryBuffer`, a container, a field of a type declared Type="Imported", or a `DateTime` in the key of a HashMap. A key that has to carry a `DateTime` can be the key of a Map instead.</Fix>
             <Implemented Lusan="true" Codegen="true" CodegenName="RULE_CONTAINER_KEY"/>
+        </Rule>
+
+        <Rule Number="60" Name="RULE_PARAM_TWO_TYPES" Section="shared" Bands="error" Documents="siml">
+            <Summary>A parameter name that a response and a broadcast of one service interface declare with two different types. The generated proxy keeps one member per parameter name for every answer and every broadcast, so the two cannot both be carried.</Summary>
+            <Fix>Answers and broadcasts of one interface share their parameter names. Give the two parameters the same type, or rename one of them.</Fix>
+            <Implemented Lusan="true" Codegen="true" CodegenName="RULE_PARAM_TWO_TYPES"/>
         </Rule>
     </RuleList>
 

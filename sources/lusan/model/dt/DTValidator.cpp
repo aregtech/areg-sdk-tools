@@ -306,7 +306,7 @@ eIssueField DTValidator::fieldOfRule(int rule)
     case DocRules::RULE_UNRESOLVED_TYPE:
         return eIssueField::Type;
 
-    case DocRules::RULE_BAD_LITERAL:
+    case DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL:
     case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return eIssueField::Value;
 
@@ -325,6 +325,8 @@ QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
             return QCoreApplication::translate("DTValidator", "The type generates an empty declaration. Give it its members, or remove it.");
         case DocRules::RULE_UNREFERENCED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Unreferenced);
+        case DocRules::RULE_BAD_LITERAL:
+            return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
         case DocRules::RULE_DEPRECATED:
             return DocRuleChecks::explainShape(DocRuleChecks::eShape::Deprecated);
         case DocRules::RULE_EMPTY_DOCUMENT:
@@ -342,8 +344,6 @@ QString DTValidator::explainRule(int rule, DocIssue::eSeverity severity)
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateName);
     case DocRules::RULE_UNRESOLVED_TYPE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::UnresolvedType);
-    case DocRules::RULE_BAD_LITERAL:
-        return DocRuleChecks::explainShape(DocRuleChecks::eShape::BadLiteral);
     case DocRules::RULE_DUPLICATE_ENUM_VALUE:
         return DocRuleChecks::explainShape(DocRuleChecks::eShape::DuplicateEnumValue);
     case DocRules::RULE_NOT_A_HEADER:

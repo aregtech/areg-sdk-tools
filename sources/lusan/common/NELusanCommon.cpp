@@ -362,14 +362,27 @@ const QStringList& NELusanCommon::getSearchRoots(void)
     return _searchRoots;
 }
 
-QString NELusanCommon::resolveLocation(const QString& hostDirectory, const QString& location)
+QString NELusanCommon::resolveLocation(const QString& hostDirectory, const QString& location, QStringList* tried /*= nullptr*/)
 {
+    if (tried != nullptr)
+    {
+        tried->clear();
+    }
+
     if (location.isEmpty())
         return QString();
 
     const QFileInfo info(location);
     if (info.isAbsolute())
-        return QDir::cleanPath(info.absoluteFilePath());
+    {
+        const QString absolute{ QDir::cleanPath(info.absoluteFilePath()) };
+        if (tried != nullptr)
+        {
+            tried->append(absolute);
+        }
+
+        return absolute;
+    }
 
     // A location spelled "./" or "../" was written against the document that holds it. Anything
     // else was written against a workspace root, which is the form every document shares.
@@ -397,12 +410,9 @@ QString NELusanCommon::resolveLocation(const QString& hostDirectory, const QStri
         candidates.append(fromHost);
     }
 
-    // One candidate needs no disambiguation, and this is the hot path: resolution runs on every
-    // validation sweep, so touching the disk when there is nothing to choose between costs a
-    // stat per import for an answer that cannot change.
-    if (candidates.size() < 2)
+    if (tried != nullptr)
     {
-        return (candidates.isEmpty() ? QString() : candidates.first());
+        tried->append(candidates);
     }
 
     for (const QString& candidate : candidates)
@@ -413,7 +423,27 @@ QString NELusanCommon::resolveLocation(const QString& hostDirectory, const QStri
         }
     }
 
-    return candidates.first();
+    // Last, the parents of the document's own directory, nearest first: a location may be written
+    // against a folder above the document rather than against a workspace root.
+    QDir walk(hostDirectory);
+    while (walk.cdUp())
+    {
+        const QString candidate{ QDir::cleanPath(walk.absoluteFilePath(location)) };
+        if (candidates.contains(candidate))
+            continue;
+
+        if (tried != nullptr)
+        {
+            tried->append(candidate);
+        }
+
+        if (QFileInfo(candidate).isFile())
+        {
+            return candidate;
+        }
+    }
+
+    return (candidates.isEmpty() ? QString() : candidates.first());
 }
 
 QIcon NELusanCommon::mergeIcons(const QIcon& icon1, double scale1, const QIcon& icon2, double scale2, const QSize& size)

@@ -152,6 +152,34 @@ namespace
         visited.removeOne(type);
         return result;
     }
+
+    //!< True for the exponent letter of a decimal or a hexadecimal number.
+    bool opensExponent(QChar symbol)
+    {
+        return (symbol == QLatin1Char('e')) || (symbol == QLatin1Char('E'))
+            || (symbol == QLatin1Char('p')) || (symbol == QLatin1Char('P'));
+    }
+
+    //!< True when the value is spelled as one number: a digit, or a sign before a digit, and then
+    //!< only what a single number carries. An operator, a bracket or a space makes it an expression.
+    bool writtenAsNumber(const QString& text)
+    {
+        const qsizetype start = ((text.front() == QLatin1Char('-')) || (text.front() == QLatin1Char('+'))) ? 1 : 0;
+        if ((start == text.size()) || (text.at(start).isDigit() == false))
+            return false;
+
+        for (qsizetype i = start + 1; i < text.size(); ++ i)
+        {
+            const QChar symbol = text.at(i);
+            const bool signsExponent = ((symbol == QLatin1Char('-')) || (symbol == QLatin1Char('+')))
+                                     && opensExponent(text.at(i - 1));
+            if ((symbol.isLetterOrNumber() == false) && (symbol != QLatin1Char('.'))
+             && (symbol != QLatin1Char('\'')) && (signsExponent == false))
+                return false;
+        }
+
+        return true;
+    }
 }
 
 DocRuleChecks::DocRuleChecks(QList<DocIssue>& issues, const DataTypeDataSection& types)
@@ -269,7 +297,7 @@ QString DocRuleChecks::literalReason(const DataTypeDataSection& types, const QSt
     switch (custom->getCategory())
     {
     case DataTypeBase::eCategory::Enumeration:
-        return (static_cast<DataTypeEnum*>(custom)->findElement(literal) != nullptr)
+        return (static_cast<const DataTypeEnum*>(custom)->enumeratorOf(literal).isEmpty() == false)
                     ? QString()
                     : tr("'%1' is not an enumerator of '%2'").arg(literal, typeName);
 
@@ -281,6 +309,36 @@ QString DocRuleChecks::literalReason(const DataTypeDataSection& types, const QSt
         // Imported: the type is defined elsewhere and opaque here, so any literal is accepted.
         return QString();
     }
+}
+
+QString DocRuleChecks::declaredValueReason(const DataTypeDataSection& types, const QString& typeName, const QString& value)
+{
+    const QString text = value.trimmed();
+    if (text.isEmpty() || typeName.isEmpty())
+        return QString();
+
+    const DataTypeCustom* custom = types.findCustomDataType(typeName);
+    if ((custom != nullptr) && (custom->getCategory() == DataTypeBase::eCategory::Enumeration))
+    {
+        // A cast, a call or any other expression is generated as written and is not judged.
+        for (const QString& part : text.split(QStringLiteral("::")))
+        {
+            if (isIdentifier(part) == false)
+                return QString();
+        }
+    }
+    else
+    {
+        // A name or an expression may be a constant an included header declares.
+        const QChar first = text.front();
+        const bool literal = (first == QLatin1Char('\'')) || (first == QLatin1Char('"'))
+                          || (text == QStringLiteral("true")) || (text == QStringLiteral("false"))
+                          || writtenAsNumber(text);
+        if (literal == false)
+            return QString();
+    }
+
+    return literalReason(types, typeName, text);
 }
 
 bool DocRuleChecks::typeResolves(const QString& fragment) const
@@ -421,11 +479,11 @@ QString DocRuleChecks::checkDeclaredType(uint32_t id, eDocElementKind kind, cons
 void DocRuleChecks::checkLiteral(uint32_t id, eDocElementKind kind, const QString& typeName
                                 , const QString& literal, const QString& what)
 {
-    const QString reason = literalReason(mTypes, typeName, literal);
+    const QString reason = declaredValueReason(mTypes, typeName, literal);
     if (reason.isEmpty())
         return;
 
-    add(id, kind, DocIssue::eSeverity::Error, DocRules::RULE_BAD_LITERAL
+    add(id, kind, DocIssue::eSeverity::Warning, DocRules::RULE_BAD_LITERAL
        , what.isEmpty() ? tr("Invalid %1 literal '%2': %3").arg(typeName, literal, reason)
                         : tr("%1 has value '%2': %3").arg(what, literal, reason)
        , explainShape(eShape::BadLiteral));
@@ -611,10 +669,19 @@ void DocRuleChecks::checkImportedDocuments(eDocElementKind kind, int rule)
         switch (group.state)
         {
         case DataTypeDataSection::eImportState::NotFound:
+        {
+            QString detail{ explainShape(eShape::BrokenImport) };
+            if (group.triedPaths.isEmpty() == false)
+            {
+                detail += QLatin1Char('\n') + tr("Looked for it at:") + QLatin1Char('\n')
+                        + group.triedPaths.join(QLatin1Char('\n'));
+            }
+
             add(group.id, kind, DocIssue::eSeverity::Error, rule
                , tr("The data type document '%1' is not there").arg(group.location)
-               , explainShape(eShape::BrokenImport));
+               , detail);
             break;
+        }
 
         case DataTypeDataSection::eImportState::ParseFailed:
             add(group.id, kind, DocIssue::eSeverity::Error, rule

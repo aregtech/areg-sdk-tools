@@ -735,7 +735,7 @@ QString DataTypePage::validateFieldValue(const QString& typeName, const QString&
 {
     // The same answer the validation engine gives, so the marker on the row and the finding in
     // the results panel can never disagree.
-    return DocRuleChecks::literalReason(mModel.getDocument().getDataTypeSection(), typeName, value);
+    return DocRuleChecks::declaredValueReason(mModel.getDocument().getDataTypeSection(), typeName, value);
 }
 
 QString DataTypePage::validateDeclaredType(const FieldEntry& field)

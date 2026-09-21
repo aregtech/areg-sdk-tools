@@ -392,16 +392,20 @@ namespace NELusanCommon
     /**
      * \brief   Turns a stored include location into an absolute file path.
      *
-     *          A location is stored relative to one of the search roots. Older documents spell it
-     *          relative to the document that holds it, so both are tried and the first candidate
-     *          that exists on disk wins. When none exists, the preferred candidate is returned, so
-     *          that a "not found" message names the path the author most likely meant.
+     *          The location is measured against the search roots first, then against the document
+     *          that holds it, and last against that document's parent directories, nearest first.
+     *          The last step is what lets a project tree resolve on its own when the workspace root
+     *          sits above the directory the location was written against. The first candidate that
+     *          exists on disk wins; when none does, the preferred candidate is returned, so that a
+     *          "not found" message names the path the author most likely meant.
      *
      * \param   hostDirectory   Directory of the document holding the location; may be empty when
      *                          the document is unsaved.
      * \param   location        The location as the document spells it.
+     * \param   tried           When not null, receives every path that was looked at, in the order
+     *                          they were looked at, so a message can list them.
      **/
-    QString resolveLocation(const QString& hostDirectory, const QString& location);
+    QString resolveLocation(const QString& hostDirectory, const QString& location, QStringList* tried = nullptr);
 
     /**
      * \brief   Returns the path of a file relative to the first of \p roots that contains it, or

@@ -21,6 +21,7 @@
 
 #include "lusan/common/XmlSI.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/DataTypeDataSection.hpp"
 
 ConstantDataSection::ConstantDataSection(ElementBase* parent /*= nullptr*/)
     : TEDataContainer<ConstantEntry, DocumentElem>(parent)

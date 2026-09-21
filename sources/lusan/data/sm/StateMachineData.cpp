@@ -37,6 +37,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+#include <algorithm>
+
 namespace
 {
     const VersionNumber& currentFormatVersion()
@@ -244,6 +246,43 @@ namespace
         return -1;
     }
 
+    //!< Calls \p visit for every node of every guard the level and the levels below it carry.
+    template<typename Visitor>
+    void visitGuardNodes(const SMStateData& level, Visitor& visit)
+    {
+        auto walk = [&visit](auto&& self, SMGuardNode& node) -> void
+        {
+            visit(node);
+            for (SMGuardNode* child : node.getChildren())
+            {
+                if (child != nullptr)
+                {
+                    self(self, *child);
+                }
+            }
+        };
+
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+                continue;
+
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                SMGuardNode* tree = (transition != nullptr) ? transition->getGuard().getTree() : nullptr;
+                if (tree != nullptr)
+                {
+                    walk(walk, *tree);
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                visitGuardNodes(*state->getNestedStates(), visit);
+            }
+        }
+    }
+
     //!< Calls \p visit for every element of the level, its transitions, operations and
     //!< conditions, then for every level below it.
     template<typename Visitor>
@@ -442,10 +481,19 @@ bool StateMachineData::readFromFile(const QString& filePath)
         {
             mUnknownElements = DocUnknownScan::scan(DocElementTable::eDocument::StateMachine, content);
             repairDuplicateIds();
+            compactMethodIds();
             DataTypeImportResolver::refresh(mDataTypes, mFilePath, mIncludes);
             mDataTypes.validate(mDataTypes);
             mAttributes.validate(mDataTypes);
+            mMethods.validate(mDataTypes);
             mConstants.validate(mDataTypes.getResolutionTypes());
+            for (SMEventEntry* event : mEvents.getElements())
+            {
+                if (event != nullptr)
+                {
+                    event->validate(mDataTypes.getResolutionTypes());
+                }
+            }
         }
     }
 
@@ -847,6 +895,56 @@ bool StateMachineData::repairDuplicateIds()
     visitDocumentIds(*this, renumber);
 
     return (mRepairedIds.isEmpty() == false);
+}
+
+bool StateMachineData::compactMethodIds()
+{
+    const QList<MethodEntry*>& methods = mMethods.getElements();
+    if (methods.size() < 2)
+    {
+        return false;
+    }
+
+    // What each call resolves to now, taken before anything moves. A call that resolves to
+    // nothing keeps the number it holds.
+    QList<QPair<SMGuardNode*, MethodEntry*>> calls;
+    auto collect = [this, &calls](SMGuardNode& node)
+    {
+        if (node.getKind() == SMGuardNode::eKind::Call)
+        {
+            calls.append({ &node, mMethods.findMethod(node.getSymbolId()) });
+        }
+    };
+    visitGuardNodes(mStates, collect);
+
+    QList<uint32_t> ids;
+    ids.reserve(methods.size());
+    for (const MethodEntry* method : methods)
+    {
+        ids.append(method->getId());
+    }
+
+    QList<uint32_t> ordered{ ids };
+    std::sort(ordered.begin(), ordered.end());
+    if (ordered == ids)
+    {
+        return false;
+    }
+
+    for (qsizetype i = 0; i < methods.size(); ++i)
+    {
+        methods.at(i)->setId(ordered.at(i));
+    }
+
+    for (const QPair<SMGuardNode*, MethodEntry*>& call : calls)
+    {
+        if (call.second != nullptr)
+        {
+            call.first->setSymbolId(call.second->getId());
+        }
+    }
+
+    return true;
 }
 
 StateMachineData::StimulusRef StateMachineData::findStimulus(const QString& name) const

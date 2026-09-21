@@ -63,9 +63,9 @@ namespace
     }
 }
 
-QString DataTypeImportResolver::absolutePath(const QString& hostFilePath, const QString& location)
+QString DataTypeImportResolver::absolutePath(const QString& hostFilePath, const QString& location, QStringList* tried /*= nullptr*/)
 {
-    return NELusanCommon::resolveLocation(hostDirectory(hostFilePath), location);
+    return NELusanCommon::resolveLocation(hostDirectory(hostFilePath), location, tried);
 }
 
 QString DataTypeImportResolver::storableLocation(const QString& /*hostFilePath*/, const QString& absoluteFilePath)
@@ -91,15 +91,17 @@ bool DataTypeImportResolver::refresh(DataTypeDataSection& types, const QString& 
         }
 
         ImportedTypes group;
+        QStringList   tried;
         group.id           = include.getId();
         group.location     = location;
-        group.absolutePath = absolutePath(hostFilePath, location);
+        group.absolutePath = absolutePath(hostFilePath, location, &tried);
         // Until the file is read, the best guess at the namespace is what it is called on disk.
         group.space        = DTDocumentCache::spaceOf(group.absolutePath.isEmpty() ? location : group.absolutePath);
 
         if (group.absolutePath.isEmpty() || (QFileInfo(group.absolutePath).isFile() == false))
         {
-            group.state = eImportState::NotFound;
+            group.state      = eImportState::NotFound;
+            group.triedPaths = std::move(tried);
             groups.append(std::move(group));
             continue;
         }

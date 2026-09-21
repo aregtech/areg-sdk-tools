@@ -157,6 +157,16 @@ public:
      **/
     bool repairDuplicateIds();
 
+    /**
+     * \brief   Hands the method list's own IDs back out so they ascend with document order, and
+     *          points every guard call at the method it was already calling. A guard binds a
+     *          condition by ID, so the two happen together or not at all.
+     * \return  True when at least one method was renumbered.
+     * \note    Call it once the whole document is read and before anything is shown. It is a load
+     *          step and never an edit: an open session holds IDs of its own.
+     **/
+    bool compactMethodIds();
+
     inline const SMOverviewData& getOverview() const;
     inline SMOverviewData& getOverview();
 

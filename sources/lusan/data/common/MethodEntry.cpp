@@ -61,7 +61,7 @@ const MethodConfig& MethodEntry::defaultConfig()
 {
     // Every field and no kind: an entry that no section has stamped yet keeps whatever it was
     // given, and the parameter default takes the attribute spelling section 5's rule asks for.
-    static const MethodConfig _config{ QList<MethodKind>{}, QString::fromLatin1(MethodEntry::DEFAULT_RETURN), true, true };
+    static const MethodConfig _config{ QList<MethodKind>{}, QString::fromLatin1(MethodEntry::DEFAULT_RETURN), true, true, true };
     return _config;
 }
 
@@ -80,6 +80,7 @@ MethodEntry::MethodEntry(ElementBase* parent /*= nullptr*/)
     , mIsDeprecated (false)
     , mDeprecateHint( )
 {
+    setIdReordering(mConfig.idReferenced == false);
 }
 
 MethodEntry::MethodEntry(uint32_t id, const QString& name, int kind, const MethodConfig& config, ElementBase* parent /*= nullptr*/)
@@ -93,6 +94,7 @@ MethodEntry::MethodEntry(uint32_t id, const QString& name, int kind, const Metho
     , mIsDeprecated (false)
     , mDeprecateHint( )
 {
+    setIdReordering(config.idReferenced == false);
 }
 
 MethodEntry::MethodEntry(const MethodEntry& src)
@@ -183,6 +185,7 @@ QString MethodEntry::getType() const
 void MethodEntry::setConfig(const MethodConfig& config)
 {
     mConfig = config;
+    setIdReordering(config.idReferenced == false);
 }
 
 //////////////////////////////////////////////////////////////////////////

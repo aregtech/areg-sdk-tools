@@ -142,9 +142,10 @@ namespace
         case SMGuardNode::eKind::Lit:
         {
             // `PowerState::On` names its enumeration as plainly as a declaration does, and for a
-            // type used nowhere else the guard literal is the only thing keeping it alive.
-            const int sep = static_cast<int>(node->getText().indexOf(QStringLiteral("::")));
-            if (sep > 0) out.types.insert(node->getText().left(sep));
+            // type used nowhere else the guard literal is the only thing keeping it alive. An
+            // imported type carries its namespace, so the type is more than the first segment.
+            const QString typeName = SMGuardSymbols::scopedTypeName(data, node->getText().split(QStringLiteral("::")));
+            if (typeName.isEmpty() == false) out.types.insert(typeName);
             break;
         }
         default:
@@ -201,6 +202,8 @@ namespace
         void validateState(const SMStateEntry& state, const SMStateData& level, bool isRootLevel);
         void validatePseudoStart(const SMStateEntry& state, bool isRootLevel);
         void validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr);
+        //!< The pair of states of one level a cross level transition belongs between, as a clause to append.
+        QString siblingHint(const SMStateEntry& source, const SMStateEntry& target) const;
         void validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr);
         void validateOperations(const SMOperationList& ops, const Scope& scope);
         void validateArguments(uint32_t ownerId, eDocElementKind kind, const MethodBase* target, const QList<SMArgumentEntry>& args, const Scope& scope);
@@ -769,6 +772,36 @@ namespace
         }
     }
 
+    QString Ctx::siblingHint(const SMStateEntry& source, const SMStateEntry& target) const
+    {
+        const SMStateData& root = mData.getStates();
+        for (const SMStateEntry* from = &source; from != nullptr; from = root.findOwnerOfRecursive(from->getId()))
+        {
+            const SMStateEntry* fromOwner = root.findOwnerOfRecursive(from->getId());
+            for (const SMStateEntry* to = &target; to != nullptr; to = root.findOwnerOfRecursive(to->getId()))
+            {
+                if ((from == to) || (root.findOwnerOfRecursive(to->getId()) != fromOwner))
+                    continue;
+
+                QString hint;
+                if (from != &source)
+                {
+                    hint += vtr("; draw it from '%1', which holds '%2' on the level of '%3'").arg(from->getName(), source.getName(), to->getName());
+                }
+
+                if (to != &target)
+                {
+                    hint += (from != &source ? QStringLiteral(", ") : QStringLiteral("; "));
+                    hint += vtr("target '%1', which holds '%2' and enters at its start state; to land on '%2', send an event from this transition that the start state of '%1' takes towards '%2'").arg(to->getName(), target.getName());
+                }
+
+                return hint;
+            }
+        }
+
+        return QString();
+    }
+
     void Ctx::validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr)
     {
         const uint32_t id = tr.getId();
@@ -787,7 +820,7 @@ namespace
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND, vtr("Transition target does not resolve"));
                 else if (target->isHistoryMarker() == false)
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TARGET_SIBLING
-                       , vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
+                       , vtr("Transition target '%1' is not a sibling state").arg(target->getName()) + siblingHint(owner, *target));
                 // else: a History pseudo-state reached from outside its own level is the one
                 // legal exception to RULE_TARGET_SIBLING -- reaching this branch already proves
                 // the target is not a member of `level` (`sibling` above resolved to nullptr).
@@ -1456,7 +1489,10 @@ namespace
 
             case SMImportResolver::eState::NotFound:
                 add(id, eDocElementKind::Import, eSeverity::Error, DocRules::RULE_BROKEN_IMPORT
-                    , vtr("Import '%1' points at a file that does not exist: %2").arg(name, entry.getLocation()));
+                    , vtr("Import '%1' points at a file that does not exist: %2").arg(name, entry.getLocation())
+                    , resolution.triedPaths.isEmpty()
+                        ? QString()
+                        : vtr("Looked for it at:") + QLatin1Char('\n') + resolution.triedPaths.join(QLatin1Char('\n')));
                 brokenAliases.insert(name);
                 continue;
 

@@ -169,7 +169,8 @@ namespace DocRules
     /**
      * \brief   A value that does not read as its declared type: a malformed literal, a name that
      *          is not an enumerator of its enumeration, or a literal on a type that has no
-     *          literal form.
+     *          literal form. The code generator reports one in a service interface or a data
+     *          type document as a warning and generates the value as written.
      **/
     constexpr int RULE_BAD_LITERAL          { 15 };
 
@@ -443,6 +444,13 @@ namespace DocRules
      **/
     constexpr int RULE_CONTAINER_KEY        { 59 };
 
+    /**
+     * \brief   A parameter name that a response and a broadcast of one service interface declare
+     *          with two different types. The generated proxy keeps one member per parameter name
+     *          for every answer and every broadcast, so the two cannot both be carried.
+     **/
+    constexpr int RULE_PARAM_TWO_TYPES      { 60 };
+
 //////////////////////////////////////////////////////////////////////////
 // Rules that exist only in a band
 //
@@ -677,11 +685,17 @@ namespace DocRules
             "ever banded -- the bare number belongs to RULE_COMPARE_OPERAND."
           , "Add a Description to the declaration so the generated element carries a comment. Advisory: "
             "generation succeeds without it." }
-        , { RULE_BAD_LITERAL         , BandError, DocDataType | DocInterface | DocStateMachine
+        , { RULE_BAD_LITERAL         , BandError | BandWarning, DocDataType | DocInterface | DocStateMachine
           , "A value that does not read as its declared type: a malformed literal, a name that is not an "
-            "enumerator of its enumeration, or a literal on a type that has no literal form."
+            "enumerator of its enumeration, or a literal on a type that has no literal form. The code "
+            "generator reports one in a service interface or a data type document as a warning and generates "
+            "the value as written."
           , "Write the value the way its declared type reads: a number for a numeric type, true or false for "
-            "bool, and an enumerator this enumeration declares." }
+            "bool, and an enumerator this enumeration declares. In a service interface or a data type "
+            "document the value may instead be a C++ expression -- a constant an included header declares, a "
+            "call, an arithmetic expression -- which reaches the generated code as written and is not judged "
+            "here; never replace one with a number to silence a warning. A state machine resolves its own "
+            "guard and argument values, so there a name it does not declare is a refusal." }
         , { RULE_BOOLEAN_OPERAND     , BandError, DocStateMachine
           , "A predicate operand tested on its own that is not 'bool'."
           , "A predicate tested on its own is bool, and this operand is not: C++ would convert it silently "
@@ -958,6 +972,12 @@ namespace DocRules
           , "Change the key type, or change the structure field that stops it: a 'BinaryBuffer', a container, "
             "a field of a type declared Type=\"Imported\", or a 'DateTime' in the key of a HashMap. A key that "
             "has to carry a 'DateTime' can be the key of a Map instead." }
+        , { RULE_PARAM_TWO_TYPES     , BandError, DocInterface
+          , "A parameter name that a response and a broadcast of one service interface declare with two "
+            "different types. The generated proxy keeps one member per parameter name for every answer and "
+            "every broadcast, so the two cannot both be carried."
+          , "Answers and broadcasts of one interface share their parameter names. Give the two parameters the "
+            "same type, or rename one of them." }
     };
 
     /**

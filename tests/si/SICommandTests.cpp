@@ -994,6 +994,46 @@ namespace
         }
     }
 
+    //!< A parameter name that responses and broadcasts declare with two types is an error; a
+    //!< request parameter of the same name, and one name of one type, are not.
+    void testValidatorParamTwoTypes()
+    {
+        auto addParam = [](MethodEntry* method, const QString& name, const QString& type)
+        {
+            MethodParameter* param = method->addParam(name);
+            CHECK(param != nullptr);
+            param->setType(type);
+        };
+
+        {
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            MethodEntry* request = doc.getMethodData().createMethod(QStringLiteral("Get"), NEMethod::SiRequest);
+            MethodEntry* response = doc.getMethodData().createMethod(QStringLiteral("Got"), NEMethod::SiResponse);
+            MethodEntry* broadcast = doc.getMethodData().createMethod(QStringLiteral("Alarm"), NEMethod::SiBroadcast);
+            CHECK((request != nullptr) && (response != nullptr) && (broadcast != nullptr));
+            addParam(request, QStringLiteral("result"), QStringLiteral("String"));
+            addParam(response, QStringLiteral("result"), QStringLiteral("int32"));
+            addParam(broadcast, QStringLiteral("result"), QStringLiteral("bool"));
+
+            const QList<DocIssue> issues = SIValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_PARAM_TWO_TYPES) == 1);
+            CHECK(namesIt(issues, DocRules::RULE_PARAM_TWO_TYPES, QStringLiteral("'result'")));
+            CHECK(namesIt(issues, DocRules::RULE_PARAM_TWO_TYPES, QStringLiteral("'Alarm'")));
+        }
+
+        {
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            MethodEntry* response = doc.getMethodData().createMethod(QStringLiteral("Got"), NEMethod::SiResponse);
+            MethodEntry* broadcast = doc.getMethodData().createMethod(QStringLiteral("Alarm"), NEMethod::SiBroadcast);
+            CHECK((response != nullptr) && (broadcast != nullptr));
+            addParam(response, QStringLiteral("result"), QStringLiteral("int32"));
+            addParam(broadcast, QStringLiteral("result"), QStringLiteral("int32"));
+            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_PARAM_TWO_TYPES) == 0);
+        }
+    }
+
     //!< What the engine says about a `.dtml` row. The rows here point at files that are not on
     //!< disk, which is the broken-import shape; a row that does resolve, and the advisory on one
     //!< nothing declares with, are exercised over real files by the import tests.
@@ -1084,11 +1124,11 @@ namespace
             ConstantEntry* bad = doc.getConstantData().createConstant(QStringLiteral("Limit"));
             CHECK(bad != nullptr);
             bad->setType(QStringLiteral("uint32"));
-            bad->setValue(QStringLiteral("not a number"));
+            bad->setValue(QStringLiteral("12x"));
 
             const QList<DocIssue> issues = SIValidator::validate(doc);
             CHECK(countRule(issues, DocRules::RULE_DUPLICATE_NAME) == 1);
-            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 1);
+            CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL) == 1);
         }
 
         {   // A request answers with a declared response and no other. A stale link is what a
@@ -1294,13 +1334,57 @@ namespace
             wrong->setType(QStringLiteral("Color"));
             wrong->setValue(QStringLiteral("Blue"));
 
+            const int badLiteral = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL;
             QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 1);
-            CHECK(namesIt(issues, DocRules::RULE_BAD_LITERAL, QStringLiteral("enumerator")));
+            CHECK(countRule(issues, badLiteral) == 1);
+            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 0);
+            CHECK(namesIt(issues, badLiteral, QStringLiteral("enumerator")));
 
-            // The same constant with a declared enumerator is silent.
+            // The same constant with a declared enumerator is silent, bare or qualified.
             wrong->setValue(QStringLiteral("Green"));
-            CHECK(countRule(SIValidator::validate(doc), DocRules::RULE_BAD_LITERAL) == 0);
+            CHECK(countRule(SIValidator::validate(doc), badLiteral) == 0);
+            wrong->setValue(QStringLiteral("Color::Green"));
+            CHECK(countRule(SIValidator::validate(doc), badLiteral) == 0);
+            wrong->setValue(QStringLiteral("Color::Blue"));
+            CHECK(countRule(SIValidator::validate(doc), badLiteral) == 1);
+
+            // An expression is generated as written and is not judged.
+            wrong->setValue(QStringLiteral("static_cast<Color>(1)"));
+            CHECK(countRule(SIValidator::validate(doc), badLiteral) == 0);
+        }
+
+        {   // A declared value may be a C++ expression over names an included header declares.
+            // Only a value written as a literal is judged.
+            ServiceInterfaceData doc;
+            makeUsable(doc);
+            ConstantEntry* limit = doc.getConstantData().createConstant(QStringLiteral("Limit"));
+            CHECK(limit != nullptr);
+            limit->setType(QStringLiteral("uint32"));
+
+            const int badLiteral = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL;
+            const QStringList expressions{ QStringLiteral("NECommon::MAX_COUNT"), QStringLiteral("MAX_COUNT")
+                                         , QStringLiteral("MAX_COUNT * 2"), QStringLiteral("sizeof(uint64_t)")
+                                         , QStringLiteral("2 * NECommon::MAX_COUNT"), QStringLiteral("1 << 6")
+                                         , QStringLiteral("(1 + 2)"), QStringLiteral("-MAX_COUNT") };
+            for (const QString& expression : expressions)
+            {
+                limit->setValue(expression);
+                CHECK(countRule(SIValidator::validate(doc), badLiteral) == 0);
+                CHECK(DocRuleChecks::declaredValueReason(doc.getDataTypeData(), QStringLiteral("uint32"), expression).isEmpty());
+            }
+
+            const QStringList literals{ QStringLiteral("-1"), QStringLiteral("12x"), QStringLiteral("99999999999") };
+            for (const QString& literal : literals)
+            {
+                limit->setValue(literal);
+                CHECK(countRule(SIValidator::validate(doc), badLiteral) == 1);
+            }
+
+            limit->setType(QStringLiteral("bool"));
+            limit->setValue(QStringLiteral("1"));
+            CHECK(countRule(SIValidator::validate(doc), badLiteral) == 1);
+            limit->setValue(QStringLiteral("true"));
+            CHECK(countRule(SIValidator::validate(doc), badLiteral) == 0);
         }
 
         {   // A structure carries no literal at all, and a name longer than a compiler would
@@ -1321,9 +1405,10 @@ namespace
             longName->setType(QStringLiteral("uint32"));
             longName->setName(QString(NELusanCommon::MAX_IDENTIFIER_LENGTH + 1, QLatin1Char('a')));
 
+            const int badLiteral = DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL;
             const QList<DocIssue> issues = SIValidator::validate(doc);
-            CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 1);
-            CHECK(namesIt(issues, DocRules::RULE_BAD_LITERAL, QStringLiteral("no literal form")));
+            CHECK(countRule(issues, badLiteral) == 1);
+            CHECK(namesIt(issues, badLiteral, QStringLiteral("no literal form")));
             CHECK(countRule(issues, DocRules::RULE_INVALID_IDENTIFIER) == 1);
         }
 
@@ -1340,7 +1425,7 @@ namespace
             ConstantEntry* twice = doc.getConstantData().createConstant(QStringLiteral("Limit"));
             CHECK(twice != nullptr);
             twice->setType(QStringLiteral("uint32"));
-            twice->setValue(QStringLiteral("nine"));
+            twice->setValue(QStringLiteral("9x"));
             ConstantEntry* clash = doc.getConstantData().createConstant(QStringLiteral("Other"));
             CHECK(clash != nullptr);
             clash->setType(QStringLiteral("uint32"));
@@ -1355,7 +1440,7 @@ namespace
             CHECK(explains(issues, DocRules::RULE_INVALID_IDENTIFIER, DocRuleChecks::eShape::MissingName));
             CHECK(explains(issues, DocRules::RULE_UNRESOLVED_TYPE, DocRuleChecks::eShape::UnresolvedType));
             CHECK(explains(issues, DocRules::RULE_DUPLICATE_NAME, DocRuleChecks::eShape::DuplicateName));
-            CHECK(explains(issues, DocRules::RULE_BAD_LITERAL, DocRuleChecks::eShape::BadLiteral));
+            CHECK(explains(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_BAD_LITERAL, DocRuleChecks::eShape::BadLiteral));
             CHECK(explains(issues, unreferenced, DocRuleChecks::eShape::Unreferenced));
         }
     }
@@ -1383,6 +1468,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testLegacyTypeNames();
     testTypeReferenceRefresh();
     testValidatorUnreferenced();
+    testValidatorParamTwoTypes();
     testValidatorUnusedImport();
     testValidatorDeclarations();
     testValidatorSharedShapes();

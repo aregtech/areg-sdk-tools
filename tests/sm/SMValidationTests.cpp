@@ -1082,6 +1082,34 @@ namespace
             return session->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
         };
 
+        {   // Rule 7 names the pair of states one level holds: into the composite it names the
+            // composite to target and the event its start state takes on; out of it, the
+            // composite to draw the transition from.
+            StateMachineData doc;
+            shadowDoc(doc);
+            auto byName = [](const SMStateData& level, const QString& name) -> SMStateEntry*
+            {
+                for (SMStateEntry* state : level.getElements())
+                {
+                    if (state->getName() == name)
+                        return state;
+                }
+
+                return nullptr;
+            };
+
+            SMStateEntry* session = byName(doc.getStates(), QStringLiteral("Session"));
+            SMStateEntry* other   = byName(doc.getStates(), QStringLiteral("Other"));
+            CHECK((session != nullptr) && (other != nullptr));
+            SMStateEntry* step2   = byName(*session->getNestedStates(), QStringLiteral("Step2"));
+            CHECK(step2 != nullptr);
+            other->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), step2->getId());
+            step2->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), other->getId());
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 2);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("target 'Session', which holds 'Step2' and enters at its start state")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("draw it from 'Session', which holds 'Step2' on the level of 'Other'")));
+        }
         {   // The override is legal and nothing reports it. A stimulus is searched from the active
             // leaf upwards, so `Step1` answers `poke` while it is active and `Session` answers it
             // from everywhere else. Both are reachable, neither is dead, and no error is raised --
@@ -3205,6 +3233,113 @@ namespace
 
     //!< A machine reads types out of an included data type document the same way an interface
     //!< does: qualified, under the included file's base name.
+    //!< A guard binds a condition by ID, so reading a machine may never move a method's ID out
+    //!< from under it, whatever order the methods are written in.
+    void testMethodIdsAndGuardBinding()
+    {
+        std::printf("- method IDs, guard binding and imported parameter types\n");
+
+        QTemporaryDir dir;
+        CHECK(dir.isValid());
+        if (dir.isValid() == false)
+        {
+            return;
+        }
+
+        const QString shared = QDir(dir.path()).absoluteFilePath(QStringLiteral("Shared.dtml"));
+        QFile types(shared);
+        CHECK(types.open(QIODevice::WriteOnly | QIODevice::Text));
+        types.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    "<DataTypeDocument FormatVersion=\"1.0.0\">\n"
+                    "    <Overview ID=\"50\" Name=\"Shared\" Version=\"1.0.0\"/>\n"
+                    "    <DataTypeList>\n"
+                    "        <DataType ID=\"51\" Name=\"Unit\" Type=\"Enumeration\" Values=\"uint16\">\n"
+                    "            <FieldList>\n"
+                    "                <EnumEntry ID=\"52\" Name=\"Celsius\" Value=\"0\"/>\n"
+                    "                <EnumEntry ID=\"53\" Name=\"Kelvin\" Value=\"1\"/>\n"
+                    "            </FieldList>\n"
+                    "        </DataType>\n"
+                    "    </DataTypeList>\n"
+                    "</DataTypeDocument>\n");
+        types.close();
+
+        // The condition is written last and carries the lowest ID, which is what a generator that
+        // numbers by kind produces and what the method list used to renumber away.
+        const QString hostPath = QDir(dir.path()).absoluteFilePath(QStringLiteral("Machine.fsml"));
+        QFile host(hostPath);
+        CHECK(host.open(QIODevice::WriteOnly | QIODevice::Text));
+        host.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                   "<StateMachine FormatVersion=\"1.2.0\">\n"
+                   "    <Overview ID=\"40\" Name=\"Machine\" Version=\"1.0.0\" Threading=\"Local\"/>\n"
+                   "    <AttributeList>\n"
+                   "        <Attribute ID=\"41\" Name=\"unit\" DataType=\"Shared::Unit\" Value=\"Celsius\"/>\n"
+                   "    </AttributeList>\n"
+                   "    <MethodList>\n"
+                   "        <Method ID=\"30\" Name=\"go\" MethodType=\"Trigger\">\n"
+                   "            <ParamList><Parameter ID=\"31\" Name=\"u\" DataType=\"Shared::Unit\"/></ParamList>\n"
+                   "        </Method>\n"
+                   "        <Method ID=\"10\" Name=\"ready\" MethodType=\"Condition\" Return=\"bool\" Implement=\"Handler\"/>\n"
+                   "    </MethodList>\n"
+                   "    <IncludeList><Location ID=\"42\" Name=\"./Shared.dtml\"/></IncludeList>\n"
+                   "    <StateList>\n"
+                   "        <State ID=\"1\" Name=\"Start\" Kind=\"Start\">\n"
+                   "            <TransitionList><Transition ID=\"2\" Kind=\"Initial\" To=\"3\"/></TransitionList>\n"
+                   "        </State>\n"
+                   "        <State ID=\"3\" Name=\"Idle\" Kind=\"Normal\">\n"
+                   "            <TransitionList>\n"
+                   "                <Transition ID=\"4\" Kind=\"Internal\" StimulusKind=\"Trigger\" Stimulus=\"go\">\n"
+                   "                    <Guard state=\"ok\"><Expr><Call id=\"10\" name=\"ready\"/></Expr></Guard>\n"
+                   "                    <OperationList>\n"
+                   "                        <AttributeSet ID=\"5\" Attribute=\"unit\" Source=\"Value\" Value=\"Shared::Unit::Kelvin\"/>\n"
+                   "                    </OperationList>\n"
+                   "                </Transition>\n"
+                   "            </TransitionList>\n"
+                   "        </State>\n"
+                   "    </StateList>\n"
+                   "</StateMachine>\n");
+        host.close();
+
+        DTDocumentCache::getInstance().clear();
+        StateMachineData doc;
+        CHECK(doc.readFromFile(hostPath));
+
+        // The IDs ascend with document order, and the guard follows the method rather than the
+        // number it used to carry.
+        const QList<MethodEntry*>& methods = doc.getMethods().getElements();
+        CHECK(methods.size() == 2);
+        if (methods.size() == 2)
+        {
+            CHECK(methods.at(0)->getName() == QStringLiteral("go"));
+            CHECK(methods.at(0)->getId() == 10u);
+            CHECK(methods.at(1)->getName() == QStringLiteral("ready"));
+            CHECK(methods.at(1)->getId() == 30u);
+
+            // The parameter's declared type is resolved at load, not only its name kept.
+            CHECK(methods.at(0)->getElements().size() == 1);
+            CHECK((methods.at(0)->getElements().size() == 1)
+                  && (methods.at(0)->getElements().first().getParamType() != nullptr));
+        }
+
+        const QList<SMIssue> issues = SMValidator::validate(doc);
+        CHECK(countRule(issues, DocRules::RULE_GUARD) == 0);
+        CHECK(countRule(issues, DocRules::RULE_BAD_LITERAL) == 0);
+        CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
+        CHECK(countRule(issues, DocRuleChecks::WARNING_RULE_BASE + DocRules::RULE_UNREFERENCED) == 0);
+
+        // Saving writes the guard's new number with the method, and leaves every value spelled
+        // the way the author wrote it.
+        CHECK(doc.writeToFile(hostPath));
+        DTDocumentCache::getInstance().clear();
+
+        StateMachineData reloaded;
+        CHECK(reloaded.readFromFile(hostPath));
+        const AttributeEntry* attribute = reloaded.getAttributes().findElement(QStringLiteral("unit"));
+        CHECK(attribute != nullptr);
+        CHECK((attribute != nullptr) && (attribute->getValue() == QStringLiteral("Celsius")));
+        CHECK(countRule(SMValidator::validate(reloaded), DocRules::RULE_GUARD) == 0);
+        CHECK(reloaded.compactMethodIds() == false);
+    }
+
     void testDataTypeDocumentImport()
     {
         std::printf("- data type documents included by a machine\n");
@@ -3326,6 +3461,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testDataTypeGaps();
     testDefaultOrderAndCallableNames();
     testSharedRuleShapes();
+    testMethodIdsAndGuardBinding();
     testDataTypeDocumentImport();
     testMissingVersion();
     testDeprecatedDeclarations();

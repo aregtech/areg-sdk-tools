@@ -563,7 +563,7 @@ void testFieldOfRule()
     CHECK(DTValidator::fieldOfRule(DocRules::RULE_INVALID_IDENTIFIER) == eIssueField::Name);
     CHECK(DTValidator::fieldOfRule(DocRules::RULE_DUPLICATE_NAME) == eIssueField::Name);
     CHECK(DTValidator::fieldOfRule(DocRules::RULE_UNRESOLVED_TYPE) == eIssueField::Type);
-    CHECK(DTValidator::fieldOfRule(DocRules::RULE_BAD_LITERAL) == eIssueField::Value);
+    CHECK(DTValidator::fieldOfRule(ADVISORY + DocRules::RULE_BAD_LITERAL) == eIssueField::Value);
     // The one the new rule adds: the enumerator's value is what has to change.
     CHECK(DTValidator::fieldOfRule(DocRules::RULE_DUPLICATE_ENUM_VALUE) == eIssueField::Value);
     CHECK(DTValidator::fieldOfRule(ADVISORY + DocRules::RULE_DEPRECATED) == eIssueField::None);

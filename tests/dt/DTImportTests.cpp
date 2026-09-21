@@ -22,6 +22,8 @@
 
 #include "lusan/model/common/DocRules.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/AttributeEntry.hpp"
+#include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
@@ -34,6 +36,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QString>
 #include <QTemporaryDir>
 #include <QTextStream>
@@ -576,6 +579,103 @@ static void testHeaderIsNotAnImport()
     CHECK(countRule(SIValidator::validate(data), DocRules::RULE_BROKEN_IMPORT) == 0);
 }
 
+//!< A location written against a project folder that the workspace root sits above still finds
+//!< its file, and a location that finds nothing says where it looked.
+static void testProjectRootResolution()
+{
+    std::printf("[project root resolution]\n");
+    resetCache();
+
+    QTemporaryDir dir;
+    CHECK(dir.isValid());
+    const QString root = QDir::cleanPath(dir.path());
+    CHECK(QDir(root).mkpath(QStringLiteral("project/src/services")));
+
+    const QString shared = QDir::cleanPath(root + QStringLiteral("/project/src/services/Shared.dtml"));
+    CHECK(writeFile(shared, QString::fromLatin1(SHARED_TYPES)));
+
+    // The workspace root is the folder above the project, exactly as a workspace holding several
+    // generated projects is set up.
+    NELusanCommon::setSearchRoots(QStringList{ root });
+
+    const QString host = QDir::cleanPath(root + QStringLiteral("/project/src/services/Sensor.siml"));
+    CHECK(writeFile(host, interfaceXml(QStringLiteral("Shared::Unit")
+                                      , { QStringLiteral("src/services/Shared.dtml") })));
+
+    ServiceInterfaceData data;
+    CHECK(data.readFromFile(host));
+
+    const DataTypeDataSection& types = data.getDataTypeData();
+    CHECK(types.getImports().size() == 1);
+    CHECK((types.getImports().size() == 1) && types.getImports().first().isResolved());
+    CHECK((types.getImports().size() == 1) && (types.getImports().first().absolutePath == shared));
+    CHECK(types.findCustomDataType(QStringLiteral("Shared::Unit")) != nullptr);
+
+    const QList<DocIssue> issues = SIValidator::validate(data);
+    CHECK(countRule(issues, DocRules::RULE_BROKEN_IMPORT) == 0);
+    CHECK(countRule(issues, DocRules::RULE_UNRESOLVED_TYPE) == 0);
+
+    // A location no folder holds names every path that was looked at, so the author can see which
+    // anchor was expected.
+    resetCache();
+    QStringList tried;
+    CHECK(NELusanCommon::resolveLocation(QFileInfo(host).absolutePath()
+                                        , QStringLiteral("src/services/Gone.dtml"), &tried).isEmpty() == false);
+    CHECK(tried.size() > 2);
+    CHECK(tried.contains(QDir::cleanPath(root + QStringLiteral("/src/services/Gone.dtml"))));
+    CHECK(tried.contains(QDir::cleanPath(root + QStringLiteral("/project/src/services/Gone.dtml"))));
+
+    NELusanCommon::setSearchRoots(QStringList());
+}
+
+//!< An enumerator may be written bare, qualified by its type, or qualified by its type's full
+//!< name; a save settles it on the full one.
+static void testEnumeratorSpelling()
+{
+    std::printf("[enumerator spelling]\n");
+    resetCache();
+
+    QTemporaryDir dir;
+    CHECK(dir.isValid());
+    CHECK(writeFile(dir.filePath(QStringLiteral("Shared.dtml")), QString::fromLatin1(SHARED_TYPES)));
+
+    const QString host = dir.filePath(QStringLiteral("Sensor.siml"));
+    CHECK(writeFile(host, interfaceXml(QStringLiteral("Shared::Unit"), { QStringLiteral("./Shared.dtml") })));
+
+    ServiceInterfaceData data;
+    CHECK(data.readFromFile(host));
+
+    const DataTypeDataSection& types = data.getDataTypeData();
+    const QString unit{ QStringLiteral("Shared::Unit") };
+    CHECK(DocRuleChecks::literalReason(types, unit, QStringLiteral("Shared::Unit::Celsius")).isEmpty());
+    CHECK(DocRuleChecks::literalReason(types, unit, QStringLiteral("Unit::Celsius")).isEmpty() == false);
+    CHECK(DocRuleChecks::literalReason(types, unit, QStringLiteral("Celsius")).isEmpty());
+    CHECK(DocRuleChecks::literalReason(types, unit, QStringLiteral("Shared::Unit::Boiling")).isEmpty() == false);
+    CHECK(DocRuleChecks::literalReason(types, unit, QStringLiteral("Other::Unit::Celsius")).isEmpty() == false);
+    CHECK(DocRuleChecks::literalReason(types, unit, QStringLiteral("::Celsius")).isEmpty() == false);
+
+    // A save keeps every spelling exactly as the author wrote it. The code generator qualifies a
+    // bare enumerator itself, with the namespace it generates the type into, so rewriting one
+    // here would take that namespace away from the generated code.
+    ConstantEntry* constant = data.getConstantData().createConstant(QStringLiteral("START_UNIT"));
+    CHECK(constant != nullptr);
+    if (constant != nullptr)
+    {
+        constant->setType(unit);
+        constant->setValue(QStringLiteral("Kelvin"));
+    }
+
+    CHECK(data.writeToFile());
+    resetCache();
+
+    ServiceInterfaceData reread;
+    CHECK(reread.readFromFile(host));
+    const ConstantEntry* saved = reread.getConstantData().findElement(QStringLiteral("START_UNIT"));
+    CHECK(saved != nullptr);
+    CHECK((saved != nullptr) && (saved->getValue() == QStringLiteral("Kelvin")));
+    CHECK(DocRuleChecks::literalReason(reread.getDataTypeData(), unit, QStringLiteral("Kelvin")).isEmpty());
+}
+
 //////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
@@ -583,6 +683,8 @@ static void testHeaderIsNotAnImport()
 int main(int /*argc*/, char* /*argv*/[])
 {
     std::printf("Data Type document import tests\n");
+    testProjectRootResolution();
+    testEnumeratorSpelling();
     testQualifiedResolution();
     testUnresolvedQualifiedName();
     testHostTypeShadowsImport();
