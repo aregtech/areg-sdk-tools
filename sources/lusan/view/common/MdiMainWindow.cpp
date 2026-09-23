@@ -542,7 +542,7 @@ void MdiMainWindow::onFileNewLiveLog()
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
         mLiveLogWnd->setWindowIcon(NELusanCommon::iconLiveLogWindow(NELusanCommon::SizeSmall));
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
-        mMdiArea.showMaximized();
+        mLiveLogWnd->showMaximized();
         mLogViewer->show();
     }
     else
@@ -1572,7 +1572,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconLiveLogWindow(NELusanCommon::SizeSmall));
     child->setCurrentFile(filePath);
-    mMdiArea.showMaximized();
+    mdiSub->showMaximized();
     mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviLiveLogs);
     return child;
 }
@@ -1584,7 +1584,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconOfflineLogWindow(NELusanCommon::SizeSmall));
     mdiSub->setWindowFilePath(filePath);    
-    mMdiArea.showMaximized();
+    mdiSub->showMaximized();
     mNaviDock.showPanel(NavigationDock::NaviOfflineLogs);
     mOutputDock.showLogging();
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());

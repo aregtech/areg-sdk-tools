@@ -469,9 +469,14 @@ protected:
     virtual void showEvent(QShowEvent* event) override;
 
     /**
-     * \brief   Gives the Properties dock its width once the page is wide enough to hold it.
+     * \brief   Gives the Properties dock its width back once the page is wide enough to hold it.
      **/
     virtual void resizeEvent(QResizeEvent* event) override;
+
+    /**
+     * \brief   Keeps the Properties dock width the user sets by dragging the dock separator.
+     **/
+    virtual bool event(QEvent* event) override;
 
 public:
     /**
@@ -1023,6 +1028,7 @@ private:
     bool                mSyncingGrid;   //!< A programmatic grid-action resync is in progress; do not push a command.
     int                 mPanelWidth;    //!< The width the Properties dock is kept at.
     bool                mPanelSized;    //!< True once the Properties dock has taken that width.
+    int                 mPanelPressWidth; //!< The Properties dock width when a mouse button went down on the page.
     bool                mPanelRestyle;  //!< The dock is out of the layout; its width is not the user's.
 };
 
