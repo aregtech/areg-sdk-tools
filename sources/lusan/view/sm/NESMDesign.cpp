@@ -109,6 +109,30 @@ QColor NESMDesign::contrastTextColor(const QColor& fill)
     return (luma < 0.5 ? QColor(0xF2, 0xF2, 0xF2) : QColor(0x1A, 0x1A, 0x1A));
 }
 
+QColor NESMDesign::timerMarkColor(bool isStart, const QColor& fill, const QColor& textColor)
+{
+    const auto luminance = [](const QColor& c) -> double
+    {
+        const auto channel = [](double v) -> double
+        {
+            return (v <= 0.03928) ? (v / 12.92) : std::pow((v + 0.055) / 1.055, 2.4);
+        };
+
+        return (0.2126 * channel(c.redF())) + (0.7152 * channel(c.greenF())) + (0.0722 * channel(c.blueF()));
+    };
+
+    const double luma  = 0.299 * fill.redF() + 0.587 * fill.greenF() + 0.114 * fill.blueF();
+    const bool   dark  = (luma < 0.5);
+    const QColor mark  = isStart ? (dark ? QColor(0x34, 0xD3, 0x99) : QColor(0x05, 0x96, 0x69))
+                                 : (dark ? QColor(0xFB, 0x71, 0x85) : QColor(0xE1, 0x1D, 0x48));
+
+    // WCAG contrast of a graphical mark against its background must be at least 3:1.
+    const double lumMark = luminance(mark);
+    const double lumFill = luminance(fill);
+    const double ratio   = (std::max(lumMark, lumFill) + 0.05) / (std::min(lumMark, lumFill) + 0.05);
+    return (ratio >= 3.0) ? mark : textColor;
+}
+
 QColor NESMDesign::edgeColor(const QPalette& palette)
 {
     QColor result{ palette.color(QPalette::WindowText) };
