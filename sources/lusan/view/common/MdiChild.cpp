@@ -19,6 +19,7 @@
 
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/app/NEAppThemes.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/OverviewDataSection.hpp"
 #include "lusan/model/common/IEDocumentModel.hpp"
@@ -30,9 +31,11 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QIconEngine>
 #include <QKeySequence>
 #include <QMdiSubWindow>
 #include <QMessageBox>
+#include <QPainter>
 #include <QPushButton>
 #include <QSaveFile>
 #include <QScrollBar>
@@ -40,6 +43,73 @@
 #include <QTabBar>
 #include <QTabWidget>
 #include <QTextDocument>
+
+#include <algorithm>
+
+namespace
+{
+    //!< Paints an icon with a round marker in its bottom right corner.
+    class UnsavedMarkIconEngine : public QIconEngine
+    {
+    public:
+        explicit UnsavedMarkIconEngine(const QIcon& base)
+            : QIconEngine()
+            , mBase(base)
+        {
+        }
+
+        void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override
+        {
+            mBase.paint(painter, rect, Qt::AlignCenter, mode, state);
+
+            const QRectF area(rect);
+            const qreal side{ std::min(area.width(), area.height()) };
+            const qreal ring{ std::max(1.0, side / 16.0) };
+            const qreal diameter{ side / 2.0 };
+            const QRectF dot{ area.right() - diameter, area.bottom() - diameter, diameter, diameter };
+
+            painter->save();
+            painter->setRenderHint(QPainter::RenderHint::Antialiasing, true);
+            painter->setPen(QPen(QGuiApplication::palette().color(QPalette::ColorRole::Base), ring));
+            painter->setBrush(NEAppThemes::unsavedMarkColor());
+            painter->drawEllipse(dot.adjusted(ring / 2.0, ring / 2.0, -ring / 2.0, -ring / 2.0));
+            painter->restore();
+        }
+
+        QPixmap pixmap(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+        {
+            return scaledPixmap(size, mode, state, 1.0);
+        }
+
+        QPixmap scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::State state, qreal scale) override
+        {
+            QPixmap result(size * scale);
+            result.setDevicePixelRatio(scale);
+            result.fill(Qt::GlobalColor::transparent);
+            QPainter painter(&result);
+            paint(&painter, QRect(QPoint(0, 0), size), mode, state);
+            return result;
+        }
+
+        QSize actualSize(const QSize& size, QIcon::Mode mode, QIcon::State state) override
+        {
+            return (mBase.isNull() ? size : mBase.actualSize(size, mode, state));
+        }
+
+        QIconEngine* clone() const override
+        {
+            return new UnsavedMarkIconEngine(mBase);
+        }
+
+        QString key() const override
+        {
+            return QStringLiteral("UnsavedMarkIconEngine");
+        }
+
+    private:
+        QIcon   mBase;  //!< The icon the marker is painted on.
+    };
+}
 
 MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
@@ -53,6 +123,9 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     , mFileTime     ( )
     , mFileSize     ( -1 )
     , mReloadAsked  ( false )
+    , mFileMissing  ( false )
+    , mTabMarked    ( false )
+    , mTabIcon      ( )
     , mMdiSubWindow ( nullptr )
     , mMainWindow   (wndMain)
 {
@@ -181,7 +254,7 @@ bool MdiChild::loadFile(const QString& fileName)
 
 bool MdiChild::save()
 {
-    return (mIsUntitled ? saveAs() : saveFile(mCurFile));
+    return ((mIsUntitled || mFileMissing) ? saveAs() : saveFile(mCurFile));
 }
 
 bool MdiChild::saveAs()
@@ -323,6 +396,60 @@ void MdiChild::checkFileChangedOnDisk()
     }
 }
 
+void MdiChild::checkFileOnDisk()
+{
+    if (mIsClosing || mReloadAsked || mIsUntitled || mCurFile.isEmpty())
+    {
+        return;
+    }
+
+    if (QFileInfo::exists(mCurFile))
+    {
+        mFileMissing = false;
+        checkFileChangedOnDisk();
+        return;
+    }
+
+    if (mFileMissing)
+    {
+        return;
+    }
+
+    mFileMissing = true;
+    QMessageBox box(this);
+    box.setWindowTitle(tr("File Not Found"));
+    box.setIcon(QMessageBox::Warning);
+    box.setText(tr("The file '%1' is no longer available in the file system.").arg(QDir::toNativeSeparators(mCurFile)));
+    box.setInformativeText(isEditableDocument()
+                            ? tr("The file or one of its folders was deleted, renamed or moved. Keep the document open and save it later, or close it?")
+                            : tr("The file or one of its folders was deleted, renamed or moved. Keep the window open, or close it?"));
+    QPushButton* keep = box.addButton(tr("Keep"), QMessageBox::AcceptRole);
+    QPushButton* close = box.addButton(tr("Close"), QMessageBox::RejectRole);
+    box.setDefaultButton(keep);
+    box.adjustSize();
+
+    mReloadAsked = true;
+    box.exec();
+    mReloadAsked = false;
+
+    if (box.clickedButton() == close)
+    {
+        setModified(false);
+        if (mMdiSubWindow != nullptr)
+        {
+            mMdiSubWindow->close();
+        }
+        else
+        {
+            this->close();
+        }
+    }
+    else if (isEditableDocument())
+    {
+        setModified(true);
+    }
+}
+
 void MdiChild::onWindowClosing(bool /*isActive*/)
 {
 }
@@ -373,13 +500,29 @@ void MdiChild::setModified(bool modified)
         bool showWarning{ (mIsUntitled == false) && (mCurFile.isEmpty() == false) && (LusanApplication::isWorkpacePath(mCurFile) == false) };
         QString title{ QString("%1%2%3").arg(showWarning ? "[!] " : "", userFriendlyCurrentFile(), mIsUntitled || mIsModified ? "[*]" : "") };
         mMdiSubWindow->setWindowTitle(title);
+        updateTabMark();
     }
+}
+
+void MdiChild::updateTabMark()
+{
+    if ((mMdiSubWindow == nullptr) || (mTabMarked == mIsModified))
+        return;
+
+    if (mTabMarked == false)
+    {
+        mTabIcon = mMdiSubWindow->windowIcon();
+    }
+
+    mTabMarked = mIsModified;
+    mMdiSubWindow->setWindowIcon(mTabMarked ? QIcon(new UnsavedMarkIconEngine(mTabIcon)) : mTabIcon);
 }
 
 void MdiChild::setCurrentFile(const QString& fileName)
 {
     mCurFile = fileName.isEmpty() ? QString() : QFileInfo(fileName).canonicalFilePath();
     mIsUntitled = false;
+    mFileMissing = false;
     rememberFileState();
     if (mMainWindow != nullptr)
     {
@@ -396,6 +539,7 @@ void MdiChild::setCurrentFile(const QString& fileName)
                                             , userFriendlyCurrentFile()
                                             , mIsUntitled || mIsModified ? "[*]" : "") };
         mMdiSubWindow->setWindowTitle(title);
+        updateTabMark();
         if (mMainWindow != nullptr)
             mMainWindow->setTabBarTooltip(mMdiSubWindow, mCurFile);
     }

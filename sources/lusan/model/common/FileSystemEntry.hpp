@@ -351,6 +351,13 @@ public:
     inline uint32_t getId() const;
 
     /**
+     * \brief   Returns the row where a sorted insert places the child: directories first, then
+     *          files, each ordered by path ignoring the letter case.
+     * \param   child   The child entry to place.
+     **/
+    int insertPosition(const FileSystemEntry& child) const;
+
+    /**
      * \brief   Adds a child entry to the file system entry.
      * \param   child   The child entry to add.
      * \param   sort    If true, sorts the child entries after adding.

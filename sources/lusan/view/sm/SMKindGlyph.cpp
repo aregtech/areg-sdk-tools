@@ -182,13 +182,12 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
 
     case eGlyph::TimerStop:
     {
-        // Clock face with a stop square.
-        const double radius = mark.width() * 0.375;
-        const QRectF face{ mark.center().x() - radius, midY - radius, 2.0 * radius, 2.0 * radius };
-        painter.drawEllipse(face);
+        // A solid stop square without the clock face, so it cannot be mistaken for the start mark.
+        const double side  = mark.width() * 0.74;
+        const double round = side * 0.16;
+        painter.setPen(Qt::NoPen);
         painter.setBrush(color);
-        painter.drawRect(QRectF(face.center().x() - (radius * 0.4), midY - (radius * 0.4)
-                              , radius * 0.8, radius * 0.8));
+        painter.drawRoundedRect(QRectF(mark.center().x() - (side / 2.0), midY - (side / 2.0), side, side), round, round);
         painter.setBrush(Qt::NoBrush);
         break;
     }

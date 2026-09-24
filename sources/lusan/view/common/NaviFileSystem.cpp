@@ -23,6 +23,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/common/FileSystemFilter.hpp"
 #include "lusan/model/common/FileSystemModel.hpp"
+#include "lusan/data/common/WorkspaceWatcher.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
@@ -180,6 +181,7 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     , mToolNewFile  (nullptr)
     , mToolEdit     (nullptr)
     , mToolDelete   (nullptr)
+    , mCurrentRemoved(false)
 {
     setupWorkspaceSelector();
     setupToolbar();
@@ -555,6 +557,7 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
         ctrlTable()->reset();
         delete mNaviModel;
         mNaviModel = nullptr;
+        mMainWindow->getWorkspaceWatcher().setClientPaths(QStringLiteral("navigation"), QStringList());
 
         // QString rootPath = QDir::rootPath();
         QString rootPath = mGenModel->myComputer().toString();
@@ -753,6 +756,7 @@ void NaviFileSystem::onTreeViewContextMenu(const QPoint& pos)
 void NaviFileSystem::updateData()
 {
     mRootPaths = setupRootPaths(LusanApplication::getOptions().getActiveWorkspace());
+    watchWorkspace(mRootPaths);
     QStringList filters{ LusanApplication::InternalExts };
     filters.append(LusanApplication::ExternalExts);
     mNaviModel->setFileFilter(filters);
@@ -760,6 +764,7 @@ void NaviFileSystem::updateData()
 
 void NaviFileSystem::setupWidgets()
 {
+    connectNaviModel();
     QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
     mTableCell = new TableCell(ctrlTable(), this, true);
     ctrlTable()->setModel(mNaviModel);
@@ -801,6 +806,63 @@ void NaviFileSystem::setupSignals()
     connect(mTableCell, &TableCell::signalEditorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
 
     connect(&LusanApplication::getOptions(), &OptionsManager::signalWorkspaceDirectoriesChanged, this, &NaviFileSystem::onWorkspaceDirectoriesChanged);
+
+    connect(&mMainWindow->getWorkspaceWatcher(), &WorkspaceWatcher::signalPathsChanged, this, &NaviFileSystem::onWorkspacePathsChanged);
+}
+
+void NaviFileSystem::connectNaviModel()
+{
+    connect(mNaviModel, &FileSystemModel::signalLoadedDirectoriesChanged, this, &NaviFileSystem::onLoadedDirectoriesChanged);
+    connect(mNaviModel, &QAbstractItemModel::rowsAboutToBeRemoved       , this, &NaviFileSystem::onRowsAboutToBeRemoved);
+    connect(mNaviModel, &QAbstractItemModel::rowsRemoved                , this, &NaviFileSystem::onRowsRemoved);
+}
+
+void NaviFileSystem::watchWorkspace(const WorkspaceElem& paths)
+{
+    QStringList roots;
+    for (WorkspaceElem::const_iterator dir = paths.constBegin(); dir != paths.constEnd(); ++dir)
+    {
+        roots.append(dir->wsDir);
+    }
+
+    mMainWindow->getWorkspaceWatcher().setRoots(roots);
+    mMainWindow->refreshDocumentWatch();
+}
+
+void NaviFileSystem::onWorkspacePathsChanged(const QStringList& paths)
+{
+    if (mNaviModel != nullptr)
+    {
+        mNaviModel->syncPaths(paths);
+    }
+}
+
+void NaviFileSystem::onLoadedDirectoriesChanged()
+{
+    if ((WorkspaceWatcher::watchesSubtree() == false) && (mNaviModel != nullptr))
+    {
+        mMainWindow->getWorkspaceWatcher().setClientPaths(QStringLiteral("navigation"), mNaviModel->loadedDirectories());
+    }
+}
+
+void NaviFileSystem::onRowsAboutToBeRemoved(const QModelIndex& parent, int first, int last)
+{
+    QModelIndex current{ ctrlTable()->selectionModel()->currentIndex() };
+    while (current.isValid() && (mCurrentRemoved == false))
+    {
+        mCurrentRemoved = (current.parent() == parent) && (current.row() >= first) && (current.row() <= last);
+        current = current.parent();
+    }
+}
+
+void NaviFileSystem::onRowsRemoved(const QModelIndex& /*parent*/, int /*first*/, int /*last*/)
+{
+    if (mCurrentRemoved)
+    {
+        mCurrentRemoved = false;
+        ctrlTable()->selectionModel()->clear();
+        updateToolButtons(QModelIndex());
+    }
 }
 
 void NaviFileSystem::blockBasicSignals(bool block)
@@ -868,6 +930,7 @@ void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspa
         return;
     
     WorkspaceElem paths = setupRootPaths(workspace);
+    watchWorkspace(paths);
     if ((mNaviModel != nullptr) && mNaviModel->updateRootPaths(paths))
     {
         mRootPaths = paths;

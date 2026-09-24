@@ -24,6 +24,7 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 
 #include <QDateTime>
+#include <QIcon>
 
 class IEDocumentModel;
 class MdiMainWindow;
@@ -253,6 +254,21 @@ public:
     void checkFileChangedOnDisk();
 
     /**
+     * \brief   Checks the document's file on disk. When the file is gone, asks whether to keep
+     *          the document or to close it; a kept document is marked modified and saving it
+     *          asks for the file to save into. Otherwise, checks for a change made by another
+     *          program. Called by the main window when the workspace or the application state
+     *          changes.
+     **/
+    void checkFileOnDisk();
+
+    /**
+     * \brief   Returns true if the file of the document is gone from the file system and the
+     *          user chose to keep the document.
+     **/
+    inline bool isFileMissing() const;
+
+    /**
      * \brief   Returns the MDI subwindow.
      **/
     inline QMdiSubWindow* getMdiSubwindow() const;
@@ -401,6 +417,16 @@ protected:
     virtual bool maybeSave();
 
     /**
+     * \brief   Shows or hides the unsaved changes marker on the tab icon of the document.
+     **/
+    void updateTabMark();
+
+    /**
+     * \brief   Returns true if the document is edited and saved by the user.
+     **/
+    inline bool isEditableDocument() const;
+
+    /**
      * \brief   Returns the tab widget hosting this document's pages, or nullptr when the document
      *          has no page tabs. Backs the shared Ctrl+PageDown / Ctrl+PageUp page cycling
      *          installed in the constructor; only the paged editors (Service Interface, State
@@ -448,6 +474,9 @@ protected:
     QDateTime           mFileTime;      //!< File timestamp as of the last read or write by the editor.
     qint64              mFileSize;      //!< File size as of the last read or write by the editor.
     bool                mReloadAsked;   //!< A reload prompt for this document is on screen.
+    bool                mFileMissing;   //!< The file of the document is gone and the document was kept.
+    bool                mTabMarked;     //!< The tab icon carries the unsaved changes marker.
+    QIcon               mTabIcon;       //!< The tab icon without the unsaved changes marker.
     QMdiSubWindow*      mMdiSubWindow;  //!< The MDI subwindow.
     MdiMainWindow*      mMainWindow;    //!< The MDI main window
 };
@@ -494,6 +523,16 @@ inline bool MdiChild::isSourceViewerWindow() const
 inline const QString & MdiChild::currentFile() const
 {
     return mCurFile;
+}
+
+inline bool MdiChild::isEditableDocument() const
+{
+    return (mMdiWindowType != MdiLogViewer) && (mMdiWindowType != MdiOfflineLogViewer) && (mMdiWindowType != MdiSourceViewer);
+}
+
+inline bool MdiChild::isFileMissing() const
+{
+    return mFileMissing;
 }
 
 inline bool MdiChild::isModified() const

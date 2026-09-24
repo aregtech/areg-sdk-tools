@@ -827,6 +827,8 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
 
     QColor bandColor{ color };
     bandColor.setAlphaF(NESMDesign::StateBandWordAlpha);
+    const QColor timerStartColor = NESMDesign::timerMarkColor(true, bodyColor, color);
+    const QColor timerStopColor  = NESMDesign::timerMarkColor(false, bodyColor, color);
 
     // Built from the box font and explicitly unbolded: the header leaves the state name's bold on
     // the painter, and the body is running text that must not inherit it.
@@ -905,8 +907,13 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
                               , row.icon, color);
         }
 
-        SMKindGlyph::paint(*painter, QRectF(actionX, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0)
-                          , (twoMarks ? row.kindIcon : row.icon), color);
+        // Only an operation row colors its timer mark. A transition header's clock is a stimulus.
+        const SMKindGlyph::eGlyph mark = twoMarks ? row.kindIcon : row.icon;
+        const QColor& markColor = (row.transitionId != 0u)                  ? color
+                                : (mark == SMKindGlyph::eGlyph::TimerStart) ? timerStartColor
+                                : (mark == SMKindGlyph::eGlyph::TimerStop)  ? timerStopColor
+                                                                            : color;
+        SMKindGlyph::paint(*painter, QRectF(actionX, rowY + 2.0, SMKindGlyph::GlyphSize, rowH - 4.0), mark, markColor);
 
         const double textX = actionX + SMKindGlyph::GlyphSize + 3.0;
         const QRectF textRect{ textX, rowY, std::max(box.width() - padding - textX, 10.0), rowH };
@@ -1211,20 +1218,23 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         return SMKindGlyph::prefix(SMKindGlyph::operationGlyph(op)) + withoutRowVerb(op, summary);
     };
 
-    // One group of operations, ordered action, event, then all timers on one row. The first row of
-    // the group is the one the band word is written against.
+    // One group of operations, ordered action, event, timer starts, then timer stops. The first row
+    // of the group is the one the band word is written against.
     const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone)
     {
         QList<const SMOperationBase*> actions;
         QList<const SMOperationBase*> events;
-        QList<const SMOperationBase*> timers;    // start and stop, in list order
+        QList<const SMOperationBase*> starts;
+        QList<const SMOperationBase*> stops;
         for (const SMOperationBase* op : ops.getOperations())
         {
             switch (op->getOperationType())
             {
             case SMOperationBase::eOperation::TimerStart:
+                starts.append(op);
+                break;
             case SMOperationBase::eOperation::TimerStop:
-                timers.append(op);
+                stops.append(op);
                 break;
             case SMOperationBase::eOperation::EventSend:
                 events.append(op);
@@ -1249,13 +1259,17 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         {
             group.append(BodyRow{ SMKindGlyph::eGlyph::Event, rowText(*op), zone, false, SMReferences::operationRefs(*op) });
         }
-        if (timers.isEmpty() == false)
+        // All timer starts on one row (`A | B`), then all timer stops on the next.
+        const auto appendTimers = [&](const QList<const SMOperationBase*>& timers, SMKindGlyph::eGlyph glyph)
         {
-            // Every timer of the group on one line (`start A | stop B`); the icon follows the first
-            // timer so a start-only group shows the play clock and a stop-only group the square clock.
+            if (timers.isEmpty())
+            {
+                return;
+            }
+
             QStringList parts;
             QList<SMReferences::Ref> timerRefs;    // the row links to every timer it names.
-            for (const SMOperationBase* op : std::as_const(timers))
+            for (const SMOperationBase* op : timers)
             {
                 parts.append(rowText(*op));
                 for (const SMReferences::Ref& ref : SMReferences::operationRefs(*op))
@@ -1264,9 +1278,11 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
                 }
             }
 
-            group.append(BodyRow{ SMKindGlyph::operationGlyph(*timers.first())
-                                , parts.join(QStringLiteral(" | ")), zone, false, timerRefs });
-        }
+            group.append(BodyRow{ glyph, parts.join(QStringLiteral(" | ")), zone, false, timerRefs });
+        };
+
+        appendTimers(starts, SMKindGlyph::eGlyph::TimerStart);
+        appendTimers(stops, SMKindGlyph::eGlyph::TimerStop);
 
         for (int i = 0; i < group.size(); ++i)
         {

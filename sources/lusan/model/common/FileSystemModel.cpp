@@ -19,10 +19,15 @@
 
 #include "lusan/model/common/FileSystemModel.hpp"
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/common/WorkspaceWatcher.hpp"
 
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
 #include <QIcon>
+#include <QSet>
+
+#include <algorithm>
 
  //////////////////////////////////////////////////////////////////////////
  // FileSystemModel class declaration
@@ -142,6 +147,7 @@ void FileSystemModel::fetchMore(const QModelIndex& parent)
     if (parentEntry->hasValidChildren() == false)
     {
         parentEntry->addChildren(mFileFilter);
+        emit signalLoadedDirectoriesChanged();
     }
 }
 
@@ -178,6 +184,7 @@ const QModelIndex& FileSystemModel::setRootPaths(const WorkspaceElem& paths)
         mRootIndex = createIndex(0, 0, &mRootEntry);
     }
     endResetModel();
+    emit signalLoadedDirectoriesChanged();
     return mRootIndex;
 }
 
@@ -197,6 +204,7 @@ bool FileSystemModel::updateRootPaths(const WorkspaceElem& paths)
         
         result = true;
         endResetModel();
+        emit signalLoadedDirectoriesChanged();
     }
 
     return result;
@@ -249,7 +257,67 @@ void FileSystemModel::refresh(FileSystemEntry* entry)
     {
         FileSystemEntry* parent = entry->getParent();
         refresh(parent);
+        return;
     }
+
+    emit signalLoadedDirectoriesChanged();
+}
+
+void FileSystemModel::syncPaths(const QStringList& paths)
+{
+    if (mRootEntry.hasFetched() == false)
+        return;
+
+    QSet<QString> unique;
+    for (const QString& path : paths)
+    {
+        const QString changed{ WorkspaceWatcher::normalizePath(path) };
+        if (changed.isEmpty())
+            continue;
+
+        unique.insert(changed);
+        unique.insert(QFileInfo(changed).path());
+    }
+
+    // A directory is synchronized after the directories above it, so an entry removed with its
+    // parent is never visited.
+    QStringList dirs{ unique.values() };
+    std::sort(dirs.begin(), dirs.end(), [](const QString& left, const QString& right) { return (left.size() < right.size()); });
+
+    bool changed{ false };
+    QList<FileSystemEntry*> entries;
+    for (const QString& dir : dirs)
+    {
+        entries.clear();
+        for (FileSystemEntry* top : mRootEntry.getChildren())
+        {
+            findLoadedEntries(top, dir, entries);
+        }
+
+        for (FileSystemEntry* entry : entries)
+        {
+            changed = syncEntry(entry) || changed;
+        }
+    }
+
+    if (changed)
+    {
+        emit signalLoadedDirectoriesChanged();
+    }
+}
+
+QStringList FileSystemModel::loadedDirectories() const
+{
+    QStringList result;
+    if (mRootEntry.hasFetched())
+    {
+        for (const FileSystemEntry* top : mRootEntry.getChildren())
+        {
+            collectLoadedDirectories(top, result);
+        }
+    }
+
+    return result;
 }
 
 
@@ -273,6 +341,7 @@ void FileSystemModel::setFileFilter(const QStringList& filterList)
         beginResetModel();
         mRootEntry.resetEntry();
         endResetModel();
+        emit signalLoadedDirectoriesChanged();
     }
 }
 
@@ -284,6 +353,7 @@ void FileSystemModel::cleanFilters()
         beginResetModel();
         mRootEntry.resetEntry();
         endResetModel();
+        emit signalLoadedDirectoriesChanged();
     }
 }
 
@@ -318,6 +388,7 @@ bool FileSystemModel::deleteEntry(const QModelIndex & index)
         beginRemoveRows(topIndex, index.row(), index.row());
         parent->removeChild(entry);
         endRemoveRows();
+        emit signalLoadedDirectoriesChanged();
     }
     
     return result;
@@ -427,6 +498,7 @@ QModelIndex FileSystemModel::renameEntry(const QString& newName, const QModelInd
         Q_ASSERT(entry != nullptr);
         int pos = entry->getRow();
         endInsertRows();
+        emit signalLoadedDirectoriesChanged();
         return createIndex(pos, 0, entry);
     }
 
@@ -644,6 +716,97 @@ void FileSystemModel::resetEntry(FileSystemEntry * entry)
     {
         entry->addChild(*fi, false);
     }
+}
+
+bool FileSystemModel::syncEntry(FileSystemEntry* entry)
+{
+    const QFileInfoList list{ entry->fetchData(mFileFilter) };
+    QHash<QString, bool> added;
+    added.reserve(list.size());
+    for (const QFileInfo& fi : list)
+    {
+        added.insert(fi.fileName(), fi.isDir());
+    }
+
+    bool changed{ false };
+    const QModelIndex parentIndex{ entryIndex(entry) };
+    for (int row = entry->getChildCount() - 1; row >= 0; --row)
+    {
+        FileSystemEntry* child{ entry->getChild(row) };
+        QHash<QString, bool>::iterator pos{ added.find(child->getFileName()) };
+        if ((pos != added.end()) && (pos.value() == child->isDir()))
+        {
+            added.erase(pos);
+            continue;
+        }
+
+        beginRemoveRows(parentIndex, row, row);
+        entry->removeChild(row);
+        endRemoveRows();
+        if (child->isValid())
+        {
+            delete child;
+        }
+
+        changed = true;
+    }
+
+    for (const QFileInfo& fi : list)
+    {
+        if (added.contains(fi.fileName()) == false)
+            continue;
+
+        FileSystemEntry* child{ entry->createChildEntry(fi) };
+        if ((child == nullptr) || (child->isValid() == false))
+        {
+            delete child;
+            continue;
+        }
+
+        const int row{ entry->insertPosition(*child) };
+        beginInsertRows(parentIndex, row, row);
+        entry->addChild(child, true);
+        endInsertRows();
+        changed = true;
+    }
+
+    return changed;
+}
+
+void FileSystemModel::findLoadedEntries(FileSystemEntry* entry, const QString& dirPath, QList<FileSystemEntry*>& result) const
+{
+    if ((entry == nullptr) || (entry->isValid() == false) || (entry->isDir() == false) || (entry->hasFetched() == false))
+        return;
+
+    const QString path{ QDir::cleanPath(entry->getPath()) };
+    if (path.compare(dirPath, Qt::CaseSensitivity::CaseInsensitive) == 0)
+    {
+        result.append(entry);
+    }
+    else if (WorkspaceWatcher::isSameOrUnder(dirPath, path))
+    {
+        for (FileSystemEntry* child : entry->getChildren())
+        {
+            findLoadedEntries(child, dirPath, result);
+        }
+    }
+}
+
+void FileSystemModel::collectLoadedDirectories(const FileSystemEntry* entry, QStringList& result) const
+{
+    if ((entry == nullptr) || (entry->isValid() == false) || (entry->isDir() == false) || (entry->hasFetched() == false))
+        return;
+
+    result.append(entry->getPath());
+    for (const FileSystemEntry* child : entry->getChildren())
+    {
+        collectLoadedDirectories(child, result);
+    }
+}
+
+inline QModelIndex FileSystemModel::entryIndex(FileSystemEntry* entry) const
+{
+    return (entry == &mRootEntry ? mRootIndex : createIndex(entry->getRow(), 0, entry));
 }
 
 //////////////////////////////////////////////////////////////////////////

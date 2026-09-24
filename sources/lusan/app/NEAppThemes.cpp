@@ -51,6 +51,7 @@ namespace
         QString scroll;      //!< Scrollbar handle color.
         QString scrollHover; //!< Scrollbar handle hover color.
         QString link;        //!< Hyperlink color.
+        QString unsaved;     //!< Marker color of a document with unsaved changes.
         bool    isDark;      //!< True for dark themes, selects the combo arrow.
     };
 
@@ -61,28 +62,28 @@ namespace
               "#f3f5f9", "#ffffff", "#ffffff", "#f6f8fb", "#ffffff"
             , "#1c2430", "#5b6675", "#d5dbe5", "#eaf1fd", "#dbe7fb"
             , "#2f6fed", "#245bd1", "#ffffff", "#c3ccd9", "#a9b5c6"
-            , "#2f6fed", false
+            , "#2f6fed", "#b45309", false
         };
         static const sThemeColors _modernDark
         {
               "#1b1e24", "#22262e", "#262b34", "#2b303a", "#2b303a"
             , "#dfe4ec", "#98a2b3", "#3a4150", "#313845", "#3c4554"
             , "#4f8cff", "#6ba1ff", "#0f1420", "#454e5e", "#5a6478"
-            , "#6ba1ff", true
+            , "#6ba1ff", "#f5a524", true
         };
         static const sThemeColors _midnightBlue
         {
               "#0d1526", "#111c33", "#142140", "#182747", "#16264a"
             , "#d7e2f5", "#8fa3c7", "#23345c", "#1b2c52", "#223a6b"
             , "#38bdf8", "#6fd0ff", "#06121f", "#2c4070", "#3a5290"
-            , "#38bdf8", true
+            , "#38bdf8", "#fbbf24", true
         };
         static const sThemeColors _nord
         {
               "#2e3440", "#353c4a", "#3b4252", "#404859", "#414a5c"
             , "#e5e9f0", "#aeb8ca", "#4c566a", "#434c5e", "#4c566a"
             , "#88c0d0", "#9ed0de", "#20242d", "#4c566a", "#5e81ac"
-            , "#88c0d0", true
+            , "#88c0d0", "#d08770", true
         };
 
         switch (theme)
@@ -182,6 +183,19 @@ namespace
             "{ height: 6px; border-top: 1px solid palette(mid); }"
             "ads--CDockSplitter::handle:hover"
             "{ background: #ff2f6fed; }");
+    }
+
+    //!< The marker color of a document with unsaved changes in the active theme.
+    QColor& activeUnsavedColor()
+    {
+        static QColor _color;
+        return _color;
+    }
+
+    //!< The unsaved marker color of the system themes, chosen by the lightness of the window.
+    QColor systemUnsavedColor(const QPalette& palette)
+    {
+        return (palette.color(QPalette::ColorRole::Window).lightness() < 128 ? QColor(0xF5, 0xA5, 0x24) : QColor(0xB4, 0x53, 0x09));
     }
 
     //!< The palette the desktop started the application with. Latches on the first call,
@@ -286,6 +300,7 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
         QApplication::setPalette(native ? QApplication::style()->standardPalette() : systemPalette);
         activeStyleSheet() = baseStyleSheet();
         NELusanCommon::setIconsForDarkTheme(QApplication::palette().color(QPalette::ColorRole::Window).lightness() < 128);
+        activeUnsavedColor() = systemUnsavedColor(QApplication::palette());
     }
     else
     {
@@ -296,9 +311,16 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
 #endif
         QApplication::setPalette(themePalette(colors));
         activeStyleSheet() = themeStyleSheet(colors);
+        activeUnsavedColor() = QColor(colors.unsaved);
     }
 
     installStyleSheet(activeStyleSheet());
+}
+
+QColor NEAppThemes::unsavedMarkColor()
+{
+    const QColor& color{ activeUnsavedColor() };
+    return (color.isValid() ? color : systemUnsavedColor(QApplication::palette()));
 }
 
 void NEAppThemes::applyThemeToWindow(QWidget& window)

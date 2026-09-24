@@ -342,6 +342,19 @@ void FileSystemEntry::deleteEntries()
     mChildren.clear();
 }
 
+int FileSystemEntry::insertPosition(const FileSystemEntry& child) const
+{
+    int pos{ 0 };
+    for ( ; pos < static_cast<int>(mChildren.size()); ++ pos)
+    {
+        Q_ASSERT((*mChildren[pos]) != child);
+        if (*mChildren[pos] > child)
+            break;
+    }
+
+    return pos;
+}
+
 bool FileSystemEntry::addChild(FileSystemEntry* child, bool sort /*= true*/)
 {
     bool result{ false };
@@ -353,15 +366,7 @@ bool FileSystemEntry::addChild(FileSystemEntry* child, bool sort /*= true*/)
             deleteEntries();
         }
         
-        int pos = sort ? 0 : mChildren.size();
-        for ( ; pos < mChildren.size(); ++ pos)
-        {
-            Q_ASSERT((*mChildren[pos]) != (*child));
-            if (*mChildren[pos] > (*child))
-                break;
-        }
-        
-        mChildren.insert(pos, child);
+        mChildren.insert(sort ? insertPosition(*child) : static_cast<int>(mChildren.size()), child);
         result = true;
     }
     

@@ -453,6 +453,14 @@ namespace NESMDesign
     QColor contrastTextColor(const QColor& fill);
 
     /**
+     * \brief   Returns the color of a timer start (emerald) or timer stop (rose) mark drawn on a fill.
+     * \param   isStart     True for the start mark, false for the stop mark.
+     * \param   fill        The fill the mark is drawn on. Its lightness picks the light or dark shade.
+     * \param   textColor   Returned instead when the hue does not stand out against \p fill.
+     **/
+    QColor timerMarkColor(bool isStart, const QColor& fill, const QColor& textColor);
+
+    /**
      * \brief   Returns the palette every canvas colour is taken from.
      * \note    A widget palette is not usable here. A style sheet writes its own colours into
      *          the palette of the widgets it matches, and the sheet of the next theme does not

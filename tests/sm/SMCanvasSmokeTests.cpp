@@ -2949,6 +2949,26 @@ int main(int argc, char* argv[])
                     CHECK(withAction.at(1).text == QStringLiteral("NewEvent"));
                     CHECK(withAction.at(1).firstInGroup == false);
                 }
+
+                // A group with both timer kinds gets one row per kind, starts first.
+                clear(host->getEntryList());
+                host->getEntryList().addOperation(new SMTimerStop(0, QStringLiteral("NewTimer")));
+                host->getEntryList().addOperation(new SMTimerStart(0, QStringLiteral("NewTimer")));
+                box->updateFromModel();
+                const QList<SMStateItem::BodyRow> mixed = box->getBodyRows();
+                CHECK(mixed.size() == 3);
+                if (mixed.size() == 3)
+                {
+                    CHECK(mixed.at(0).icon == SMKindGlyph::eGlyph::TimerStart);
+                    CHECK(mixed.at(0).text == QStringLiteral("NewTimer"));
+                    CHECK(mixed.at(0).firstInGroup);
+                    CHECK(mixed.at(1).icon == SMKindGlyph::eGlyph::TimerStop);
+                    CHECK(mixed.at(1).text == QStringLiteral("NewTimer"));
+                    CHECK(mixed.at(1).zone == SMStateItem::eRowZone::Enter);
+                    CHECK(mixed.at(1).firstInGroup == false);
+                    CHECK(mixed.at(2).icon == SMKindGlyph::eGlyph::TimerStart);
+                    CHECK(mixed.at(2).zone == SMStateItem::eRowZone::Exit);
+                }
             }
         }
 
@@ -4231,6 +4251,60 @@ int main(int argc, char* argv[])
 
         CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Trigger, QColor(Qt::black)).isNull() == false);
         CHECK(SMKindGlyph::icon(SMKindGlyph::eGlyph::Action, QColor(Qt::black)).isNull() == false);
+
+        // A timer start and a timer stop differ in shape, not only in the small mark inside, and
+        // still carry about the same amount of ink.
+        {
+            constexpr int zoom{ 8 };
+            const auto render = [](SMKindGlyph::eGlyph glyph) -> QImage
+            {
+                QImage img(SMKindGlyph::GlyphSize * zoom, SMKindGlyph::GlyphSize * zoom, QImage::Format_ARGB32);
+                img.fill(Qt::transparent);
+                QPainter p(&img);
+                p.setRenderHint(QPainter::Antialiasing, true);
+                p.scale(zoom, zoom);
+                SMKindGlyph::paint(p, QRectF(0.0, 0.0, SMKindGlyph::GlyphSize, SMKindGlyph::GlyphSize), glyph, QColor(Qt::black));
+                return img;
+            };
+
+            const QImage start = render(SMKindGlyph::eGlyph::TimerStart);
+            const QImage stop  = render(SMKindGlyph::eGlyph::TimerStop);
+            int inkStart = 0;
+            int inkStop  = 0;
+            int differ   = 0;
+            for (int y = 0; y < start.height(); ++y)
+            {
+                for (int x = 0; x < start.width(); ++x)
+                {
+                    const bool a = qAlpha(start.pixel(x, y)) > 128;
+                    const bool b = qAlpha(stop.pixel(x, y)) > 128;
+                    inkStart += a ? 1 : 0;
+                    inkStop  += b ? 1 : 0;
+                    differ   += (a != b) ? 1 : 0;
+                }
+            }
+
+            CHECK((inkStart > 0) && (inkStop > 0));
+            CHECK(differ * 3 > std::max(inkStart, inkStop));
+            CHECK((inkStop * 4 >= inkStart * 3) && (inkStop * 3 <= inkStart * 4));
+        }
+
+        // Start and stop marks take two different theme colors, and give way to the text color on
+        // a fill they cannot be read on.
+        {
+            const QColor text{ Qt::black };
+            const QColor light{ 0xF6, 0xF8, 0xFB };
+            const QColor dark{ 0x2B, 0x30, 0x3A };
+            const QColor startLight = NESMDesign::timerMarkColor(true, light, text);
+            const QColor stopLight  = NESMDesign::timerMarkColor(false, light, text);
+            const QColor startDark  = NESMDesign::timerMarkColor(true, dark, text);
+            const QColor stopDark   = NESMDesign::timerMarkColor(false, dark, text);
+            CHECK((startLight != text) && (stopLight != text) && (startLight != stopLight));
+            CHECK((startDark != text) && (stopDark != text) && (startDark != stopDark));
+            CHECK((startLight != startDark) && (stopLight != stopDark));
+            CHECK(NESMDesign::timerMarkColor(true, startLight, text) == text);
+            CHECK(NESMDesign::timerMarkColor(false, stopDark, text) == text);
+        }
 
         // Find (or make) a state carrying an internal transition on a TIMER with one action, the
         // TRAFFIC_LIGHT_RED shape: `on <timer>` over `<action>()`.

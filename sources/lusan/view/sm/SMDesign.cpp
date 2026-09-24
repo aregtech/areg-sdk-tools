@@ -290,6 +290,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mSyncingGrid  (false)
     , mPanelWidth   (NESMDesign::PanelDefaultWidth)
     , mPanelSized   (false)
+    , mPanelPressWidth(0)
     , mPanelRestyle (false)
 {
     mSceneManager = new SMSceneManager(model, this);
@@ -488,11 +489,6 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
                 applyPanelWidth();
                 mPanelRestyle = false;
             }, Qt::ConnectionType::QueuedConnection);
-        }
-        else if ((event->type() == QEvent::Type::Resize) && mPanelSized && (mPanelRestyle == false))
-        {
-            // Past the first sizing the width is the user's, dragged on the dock separator.
-            mPanelWidth = mPropertiesDock->width();
         }
     }
 
@@ -1626,12 +1622,30 @@ void SMDesign::showEvent(QShowEvent* event)
 void SMDesign::resizeEvent(QResizeEvent* event)
 {
     QMainWindow::resizeEvent(event);
-    if (mPanelSized == false)
+    if ((mPropertiesDock != nullptr) && (mPropertiesDock->width() != mPanelWidth))
     {
-        // The page opens narrower than it ends up, and a dock cannot be given a width the page
-        // does not have yet, so the width is asked for again until it fits.
+        // A dock cannot be wider than the page allows, so the width is asked for again until it fits.
         QMetaObject::invokeMethod(this, [this]() { applyPanelWidth(); }, Qt::ConnectionType::QueuedConnection);
     }
+}
+
+bool SMDesign::event(QEvent* event)
+{
+    const bool result{ QMainWindow::event(event) };
+    if ((event != nullptr) && (mPropertiesDock != nullptr))
+    {
+        if (event->type() == QEvent::Type::MouseButtonPress)
+        {
+            mPanelPressWidth = mPropertiesDock->width();
+        }
+        else if ((event->type() == QEvent::Type::MouseButtonRelease) && (mPropertiesDock->width() != mPanelPressWidth))
+        {
+            mPanelWidth = mPropertiesDock->width();
+            mPanelSized = true;
+        }
+    }
+
+    return result;
 }
 
 void SMDesign::setPropertiesWidth(int width)
@@ -1653,7 +1667,10 @@ void SMDesign::applyPanelWidth(void)
         resizeDocks(QList<QDockWidget*>{ mPropertiesDock }, QList<int>{ mPanelWidth }, Qt::Orientation::Horizontal);
     }
 
-    mPanelSized = (mPropertiesDock->width() == mPanelWidth);
+    if (mPropertiesDock->width() == mPanelWidth)
+    {
+        mPanelSized = true;
+    }
 }
 
 void SMDesign::applyZoom(int percent)

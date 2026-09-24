@@ -75,7 +75,7 @@ namespace SMKindGlyph
         , Trigger       //!< A trigger method as a stimulus: a push button in profile.
         , Event         //!< An event, sent or awaited: a lightning bolt.
         , TimerStart    //!< A timer start: a clock face with a play triangle.
-        , TimerStop     //!< A timer stop: a clock face with a stop square.
+        , TimerStop     //!< A timer stop: a solid stop square, no clock face.
     };
 
     /**

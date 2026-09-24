@@ -21,10 +21,10 @@
 
 #include <QMainWindow>
 #include <QAction>
-#include <QFileSystemWatcher>
 #include <QHash>
 #include <QSize>
 
+#include "lusan/data/common/WorkspaceWatcher.hpp"
 #include "lusan/view/common/MdiArea.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
@@ -243,8 +243,9 @@ public:
     void syncDesignWidgets();
 
     /**
-     * \brief   Points the document watcher at exactly the files the open documents were read
-     *          from, so a change made outside Lusan reaches the window that shows it.
+     * \brief   Hands the files of the open documents inside the workspace, and the folders that
+     *          hold them, to the workspace watcher. Needed on the platforms that do not watch a
+     *          whole subtree.
      **/
     void refreshDocumentWatch();
 
@@ -302,6 +303,11 @@ public:
      * \brief   Returns the File System navigation window.
      **/
     NaviFileSystem& getNaviFileSystem();
+
+    /**
+     * \brief   Returns the watcher of the workspace directories.
+     **/
+    inline WorkspaceWatcher& getWorkspaceWatcher();
 
     /**
      * \brief   Returns the Live Logging Scopes Navigation window.
@@ -532,12 +538,11 @@ private slots:
     void onMdiChildClosed(MdiChild *mdiChild);
 
     /**
-     * \brief   Slot for a watched document file that changed on disk. Hands the change to every
-     *          open window that shows that file, after a short settle so a save seen half-written
-     *          is not read back.
-     * \param   filePath    The file that changed.
+     * \brief   Slot for the paths the workspace watcher reports as changed. Checks the files of
+     *          the open documents.
+     * \param   paths   The changed paths.
      **/
-    void onDocumentFileChanged(const QString& filePath);
+    void onWorkspacePathsChanged(const QStringList& paths);
 
     /**
      * \brief   Slot for handling the MDI sub-window when it is activated.
@@ -749,6 +754,12 @@ private:
     inline MdiMainWindow& self();
 
     /**
+     * \brief   Checks the files of the open documents on disk, after a short settle so a file
+     *          seen half-written or briefly replaced is not taken as changed or gone.
+     **/
+    void checkOpenDocuments();
+
+    /**
      * \brief   Initializes an action with the given parameters.
      * \param   act     The action to initialize.
      * \param   icon    The icon for the action.
@@ -763,11 +774,13 @@ private:
     QString         mWorkspaceRoot; //!< The root directory of the workspace.
     QString         mLastFile;      //!< The current file name.
     
+    WorkspaceWatcher mWorkspaceWatcher; //!< Watches the workspace directories for changes.
+    bool            mCheckingDocuments; //!< The files of the open documents are being checked.
+    bool            mRecheckDocuments;  //!< A check of the open documents was asked for during a check.
+
     MdiArea         mMdiArea;       //!< The MDI area for managing sub-windows.
     NavigationDock  mNaviDock;      //!< The navigation content (hosted in an ADS dock, issue #516).
     OutputDock      mOutputDock;    //!< The output content (hosted in an ADS dock, issue #516).
-
-    QFileSystemWatcher mDocWatcher;     //!< Watches the files the open documents were read from.
 
     ads::CDockManager* mDockManager;    //!< The single ADS dock manager; hosts every dock (issue #516).
     ads::CDockWidget*  mCentralDock;    //!< Wraps the MDI area as the non-closable central dock.
@@ -887,6 +900,11 @@ inline void MdiMainWindow::setWorkspaceRoot(const QString& workspace)
 inline const QString& MdiMainWindow::getWorkspaceRoot() const
 {
     return mWorkspaceRoot;
+}
+
+inline WorkspaceWatcher& MdiMainWindow::getWorkspaceWatcher()
+{
+    return mWorkspaceWatcher;
 }
 
 inline MdiMainWindow& MdiMainWindow::self()

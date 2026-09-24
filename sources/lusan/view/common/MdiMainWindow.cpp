@@ -60,6 +60,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QGuiApplication>
 #include <QPointer>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -127,6 +128,9 @@ MdiMainWindow::MdiMainWindow()
     : QMainWindow   ( )
     , mWorkspaceRoot( )
     , mLastFile     ( )
+    , mWorkspaceWatcher ( )
+    , mCheckingDocuments( false )
+    , mRecheckDocuments ( false )
     , mMdiArea      ( this )
     , mNaviDock     ( this )
     , mOutputDock   ( this )
@@ -542,7 +546,7 @@ void MdiMainWindow::onFileNewLiveLog()
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
         mLiveLogWnd->setWindowIcon(NELusanCommon::iconLiveLogWindow(NELusanCommon::SizeSmall));
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
-        mMdiArea.showMaximized();
+        mLiveLogWnd->showMaximized();
         mLogViewer->show();
     }
     else
@@ -1248,71 +1252,86 @@ void MdiMainWindow::onMdiChildClosed(MdiChild* mdiChild)
     emit signalMdiWindowClosed(mdiChild);
 }
 
-void MdiMainWindow::onDocumentFileChanged(const QString& filePath)
+void MdiMainWindow::onWorkspacePathsChanged(const QStringList& paths)
 {
-    // An editor that saves by replacing the file takes the watched path with it; re-arm on the
-    // new file. The settle also keeps a half-written file from being read back as the document.
-    QTimer::singleShot(DocumentChangeSettleMs, this, [this, filePath]()
+    if (paths.isEmpty() == false)
     {
-        refreshDocumentWatch();
+        checkOpenDocuments();
+    }
+}
 
-        // The prompt runs a nested event loop, and a window can be deleted while it is up, so the
-        // documents to ask are collected first and each is re-checked before it is used.
-        QList<QPointer<MdiChild> > affected;
-        const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
-        for (QMdiSubWindow* window : subWindows)
+void MdiMainWindow::checkOpenDocuments()
+{
+    // The prompts run a nested event loop, and a window can be deleted while one is up, so the
+    // documents to check are collected first and each is re-checked before it is used.
+    QList<QPointer<MdiChild> > affected;
+    const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
+    for (QMdiSubWindow* window : subWindows)
+    {
+        MdiChild* child = (window != nullptr) ? qobject_cast<MdiChild*>(window->widget()) : nullptr;
+        if ((child != nullptr) && (child->isClosing() == false) && (child->isLogViewerWindow() == false) && (child->currentFile().isEmpty() == false))
         {
-            MdiChild* child = (window != nullptr) ? qobject_cast<MdiChild*>(window->widget()) : nullptr;
-            if ((child != nullptr) && (child->isClosing() == false) && (child->currentFile() == filePath))
+            affected.append(QPointer<MdiChild>(child));
+        }
+    }
+
+    if (affected.isEmpty())
+        return;
+
+    QTimer::singleShot(DocumentChangeSettleMs, this, [this, affected]()
+    {
+        if (mCheckingDocuments)
+        {
+            mRecheckDocuments = true;
+            return;
+        }
+
+        mCheckingDocuments = true;
+        refreshDocumentWatch();
+        for (const QPointer<MdiChild>& child : affected)
+        {
+            if ((child.isNull() == false) && (child->isClosing() == false))
             {
-                affected.append(QPointer<MdiChild>(child));
+                child->checkFileOnDisk();
             }
         }
 
-        for (const QPointer<MdiChild>& child : affected)
+        mCheckingDocuments = false;
+        if (mRecheckDocuments)
         {
-            if (child.isNull() == false)
-            {
-                child->checkFileChangedOnDisk();
-            }
+            mRecheckDocuments = false;
+            checkOpenDocuments();
         }
     });
 }
 
 void MdiMainWindow::refreshDocumentWatch()
 {
+    if (WorkspaceWatcher::watchesSubtree())
+        return;
+
     QStringList wanted;
     const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
     for (QMdiSubWindow* window : subWindows)
     {
         MdiChild* child = (window != nullptr) ? qobject_cast<MdiChild*>(window->widget()) : nullptr;
-        if ((child == nullptr) || child->isClosing() || child->currentFile().isEmpty())
-        {
+        if ((child == nullptr) || child->isClosing() || child->isLogViewerWindow() || child->currentFile().isEmpty())
             continue;
-        }
 
-        if ((wanted.contains(child->currentFile()) == false) && QFileInfo::exists(child->currentFile()))
+        // The file and every folder up to the workspace root, so a renamed or deleted folder is seen.
+        QString path{ WorkspaceWatcher::normalizePath(child->currentFile()) };
+        while (mWorkspaceWatcher.isUnderRoot(path) && (wanted.contains(path) == false))
         {
-            wanted.append(child->currentFile());
+            wanted.append(path);
+            const QString parent{ QFileInfo(path).path() };
+            if (parent == path)
+                break;
+
+            path = parent;
         }
     }
 
-    const QStringList watched = mDocWatcher.files();
-    for (const QString& path : watched)
-    {
-        if (wanted.contains(path) == false)
-        {
-            mDocWatcher.removePath(path);
-        }
-    }
-
-    for (const QString& path : wanted)
-    {
-        if (watched.contains(path) == false)
-        {
-            mDocWatcher.addPath(path);
-        }
-    }
+    mWorkspaceWatcher.setClientPaths(QStringLiteral("documents"), wanted);
 }
 
 bool MdiMainWindow::reopenDocument(MdiChild& child)
@@ -1572,7 +1591,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconLiveLogWindow(NELusanCommon::SizeSmall));
     child->setCurrentFile(filePath);
-    mMdiArea.showMaximized();
+    mdiSub->showMaximized();
     mNaviDock.showPanel(NavigationDock::eNaviWindow::NaviLiveLogs);
     return child;
 }
@@ -1584,7 +1603,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconOfflineLogWindow(NELusanCommon::SizeSmall));
     mdiSub->setWindowFilePath(filePath);    
-    mMdiArea.showMaximized();
+    mdiSub->showMaximized();
     mNaviDock.showPanel(NavigationDock::NaviOfflineLogs);
     mOutputDock.showLogging();
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
@@ -2140,7 +2159,14 @@ void MdiMainWindow::_createMdiArea()
         }
     });
 
-    connect(&mDocWatcher, &QFileSystemWatcher::fileChanged, this, &MdiMainWindow::onDocumentFileChanged);
+    connect(&mWorkspaceWatcher, &WorkspaceWatcher::signalPathsChanged, this, &MdiMainWindow::onWorkspacePathsChanged);
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, [this](Qt::ApplicationState state)
+    {
+        if (state == Qt::ApplicationState::ApplicationActive)
+        {
+            checkOpenDocuments();
+        }
+    });
 }
 
 void MdiMainWindow::onNaviCollapsed(bool collapsed)

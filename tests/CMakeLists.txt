@@ -1228,3 +1228,28 @@ set_target_properties(lusan_mdi_window_tests PROPERTIES WIN32_EXECUTABLE OFF)
 add_test(NAME mdi_window_tests COMMAND lusan_mdi_window_tests)
 set_tests_properties(mdi_window_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+# The workspace tree and the open documents follow the files and folders changed on disk.
+qt_add_executable(lusan_workspace_watch_tests
+    ${LUSAN_APP_NO_MAIN}
+    ${LUSAN_APP_HDR_NO_MAIN}
+    ${LUSAN_UI}
+    ${LUSAN_ROOT}/tests/common/WorkspaceWatchTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_workspace_watch_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY} ${LUSAN_ROOT})
+target_compile_definitions(lusan_workspace_watch_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL
+    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/tests/data"
+)
+target_link_libraries(lusan_workspace_watch_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+    ${LUSAN_ADS_TARGET}
+)
+set_target_properties(lusan_workspace_watch_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+add_test(NAME workspace_watch_tests COMMAND lusan_workspace_watch_tests)
+set_tests_properties(workspace_watch_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
