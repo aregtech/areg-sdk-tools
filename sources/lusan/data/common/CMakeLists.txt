@@ -28,6 +28,7 @@
     ${LUSAN}/data/common/ParamBase.cpp
     ${LUSAN}/data/common/ParamType.cpp
     ${LUSAN}/data/common/WorkspaceEntry.cpp
+    ${LUSAN}/data/common/WorkspaceWatcher.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -63,4 +64,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/TEDataTypeContainer.hpp
     ${LUSAN}/data/common/TETypeWrap.hpp
     ${LUSAN}/data/common/WorkspaceEntry.hpp
+    ${LUSAN}/data/common/WorkspaceWatcher.hpp
 )

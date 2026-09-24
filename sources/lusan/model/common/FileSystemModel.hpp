@@ -184,7 +184,20 @@ public:
      * \brief   Resets and refreshes the entries of specified entry.
      **/
     void refresh(FileSystemEntry* entry);
-    
+
+    /**
+     * \brief   Brings the loaded directories among the given paths, and the loaded directories
+     *          holding them, in line with the file system. Only the rows that differ are removed
+     *          or inserted, so the view keeps its expanded folders and its selection.
+     * \param   paths   The absolute paths that changed, with '/' as separator.
+     **/
+    void syncPaths(const QStringList& paths);
+
+    /**
+     * \brief   Returns the paths of the directories whose entries are loaded.
+     **/
+    QStringList loadedDirectories() const;
+
     /**
      * \brief   Returns the file information for the given index.
      * \param   index   The index of the item.
@@ -376,9 +389,46 @@ public:
     bool checkWorkspaceEntry(const QModelIndex& index) const;
 
 //////////////////////////////////////////////////////////////////////////
+// Signals
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   Triggered when the set of directories with loaded entries may have changed.
+     **/
+    void signalLoadedDirectoriesChanged();
+
+//////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+
+    /**
+     * \brief   Removes the rows of the entries that are gone from the directory and inserts the
+     *          rows of the new ones. The entries that stay are not touched.
+     * \param   entry   The directory entry with loaded entries.
+     * \return  True if a row was removed or inserted.
+     **/
+    bool syncEntry(FileSystemEntry* entry);
+
+    /**
+     * \brief   Collects the loaded directory entries of the subtree that have the given path.
+     *          The same directory is found more than once when the workspace roots are nested.
+     * \param   entry   The entry to search from.
+     * \param   dirPath The clean absolute path of the directory.
+     * \param   result  On output, contains the found entries.
+     **/
+    void findLoadedEntries(FileSystemEntry* entry, const QString& dirPath, QList<FileSystemEntry*>& result) const;
+
+    /**
+     * \brief   Adds the paths of the loaded directories of the subtree to the list.
+     **/
+    void collectLoadedDirectories(const FileSystemEntry* entry, QStringList& result) const;
+
+    /**
+     * \brief   Returns the model index of the entry.
+     **/
+    inline QModelIndex entryIndex(FileSystemEntry* entry) const;
 
     /**
      * \brief   Resets the given entry, removes all children.

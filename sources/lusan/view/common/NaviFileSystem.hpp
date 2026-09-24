@@ -297,7 +297,44 @@ private:
      **/
     WorkspaceElem setupRootPaths(const WorkspaceEntry& workspace);
 
+    /**
+     * \brief   Hands the workspace directories to the workspace watcher.
+     * \param   paths   The map of the workspace directories.
+     **/
+    void watchWorkspace(const WorkspaceElem& paths);
+
+    /**
+     * \brief   Connects the signals of the file system model. Called before the model is set on
+     *          the tree view, so the removed rows are seen before the view reacts to them.
+     **/
+    void connectNaviModel();
+
 private slots:
+
+    /**
+     * \brief   Triggered when the workspace watcher reports changed paths. Updates the loaded
+     *          folders of the tree without collapsing them.
+     * \param   paths   The changed paths.
+     **/
+    void onWorkspacePathsChanged(const QStringList& paths);
+
+    /**
+     * \brief   Triggered when the set of folders with loaded entries may have changed. Hands
+     *          them to the workspace watcher on the platforms that do not watch a whole subtree.
+     **/
+    void onLoadedDirectoriesChanged();
+
+    /**
+     * \brief   Triggered before rows of the tree are removed. Notes whether the current entry
+     *          or one of its parents is among them.
+     **/
+    void onRowsAboutToBeRemoved(const QModelIndex& parent, int first, int last);
+
+    /**
+     * \brief   Triggered after rows of the tree are removed. Clears the selection if the current
+     *          entry was removed with them.
+     **/
+    void onRowsRemoved(const QModelIndex& parent, int first, int last);
 
     /**
      * \brief   Triggered when the workspace directories are changed.
@@ -332,6 +369,7 @@ private:
     QToolButton*            mToolNewFile;   //!< The tool button to create a new file.
     QToolButton*            mToolEdit;      //!< The tool button to rename the selected entry.
     QToolButton*            mToolDelete;    //!< The tool button to delete the selected entry.
+    bool                    mCurrentRemoved;//!< The current entry is among the rows being removed.
 };
 
 //////////////////////////////////////////////////////////////////////////

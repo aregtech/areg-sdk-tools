@@ -21,6 +21,7 @@
 
 #include "lusan/data/common/OptionsManager.hpp"
 
+#include <QColor>
 #include <QList>
 #include <QString>
 
@@ -58,6 +59,12 @@ namespace NEAppThemes
      * \param   window  The window to hand the active theme's style sheet to.
      **/
     void applyThemeToWindow(QWidget& window);
+
+    /**
+     * \brief   Returns the color that marks a document with unsaved changes in the
+     *          active theme.
+     **/
+    QColor unsavedMarkColor();
 }
 
 #endif // LUSAN_APPLICATION_NEAPPTHEMES_HPP
