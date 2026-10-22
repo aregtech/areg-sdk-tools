@@ -204,6 +204,13 @@ namespace
         void validateTransitionKind(const SMStateEntry& owner, const SMTransitionEntry& tr);
         //!< The pair of states of one level a cross level transition belongs between, as a clause to append.
         QString siblingHint(const SMStateEntry& source, const SMStateEntry& target) const;
+        QString historyHint(const SMStateEntry& source, const SMStateEntry& marker, const SMStateEntry& from, const SMStateEntry& to) const;
+        //!< The state directly in a composite that is, or holds, a state below it; nullptr when the state is not below it.
+        const SMStateEntry* childOn(const SMStateEntry& owner, const SMStateEntry& state) const;
+        //!< Where a composite's transition to a state inside it belongs, as a clause to append.
+        QString insideHint(const SMStateEntry& source, const SMStateEntry& target, const SMStateEntry& below) const;
+        //!< Where a transition to a composite that holds its source belongs, as a clause to append.
+        QString aboveHint(const SMStateEntry& source, const SMStateEntry& target, const SMStateEntry& above) const;
         void validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr);
         void validateOperations(const SMOperationList& ops, const Scope& scope);
         void validateArguments(uint32_t ownerId, eDocElementKind kind, const MethodBase* target, const QList<SMArgumentEntry>& args, const Scope& scope);
@@ -783,6 +790,9 @@ namespace
                 if ((from == to) || (root.findOwnerOfRecursive(to->getId()) != fromOwner))
                     continue;
 
+                if (target.isHistoryMarker())
+                    return historyHint(source, target, *from, *to);
+
                 QString hint;
                 if (from != &source)
                 {
@@ -799,7 +809,102 @@ namespace
             }
         }
 
+        if (const SMStateEntry* below = childOn(source, target))
+            return insideHint(source, target, *below);
+
+        if (const SMStateEntry* above = childOn(target, source))
+            return aboveHint(source, target, *above);
+
         return QString();
+    }
+
+    const SMStateEntry* Ctx::childOn(const SMStateEntry& owner, const SMStateEntry& state) const
+    {
+        const SMStateData& root = mData.getStates();
+        for (const SMStateEntry* level = &state; level != nullptr; level = root.findOwnerOfRecursive(level->getId()))
+        {
+            if (root.findOwnerOfRecursive(level->getId()) == &owner)
+                return level;
+        }
+
+        return nullptr;
+    }
+
+    QString Ctx::insideHint(const SMStateEntry& source, const SMStateEntry& target, const SMStateEntry& below) const
+    {
+        QString hint = vtr("; '%1' is inside '%2', whose own transitions reach only its own level: draw this one from the state inside '%2' that is current when it fires, beside '%3'")
+            .arg(target.getName(), source.getName(), below.getName());
+
+        if (target.isHistoryMarker())
+            return hint + historyHint(source, target, source, below);
+
+        if (&below != &target)
+        {
+            hint += vtr(", and target '%1', which holds '%2' and enters at its start state; to land on '%2', send an event from that transition that the start state of '%1' takes towards '%2'")
+                .arg(below.getName(), target.getName());
+        }
+
+        return hint;
+    }
+
+    QString Ctx::aboveHint(const SMStateEntry& source, const SMStateEntry& target, const SMStateEntry& above) const
+    {
+        QString hint = vtr("; '%1' is inside '%2', which is entered already: to go to another state inside '%2', target it")
+            .arg(source.getName(), target.getName());
+        if (&above != &source)
+            hint += vtr(" from '%1', which holds '%2' on that level").arg(above.getName(), source.getName());
+
+        return hint + vtr("; to leave '%1', give the transition to '%1' itself, towards a state beside it").arg(target.getName());
+    }
+
+    QString Ctx::historyHint(const SMStateEntry& source, const SMStateEntry& marker, const SMStateEntry& from, const SMStateEntry& to) const
+    {
+        const SMStateEntry* owner = mData.getStates().findOwnerOfRecursive(marker.getId());
+        if (owner == nullptr)
+            return QString();
+
+        if (&to == &marker)
+        {
+            return vtr("; '%1' resumes '%2', which holds '%3': a History marker is reached only from a state beside '%2', so from inside it target the state to enter")
+                .arg(marker.getName(), owner->getName(), source.getName());
+        }
+
+        QString hint;
+        if (&from != &source)
+        {
+            hint += vtr("; draw it from '%1', which holds '%2' on the level of '%3'").arg(from.getName(), source.getName(), to.getName());
+        }
+
+        if (&to == owner)
+            return hint;
+
+        hint += vtr("; '%1' resumes only '%2', the state that holds it, and is reached only from a state beside '%2'. To resume '%3' where it left off, target ")
+            .arg(marker.getName(), owner->getName(), to.getName());
+
+        if (to.getHistory() != SMStateEntry::eHistory::None)
+            return hint + vtr("'%1' itself, whose History attribute resumes it on every entry").arg(to.getName());
+
+        const SMStateEntry* own = nullptr;
+        const SMStateData* nested = to.getNestedStates();
+        if (nested != nullptr)
+        {
+            for (const SMStateEntry* child : nested->getElements())
+            {
+                if (child->isHistoryMarker())
+                {
+                    own = child;
+                    break;
+                }
+            }
+        }
+
+        if (own != nullptr)
+            hint += vtr("'%1', the History marker '%2' holds").arg(own->getName(), to.getName());
+        else
+            hint += vtr("a History marker placed directly in '%1' (Deep restores every state below it, Shallow only the state directly in it)").arg(to.getName());
+
+        return hint + vtr("; to resume only '%1', target '%2' and send an event from this transition that the start state of '%2' takes towards '%3': '%2' starts again at its start state")
+            .arg(owner->getName(), to.getName(), marker.getName());
     }
 
     void Ctx::validateTransition(const SMStateEntry& owner, const SMStateData& level, const SMTransitionEntry& tr)
@@ -816,14 +921,14 @@ namespace
             if (sibling == nullptr)
             {
                 const SMStateEntry* target = mData.findStateById(targetId);
+                const SMStateEntry* historyComposite = (target != nullptr ? mData.getStates().findOwnerOfRecursive(targetId) : nullptr);
                 if (target == nullptr)
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TRANSITION_KIND, vtr("Transition target does not resolve"));
-                else if (target->isHistoryMarker() == false)
+                else if ((target->isHistoryMarker() == false) || (historyComposite == nullptr) || (level.findStateById(historyComposite->getId()) == nullptr))
                     add(id, eDocElementKind::Transition, eSeverity::Error, DocRules::RULE_TARGET_SIBLING
                        , vtr("Transition target '%1' is not a sibling state").arg(target->getName()) + siblingHint(owner, *target));
-                // else: a History pseudo-state reached from outside its own level is the one
-                // legal exception to RULE_TARGET_SIBLING -- reaching this branch already proves
-                // the target is not a member of `level` (`sibling` above resolved to nullptr).
+                // else: a History pseudo-state whose composite sits on this level is the one
+                // legal exception to RULE_TARGET_SIBLING.
             }
             else if (sibling->isPseudoStart())
             {
@@ -1638,8 +1743,24 @@ namespace
             if ((m == nullptr) || (NESMMethod::isTrigger(m) == false))
                 continue;
             if (mData.getAttributes().findElement(m->getName()) != nullptr)
+            {
                 add(m->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_ATTRIBUTE_STIMULUS
                   , vtr("Trigger '%1' has the same name as an attribute. An attribute and a trigger must have different names, because both become members of the machine class.").arg(m->getName()));
+                continue;
+            }
+
+            // A trigger is spelled as written and an attribute by its converted accessors, so a
+            // trigger can land on the getter or the setter of an attribute of another spelling.
+            for (const AttributeEntry& a : mData.getAttributes().getElements())
+            {
+                const QString accessor = DocRuleChecks::toSnakeCase(a.getName());
+                if ((m->getName() == accessor) || (m->getName() == QStringLiteral("set_") + accessor))
+                {
+                    add(m->getId(), eDocElementKind::Method, eSeverity::Error, DocRules::RULE_ATTRIBUTE_STIMULUS
+                      , vtr("Trigger '%1' has the name of an accessor of attribute '%2'. Both become functions of the machine class, and a call reaches the trigger. Rename the trigger or the attribute.").arg(m->getName(), a.getName()));
+                    break;
+                }
+            }
         }
 
         // Only a state that hosts an imported machine becomes a member: it holds the machine in
@@ -2278,7 +2399,7 @@ QString SMValidator::explainRule(int rule, DocIssue::eSeverity severity)
     case DocRules::RULE_UNRESOLVED_ELEMENT:
         return vtr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
     case DocRules::RULE_TARGET_SIBLING:
-        return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent -- except a History pseudo-state, which is reached exactly by a transition from outside its level.");
+        return vtr("A transition may only target a state of its own level. Cross-level jumps go through the parent -- except a History pseudo-state, which is reached by a transition from a state beside the composite that holds it.");
     case DocRules::RULE_MISSING_VERSION:
         return vtr("The version is generated into the code and tells a client which contract it was built against. Give the document one.");
     case DocRules::RULE_FINAL_STATE:

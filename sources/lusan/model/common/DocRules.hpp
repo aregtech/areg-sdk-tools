@@ -113,10 +113,10 @@ namespace DocRules
 
     /**
      * \brief   A transition target that is not a sibling of the state it leaves. One exception:
-     *          a transition from outside a composite targeting that composite's Kind="History"
-     *          pseudo-state is legal even though the pseudo-state is not a sibling either -- the
-     *          same target reached from inside its own level is refused instead, as
-     *          RULE_HISTORY_SIBLING (error 57).
+     *          a transition from a state beside a composite, on the composite's own level, may
+     *          target that composite's Kind="History" pseudo-state, though the pseudo-state is
+     *          not a sibling -- the same target reached from inside the composite is refused
+     *          instead, as RULE_HISTORY_SIBLING (error 57).
      **/
     constexpr int RULE_TARGET_SIBLING       {  7 };
 
@@ -640,9 +640,9 @@ namespace DocRules
             "declared once with Type=\"Imported\"." }
         , { RULE_TARGET_SIBLING      , BandError, DocStateMachine
           , "A transition target that is not a sibling of the state it leaves. One exception: a transition "
-            "from outside a composite targeting that composite's Kind=\"History\" pseudo-state is legal even "
-            "though the pseudo-state is not a sibling either -- the same target reached from inside its own "
-            "level is refused instead, as RULE_HISTORY_SIBLING (error 57)."
+            "from a state beside a composite, on the composite's own level, may target that composite's "
+            "Kind=\"History\" pseudo-state, though the pseudo-state is not a sibling -- the same target reached "
+            "from inside the composite is refused instead, as RULE_HISTORY_SIBLING (error 57)."
           , "A transition ends on a state of its own level. To leave a composite state, draw the transition "
             "from the composite itself, not from a state inside it." }
         , { RULE_FINAL_STATE         , BandError, DocStateMachine
