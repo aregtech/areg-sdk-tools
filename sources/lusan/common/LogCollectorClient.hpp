@@ -128,8 +128,9 @@ signals:
     /**
      * \brief   The signal triggered when receive message to log.
      * \param   logMessage  The buffer with structure of the message to log.
+     * \param   rowId       The database id of the message, 0 if the message is not in the database.
      **/
-    void signalLogMessage(const areg::MessageEnvelope & logMessage);
+    void signalLogMessage(const areg::MessageEnvelope & logMessage, uint32_t rowId);
 
     /**
      * \brief   The signal triggered when a log source started or stopped sending the logs it produces.

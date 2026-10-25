@@ -644,7 +644,8 @@ namespace DocRules
             "Kind=\"History\" pseudo-state, though the pseudo-state is not a sibling -- the same target reached "
             "from inside the composite is refused instead, as RULE_HISTORY_SIBLING (error 57)."
           , "A transition ends on a state of its own level. To leave a composite state, draw the transition "
-            "from the composite itself, not from a state inside it." }
+            "from the composite itself, not from a state inside it. To move between the states inside a "
+            "composite, draw it from the state inside that is current when it fires, not from the composite." }
         , { RULE_FINAL_STATE         , BandError, DocStateMachine
           , "A 'Final' state with outgoing transitions, or with substates."
           , "A Final state ends its level: remove its outgoing transitions and its substates. To continue "

@@ -27,6 +27,7 @@
 #include "lusan/model/log/LogViewerFilter.hpp"
 
 #include <QTableView>
+#include <QTimer>
 #include <QToolButton>
 #include <QMdiSubWindow>
 
@@ -38,7 +39,17 @@ const QString   LiveLogViewer::_tooltipRestartLogging   (tr("Resume logging in a
 LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : LogViewerBase (MdiChild::eMdiWindow::MdiLogViewer, nullptr, wndMain, parent)
     , mReleased     (false)
+    , mFollowTimer  (new QTimer(this))
 {
+    mFollowTimer->setSingleShot(true);
+    mFollowTimer->setInterval(LiveLogViewer::FOLLOW_SCROLL_MS);
+    connect(mFollowTimer, &QTimer::timeout, this, [this]() {
+                if ((mReleased == false) && getSessionBar()->isFollowing())
+                {
+                    scrollFollowing();
+                }
+            });
+
     mLogModel = new LiveLogsModel(this);
     setupWidgets();
 
@@ -125,9 +136,9 @@ void LiveLogViewer::onRowsInserted(const QModelIndex& parent, int first, int las
     Q_UNUSED(first);
     Q_UNUSED(last);
 
-    if (getSessionBar()->isFollowing())
+    if (getSessionBar()->isFollowing() && (mFollowTimer->isActive() == false))
     {
-        scrollFollowing();
+        mFollowTimer->start();
     }
 }
 
@@ -295,7 +306,7 @@ void LiveLogViewer::cleanResources()
     Q_ASSERT(mFilter != nullptr);
 
     setupSignals(false);
-    LogObserver::releaseLogObserver();
+    mFollowTimer->stop();
     disconnect(mFilter, nullptr, this, nullptr);
     disconnect(mLogModel, nullptr, this, nullptr);
 
@@ -304,7 +315,10 @@ void LiveLogViewer::cleanResources()
     view->setHorizontalHeader(nullptr);
     mFilter->setSourceModel(nullptr);
     mSearch.setLogModel(nullptr);
+
+    // The read connection closes before the log observer closes the log file.
     mLogModel->closeDatabase();
+    LogObserver::releaseLogObserver();
 
     mReleased = true;
 

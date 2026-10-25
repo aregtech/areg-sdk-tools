@@ -57,6 +57,7 @@ public:
     inline LogObserverEventData();
     inline LogObserverEventData(LogObserverCommand event);
     inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data);
+    inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data, uint32_t rowId);
     inline LogObserverEventData(const LogObserverEventData& src);
     inline LogObserverEventData(LogObserverEventData && src);
 
@@ -66,6 +67,11 @@ public:
 
     inline const areg::SharedBuffer& getBuffer() const;
 
+    /**
+     * \brief   Returns the database id of the log message the event carries, 0 if none.
+     **/
+    inline uint32_t getRowId() const;
+
     inline operator const areg::InStream& () const;
 
     inline operator areg::OutStream& ();
@@ -73,6 +79,7 @@ public:
 private:
     LogObserverCommand  mEvent;     //!< The event type
     areg::SharedBuffer  mBuffer;    //!< The buffer to store event data
+    uint32_t            mRowId;     //!< The database id of the log message, 0 if none.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -87,30 +94,42 @@ AREG_DECLARE_EVENT(LogObserverEventData, LogObserverEvent, LogObserverEventConsu
 LogObserverEventData::LogObserverEventData()
     : mEvent(LogObserverEventData::LogObserverCommand::CMD_Unknown)
     , mBuffer()
+    , mRowId(0u)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(LogObserverCommand event)
     : mEvent(event)
     , mBuffer()
+    , mRowId(0u)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data)
     : mEvent(event)
     , mBuffer(data)
+    , mRowId(0u)
+{
+}
+
+inline LogObserverEventData::LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data, uint32_t rowId)
+    : mEvent(event)
+    , mBuffer(data)
+    , mRowId(rowId)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(const LogObserverEventData& src)
     : mEvent(src.mEvent)
     , mBuffer(src.mBuffer)
+    , mRowId(src.mRowId)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(LogObserverEventData&& src)
     : mEvent(src.mEvent)
     , mBuffer(std::move(src.mBuffer))
+    , mRowId(src.mRowId)
 {
     src.mEvent = LogObserverCommand::CMD_Unknown;
 }
@@ -128,6 +147,11 @@ inline areg::SharedBuffer& LogObserverEventData::getBuffer()
 inline const areg::SharedBuffer& LogObserverEventData::getBuffer() const
 {
     return mBuffer;
+}
+
+inline uint32_t LogObserverEventData::getRowId() const
+{
+    return mRowId;
 }
 
 inline LogObserverEventData::operator const areg::InStream& () const

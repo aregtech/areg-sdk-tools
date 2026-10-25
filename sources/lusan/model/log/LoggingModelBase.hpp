@@ -76,6 +76,10 @@ public:
     //!< reads it to draw the boundary, so a day change is found while scrolling.
     static constexpr int    DayChangeRole   { Qt::ItemDataRole::UserRole + 3 };
 
+    //!< The role that answers the database id of the row, the `logs.id` of the log file.
+    //!< Zero if the row has no id in the file.
+    static constexpr int    RowIdRole       { Qt::ItemDataRole::UserRole + 4 };
+
     enum class eColumn : int
     {
           LogColumnInvalid  = -1    //!< Invalid column index, used for error checking
@@ -126,6 +130,7 @@ public:
 
     using   ListColumns     = QList<LoggingModelBase::eColumn>;
     using   ListLogs        = std::vector<areg::SharedBuffer>;
+    using   ListRowIds      = std::vector<uint32_t>;
     using   ListInstances   = std::vector< areg::ConnectedInstance>;
     using   ListScopes      = std::vector< areg::ScopeEntry>;
     using   MapScopes       = std::map<ITEM_ID, ListScopes>;
@@ -410,6 +415,13 @@ public:
      * \brief   Returns the logging message structure of specified row.
      **/
     inline const areg::LogEntry* getLogData(int row) const;
+
+    /**
+     * \brief   Returns the database id of the row, the `logs.id` of the log file.
+     *          Returns 0 if the row does not exist or has no id in the file.
+     * \param   row     The row of the model.
+     **/
+    inline uint32_t getRowId(int row) const;
 
     /**
      * \brief   Returns true if the entry is a problem row, meaning warning priority or worse.
@@ -735,19 +747,28 @@ public:
     virtual void readLogsAsynchronous(int maxEntries = -1);
 
     /**
-     * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
-     * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
-     * \return  Number or log entries to read.
+     * \brief   Returns true if the model reads the rows that the scope filters pass, and false if it
+     *          reads every row. By default, it reads every row.
      **/
-    virtual uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL,int32_t limit = -1,uint32_t offset = 0u);
+    virtual bool readsFilteredLogs() const;
 
     /**
-     * \brief   Slides the loaded window to a new position in the dataset.
-     *          Releases the previously loaded rows and loads a new window
-     *          starting at the specified row index.
+     * \brief   Slides the loaded window to a new position in the dataset. A move shorter than the
+     *          window reads only the rows that enter it, by keyset from the first or the last row.
+     *          A longer move reads the window at the row number once.
      * \param   newStartRow     The index of the first row in the new window.
      **/
     void slideWindow(uint32_t newStartRow);
+
+    /**
+     * \brief   Returns the index of the first row of the loaded window in the dataset.
+     **/
+    inline uint32_t getWindowStart() const;
+
+    /**
+     * \brief   Returns the number of rows the dataset holds for the current query.
+     **/
+    inline uint32_t getTotalLogCount() const;
     /**
      * \brief   Applies the filters to the log query.
      * \param   instId  The ID of the instance to apply filters. Applies filters for all instances if `areg::TARGET_ALL`.
@@ -783,10 +804,52 @@ protected:
      *          Runs in the thread that owns the model. The reading thread hands its
      *          batches over by a queued call, it does not touch the model itself.
      * \param   logs        The entries to append. The list is emptied on output.
+     * \param   rowIds      The database ids of the entries, one per entry, in the same order.
      * \param   generation  The read session the batch belongs to.
      *                      Batches of an already replaced session are dropped.
      **/
-    void appendLogBatch(std::vector<areg::SharedBuffer>&& logs, uint32_t generation);
+    void appendLogBatch(std::vector<areg::SharedBuffer>&& logs, std::vector<uint32_t>&& rowIds, uint32_t generation);
+
+    /**
+     * \brief   Appends one received log entry at the bottom of the model.
+     * \param   log     The log entry.
+     * \param   rowId   The database id of the entry, 0 if it has none.
+     **/
+    void appendLogEntry(const areg::SharedBuffer& log, uint32_t rowId);
+
+    /**
+     * \brief   Drops the given number of oldest entries from the top of the model.
+     * \param   count   The number of entries to drop. Limited by the number of entries.
+     **/
+    void evictOldest(uint32_t count);
+
+    /**
+     * \brief   Returns the number of rows the current query reads from the database.
+     **/
+    uint32_t countDatabaseLogs();
+
+    /**
+     * \brief   Prepares the statement to read one window of rows by keyset.
+     * \param   place       The row to continue from. A zeroed place starts at the first or the last row.
+     * \param   limit       The greatest number of rows to read.
+     * \param   backward    If true, reads the rows before the place, newest first.
+     * \return  True if the statement is ready to be read.
+     **/
+    bool setupWindowStatement(const areg::ext::LogSqliteDatabase::LogPosition& place, int32_t limit, bool backward);
+
+    /**
+     * \brief   Prepares the statement to read one window of rows starting at a row number.
+     * \param   offset  The number of the first row of the window.
+     * \param   limit   The greatest number of rows to read.
+     * \return  True if the statement is ready to be read.
+     **/
+    bool setupWindowStatementAt(uint32_t offset, int32_t limit);
+
+    /**
+     * \brief   Closes the database connection. The statement is released first, so the connection
+     *          closes at once.
+     **/
+    inline void _disconnectDatabase();
 
     /**
      * \brief   Closes currently opened log database file without triggering signal.
@@ -869,6 +932,21 @@ private:
 
     inline LoggingModelBase& self();
 
+    //!< Returns the number of rows a window or a read step holds.
+    inline int32_t _windowSize() const;
+
+    //!< Replaces the loaded rows with the window that starts at the row number.
+    void _readWindowAt(uint32_t startRow, int32_t windowSize);
+
+    //!< Moves the loaded window down by the number of rows, reading the rows after the last one.
+    void _moveWindowForward(uint32_t count);
+
+    //!< Moves the loaded window up by the number of rows, reading the rows before the first one.
+    void _moveWindowBack(uint32_t count);
+
+    //!< Returns the keyset place of the loaded row.
+    inline areg::ext::LogSqliteDatabase::LogPosition _rowPlace(int row) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -879,6 +957,7 @@ protected:
     ListColumns             mActiveColumns; //!< The list of active columns.
     RootList                mRootList;      //!< The list of root nodes
     ListLogs                mLogs;          //!< The list of log messages.
+    ListRowIds              mRowIds;        //!< The database id of each log message, in the order of mLogs.
     ListInstances           mInstances;     //!< The list of connected instances.
     QModelIndex             mSelectedScope; //!< The selected node of the tree;
     QModelIndex             mSelectedLog;   //!< The selected entry of the log;
@@ -1023,6 +1102,21 @@ inline const areg::LogEntry* LoggingModelBase::getLogData(int row) const
     return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? reinterpret_cast<const areg::LogEntry*>(mLogs[row].buffer()) : nullptr);
 }
 
+inline uint32_t LoggingModelBase::getRowId(int row) const
+{
+    return ((row >= 0) && (row < static_cast<int>(mRowIds.size())) ? mRowIds[static_cast<size_t>(row)] : 0u);
+}
+
+inline uint32_t LoggingModelBase::getWindowStart() const
+{
+    return mWindowStart;
+}
+
+inline uint32_t LoggingModelBase::getTotalLogCount() const
+{
+    return mTotalLogCount;
+}
+
 inline bool LoggingModelBase::isProblemEntry(const areg::LogEntry* entry)
 {
     constexpr uint16_t problems{ static_cast<uint16_t>(areg::LogPriority::PrioWarning)
@@ -1045,8 +1139,14 @@ inline void LoggingModelBase::setScopeFiler(ScopeLogViewerFilter* filter)
 inline void LoggingModelBase::_closeDatabase()
 {
     _quitThread();
-    mDatabase.disconnect();
+    _disconnectDatabase();
     dataReset();
+}
+
+inline void LoggingModelBase::_disconnectDatabase()
+{
+    mStatement.finalize();
+    mDatabase.disconnect();
 }
 
 inline void LoggingModelBase::_quitThread()
@@ -1067,6 +1167,7 @@ inline void LoggingModelBase::cleanLogs()
     mTotalLogCount  = 0;
     mWindowStart    = 0;
     mLogs.clear();
+    mRowIds.clear();
 }
 
 inline areg::ext::LogSqliteDatabase& LoggingModelBase::getDatabase()
@@ -1082,6 +1183,17 @@ inline const areg::ext::LogSqliteDatabase& LoggingModelBase::getDatabase() const
 inline LoggingModelBase& LoggingModelBase::self()
 {
     return (*this);
+}
+
+inline int32_t LoggingModelBase::_windowSize() const
+{
+    return (mLogChunk > 0 ? mLogChunk : LoggingModelBase::READ_CHUNK_SIZE);
+}
+
+inline areg::ext::LogSqliteDatabase::LogPosition LoggingModelBase::_rowPlace(int row) const
+{
+    const areg::LogEntry* entry{ getLogData(row) };
+    return areg::ext::LogSqliteDatabase::LogPosition{ entry != nullptr ? entry->logTimestamp : 0, getRowId(row) };
 }
 
 #endif // LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP

@@ -25,6 +25,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 
 #include "areg/appbase/AppDefs.hpp"
+#include "areg/appbase/Application.hpp"
 #include "areg/base/DateTime.hpp"
 #include "areg/component/ComponentLoader.hpp"
 #include "areg/component/ComponentThread.hpp"
@@ -68,6 +69,13 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
 
         _observerStart = false;
         _logObserverStarted = callbackStarted;
+
+        // The observer model runs on the service manager, which is started with the first connection.
+        if (areg::Application::is_servicing_ready() == false)
+        {
+            areg::Application::setup(false, true, false, true, false, NELusanCommon::INIT_FILE.toStdString().c_str());
+        }
+
         result = areg::ComponentLoader::load_component_model(LogObserver::LogobserverModel);
     }
     
@@ -558,7 +566,7 @@ void LogObserver::process_event(const LogObserverEventData& data)
 
     case LogObserverEventData::LogObserverCommand::CMD_LogMessage:
     {
-        emit signalLogMessage(stream);
+        emit signalLogMessage(stream, data.getRowId());
     }
     break;
 
@@ -674,9 +682,9 @@ void LogObserver::slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, i
     postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ScopesUpdated, stream));
 }
 
-void LogObserver::slotLogMessage(const areg::MessageEnvelope& logMessage)
+void LogObserver::slotLogMessage(const areg::MessageEnvelope& logMessage, uint32_t rowId)
 {
-    postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, areg::SharedBuffer(logMessage)));
+    postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, areg::SharedBuffer(logMessage), rowId));
 }
 
 void LogObserver::slotLogSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver)

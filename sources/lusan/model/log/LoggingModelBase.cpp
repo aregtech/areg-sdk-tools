@@ -35,6 +35,7 @@
 #include <QIcon>
 #include <QSize>
 
+#include <algorithm>
 #include <iterator>
 
 const QStringList& LoggingModelBase::getHeaderList()
@@ -182,6 +183,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mActiveColumns(getDefaultColumns())
     , mRootList     ( )
     , mLogs         ( )
+    , mRowIds       ( )
     , mInstances    ( )
     , mSelectedScope( )
     , mSelectedLog  ( )
@@ -297,6 +299,8 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         return QVariant((mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index));
     else if (role == LoggingModelBase::DayChangeRole)
         return QVariant(isDayChange(row));
+    else if (role == LoggingModelBase::RowIdRole)
+        return QVariant(getRowId(row));
 
     eColumn column = mActiveColumns.at(col);
     switch (static_cast<Qt::ItemDataRole>(role))
@@ -420,42 +424,138 @@ void LoggingModelBase::releaseModel()
 void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
 {
     std::string path(areg::File::normalize_path(dbPath.toStdString().c_str()));
-    if (mDatabase.database_path() != path)
+    if (path.empty())
+        return;
+
+    if ((mDatabase.database_path() != path) || (mDatabase.is_operable() == false))
     {
         // Another database is another session, and a refused span names a target of the old one.
-        clearRefusedScopes();
+        if (mDatabase.database_path() != path)
+        {
+            clearRefusedScopes();
+        }
+
+        _quitThread();
+        _disconnectDatabase();
         mDatabase.connect(path, readOnly);
     }
 }
 
 void LoggingModelBase::slideWindow(uint32_t newStartRow)
 {
-    if (newStartRow == mWindowStart)
+    if (mDatabase.is_operable() == false)
         return;
 
+    if (mTotalLogCount == 0)
+    {
+        mTotalLogCount = countDatabaseLogs();
+    }
+
     // Clamp so window doesn't go past end of dataset
-    uint32_t windowSize = static_cast<uint32_t>(mLogs.size());
-    if (newStartRow + windowSize > mTotalLogCount)
-        newStartRow = (mTotalLogCount > windowSize)
-                      ? mTotalLogCount - windowSize
-                      : 0u;
+    const int32_t  windowSize{ _windowSize() };
+    const uint32_t size{ static_cast<uint32_t>(windowSize) };
+    if (newStartRow + size > mTotalLogCount)
+        newStartRow = (mTotalLogCount > size) ? mTotalLogCount - size : 0u;
+
+    if ((newStartRow == mWindowStart) && (mLogs.empty() == false))
+        return;
 
     _quitThread();
-    mWindowStart = newStartRow;
+    const uint32_t distance{ newStartRow > mWindowStart ? newStartRow - mWindowStart : mWindowStart - newStartRow };
+    const bool keyset{ (mLogs.empty() == false) && (mLogs.size() <= size) && (distance < static_cast<uint32_t>(mLogs.size())) };
+    if ((keyset == false) || (getRowId(0) == 0u) || (getRowId(static_cast<int>(mLogs.size()) - 1) == 0u))
+    {
+        _readWindowAt(newStartRow, windowSize);
+    }
+    else if (newStartRow > mWindowStart)
+    {
+        _moveWindowForward(distance);
+    }
+    else
+    {
+        _moveWindowBack(distance);
+    }
+}
 
-    // Re-prepare the statement with the new offset, SQLite jumps directly without scanning.
-    setupLogStatement(areg::TARGET_ALL, mLogChunk, mWindowStart);
-
+void LoggingModelBase::_readWindowAt(uint32_t startRow, int32_t windowSize)
+{
     beginResetModel();
-    mLogCount = 0;
+    ++ mLoadGeneration;
+    mLogs.clear();
+    mRowIds.clear();
+    mWindowStart = startRow;
+    if (setupWindowStatementAt(startRow, windowSize))
+    {
+        areg::ext::LogSqliteDatabase::LogPosition last{};
+        areg::ext::LogSqliteDatabase::fill_log_window(mLogs, mStatement, windowSize, last, mRowIds);
+    }
 
-    int readCount = areg::ext::LogSqliteDatabase::fill_log_messages(
-                        mLogs, mStatement, 0, mLogChunk);
-
-    if (readCount > 0)
-        mLogCount = static_cast<uint32_t>(readCount);
-
+    mLogCount = static_cast<uint32_t>(mLogs.size());
     endResetModel();
+}
+
+void LoggingModelBase::_moveWindowForward(uint32_t count)
+{
+    ListLogs logs;
+    ListRowIds ids;
+    areg::ext::LogSqliteDatabase::LogPosition last{ _rowPlace(static_cast<int>(mLogs.size()) - 1) };
+    if (setupWindowStatement(last, static_cast<int32_t>(count), false))
+    {
+        areg::ext::LogSqliteDatabase::fill_log_window(logs, mStatement, static_cast<int32_t>(count), last, ids);
+    }
+
+    const int read{ static_cast<int>(logs.size()) };
+    if (read == 0)
+        return;
+
+    beginRemoveRows(QModelIndex(), 0, read - 1);
+    mLogs.erase(mLogs.begin(), mLogs.begin() + read);
+    mRowIds.erase(mRowIds.begin(), mRowIds.begin() + read);
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endRemoveRows();
+
+    const int first{ static_cast<int>(mLogs.size()) };
+    beginInsertRows(QModelIndex(), first, first + read - 1);
+    mLogs.insert(mLogs.end(), std::make_move_iterator(logs.begin()), std::make_move_iterator(logs.end()));
+    mRowIds.insert(mRowIds.end(), ids.begin(), ids.end());
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endInsertRows();
+
+    mWindowStart += static_cast<uint32_t>(read);
+}
+
+void LoggingModelBase::_moveWindowBack(uint32_t count)
+{
+    ListLogs logs;
+    ListRowIds ids;
+    areg::ext::LogSqliteDatabase::LogPosition first{ _rowPlace(0) };
+    if (setupWindowStatement(first, static_cast<int32_t>(count), true))
+    {
+        areg::ext::LogSqliteDatabase::fill_log_window(logs, mStatement, static_cast<int32_t>(count), first, ids);
+    }
+
+    const int read{ static_cast<int>(logs.size()) };
+    if (read == 0)
+        return;
+
+    // The rows come newest first.
+    std::reverse(logs.begin(), logs.end());
+    std::reverse(ids.begin(), ids.end());
+
+    const int last{ static_cast<int>(mLogs.size()) - 1 };
+    beginRemoveRows(QModelIndex(), last - read + 1, last);
+    mLogs.erase(mLogs.end() - read, mLogs.end());
+    mRowIds.erase(mRowIds.end() - read, mRowIds.end());
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endRemoveRows();
+
+    beginInsertRows(QModelIndex(), 0, read - 1);
+    mLogs.insert(mLogs.begin(), std::make_move_iterator(logs.begin()), std::make_move_iterator(logs.end()));
+    mRowIds.insert(mRowIds.begin(), ids.begin(), ids.end());
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endInsertRows();
+
+    mWindowStart -= std::min<uint32_t>(mWindowStart, static_cast<uint32_t>(read));
 }
 
 QString LoggingModelBase::getDatabasePath() const
@@ -676,6 +776,7 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
 
     cleanLogs();
     mLogs = std::move(logModel.mLogs);
+    mRowIds = std::move(logModel.mRowIds);
     mLogChunk       = logModel.mLogChunk;
     mLogCount       = logModel.mLogCount;
     mTotalLogCount  = logModel.mTotalLogCount;
@@ -699,13 +800,13 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     mSelectedLog = std::move(logModel.mSelectedLog);
     logModel.mSelectedLog = QModelIndex();
 
-    mDatabase.disconnect();
+    _disconnectDatabase();
     if (logModel.mDatabase.is_operable())
     {
         mDatabase.connect(logModel.mDatabase.database_path(), true);
     }
 
-    logModel.mDatabase.disconnect();
+    logModel._disconnectDatabase();
 }
 
 void LoggingModelBase::readLogsAsynchronous(int maxEntries)
@@ -716,12 +817,13 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     endResetModel();
     mLogChunk = maxEntries;
 
-    uint32_t count = setupLogStatement(areg::TARGET_ALL, mLogChunk, 0u);
+    uint32_t count = countDatabaseLogs();
     if (count == 0)
         return;
 
     mTotalLogCount = count;
     mLogs.reserve(count);
+    mRowIds.reserve(count);
     mReadThread.start(areg::DO_NOT_WAIT);
 }
 
@@ -809,23 +911,50 @@ void LoggingModelBase::requestShowAllScopes(void)
     emit signalShowAllScopesRequested();
 }
 
-uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId, int32_t limit, uint32_t offset)
+bool LoggingModelBase::readsFilteredLogs() const
 {
-    return mDatabase.setup_statement_read_logs(mStatement, instId, limit, offset);
+    return false;
+}
+
+uint32_t LoggingModelBase::countDatabaseLogs()
+{
+    return (readsFilteredLogs() ? mDatabase.count_filter_logs(areg::TARGET_ALL) : mDatabase.count_log_entries(areg::TARGET_ALL));
+}
+
+bool LoggingModelBase::setupWindowStatement(const areg::ext::LogSqliteDatabase::LogPosition& place, int32_t limit, bool backward)
+{
+    if (readsFilteredLogs())
+    {
+        return (backward ? mDatabase.setup_statement_read_filter_window_back(mStatement, areg::TARGET_ALL, place, limit)
+                         : mDatabase.setup_statement_read_filter_window(mStatement, areg::TARGET_ALL, place, limit));
+    }
+
+    return (backward ? mDatabase.setup_statement_read_window_back(mStatement, place, limit)
+                     : mDatabase.setup_statement_read_window(mStatement, place, limit));
+}
+
+bool LoggingModelBase::setupWindowStatementAt(uint32_t offset, int32_t limit)
+{
+    return (readsFilteredLogs() ? mDatabase.setup_statement_read_filter_window_at(mStatement, areg::TARGET_ALL, offset, limit)
+                                : mDatabase.setup_statement_read_window_at(mStatement, offset, limit));
 }
 
 bool LoggingModelBase::applyFilters(uint32_t instId, const areg::ArrayList<areg::ext::LogSqliteDatabase::ScopeFilter>& filter)
 {
+    // The reading thread uses the filter tables, it is stopped before they change.
+    _quitThread();
     return mDatabase.setup_filter_logs(instId, filter);
 }
 
 bool LoggingModelBase::resetFilters(uint32_t instId)
 {
+    _quitThread();
     return mDatabase.reset(instId);
 }
 
 bool LoggingModelBase::disableFilters(uint32_t instId)
 {
+    _quitThread();
     return mDatabase.disable_filter_mask(instId);
 }
 
@@ -1025,27 +1154,65 @@ inline void LoggingModelBase::_cleanNodes()
     mRootList.clear();
 }
 
-void LoggingModelBase::appendLogBatch(std::vector<areg::SharedBuffer>&& logs, uint32_t generation)
+void LoggingModelBase::appendLogBatch(std::vector<areg::SharedBuffer>&& logs, std::vector<uint32_t>&& rowIds, uint32_t generation)
 {
     if ((generation != mLoadGeneration) || logs.empty())
         return;
 
+    Q_ASSERT(rowIds.size() == logs.size());
+    rowIds.resize(logs.size(), 0u);
     const int first{ static_cast<int>(mLogs.size()) };
     const int last { first + static_cast<int>(logs.size()) - 1 };
 
     beginInsertRows(QModelIndex(), first, last);
     mLogs.insert(mLogs.end(), std::make_move_iterator(logs.begin()), std::make_move_iterator(logs.end()));
+    mRowIds.insert(mRowIds.end(), rowIds.begin(), rowIds.end());
     mLogCount = static_cast<uint32_t>(mLogs.size());
     endInsertRows();
 }
 
+void LoggingModelBase::appendLogEntry(const areg::SharedBuffer& log, uint32_t rowId)
+{
+    const int row{ static_cast<int>(mLogs.size()) };
+    beginInsertRows(QModelIndex(), row, row);
+    mLogs.push_back(log);
+    mRowIds.push_back(rowId);
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endInsertRows();
+}
+
+void LoggingModelBase::evictOldest(uint32_t count)
+{
+    count = std::min<uint32_t>(count, static_cast<uint32_t>(mLogs.size()));
+    if (count == 0)
+        return;
+
+    const QModelIndex selected{ getSelectedLog() };
+    const int selectedRow{ selected.isValid() ? selected.row()    : -1 };
+    const int selectedCol{ selected.isValid() ? selected.column() :  0 };
+
+    beginRemoveRows(QModelIndex(), 0, static_cast<int>(count) - 1);
+    mLogs.erase(mLogs.begin(), mLogs.begin() + count);
+    mRowIds.erase(mRowIds.begin(), mRowIds.begin() + count);
+    mLogCount = static_cast<uint32_t>(mLogs.size());
+    endRemoveRows();
+
+    if (selectedRow >= 0)
+    {
+        // The remembered entry moved up by the number of dropped rows, or is gone with them.
+        const int row{ selectedRow - static_cast<int>(count) };
+        setSelectedLog(row >= 0 ? index(row, selectedCol) : QModelIndex());
+    }
+}
+
 void LoggingModelBase::on_run()
 {
-    // Runs in the reading thread. It reads from the database only, the entries are handed
+    // Runs in the reading thread. It reads windows from the database only, the entries are handed
     // over to the thread that owns the model, which is the single writer of the row list.
     const uint32_t generation{ mLoadGeneration };
-    const int32_t  chunk{ mLogChunk > 0 ? mLogChunk : LoggingModelBase::READ_CHUNK_SIZE };
+    const int32_t  chunk{ _windowSize() };
     int32_t        readCount{ 0 };
+    areg::ext::LogSqliteDatabase::LogPosition place{};
 
     do
     {
@@ -1054,16 +1221,21 @@ void LoggingModelBase::on_run()
 
         mQuitThread.unlock();
 
-        std::vector<areg::SharedBuffer> batch(static_cast<size_t>(chunk));
-        readCount = areg::ext::LogSqliteDatabase::fill_log_messages(batch, mStatement, 0, chunk);
+        if (setupWindowStatement(place, chunk, false) == false)
+            break;
+
+        std::vector<areg::SharedBuffer> batch;
+        std::vector<uint32_t> ids;
+        batch.reserve(static_cast<size_t>(chunk));
+        ids.reserve(static_cast<size_t>(chunk));
+        readCount = areg::ext::LogSqliteDatabase::fill_log_window(batch, mStatement, chunk, place, ids);
         if (readCount <= 0)
             break;
 
-        batch.resize(static_cast<size_t>(readCount));
         QMetaObject::invokeMethod(this
-                                 , [this, generation, batch = std::move(batch)]() mutable
+                                 , [this, generation, batch = std::move(batch), ids = std::move(ids)]() mutable
                                    {
-                                       appendLogBatch(std::move(batch), generation);
+                                       appendLogBatch(std::move(batch), std::move(ids), generation);
                                    }
                                  , Qt::ConnectionType::QueuedConnection);
 

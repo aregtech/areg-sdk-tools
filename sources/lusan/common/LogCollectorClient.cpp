@@ -99,7 +99,7 @@ void LogCollectorClient::on_log_update_scopes(ITEM_ID cookie, const ScopeInfo* s
 
 void LogCollectorClient::on_log_message(const areg::MessageEnvelope& logMessage)
 {
-    emit signalLogMessage(logMessage);
+    emit signalLogMessage(logMessage, delivered_log_id());
 }
 
 void LogCollectorClient::on_log_source_state(ITEM_ID cookie, areg::LogSourceState state, ITEM_ID byObserver)

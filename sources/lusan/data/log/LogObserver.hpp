@@ -461,8 +461,9 @@ signals:
     /**
      * \brief   The signal is triggered when receive message to log.
      * \param   logMessage  The buffer with structure of the message to log.
+     * \param   rowId       The database id of the message, 0 if the message is not in the database.
      **/
-    void signalLogMessage(const areg::SharedBuffer & logMessage);
+    void signalLogMessage(const areg::SharedBuffer & logMessage, uint32_t rowId);
 
     /**
      * \brief   The signal is triggered when the log observer instance is activated or shutdown.
@@ -635,8 +636,9 @@ private slots:
     /**
      * \brief   The callback of the event triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
+     * \param   rowId       The database id of the message, 0 if the message is not in the database.
      **/
-    void slotLogMessage(const areg::MessageEnvelope & logMessage);
+    void slotLogMessage(const areg::MessageEnvelope & logMessage, uint32_t rowId);
 
     /**
      * \brief   The callback of the event triggered when a log source started or stopped sending its logs.

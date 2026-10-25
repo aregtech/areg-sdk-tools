@@ -25,6 +25,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QTimer;
 class QToolButton;
 class QWidget;
 class MdiMainWindow;
@@ -42,6 +43,8 @@ private:
     static const QString    _tooltipResumeLogging;  //!< Tooltip for the Resume logging button.
     static const QString    _tooltipStopLogging;    //!< Tooltip for the Stop logging button.
     static const QString    _tooltipRestartLogging; //!< Tooltip for the Restart logging button.
+
+    static constexpr int    FOLLOW_SCROLL_MS    { 30 }; //!< The longest wait before the table follows the newest rows.
 
 public:
     /**
@@ -195,7 +198,8 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    bool    mReleased;  //!< True once the widgets and the models of this window are released.
+    bool    mReleased;      //!< True once the widgets and the models of this window are released.
+    QTimer* mFollowTimer;   //!< Scrolls to the newest row once for all rows inserted while it waits.
 };
 
 #endif // LUSAN_VIEW_LOG_LIVELOGVIEWER_HPP

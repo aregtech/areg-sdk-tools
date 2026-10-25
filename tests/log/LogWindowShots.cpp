@@ -55,6 +55,7 @@
 #include "lusan/view/log/ScopeOutputViewer.hpp"
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -188,7 +189,8 @@ namespace
 
         void addEntries(std::vector<areg::SharedBuffer>&& entries)
         {
-            appendLogBatch(std::move(entries), mLoadGeneration);
+            std::vector<uint32_t> ids(entries.size(), 0u);
+            appendLogBatch(std::move(entries), std::move(ids), mLoadGeneration);
         }
     };
 
@@ -1278,7 +1280,8 @@ int main(int argc, char* argv[])
         {
             handed = handed && QMetaObject::invokeMethod(model, "slotLogMessage"
                                                         , Qt::ConnectionType::DirectConnection
-                                                        , Q_ARG(areg::SharedBuffer, row));
+                                                        , Q_ARG(areg::SharedBuffer, row)
+                                                        , Q_ARG(uint32_t, 0u));
         }
 
         CHECK(handed);
@@ -1470,10 +1473,16 @@ int main(int argc, char* argv[])
             const areg::SharedBuffer row{ makeEntry(areg::LogPriority::PrioInfo, 1000 + i
                                                    , "a log line long enough to fill the message column") };
             QMetaObject::invokeMethod(model, "slotLogMessage", Qt::ConnectionType::DirectConnection
-                                     , Q_ARG(areg::SharedBuffer, row));
+                                     , Q_ARG(areg::SharedBuffer, row), Q_ARG(uint32_t, 0u));
         }
 
-        QApplication::processEvents();
+        // The table follows the newest rows on a short timer, and lays itself out then.
+        QElapsedTimer settle;
+        settle.start();
+        while (settle.elapsed() < 200)
+        {
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+        }
 
         // The rows bring the vertical bar up, and it takes its own width out of the viewport.
         // The message column gives that width back, so no sideways bar appears for it.
@@ -1539,7 +1548,7 @@ int main(int argc, char* argv[])
 
         const areg::SharedBuffer entry{ makeEntry(areg::LogPriority::PrioError, 1000, "connect failed", 7u, 1u) };
         QMetaObject::invokeMethod(model, "slotLogMessage", Qt::ConnectionType::DirectConnection
-                                 , Q_ARG(areg::SharedBuffer, entry));
+                                 , Q_ARG(areg::SharedBuffer, entry), Q_ARG(uint32_t, 0u));
         QApplication::processEvents();
         CHECK(model->rowCount() == 1);
 

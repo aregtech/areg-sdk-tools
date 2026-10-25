@@ -530,7 +530,7 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
         ctrlConnect()->setToolTip(tr("Connect to log collector"));
 
         mState = eLoggingStates::LoggingDisconnected;
-        LogObserver::disconnect();
+        disconnectObserver();
         LogObserver::releaseLogObserver();
 
         mMainWindow->logCollecttorConnected(false, address, port, logFile);
@@ -618,7 +618,7 @@ void NaviLiveLogsScopes::optionOpenning()
 
         setupLogSignals(false);
         mState = eLoggingStates::LoggingPaused;
-        LogObserver::disconnect();
+        disconnectObserver();
         LogObserver::releaseLogObserver();
         mMainWindow->logCollecttorConnected(false, address, port, logFile);
         mScopesModel->setLoggingModel(nullptr);
@@ -626,6 +626,19 @@ void NaviLiveLogsScopes::optionOpenning()
     }
 
     enableButtons(QModelIndex());
+}
+
+void NaviLiveLogsScopes::disconnectObserver()
+{
+    LiveLogsModel* liveModel{ mMainWindow != nullptr ? mMainWindow->getLiveLogging() : nullptr };
+    if (liveModel != nullptr)
+    {
+        liveModel->disconnectService();
+    }
+    else
+    {
+        LogObserver::disconnect();
+    }
 }
 
 void NaviLiveLogsScopes::optionApplied()
