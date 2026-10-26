@@ -169,7 +169,7 @@ void LiveLogsModel::_setupSignals(bool doSetup)
             return;
 
         mSignalsSetup = true;
-        mConLogs                = connect(log, &LogObserver::signalLogMessage            , this, &LiveLogsModel::slotLogMessage);
+        mConLogs                = connect(log, &LogObserver::signalLogBatchReady         , this, &LiveLogsModel::slotLogBatchReady);
         mConInstancesDisconnect = connect(log, &LogObserver::signalLogInstancesDisconnect, this, &LiveLogsModel::slotLogInstancesDisconnect);
         
         mConLogger              = connect(log, &LogObserver::signalLogServiceConnected   , this, []() {
@@ -214,6 +214,36 @@ void LiveLogsModel::slotLogMessage(const areg::SharedBuffer& logMessage, uint32_
     }
 
     appendLogEntry(logMessage, rowId);
+}
+
+void LiveLogsModel::slotLogBatchReady(uint64_t sequence)
+{
+    std::vector<areg::SharedBuffer> logs;
+    std::vector<uint32_t> rowIds;
+    uint32_t skipped{ LogObserver::takeLogBatches(sequence, logs, rowIds) };
+    if (logs.size() > LiveLogsModel::LIVE_LOG_CAPACITY)
+    {
+        const std::ptrdiff_t extra{ static_cast<std::ptrdiff_t>(logs.size() - LiveLogsModel::LIVE_LOG_CAPACITY) };
+        logs.erase(logs.begin(), logs.begin() + extra);
+        rowIds.erase(rowIds.begin(), rowIds.begin() + extra);
+        skipped += static_cast<uint32_t>(extra);
+    }
+
+    if (logs.empty() == false)
+    {
+        const uint32_t total{ static_cast<uint32_t>(mLogs.size() + logs.size()) };
+        if (total > LiveLogsModel::LIVE_LOG_CAPACITY)
+        {
+            evictOldest(std::max(LiveLogsModel::LIVE_LOG_EVICT_BLOCK, total - LiveLogsModel::LIVE_LOG_CAPACITY));
+        }
+
+        appendLogBatch(std::move(logs), std::move(rowIds), mLoadGeneration);
+    }
+
+    if (skipped != 0u)
+    {
+        emit signalLogsSkipped(skipped);
+    }
 }
 
 QString LiveLogsModel::_releaseDatabase()

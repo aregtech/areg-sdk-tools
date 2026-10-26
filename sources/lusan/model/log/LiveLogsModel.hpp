@@ -166,6 +166,17 @@ public:
     void restartLogging(const QString & dbName = QString());
 
 //////////////////////////////////////////////////////////////////////////
+// Signals.
+//////////////////////////////////////////////////////////////////////////
+signals:
+    /**
+     * \brief   The signal is triggered when received log messages were not added to the window
+     *          because it did not take them in time. The log database has them.
+     * \param   count   The number of log messages left out.
+     **/
+    void signalLogsSkipped(uint32_t count);
+
+//////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
 private slots:
@@ -175,6 +186,13 @@ private slots:
      * \param   rowId       The database id of the message, 0 if the message is not in the database.
      **/
     void slotLogMessage(const areg::SharedBuffer& logMessage, uint32_t rowId);
+
+    /**
+     * \brief   The slot is triggered when a new batch of received log messages waits for the window.
+     *          Adds every waiting batch up to the given one with one insertion.
+     * \param   sequence    The sequence number of the batch.
+     **/
+    void slotLogBatchReady(uint64_t sequence);
     
     /**
      * \brief   The slot is triggered when receive the list of disconnected instances that make logs.

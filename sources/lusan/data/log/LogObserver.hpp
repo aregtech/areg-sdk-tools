@@ -43,6 +43,7 @@
  ************************************************************************/
 class LogCollectorClient;
 struct ScopeInfo;
+struct LogQueueState;
 
 //!< The callback to notify that the service component started.
 typedef void (*FuncLogObserverStarted)();
@@ -357,6 +358,24 @@ public:
      *                      If `0` it receives log messages of all scopes.
      **/
     static void queryLogMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+
+    /**
+     * \brief   Moves the received log messages of every batch up to the given one into the lists.
+     *          Called by the live window when signalLogBatchReady() reaches it.
+     * \param   sequence    The sequence number of the newest batch to take.
+     * \param[out] logs     The log messages are appended, oldest first.
+     * \param[out] rowIds   The database id of every message is appended, 0 if not in the database.
+     * \return  The number of messages dropped from the taken batches because the window did not
+     *          take them in time. The database has them.
+     **/
+    static uint32_t takeLogBatches(uint64_t sequence, std::vector<areg::SharedBuffer>& logs, std::vector<uint32_t>& rowIds);
+
+    /**
+     * \brief   Reads the state of the queue of log messages that wait to be saved in the log file.
+     * \param[out] state    The state of the queue.
+     * \return  Returns true if the logs are saved in a log file now.
+     **/
+    static bool queryQueueState(LogQueueState& state);
     
 private:
     
@@ -459,11 +478,11 @@ signals:
     void signalLogUpdateScopes(ITEM_ID cookie, const std::vector <areg::ScopeEntry>& scopes);
 
     /**
-     * \brief   The signal is triggered when receive message to log.
-     * \param   logMessage  The buffer with structure of the message to log.
-     * \param   rowId       The database id of the message, 0 if the message is not in the database.
+     * \brief   The signal is triggered when a new batch of received log messages waits for the
+     *          live window. The receiver takes it with takeLogBatches().
+     * \param   sequence    The sequence number of the batch.
      **/
-    void signalLogMessage(const areg::SharedBuffer & logMessage, uint32_t rowId);
+    void signalLogBatchReady(uint64_t sequence);
 
     /**
      * \brief   The signal is triggered when the log observer instance is activated or shutdown.
@@ -634,11 +653,10 @@ private slots:
     void slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, int count);
 
     /**
-     * \brief   The callback of the event triggered when receive message to log.
-     * \param   logMessage  The structure of the message to log.
-     * \param   rowId       The database id of the message, 0 if the message is not in the database.
+     * \brief   The callback of the event triggered when the first log message of a new batch is received.
+     * \param   sequence    The sequence number of the batch.
      **/
-    void slotLogMessage(const areg::MessageEnvelope & logMessage, uint32_t rowId);
+    void slotLogBatchReady(uint64_t sequence);
 
     /**
      * \brief   The callback of the event triggered when a log source started or stopped sending its logs.

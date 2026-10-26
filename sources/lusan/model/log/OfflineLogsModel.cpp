@@ -51,7 +51,7 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
     if (!fileInfo.exists() || !fileInfo.isFile())
         return;
     
-    if (mDatabase.connect(filePath.toStdString(), readOnly))
+    if (mDatabase.connect(filePath.toStdString(), readOnly ? areg::DatabaseRole::Viewer : areg::DatabaseRole::Recorder))
     {
         emit signalDatabaseIsOpened(QString::fromStdString(mDatabase.database_path().data()));
         // Load initial log messages for display

@@ -89,6 +89,8 @@ public:
     {
           NoticeClockSkew = 0   //!< Two sources disagree about the wall clock.
         , NoticeRevealed        //!< A row a filter hides is drawn because the search found it.
+        , NoticeSkipped         //!< The live window left out logs it could not draw in time.
+        , NoticeDropped         //!< The log file dropped logs it could not save in time.
         , NoticeCount           //!< Number of lines.
     };
 

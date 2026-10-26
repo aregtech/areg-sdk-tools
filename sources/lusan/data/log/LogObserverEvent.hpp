@@ -48,7 +48,7 @@ public:
         , CMD_ServiceDisconnect //!< The log observer disconnected service.
         , CMD_ScopesRegistered  //!< The log observer received list of registered scopes.
         , CMD_ScopesUpdated     //!< The log observer received list of updated scopes.
-        , CMD_LogMessage        //!< The log observer received log message.
+        , CMD_LogBatch          //!< The log observer received a new batch of log messages.
         , CMD_SourceState       //!< A log source started or stopped sending the logs it produces.
         , CMD_ConfigRestored    //!< A log source read its configuration file again.
     };
@@ -57,7 +57,7 @@ public:
     inline LogObserverEventData();
     inline LogObserverEventData(LogObserverCommand event);
     inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data);
-    inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data, uint32_t rowId);
+    inline LogObserverEventData(LogObserverCommand event, uint64_t sequence);
     inline LogObserverEventData(const LogObserverEventData& src);
     inline LogObserverEventData(LogObserverEventData && src);
 
@@ -68,9 +68,9 @@ public:
     inline const areg::SharedBuffer& getBuffer() const;
 
     /**
-     * \brief   Returns the database id of the log message the event carries, 0 if none.
+     * \brief   Returns the sequence number of the log batch the event announces, 0 if none.
      **/
-    inline uint32_t getRowId() const;
+    inline uint64_t getSequence() const;
 
     inline operator const areg::InStream& () const;
 
@@ -79,7 +79,7 @@ public:
 private:
     LogObserverCommand  mEvent;     //!< The event type
     areg::SharedBuffer  mBuffer;    //!< The buffer to store event data
-    uint32_t            mRowId;     //!< The database id of the log message, 0 if none.
+    uint64_t            mSequence;  //!< The sequence number of the announced log batch, 0 if none.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,42 +94,42 @@ AREG_DECLARE_EVENT(LogObserverEventData, LogObserverEvent, LogObserverEventConsu
 LogObserverEventData::LogObserverEventData()
     : mEvent(LogObserverEventData::LogObserverCommand::CMD_Unknown)
     , mBuffer()
-    , mRowId(0u)
+    , mSequence(0u)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(LogObserverCommand event)
     : mEvent(event)
     , mBuffer()
-    , mRowId(0u)
+    , mSequence(0u)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data)
     : mEvent(event)
     , mBuffer(data)
-    , mRowId(0u)
+    , mSequence(0u)
 {
 }
 
-inline LogObserverEventData::LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data, uint32_t rowId)
+inline LogObserverEventData::LogObserverEventData(LogObserverCommand event, uint64_t sequence)
     : mEvent(event)
-    , mBuffer(data)
-    , mRowId(rowId)
+    , mBuffer()
+    , mSequence(sequence)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(const LogObserverEventData& src)
     : mEvent(src.mEvent)
     , mBuffer(src.mBuffer)
-    , mRowId(src.mRowId)
+    , mSequence(src.mSequence)
 {
 }
 
 inline LogObserverEventData::LogObserverEventData(LogObserverEventData&& src)
     : mEvent(src.mEvent)
     , mBuffer(std::move(src.mBuffer))
-    , mRowId(src.mRowId)
+    , mSequence(src.mSequence)
 {
     src.mEvent = LogObserverCommand::CMD_Unknown;
 }
@@ -149,9 +149,9 @@ inline const areg::SharedBuffer& LogObserverEventData::getBuffer() const
     return mBuffer;
 }
 
-inline uint32_t LogObserverEventData::getRowId() const
+inline uint64_t LogObserverEventData::getSequence() const
 {
-    return mRowId;
+    return mSequence;
 }
 
 inline LogObserverEventData::operator const areg::InStream& () const

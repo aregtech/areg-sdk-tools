@@ -263,7 +263,7 @@ namespace
     {
         std::vector<FileRow> result;
         areg::ext::SqliteDatabase db;
-        if (db.connect(areg::String(path.toStdString().c_str()), true))
+        if (db.connect(areg::String(path.toStdString().c_str()), areg::DatabaseRole::Viewer))
         {
             areg::ext::SqliteStatement stmt(db, "SELECT id, scope_id, msg_prio, msg_log FROM logs ORDER BY time_created, id;");
             while (stmt.next() == areg::ext::SqliteStatement::QueryResult::HasMore)
@@ -283,7 +283,7 @@ namespace
     {
         std::string result;
         areg::ext::SqliteDatabase db;
-        if (db.connect(areg::String(path.toStdString().c_str()), true))
+        if (db.connect(areg::String(path.toStdString().c_str()), areg::DatabaseRole::Viewer))
         {
             areg::ext::SqliteStatement stmt(db, sql);
             while (stmt.next() == areg::ext::SqliteStatement::QueryResult::HasMore)

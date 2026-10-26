@@ -102,7 +102,7 @@ namespace
     bool writeArchive(const QString& path, int count)
     {
         areg::ext::LogSqliteDatabase db;
-        if (db.connect(areg::String(path.toUtf8().constData()), false) == false)
+        if (db.connect(areg::String(path.toUtf8().constData()), areg::DatabaseRole::Recorder) == false)
         {
             return false;
         }

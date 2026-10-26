@@ -20,8 +20,11 @@
  ************************************************************************/
 
 #include "areglogger/client/LogObserverBase.hpp"
+#include "areg/base/SharedBuffer.hpp"
 
 #include <QObject>
+#include <deque>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -42,8 +45,28 @@ private:
 
 public:
 
+    //!< The most received log messages that wait for the live window, twice the rows it holds.
+    //!< Above it the oldest waiting messages are dropped from the window, never from the database.
+    static constexpr uint32_t   LIVE_PENDING_LIMIT  { 200'000u };
+
     static LogCollectorClient& getInstance();
-    
+
+    /**
+     * \brief   Moves the log messages of every batch up to the given one into the lists.
+     *          Called by the thread of the live window when signalLogBatchReady() reaches it.
+     * \param   sequence    The sequence number of the newest batch to take.
+     * \param[out] logs     The log messages are appended, oldest first.
+     * \param[out] rowIds   The database id of every message is appended, 0 if not in the database.
+     * \return  The number of messages dropped from the taken batches because the window did not
+     *          take them in time.
+     **/
+    uint32_t takeLogBatches(uint64_t sequence, std::vector<areg::SharedBuffer>& logs, std::vector<uint32_t>& rowIds);
+
+    /**
+     * \brief   Drops every log message that waits for the live window.
+     **/
+    void clearLogBatches();
+
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////
@@ -126,11 +149,12 @@ signals:
     void signalLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, int count);
 
     /**
-     * \brief   The signal triggered when receive message to log.
-     * \param   logMessage  The buffer with structure of the message to log.
-     * \param   rowId       The database id of the message, 0 if the message is not in the database.
+     * \brief   The signal triggered when the first log message of a new batch is received.
+     *          The batch takes the next messages until another callback arrives or
+     *          takeLogBatches() takes it.
+     * \param   sequence    The sequence number of the batch.
      **/
-    void signalLogMessage(const areg::MessageEnvelope & logMessage, uint32_t rowId);
+    void signalLogBatchReady(uint64_t sequence);
 
     /**
      * \brief   The signal triggered when a log source started or stopped sending the logs it produces.
@@ -271,6 +295,37 @@ protected:
      **/
     void on_log_configuration_restored(ITEM_ID cookie) final;
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
+private:
+    /**
+     * \brief   The log messages received in a row, with no other callback between them.
+     **/
+    struct LogBatch
+    {
+        std::vector<areg::SharedBuffer> logs;       //!< The log messages, oldest first.
+        std::vector<uint32_t>           rowIds;     //!< The database id of every message.
+        uint64_t                        sequence{0};//!< The sequence number of the batch.
+        uint32_t                        skipped {0};//!< The messages dropped from the batch.
+    };
+
+    /**
+     * \brief   Ends the newest batch, so that the next log message starts a new one.
+     **/
+    void _closeLogBatch();
+
+    /**
+     * \brief   Drops the oldest waiting log messages. Called with the batch lock held.
+     **/
+    void _dropOldestLogs();
+
+private:
+    std::mutex              mBatchLock;     //!< Protects the batches.
+    std::deque<LogBatch>    mBatches;       //!< The batches waiting for the live window, oldest first.
+    uint32_t                mBatchRows;     //!< The log messages in all batches.
+    uint64_t                mBatchSequence; //!< The sequence number of the newest batch.
+    bool                    mBatchOpen;     //!< True if the newest batch takes the next log message.
 };
 
 #endif  // LUSAN_COMMON_LOGCOLLECTORCLIENT_HPP

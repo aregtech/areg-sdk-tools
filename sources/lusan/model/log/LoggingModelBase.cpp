@@ -437,7 +437,7 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
 
         _quitThread();
         _disconnectDatabase();
-        mDatabase.connect(path, readOnly);
+        mDatabase.connect(path, readOnly ? areg::DatabaseRole::Viewer : areg::DatabaseRole::Recorder);
     }
 }
 
@@ -803,7 +803,7 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     _disconnectDatabase();
     if (logModel.mDatabase.is_operable())
     {
-        mDatabase.connect(logModel.mDatabase.database_path(), true);
+        mDatabase.connect(logModel.mDatabase.database_path(), areg::DatabaseRole::Viewer);
     }
 
     logModel._disconnectDatabase();
