@@ -26,7 +26,11 @@
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 
+#include "areglogger/client/LogObserverApi.h"
+
+#include <QLocale>
 #include <QTableView>
+#include <QTimer>
 #include <QToolButton>
 #include <QMdiSubWindow>
 
@@ -38,7 +42,23 @@ const QString   LiveLogViewer::_tooltipRestartLogging   (tr("Resume logging in a
 LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : LogViewerBase (MdiChild::eMdiWindow::MdiLogViewer, nullptr, wndMain, parent)
     , mReleased     (false)
+    , mFollowTimer  (new QTimer(this))
+    , mSaveTimer    (new QTimer(this))
+    , mSkippedLogs  (0u)
+    , mDroppedLogs  (0u)
 {
+    mSaveTimer->setInterval(LiveLogViewer::SAVE_CHECK_MS);
+    connect(mSaveTimer, &QTimer::timeout, this, &LiveLogViewer::onCheckSaveQueue);
+
+    mFollowTimer->setSingleShot(true);
+    mFollowTimer->setInterval(LiveLogViewer::FOLLOW_SCROLL_MS);
+    connect(mFollowTimer, &QTimer::timeout, this, [this]() {
+                if ((mReleased == false) && getSessionBar()->isFollowing())
+                {
+                    scrollFollowing();
+                }
+            });
+
     mLogModel = new LiveLogsModel(this);
     setupWidgets();
 
@@ -69,9 +89,11 @@ void LiveLogViewer::logServiceConnected(bool isConnected, const QString& address
         ctrlPause()->setEnabled(true);
         ctrlStop()->setEnabled(true);
         updateToolbuttons(false, false);
+        mSaveTimer->start();
     }
     else if (mMdiSubWindow != nullptr)
     {
+        mSaveTimer->stop();
         Q_ASSERT(logModel->getDatabasePath() == dbPath);
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
@@ -125,9 +147,9 @@ void LiveLogViewer::onRowsInserted(const QModelIndex& parent, int first, int las
     Q_UNUSED(first);
     Q_UNUSED(last);
 
-    if (getSessionBar()->isFollowing())
+    if (getSessionBar()->isFollowing() && (mFollowTimer->isActive() == false))
     {
-        scrollFollowing();
+        mFollowTimer->start();
     }
 }
 
@@ -235,6 +257,36 @@ void LiveLogViewer::onClearClicked()
 {
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->dataReset();
+    mSkippedLogs = 0u;
+    getSessionBar()->hideNotice(LogSessionBar::eNotice::NoticeSkipped);
+}
+
+void LiveLogViewer::onLogsSkipped(uint32_t count)
+{
+    mSkippedLogs += count;
+    getSessionBar()->showNotice(LogSessionBar::eNotice::NoticeSkipped
+                              , tr("%1 logs are not in this window, it could not draw them as fast as they arrived. The log file has all of them.")
+                                    .arg(QLocale().toString(static_cast<qulonglong>(mSkippedLogs))));
+}
+
+void LiveLogViewer::onCheckSaveQueue()
+{
+    LogQueueState state{};
+    if ((mReleased == false) && LogObserver::queryQueueState(state))
+    {
+        if (state.lqDropped < mDroppedLogs)
+        {
+            mDroppedLogs = 0u;
+        }
+
+        if (state.lqDropped > mDroppedLogs)
+        {
+            mDroppedLogs = state.lqDropped;
+            getSessionBar()->showNotice(LogSessionBar::eNotice::NoticeDropped
+                                      , tr("%1 logs were not saved, the log file could not keep up with the rate they arrived at.")
+                                            .arg(QLocale().toString(static_cast<qulonglong>(mDroppedLogs))));
+        }
+    }
 }
 
 QString LiveLogViewer::getDatabasePath() const
@@ -265,6 +317,7 @@ void LiveLogViewer::setupSignals(bool doSetup)
     if (doSetup)
     {
         connect(mLogModel       , &LoggingModelBase::rowsInserted, this,&LiveLogViewer::onRowsInserted);
+        connect(static_cast<LiveLogsModel*>(mLogModel), &LiveLogsModel::signalLogsSkipped, this, &LiveLogViewer::onLogsSkipped);
         connect(ctrlPause()     , &QToolButton::clicked         , this, &LiveLogViewer::onPauseClicked);
         connect(ctrlStop()      , &QToolButton::clicked         , this, &LiveLogViewer::onStopClicked);
         connect(ctrlClear()     , &QToolButton::clicked         , this, &LiveLogViewer::onClearClicked);
@@ -275,6 +328,7 @@ void LiveLogViewer::setupSignals(bool doSetup)
     else
     {
         disconnect(mLogModel    , &LoggingModelBase::rowsInserted, this,&LiveLogViewer::onRowsInserted);
+        disconnect(static_cast<LiveLogsModel*>(mLogModel), &LiveLogsModel::signalLogsSkipped, this, &LiveLogViewer::onLogsSkipped);
         disconnect(ctrlPause()  , &QToolButton::clicked         , this, &LiveLogViewer::onPauseClicked);
         disconnect(ctrlStop()   , &QToolButton::clicked         , this, &LiveLogViewer::onStopClicked);
         disconnect(ctrlClear()  , &QToolButton::clicked         , this, &LiveLogViewer::onClearClicked);
@@ -295,7 +349,8 @@ void LiveLogViewer::cleanResources()
     Q_ASSERT(mFilter != nullptr);
 
     setupSignals(false);
-    LogObserver::releaseLogObserver();
+    mFollowTimer->stop();
+    mSaveTimer->stop();
     disconnect(mFilter, nullptr, this, nullptr);
     disconnect(mLogModel, nullptr, this, nullptr);
 
@@ -304,7 +359,10 @@ void LiveLogViewer::cleanResources()
     view->setHorizontalHeader(nullptr);
     mFilter->setSourceModel(nullptr);
     mSearch.setLogModel(nullptr);
+
+    // The read connection closes before the log observer closes the log file.
     mLogModel->closeDatabase();
+    LogObserver::releaseLogObserver();
 
     mReleased = true;
 

@@ -63,12 +63,9 @@ public:
     void closeDatabase() override;
 
     /**
-     * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
-     *          Override if need to change.
-     * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
-     * \return  Number or log entries to read.
+     * \brief   Returns true: the offline model reads the rows that the scope filters pass.
      **/
-    uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL, int32_t limit = -1, uint32_t offset = 0u) override;
+    bool readsFilteredLogs() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Signals

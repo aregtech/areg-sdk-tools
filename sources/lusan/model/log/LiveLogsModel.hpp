@@ -105,7 +105,9 @@ public:
     bool connectService(const QString& hostName = "", unsigned short portNr = 0u);
 
     /**
-     * \brief   Call to start disconnection from the log collector service.
+     * \brief   Disconnects the log observer from the log collector service. The model closes
+     *          its read connection before the observer closes the log file, and opens the file
+     *          again afterwards.
      **/
     void disconnectService();
 
@@ -149,7 +151,8 @@ public:
     /**
      * \brief   Call to stop logging. When logging is stopped,
      *          it closes the database and stops writing logs.
-     *          On restart, it creates new database.
+     *          On restart, it creates new database. The model reads
+     *          the closed database afterwards.
      **/
     void stopLogging();
 
@@ -163,14 +166,33 @@ public:
     void restartLogging(const QString & dbName = QString());
 
 //////////////////////////////////////////////////////////////////////////
+// Signals.
+//////////////////////////////////////////////////////////////////////////
+signals:
+    /**
+     * \brief   The signal is triggered when received log messages were not added to the window
+     *          because it did not take them in time. The log database has them.
+     * \param   count   The number of log messages left out.
+     **/
+    void signalLogsSkipped(uint32_t count);
+
+//////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
 private slots:
     /**
      * \brief   The slot is triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
+     * \param   rowId       The database id of the message, 0 if the message is not in the database.
      **/
-    void slotLogMessage(const areg::SharedBuffer& logMessage);
+    void slotLogMessage(const areg::SharedBuffer& logMessage, uint32_t rowId);
+
+    /**
+     * \brief   The slot is triggered when a new batch of received log messages waits for the window.
+     *          Adds every waiting batch up to the given one with one insertion.
+     * \param   sequence    The sequence number of the batch.
+     **/
+    void slotLogBatchReady(uint64_t sequence);
     
     /**
      * \brief   The slot is triggered when receive the list of disconnected instances that make logs.
@@ -186,10 +208,15 @@ private:
     void _setupSignals(bool doSetup);
 
     /**
-     * \brief   Drops the given number of oldest entries from the top of the list.
-     * \param   count   The number of entries to drop. Limited by the number of entries in the list.
+     * \brief   Closes the read connection of the model and returns the path of the file it read.
      **/
-    void _evictOldest(uint32_t count);
+    QString _releaseDatabase();
+
+    /**
+     * \brief   Opens the file again with a read connection.
+     * \param   dbPath  The path of the file to open. Nothing is opened if empty.
+     **/
+    void _restoreDatabase(const QString& dbPath);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variable

@@ -1122,6 +1122,7 @@ set(LUSAN_LOG_CORE_SRC
 
 qt_add_executable(lusan_log_model_tests
     ${LUSAN_LOG_CORE_SRC}
+    ${LUSAN}/model/log/OfflineLogsModel.cpp
     ${LUSAN_ROOT}/tests/log/LogModelTests.cpp
     ${LUSAN}/res/lusan.qrc
 )

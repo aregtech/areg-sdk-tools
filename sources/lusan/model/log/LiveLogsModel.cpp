@@ -97,6 +97,10 @@ bool LiveLogsModel::connectService(const QString& hostName /*= ""*/, unsigned sh
 
 void LiveLogsModel::disconnectService()
 {
+    // Closes the read connection while the observer closes the file.
+    const QString dbPath{ _releaseDatabase() };
+    LogObserver::disconnect();
+    _restoreDatabase(dbPath);
 }
 
 void LiveLogsModel::setupModel()
@@ -134,14 +138,22 @@ void LiveLogsModel::resumeLogging()
 
 void LiveLogsModel::stopLogging()
 {
+    // Closes the read connection while the observer closes the file.
+    const QString dbPath{ _releaseDatabase() };
     LogObserver::stop();
+    _restoreDatabase(dbPath);
 }
 
 void LiveLogsModel::restartLogging(const QString& dbName /*= QString()*/)
 {
     beginResetModel();
     cleanLogs();
-    LogObserver::restart(dbName);
+    const QString dbPath{ _releaseDatabase() };
+    if (LogObserver::restart(dbName) == false)
+    {
+        _restoreDatabase(dbPath);
+    }
+
     endResetModel();
 }
 
@@ -157,7 +169,7 @@ void LiveLogsModel::_setupSignals(bool doSetup)
             return;
 
         mSignalsSetup = true;
-        mConLogs                = connect(log, &LogObserver::signalLogMessage            , this, &LiveLogsModel::slotLogMessage);
+        mConLogs                = connect(log, &LogObserver::signalLogBatchReady         , this, &LiveLogsModel::slotLogBatchReady);
         mConInstancesDisconnect = connect(log, &LogObserver::signalLogInstancesDisconnect, this, &LiveLogsModel::slotLogInstancesDisconnect);
         
         mConLogger              = connect(log, &LogObserver::signalLogServiceConnected   , this, []() {
@@ -191,43 +203,62 @@ void LiveLogsModel::_setupSignals(bool doSetup)
     }
 }
     
-void LiveLogsModel::slotLogMessage(const areg::SharedBuffer& logMessage)
+void LiveLogsModel::slotLogMessage(const areg::SharedBuffer& logMessage, uint32_t rowId)
 {
     if (logMessage.is_empty())
         return;
 
     if (static_cast<uint32_t>(mLogs.size()) >= LiveLogsModel::LIVE_LOG_CAPACITY)
     {
-        _evictOldest(LiveLogsModel::LIVE_LOG_EVICT_BLOCK);
+        evictOldest(LiveLogsModel::LIVE_LOG_EVICT_BLOCK);
     }
 
-    const int row{ static_cast<int>(mLogs.size()) };
-    beginInsertRows(QModelIndex(), row, row);
-    mLogs.push_back(logMessage);
-    mLogCount = static_cast<uint32_t>(mLogs.size());
-    endInsertRows();
+    appendLogEntry(logMessage, rowId);
 }
 
-void LiveLogsModel::_evictOldest(uint32_t count)
+void LiveLogsModel::slotLogBatchReady(uint64_t sequence)
 {
-    count = std::min<uint32_t>(count, static_cast<uint32_t>(mLogs.size()));
-    if (count == 0)
-        return;
-
-    const QModelIndex selected{ getSelectedLog() };
-    const int selectedRow{ selected.isValid() ? selected.row()    : -1 };
-    const int selectedCol{ selected.isValid() ? selected.column() :  0 };
-
-    beginRemoveRows(QModelIndex(), 0, static_cast<int>(count) - 1);
-    mLogs.erase(mLogs.begin(), mLogs.begin() + count);
-    mLogCount = static_cast<uint32_t>(mLogs.size());
-    endRemoveRows();
-
-    if (selectedRow >= 0)
+    std::vector<areg::SharedBuffer> logs;
+    std::vector<uint32_t> rowIds;
+    uint32_t skipped{ LogObserver::takeLogBatches(sequence, logs, rowIds) };
+    if (logs.size() > LiveLogsModel::LIVE_LOG_CAPACITY)
     {
-        // The remembered entry moved up by the number of dropped rows, or is gone with them.
-        const int row{ selectedRow - static_cast<int>(count) };
-        setSelectedLog(row >= 0 ? index(row, selectedCol) : QModelIndex());
+        const std::ptrdiff_t extra{ static_cast<std::ptrdiff_t>(logs.size() - LiveLogsModel::LIVE_LOG_CAPACITY) };
+        logs.erase(logs.begin(), logs.begin() + extra);
+        rowIds.erase(rowIds.begin(), rowIds.begin() + extra);
+        skipped += static_cast<uint32_t>(extra);
+    }
+
+    if (logs.empty() == false)
+    {
+        const uint32_t total{ static_cast<uint32_t>(mLogs.size() + logs.size()) };
+        if (total > LiveLogsModel::LIVE_LOG_CAPACITY)
+        {
+            evictOldest(std::max(LiveLogsModel::LIVE_LOG_EVICT_BLOCK, total - LiveLogsModel::LIVE_LOG_CAPACITY));
+        }
+
+        appendLogBatch(std::move(logs), std::move(rowIds), mLoadGeneration);
+    }
+
+    if (skipped != 0u)
+    {
+        emit signalLogsSkipped(skipped);
+    }
+}
+
+QString LiveLogsModel::_releaseDatabase()
+{
+    const QString dbPath{ mDatabase.is_operable() ? getDatabasePath() : QString() };
+    _quitThread();
+    _disconnectDatabase();
+    return dbPath;
+}
+
+void LiveLogsModel::_restoreDatabase(const QString& dbPath)
+{
+    if (dbPath.isEmpty() == false)
+    {
+        openDatabase(dbPath, true);
     }
 }
 

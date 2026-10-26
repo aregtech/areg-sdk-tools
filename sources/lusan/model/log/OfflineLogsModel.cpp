@@ -51,7 +51,7 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
     if (!fileInfo.exists() || !fileInfo.isFile())
         return;
     
-    if (mDatabase.connect(filePath.toStdString(), readOnly))
+    if (mDatabase.connect(filePath.toStdString(), readOnly ? areg::DatabaseRole::Viewer : areg::DatabaseRole::Recorder))
     {
         emit signalDatabaseIsOpened(QString::fromStdString(mDatabase.database_path().data()));
         // Load initial log messages for display
@@ -74,9 +74,9 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
     }
 }
 
-uint32_t OfflineLogsModel::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL*/, int32_t limit /*= -1*/, uint32_t offset /*= 0u*/)
+bool OfflineLogsModel::readsFilteredLogs() const
 {
-    return mDatabase.setup_statement_read_filter_logs(mStatement, instId);
+    return true;
 }
 
 void OfflineLogsModel::closeDatabase()

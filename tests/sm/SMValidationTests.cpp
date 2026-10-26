@@ -420,6 +420,21 @@ namespace
             doc.getAttributes().createAttribute("IsReady")->setType("bool");
             CHECK(countRule(SMValidator::validate(doc), 32) == 0);
         }
+        {   // The attribute 'Balance' generates balance() and set_balance(); a trigger spelled
+            // like either is a second function of that name.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("balance", NEMethod::SmTrigger);
+            doc.getAttributes().createAttribute("Balance")->setType("uint32");
+            CHECK(hasRule(SMValidator::validate(doc), 32));
+        }
+        {
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("set_balance", NEMethod::SmTrigger);
+            doc.getAttributes().createAttribute("Balance")->setType("uint32");
+            CHECK(hasRule(SMValidator::validate(doc), 32));
+        }
         {   // A condition and an attribute of the same name land on different classes: no collision.
             StateMachineData doc;
             addStart(doc);
@@ -1109,6 +1124,99 @@ namespace
             CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 2);
             CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("target 'Session', which holds 'Step2' and enters at its start state")));
             CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("draw it from 'Session', which holds 'Step2' on the level of 'Other'")));
+        }
+        {   // Rule 7 for a History marker names what each legal shape resumes, and never a shape
+            // rule 57 refuses. Active holds Doors, Doors holds the marker Resume; Halted is beside Active.
+            StateMachineData doc;
+            SMStateEntry* start  = addStart(doc);
+            SMStateEntry* active = doc.getStates().createState(QStringLiteral("Active"), eKind::Normal);
+            SMStateEntry* halted = doc.getStates().createState(QStringLiteral("Halted"), eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), active->getId(), eTrans::Initial);
+            doc.getMethods().createMethod(QStringLiteral("poke"), NEMethod::SmTrigger);
+
+            SMStateData* inActive = active->getOrCreateNestedStates();
+            SMStateEntry* activeStart = inActive->createState(QStringLiteral("ActiveStart"), eKind::Start);
+            SMStateEntry* doors = inActive->createState(QStringLiteral("Doors"), eKind::Normal);
+            activeStart->getTransitions().createTransition(eStim::Trigger, QString(), doors->getId(), eTrans::Initial);
+            SMStateData* inDoors = doors->getOrCreateNestedStates();
+            SMStateEntry* doorsStart = inDoors->createState(QStringLiteral("DoorsStart"), eKind::Start);
+            SMStateEntry* opening = inDoors->createState(QStringLiteral("Opening"), eKind::Normal);
+            doorsStart->getTransitions().createTransition(eStim::Trigger, QString(), opening->getId(), eTrans::Initial);
+            SMStateEntry* resume = inDoors->createState(QStringLiteral("Resume"), eKind::History);
+            resume->setHistoryDepth(SMStateEntry::eHistoryDepth::Deep);
+
+            // Two levels down: resuming Active takes a marker of its own, resuming only Doors an event.
+            SMTransitionEntry* toResume = halted->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), resume->getId());
+            QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 1);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'Resume' resumes only 'Doors', the state that holds it")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("target a History marker placed directly in 'Active'")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'Active' starts again at its start state")));
+
+            // Active already holds a marker: the hint names it instead of a new one.
+            SMStateEntry* own = inActive->createState(QStringLiteral("ActiveResume"), eKind::History);
+            own->setHistoryDepth(SMStateEntry::eHistoryDepth::Deep);
+            issues = SMValidator::validate(doc);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("target 'ActiveResume', the History marker 'Active' holds")));
+
+            // The marker directly in Active, reached from beside Active: legal.
+            toResume->setToId(own->getId());
+            issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 0);
+            CHECK(countRule(issues, DocRules::RULE_HISTORY_SIBLING) == 0);
+
+            // From inside Active, Active's own marker is out of reach: no "draw it from", which rule 57 refuses.
+            opening->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), own->getId());
+            issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 1);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'ActiveResume' resumes 'Active', which holds 'Opening'")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("draw it from")) == false);
+        }
+        {   // Rule 7 when one state holds the other: the two never meet on one level, and the hint
+            // still names where the transition belongs. Active holds Doors, Doors holds Opening and
+            // the marker Resume.
+            StateMachineData doc;
+            SMStateEntry* start  = addStart(doc);
+            SMStateEntry* active = doc.getStates().createState(QStringLiteral("Active"), eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), active->getId(), eTrans::Initial);
+            doc.getMethods().createMethod(QStringLiteral("poke"), NEMethod::SmTrigger);
+
+            SMStateData* inActive = active->getOrCreateNestedStates();
+            SMStateEntry* activeStart = inActive->createState(QStringLiteral("ActiveStart"), eKind::Start);
+            SMStateEntry* doors = inActive->createState(QStringLiteral("Doors"), eKind::Normal);
+            activeStart->getTransitions().createTransition(eStim::Trigger, QString(), doors->getId(), eTrans::Initial);
+            SMStateData* inDoors = doors->getOrCreateNestedStates();
+            SMStateEntry* doorsStart = inDoors->createState(QStringLiteral("DoorsStart"), eKind::Start);
+            SMStateEntry* opening = inDoors->createState(QStringLiteral("Opening"), eKind::Normal);
+            doorsStart->getTransitions().createTransition(eStim::Trigger, QString(), opening->getId(), eTrans::Initial);
+            SMStateEntry* resume = inDoors->createState(QStringLiteral("Resume"), eKind::History);
+            resume->setHistoryDepth(SMStateEntry::eHistoryDepth::Shallow);
+
+            // A composite's own transition to its child: drawn from the state current inside it.
+            active->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), doors->getId());
+            QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 1);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'Doors' is inside 'Active', whose own transitions reach only its own level: draw this one from the state inside 'Active' that is current when it fires, beside 'Doors'")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral(", and target")) == false);
+
+            // To its grandchild: the same, and the event that lands on it.
+            active->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), opening->getId());
+            issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 2);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'Opening' is inside 'Active'")));
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral(", and target 'Doors', which holds 'Opening' and enters at its start state")));
+
+            // To a marker inside it, whose composite is its child: drawn from beside that composite.
+            active->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), resume->getId());
+            issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 3);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'Resume' is inside 'Active'")));
+
+            // A state's transition to the composite that holds it two levels up.
+            opening->getTransitions().createTransition(eStim::Trigger, QStringLiteral("poke"), active->getId());
+            issues = SMValidator::validate(doc);
+            CHECK(countRule(issues, DocRules::RULE_TARGET_SIBLING) == 4);
+            CHECK(namesRule(issues, DocRules::RULE_TARGET_SIBLING, QStringLiteral("'Opening' is inside 'Active', which is entered already: to go to another state inside 'Active', target it from 'Doors', which holds 'Opening' on that level; to leave 'Active', give the transition to 'Active' itself, towards a state beside it")));
         }
         {   // The override is legal and nothing reports it. A stimulus is searched from the active
             // leaf upwards, so `Step1` answers `poke` while it is active and `Session` answers it

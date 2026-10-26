@@ -25,6 +25,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 
 #include "areg/appbase/AppDefs.hpp"
+#include "areg/appbase/Application.hpp"
 #include "areg/base/DateTime.hpp"
 #include "areg/component/ComponentLoader.hpp"
 #include "areg/component/ComponentThread.hpp"
@@ -32,6 +33,7 @@
 
 #include <atomic>
 
+#include <QMetaMethod>
 #include <QMetaType>
 
 namespace
@@ -68,6 +70,13 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
 
         _observerStart = false;
         _logObserverStarted = callbackStarted;
+
+        // The observer model runs on the service manager, which is started with the first connection.
+        if (areg::Application::is_servicing_ready() == false)
+        {
+            areg::Application::setup(false, true, false, true, false, NELusanCommon::INIT_FILE.toStdString().c_str());
+        }
+
         result = areg::ComponentLoader::load_component_model(LogObserver::LogobserverModel);
     }
     
@@ -290,6 +299,16 @@ void LogObserver::queryLogMessages(std::vector<areg::SharedBuffer>& messages, IT
     LogObserver::getClient().log_messages(messages, instId, scopeId);
 }
 
+uint32_t LogObserver::takeLogBatches(uint64_t sequence, std::vector<areg::SharedBuffer>& logs, std::vector<uint32_t>& rowIds)
+{
+    return LogObserver::getClient().takeLogBatches(sequence, logs, rowIds);
+}
+
+bool LogObserver::queryQueueState(LogQueueState& state)
+{
+    return LogObserver::getClient().queue_state(state);
+}
+
 LogCollectorClient& LogObserver::getClient()
 {
     return LogCollectorClient::getInstance();
@@ -315,6 +334,7 @@ void LogObserver::startup_service_interface(areg::Component & holder)
     areg::StubBase::startup_service_interface(holder);
     static_cast<areg::logger::LogObserverBase &>(mLogClient).stop();
     static_cast<areg::logger::LogObserverBase &>(mLogClient).disconnect();
+    mLogClient.clearLogBatches();
 
     FuncLogObserverStarted callback = _logObserverStarted.load();
     if (callback != nullptr)
@@ -340,7 +360,7 @@ void LogObserver::startup_service_interface(areg::Component & holder)
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogServiceDisconnected  , this, &LogObserver::slotLogServiceDisconnected   , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogRegisterScopes       , this, &LogObserver::slotLogRegisterScopes        , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogUpdateScopes         , this, &LogObserver::slotLogUpdateScopes          , Qt::DirectConnection);
-    QObject::connect(&mLogClient, &LogCollectorClient::signalLogMessage              , this, &LogObserver::slotLogMessage               , Qt::DirectConnection);
+    QObject::connect(&mLogClient, &LogCollectorClient::signalLogBatchReady           , this, &LogObserver::slotLogBatchReady            , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogSourceState          , this, &LogObserver::slotLogSourceState           , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogConfigRestored       , this, &LogObserver::slotLogConfigRestored        , Qt::DirectConnection);
     
@@ -374,7 +394,7 @@ void LogObserver::shutdown_service_interface(Component & holder) noexcept
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogServiceDisconnected   , this, &LogObserver::slotLogServiceDisconnected);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogRegisterScopes        , this, &LogObserver::slotLogRegisterScopes);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogUpdateScopes          , this, &LogObserver::slotLogUpdateScopes);
-    QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogMessage               , this, &LogObserver::slotLogMessage);
+    QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogBatchReady            , this, &LogObserver::slotLogBatchReady);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogSourceState           , this, &LogObserver::slotLogSourceState);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogConfigRestored        , this, &LogObserver::slotLogConfigRestored);
 
@@ -386,6 +406,7 @@ void LogObserver::shutdown_service_interface(Component & holder) noexcept
 
     static_cast<areg::logger::LogObserverBase &>(mLogClient).stop();
     static_cast<areg::logger::LogObserverBase &>(mLogClient).disconnect();
+    mLogClient.clearLogBatches();
     StubBase::shutdown_service_interface(holder);
 
     LogObserverEvent::remove_listener(static_cast<LogObserverEventConsumer &>(self()), master_thread());
@@ -556,9 +577,18 @@ void LogObserver::process_event(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::LogObserverCommand::CMD_LogMessage:
+    case LogObserverEventData::LogObserverCommand::CMD_LogBatch:
     {
-        emit signalLogMessage(stream);
+        if (isSignalConnected(QMetaMethod::fromSignal(&LogObserver::signalLogBatchReady)))
+        {
+            emit signalLogBatchReady(data.getSequence());
+        }
+        else
+        {
+            std::vector<areg::SharedBuffer> logs;
+            std::vector<uint32_t> rowIds;
+            static_cast<void>(mLogClient.takeLogBatches(data.getSequence(), logs, rowIds));
+        }
     }
     break;
 
@@ -674,9 +704,9 @@ void LogObserver::slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, i
     postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ScopesUpdated, stream));
 }
 
-void LogObserver::slotLogMessage(const areg::MessageEnvelope& logMessage)
+void LogObserver::slotLogBatchReady(uint64_t sequence)
 {
-    postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, areg::SharedBuffer(logMessage)));
+    postObserverEvent(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogBatch, sequence));
 }
 
 void LogObserver::slotLogSourceState(ITEM_ID cookie, uint8_t state, ITEM_ID byObserver)

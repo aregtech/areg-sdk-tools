@@ -25,6 +25,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QTimer;
 class QToolButton;
 class QWidget;
 class MdiMainWindow;
@@ -42,6 +43,9 @@ private:
     static const QString    _tooltipResumeLogging;  //!< Tooltip for the Resume logging button.
     static const QString    _tooltipStopLogging;    //!< Tooltip for the Stop logging button.
     static const QString    _tooltipRestartLogging; //!< Tooltip for the Restart logging button.
+
+    static constexpr int    FOLLOW_SCROLL_MS    { 30 }; //!< The longest wait before the table follows the newest rows.
+    static constexpr int    SAVE_CHECK_MS       { 1000 };//!< How often the window checks that the log file keeps up.
 
 public:
     /**
@@ -157,6 +161,17 @@ private slots:
      **/
     void onClearClicked();
 
+    /**
+     * \brief   Slot, triggered when received logs were not added to the window.
+     * \param   count   The number of logs left out.
+     **/
+    void onLogsSkipped(uint32_t count);
+
+    /**
+     * \brief   Slot, triggered once a second while connected. Tells when the log file drops logs.
+     **/
+    void onCheckSaveQueue();
+
 private:
     //!< Returns Pause / Resume toolbutton
     QToolButton* ctrlPause();
@@ -195,7 +210,11 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    bool    mReleased;  //!< True once the widgets and the models of this window are released.
+    bool        mReleased;      //!< True once the widgets and the models of this window are released.
+    QTimer*     mFollowTimer;   //!< Scrolls to the newest row once for all rows inserted while it waits.
+    QTimer*     mSaveTimer;     //!< Checks once a second whether the log file drops logs.
+    uint64_t    mSkippedLogs;   //!< The received logs not added to the window since it was cleared.
+    uint64_t    mDroppedLogs;   //!< The dropped logs the window reported last.
 };
 
 #endif // LUSAN_VIEW_LOG_LIVELOGVIEWER_HPP

@@ -267,6 +267,12 @@ private:
      **/
     void setupLogSignals(bool setup);
 
+    /**
+     * \brief   Disconnects the log observer. The live log model, if any, closes its read
+     *          connection before the observer closes the log file, and opens it again afterwards.
+     **/
+    void disconnectObserver();
+
 private slots:
     /**
      * \brief   The slot is triggered when initializing and configuring the observer.
